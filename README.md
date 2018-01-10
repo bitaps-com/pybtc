@@ -1,0 +1,2 @@
+# pybtc
+Python bitcoin library
