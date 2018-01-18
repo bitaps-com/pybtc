@@ -377,9 +377,7 @@ class Transaction():
         scriptCode += b'\x14' + pubkey_hash160 + OPCODE["OP_EQUALVERIFY"] + OPCODE["OP_CHECKSIG"]
         self.tx_in[input_index].sig_script = Script(b'\x16\x00\x14' + pubkey_hash160) # P2WPKHredeemScript
         sighash = self.sighash_segwit(sighash_type, input_index, scriptCode, amount)
-        print(sighash)
         signature = sign_message(sighash, private_key) + sighash_type.to_bytes(1,'little')
-        print(signature)
         self.witness[input_index] = Witness([signature, pubkey])
         self.recalculate_txid()
 
