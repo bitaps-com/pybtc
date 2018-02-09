@@ -260,7 +260,6 @@ class Transaction():
         self.flag = flag
         self.valid = True
         self.lock = False
-        self.orphaned = False
         self.in_sum = None
         self.tx_fee = None
         self.version = version
@@ -272,7 +271,9 @@ class Transaction():
         if self.tx_in:
             self.coinbase = self.tx_in[0].coinbase
         else:
-            self.coinbase = False
+            self.coinbase = None
+        if self.coinbase:
+            self.whash = b"\x00" * 32
         self.double_spend = 0
         self.data = None
         self.ip = None
@@ -294,8 +295,17 @@ class Transaction():
             self.recalculate_txid()
 
     def recalculate_txid(self):
-        self.hash = double_sha256(self.serialize(segwit=False))
-        self.whash = double_sha256(self.serialize(segwit=True))
+        self.tx_in_count = len(self.tx_in)
+        self.tx_out_count = len(self.tx_out)
+        t = self.serialize(segwit=False)
+        t2 = self.serialize(segwit=True)
+        self.hash = double_sha256(t)
+        if self.coinbase:
+            self.whash = b"\x00" * 32
+        else:
+            self.whash = double_sha256(t2)
+        self.size = len(t)
+        self.vsize = math.ceil((self.size * 3 + self.size) / 4)
 
     def add_input(self, tx_hash, output_number,
                   sequence = 0xffffffff,
@@ -541,7 +551,7 @@ class Transaction():
                     break
                 else:
                     wtx_id = tx_id
-            vsize = math.ceil((len(raw_tx) * 3 + size) / 4)
+            vsize = math.ceil((size * 3 + size) / 4)
         else:
             stream.seek(start)
             marker = b"\x00"
@@ -555,7 +565,7 @@ class Transaction():
             stream.seek(start)
             data = stream.read(size)
             tx_id = double_sha256(data)
-            wtx_id = None
+            wtx_id = tx_id
             vsize = size
 
         return cls(version, tx_in, tx_out, lock_time,
@@ -566,31 +576,75 @@ class Transaction():
 
 class Block():
     def __init__(self, version, prev_block, merkle_root,
-                 timestamp, bits, nonce, txs, block_size,hash=None):
+                 timestamp, bits, nonce, txs, block_size, hash = None, header = None):
         self.hash = hash
+        self.header = header
         self.version = version
         self.prev_block = prev_block
         self.merkle_root = merkle_root
         self.timestamp = timestamp
         self.bits = bits
         self.nonce = nonce
-        self.txs = txs
-        self.block_size = block_size
-        self.height = None
-        self.id = None
-        self.chain = None
-        self.amount = 0
-        self.mountpoint = None
-        self.side_branch_set = None
+        self.transactions = txs
         self.tx_hash_list = list()
-        self.op_sig_count = 0
+        self.size = block_size
+        self.weight = block_size
+        self.height = None
+        self.amount = 0
+        self.fee = 0
+        self.sigop = 0
         for t in txs:
-            if t.hash in txs:
+            if t.hash in self.tx_hash_list:
                 raise Exception("CVE-2012-2459") # merkle tree malleability
-            self.op_sig_count += t.op_sig_count
             self.tx_hash_list.append(t.hash)
         self.target = None
         self.fee = 0
+        self.witness_root_hash = None
+        if txs[0].coinbase:
+            if version > 1:
+                self.height = int.from_bytes(txs[0].tx_in[0].sig_script.raw[1:5], "little")
+                self.coinbase = txs[0].tx_in[0].sig_script.raw[5:]
+            else:
+                self.coinbase = txs[0].tx_in[0].sig_script.raw
+            try:
+               for out in txs[0].tx_out:
+                   if out.pk_script.ntype == 3:
+                       if b'\xaa!\xa9\xed' == out.pk_script.data[:4]:
+                          self.witness_root_hash = out.pk_script.data[4:36]
+            except:
+                pass
+
+    def calculate_commitment(self):
+        wtxid_list = [b"\x00" * 32,]
+        for tx in self.transactions[0 if not self.transactions[0].coinbase else 1:]:
+            wtxid_list.append(tx.whash)
+        return double_sha256(merkleroot(wtxid_list[::-1]) + b"\x00" * 32)
+
+    def create_coinbase_transaction(self, block_height, outputs, coinbase_message = b"", insert = True):
+        tx = Transaction(version = 1,tx_in = [], tx_out = [], witness= [] )
+        coinbase = b'\x03' + block_height.to_bytes(4,'little') + coinbase_message
+        if len(coinbase) > 100:
+            raise Exception("coinbase is to long")
+        coinbase_input = Input((b'\x00'*32 ,0xffffffff), coinbase, 0xffffffff)
+        tx.tx_in = [coinbase_input]
+        commitment = self.calculate_commitment()
+        for o in outputs:
+            if type(o[1]) == str:
+                tx.tx_out.append(Output(o[0], address2script(o[1])))
+            else:
+                tx.tx_out.append(Output(o[0], o[1]))
+        tx.tx_out.append(Output(0, b'j$\xaa!\xa9\xed' + commitment))
+        tx.witness = [Witness([b'\x00'*32])]
+        tx.recalculate_txid()
+        if insert:
+            if self.transactions[0].coinbase:
+                self.transactions[0] = tx
+            else:
+                self.transactions.insert(0,tx)
+        return tx
+
+
+
 
     @classmethod
     def deserialize(cls, stream):
@@ -598,7 +652,7 @@ class Block():
         header = stream.read(80)
         stream.seek(-80, 1)
         kwargs = {
-            'hash': hashlib.sha256(hashlib.sha256(header).digest()).digest(),
+            'hash': double_sha256(header),
             'version': int.from_bytes(stream.read(4), 'little'),
             'prev_block': stream.read(32),
             'merkle_root': stream.read(32),
@@ -606,7 +660,8 @@ class Block():
             'bits': int.from_bytes(stream.read(4), 'little'),
             'nonce': int.from_bytes(stream.read(4), 'little'),
             'txs': read_var_list(stream, Transaction),
-            'block_size': stream.tell()
+            'block_size': stream.tell(),
+            'header': header
         }
         return cls(**kwargs)
 

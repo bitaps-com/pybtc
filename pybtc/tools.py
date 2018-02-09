@@ -6,7 +6,7 @@ import struct
 import hmac
 from secp256k1 import lib as secp256k1
 from secp256k1 import ffi
-
+from .opcodes import *
 
 SIGHASH_ALL           = 0x00000001
 SIGHASH_NONE          = 0x00000002
@@ -218,6 +218,15 @@ def address_type(address):
     if address[0] in ('1', 'm', 'n'):
         return 'P2PKH'
     return 'UNKNOWN'
+
+def address2script(address):
+    if address[0] in ('2', '3'):
+        return OPCODE["OP_HASH160"] + b'\x14' + address2hash160(address) + OPCODE["OP_EQUAL"]
+    if address[0] in ('1', 'm', 'n'):
+        return OPCODE["OP_DUP"] + OPCODE["OP_HASH160"] + b'\x14' + \
+               address2hash160(address) + OPCODE["OP_EQUALVERIFY"] + OPCODE["OP_CHECKSIG"]
+    raise Exception("Unknown address")
+
 
 def pub2address(pubkey, testnet = False, p2sh = False):
     h = hash160(pubkey)
