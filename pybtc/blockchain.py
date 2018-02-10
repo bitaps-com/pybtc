@@ -618,7 +618,7 @@ class Block():
         wtxid_list = [b"\x00" * 32,]
         for tx in self.transactions[0 if not self.transactions[0].coinbase else 1:]:
             wtxid_list.append(tx.whash)
-        return double_sha256(merkleroot(wtxid_list[::-1]) + b"\x00" * 32)
+        return double_sha256(merkleroot(wtxid_list[::-1]) + self.transactions[0].witness[0].serialize())
 
     def create_coinbase_transaction(self, block_height, outputs, coinbase_message = b"", insert = True):
         tx = Transaction(version = 1,tx_in = [], tx_out = [], witness= [] )
@@ -665,3 +665,5 @@ class Block():
         }
         return cls(**kwargs)
 
+# class BlockTemplate():
+#     def __init__(self, data):
