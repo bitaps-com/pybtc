@@ -600,19 +600,20 @@ class Block():
         self.target = None
         self.fee = 0
         self.witness_root_hash = None
-        if txs[0].coinbase:
-            if version > 1:
-                self.height = int.from_bytes(txs[0].tx_in[0].sig_script.raw[1:5], "little")
-                self.coinbase = txs[0].tx_in[0].sig_script.raw[5:]
-            else:
-                self.coinbase = txs[0].tx_in[0].sig_script.raw
-            try:
-               for out in txs[0].tx_out:
-                   if out.pk_script.ntype == 3:
-                       if b'\xaa!\xa9\xed' == out.pk_script.data[:4]:
-                          self.witness_root_hash = out.pk_script.data[4:36]
-            except:
-                pass
+        if txs:
+            if txs[0].coinbase:
+                if version > 1:
+                    self.height = int.from_bytes(txs[0].tx_in[0].sig_script.raw[1:5], "little")
+                    self.coinbase = txs[0].tx_in[0].sig_script.raw[5:]
+                else:
+                    self.coinbase = txs[0].tx_in[0].sig_script.raw
+                try:
+                   for out in txs[0].tx_out:
+                       if out.pk_script.ntype == 3:
+                           if b'\xaa!\xa9\xed' == out.pk_script.data[:4]:
+                              self.witness_root_hash = out.pk_script.data[4:36]
+                except:
+                    pass
 
     def calculate_commitment(self, witness = None):
         wtxid_list = [b"\x00" * 32,]

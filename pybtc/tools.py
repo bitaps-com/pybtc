@@ -439,7 +439,8 @@ def merkle_branches(tx_hash_list):
         if len(new_hash_list) > 1:
             tx_hash_list = new_hash_list
         else:
-            branches.append(new_hash_list.pop(0))
+            if new_hash_list:
+                branches.append(new_hash_list.pop(0))
             return branches
 
 
