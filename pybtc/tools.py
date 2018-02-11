@@ -407,19 +407,40 @@ def merkleroot(tx_hash_list):
     while True:
         new_hash_list = list()
         while tx_hash_list:
-            h1 = tx_hash_list.pop()
+            h1 = tx_hash_list.pop(0)
             try:
-                h2 = tx_hash_list.pop()
+                h2 = tx_hash_list.pop(0)
             except:
                 h2 = h1
-            new_hash_list.insert(0, double_sha256(h1 + h2))
+            new_hash_list.append(double_sha256(h1 + h2))
         if len(new_hash_list) > 1:
             tx_hash_list = new_hash_list
         else:
             return new_hash_list[0]
 
-
-
+def merkle_branches(tx_hash_list):
+    if not tx_hash_list:
+        return []
+    tx_hash_list = list(tx_hash_list)
+    branches = []
+    if len(tx_hash_list) == 1:
+        return tx_hash_list[0]
+    tx_hash_list.pop(0)
+    while True:
+        branches.append(tx_hash_list.pop(0))
+        new_hash_list = list()
+        while tx_hash_list:
+            h1 = tx_hash_list.pop(0)
+            try:
+                h2 = tx_hash_list.pop(0)
+            except:
+                h2 = h1
+            new_hash_list.append(double_sha256(h1 + h2))
+        if len(new_hash_list) > 1:
+            tx_hash_list = new_hash_list
+        else:
+            branches.append(new_hash_list.pop(0))
+            return branches
 
 
 #

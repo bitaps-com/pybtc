@@ -614,11 +614,14 @@ class Block():
             except:
                 pass
 
-    def calculate_commitment(self):
+    def calculate_commitment(self, witness = None):
         wtxid_list = [b"\x00" * 32,]
         for tx in self.transactions[0 if not self.transactions[0].coinbase else 1:]:
             wtxid_list.append(tx.whash)
-        return double_sha256(merkleroot(wtxid_list[::-1]) + self.transactions[0].witness[0].serialize())
+        if witness is None:
+            return double_sha256(merkleroot(wtxid_list) + self.transactions[0].witness[0].witness[0])
+        else:
+            return double_sha256(merkleroot(wtxid_list) + witness)
 
     def create_coinbase_transaction(self, block_height, outputs, coinbase_message = b"", insert = True):
         tx = Transaction(version = 1,tx_in = [], tx_out = [], witness= [] )
@@ -627,14 +630,14 @@ class Block():
             raise Exception("coinbase is to long")
         coinbase_input = Input((b'\x00'*32 ,0xffffffff), coinbase, 0xffffffff)
         tx.tx_in = [coinbase_input]
-        commitment = self.calculate_commitment()
+        tx.witness = [Witness([b'\x00'*32])]
+        commitment = self.calculate_commitment(tx.witness[0].witness[0])
         for o in outputs:
             if type(o[1]) == str:
                 tx.tx_out.append(Output(o[0], address2script(o[1])))
             else:
                 tx.tx_out.append(Output(o[0], o[1]))
         tx.tx_out.append(Output(0, b'j$\xaa!\xa9\xed' + commitment))
-        tx.witness = [Witness([b'\x00'*32])]
         tx.recalculate_txid()
         if insert:
             if self.transactions[0].coinbase:
@@ -643,8 +646,15 @@ class Block():
                 self.transactions.insert(0,tx)
         return tx
 
+    def split_coinbase(self, extranonce_size = 8, extranonce_start = -8):
+        tx = self.transactions[0].serialize()
+        len_coinbase = len(self.transactions[0].tx_in[0].sig_script.raw)
+        if extranonce_start < 0:
+            extranonce_start = len_coinbase + extranonce_start
+        return tx[:44 + extranonce_start], tx[44+ len_coinbase:]
 
-
+        result = version + marke_flag + ninputs + b''.join(inputs) +\
+            nouts + b''.join(outputs) + witness + self.lock_time.to_bytes(4,'little')
 
     @classmethod
     def deserialize(cls, stream):
