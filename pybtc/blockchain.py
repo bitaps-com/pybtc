@@ -617,8 +617,12 @@ class Block():
 
     def calculate_commitment(self, witness = None):
         wtxid_list = [b"\x00" * 32,]
-        for tx in self.transactions[0 if not self.transactions[0].coinbase else 1:]:
-            wtxid_list.append(tx.whash)
+        print(self.transactions)
+        print(self.transactions[0].witness[0].witness[0])
+        # print("len ", len(self.transactions))
+        if not (len(self.transactions) == 1 and self.transactions[0].coinbase):
+            for tx in self.transactions[0 if not self.transactions[0].coinbase else 1:]:
+                wtxid_list.append(tx.whash)
         if witness is None:
             return double_sha256(merkleroot(wtxid_list) + self.transactions[0].witness[0].witness[0])
         else:
@@ -632,6 +636,7 @@ class Block():
         coinbase_input = Input((b'\x00'*32 ,0xffffffff), coinbase, 0xffffffff)
         tx.tx_in = [coinbase_input]
         tx.witness = [Witness([b'\x00'*32])]
+        print(tx.witness[0].witness[0])
         commitment = self.calculate_commitment(tx.witness[0].witness[0])
         for o in outputs:
             if type(o[1]) == str:
@@ -676,5 +681,25 @@ class Block():
         }
         return cls(**kwargs)
 
+    def serialize(self, hex = False):
+        block = self.version.to_bytes(4,'little') + \
+                self.prev_block + \
+                self.merkle_root + \
+                self.timestamp.to_bytes(4,'little') + \
+                self.bits.to_bytes(4,'little') + \
+                self.nonce.to_bytes(4,'little') + \
+                to_var_int(len (self.transactions))
+        for t in self.transactions:
+            if t.hash == t.whash:
+                print("l")
+                block += t.serialize(segwit = 0)
+            else:
+                print("s")
+                block += t.serialize(segwit = 1)
+
+        if hex:
+            return hexlify(block).decode()
+        else:
+            return block
 # class BlockTemplate():
 #     def __init__(self, data):
