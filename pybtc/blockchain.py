@@ -645,11 +645,15 @@ class Block():
         tx.coinbase = True
         tx.recalculate_txid()
         if insert:
-            if self.transactions[0].coinbase:
-                self.transactions[0] = tx
-                self.tx_hash_list[0] = tx.hash
+            if self.transactions:
+                if self.transactions[0].coinbase:
+                    self.transactions[0] = tx
+                    self.tx_hash_list[0] = tx.hash
+                else:
+                    self.transactions.insert(0,tx)
+                    self.tx_hash_list.insert(0, tx.hash)
             else:
-                self.transactions.insert(0,tx)
+                self.transactions.insert(0, tx)
                 self.tx_hash_list.insert(0, tx.hash)
         return tx
 
