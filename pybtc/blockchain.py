@@ -580,6 +580,7 @@ class Block():
         self.hash = hash
         self.header = header
         self.version = version
+        self.nversion = int.from_bytes(version,'little')
         self.prev_block = prev_block
         self.merkle_root = merkle_root
         self.timestamp = timestamp
@@ -602,7 +603,7 @@ class Block():
         self.witness_root_hash = None
         if txs:
             if txs[0].coinbase:
-                if version > 1:
+                if self.nversion > 1:
                     self.height = int.from_bytes(txs[0].tx_in[0].sig_script.raw[1:5], "little")
                     self.coinbase = txs[0].tx_in[0].sig_script.raw[5:]
                 else:
@@ -644,8 +645,10 @@ class Block():
         if insert:
             if self.transactions[0].coinbase:
                 self.transactions[0] = tx
+                self.tx_hash_list[0] = tx.hash
             else:
                 self.transactions.insert(0,tx)
+                self.tx_hash_list.insert(0, tx.hash)
         return tx
 
     def split_coinbase(self, extranonce_size = 8, extranonce_start = -8):
