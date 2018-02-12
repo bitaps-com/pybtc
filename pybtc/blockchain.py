@@ -619,7 +619,7 @@ class Block():
     def calculate_commitment(self, witness = None):
         wtxid_list = [b"\x00" * 32,]
         print(len(self.transactions))
-        if not (len(self.transactions) == 1 and self.transactions[0].coinbase):
+        if self.transactions and not (len(self.transactions) == 1 and self.transactions[0].coinbase):
             for tx in self.transactions[0 if not self.transactions[0].coinbase else 1:]:
                 wtxid_list.append(tx.whash)
         if witness is None:
