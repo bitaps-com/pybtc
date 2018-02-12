@@ -641,6 +641,7 @@ class Block():
             else:
                 tx.tx_out.append(Output(o[0], o[1]))
         tx.tx_out.append(Output(0, b'j$\xaa!\xa9\xed' + commitment))
+        tx.coinbase = True
         tx.recalculate_txid()
         if insert:
             if self.transactions[0].coinbase:
