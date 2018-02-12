@@ -617,9 +617,6 @@ class Block():
 
     def calculate_commitment(self, witness = None):
         wtxid_list = [b"\x00" * 32,]
-        print(self.transactions)
-        print(self.transactions[0].witness[0].witness[0])
-        # print("len ", len(self.transactions))
         if not (len(self.transactions) == 1 and self.transactions[0].coinbase):
             for tx in self.transactions[0 if not self.transactions[0].coinbase else 1:]:
                 wtxid_list.append(tx.whash)
@@ -636,7 +633,6 @@ class Block():
         coinbase_input = Input((b'\x00'*32 ,0xffffffff), coinbase, 0xffffffff)
         tx.tx_in = [coinbase_input]
         tx.witness = [Witness([b'\x00'*32])]
-        print(tx.witness[0].witness[0])
         commitment = self.calculate_commitment(tx.witness[0].witness[0])
         for o in outputs:
             if type(o[1]) == str:
@@ -659,8 +655,6 @@ class Block():
             extranonce_start = len_coinbase + extranonce_start
         return tx[:44 + extranonce_start], tx[44+ len_coinbase:]
 
-        result = version + marke_flag + ninputs + b''.join(inputs) +\
-            nouts + b''.join(outputs) + witness + self.lock_time.to_bytes(4,'little')
 
     @classmethod
     def deserialize(cls, stream):
@@ -669,12 +663,12 @@ class Block():
         stream.seek(-80, 1)
         kwargs = {
             'hash': double_sha256(header),
-            'version': int.from_bytes(stream.read(4), 'little'),
+            'version': stream.read(4),
             'prev_block': stream.read(32),
             'merkle_root': stream.read(32),
             'timestamp': int.from_bytes(stream.read(4), 'little'),
-            'bits': int.from_bytes(stream.read(4), 'little'),
-            'nonce': int.from_bytes(stream.read(4), 'little'),
+            'bits': stream.read(4),
+            'nonce': stream.read(4),
             'txs': read_var_list(stream, Transaction),
             'block_size': stream.tell(),
             'header': header
@@ -682,19 +676,17 @@ class Block():
         return cls(**kwargs)
 
     def serialize(self, hex = False):
-        block = self.version.to_bytes(4,'little') + \
+        block = self.version + \
                 self.prev_block + \
                 self.merkle_root + \
                 self.timestamp.to_bytes(4,'little') + \
-                self.bits.to_bytes(4,'little') + \
-                self.nonce.to_bytes(4,'little') + \
+                self.bits + \
+                self.nonce + \
                 to_var_int(len (self.transactions))
         for t in self.transactions:
             if t.hash == t.whash:
-                print("l")
                 block += t.serialize(segwit = 0)
             else:
-                print("s")
                 block += t.serialize(segwit = 1)
 
         if hex:
