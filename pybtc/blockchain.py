@@ -396,6 +396,55 @@ class Transaction():
                      len(pubkey).to_bytes(1, 'little') + pubkey
         self.tx_in[input_index].sig_script = Script(sig_script)
         self.recalculate_txid()
+        
+
+    def sign_P2SH_input(self, sighash_type, input_index, redeem_script, compressed = True, private_key = None):
+        if private_key is not None:
+            self.tx_in[input_index].private_key = private_key
+        else:
+            private_key = self.tx_in[input_index].private_key
+        pubkey = priv2pub(private_key, compressed)
+        pubkey_hash160 = hash160(pubkey)
+        self.tx_in[input_index].sig_script = Script(redeem_script)
+        sighash = self.sighash(sighash_type, input_index, redeem_script)
+        signature = sign_message(sighash, private_key) + sighash_type.to_bytes(1, 'little')
+        sig_script = len(signature).to_bytes(1, 'little') + signature + \
+                     len(pubkey).to_bytes(1, 'little') + pubkey
+        if len(redeem_script) <= 0x4b:
+            sig_script += len(redeem_script).to_bytes(1, 'little') + redeem_script
+        elif len(redeem_script) <= 0xff:
+            sig_script += OPCODE["OP_PUSHDATA1"] + len(redeem_script).to_bytes(1, 'little') + redeem_script
+        elif len(redeem_script) <= 0xffff:
+            sig_script += OPCODE["OP_PUSHDATA2"] + len(redeem_script).to_bytes(1, 'little') + redeem_script
+        else:
+            sig_script += OPCODE["OP_PUSHDATA4"] + len(redeem_script).to_bytes(1, 'little') + redeem_script
+        self.tx_in[input_index].sig_script = Script(sig_script)
+        self.recalculate_txid()
+
+
+    def sign_redeem4P2SH_multisig(self, sighash_type, input_index, redeem_script, private_key, hex=False):
+        sighash = self.sighash(sighash_type, input_index, redeem_script)
+        signature = sign_message(sighash, private_key) + sighash_type.to_bytes(1, 'little')
+        if hex:
+            return hexlify(signature).decode()
+        return signature
+
+
+    def sign_P2SH_multisig_input(self, sighash_type, input_index, redeem_script, sign_list):
+        sig_script = OPCODE["OP_0"]
+        for signature in sign_list:
+            sig_script += len(signature).to_bytes(1, 'little') + signature
+        if len(redeem_script) <= 0x4b:
+            sig_script += len(redeem_script).to_bytes(1, 'little') + redeem_script
+        elif len(redeem_script) <= 0xff:
+            sig_script += OPCODE["OP_PUSHDATA1"] + len(redeem_script).to_bytes(1, 'little') + redeem_script
+        elif len(redeem_script) <= 0xffff:
+            sig_script += OPCODE["OP_PUSHDATA2"] + len(redeem_script).to_bytes(1, 'little') + redeem_script
+        else:
+            sig_script += OPCODE["OP_PUSHDATA4"] + len(redeem_script).to_bytes(1, 'little') + redeem_script
+        self.tx_in[input_index].sig_script = Script(sig_script)
+        self.recalculate_txid()
+
 
     def sighash(self, sighash_type, input_index, scriptCode, hex = False):
         if type(scriptCode) == str:
