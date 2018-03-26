@@ -1,1 +1,1 @@
-![Address map](img/address_map.svg)
+![Address map](img/address_map.jpg)
