@@ -1,7 +1,7 @@
 import unittest
 from pybtc import blockchain
 from binascii import unhexlify
-from pybtc import address2hash160
+from pybtc import address2hash  as address2hash160
 
 
 class ScriptDeserializeTests(unittest.TestCase):

@@ -83,6 +83,7 @@ class Script():
         self.data = b''
         self.type = "NON_STANDARD"
         self.ntype = 7
+        self.witness_version = None
         self.op_sig_count = 0
         if coinbase:
             self.pattern = b"<coinbase>"
@@ -148,11 +149,13 @@ class Script():
                 self.type = "P2WPKH"
                 self.op_sig_count = 1
                 self.ntype = 5
-                self.address.append(b"\x00"+self.script[1].data)
+                self.witness_version = 0
+                self.address.append(self.script[1].data)
             elif self.pattern == "OP_0 <32>":
                 self.type = "P2WSH"
                 self.ntype = 6
-                self.address.append(b"\x00"+self.script[1].data)
+                self.witness_version = 0
+                self.address.append(self.script[1].data)
 
 
 
@@ -315,6 +318,13 @@ class Transaction():
         self.tx_in.append(Input((tx_hash, output_number), sig_script, sequence, amount, private_key))
         self.witness.append(Witness.deserialize(b"\x00"))
         self.tx_in_count += 1
+        self.recalculate_txid()
+
+    def add_output(self, amount, script):
+        if type(script)==str:
+            script = unhexlify(script)
+        self.tx_out.append(Output(amount,script))
+        self.tx_out_count += 1
         self.recalculate_txid()
 
     def add_P2SH_output(self, amount, p2sh_address):

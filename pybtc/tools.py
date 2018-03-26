@@ -1,122 +1,17 @@
 import hashlib
 from binascii import hexlify, unhexlify
 import time
-import random
 import struct
 import hmac
-from secp256k1 import lib as secp256k1
-from secp256k1 import ffi
+from .constants import *
 from .opcodes import *
-
-SIGHASH_ALL           = 0x00000001
-SIGHASH_NONE          = 0x00000002
-SIGHASH_SINGLE        = 0x00000003
-SIGHASH_ANYONECANPAY  = 0x00000080
-MAX_INT_PRIVATE_KEY   = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141
-
-EC_COMPRESSED = secp256k1.SECP256K1_EC_COMPRESSED
-EC_UNCOMPRESSED = secp256k1.SECP256K1_EC_UNCOMPRESSED
-
-FLAG_SIGN = secp256k1.SECP256K1_CONTEXT_SIGN
-FLAG_VERIFY = secp256k1.SECP256K1_CONTEXT_VERIFY
-ALL_FLAGS = FLAG_SIGN | FLAG_VERIFY
-NO_FLAGS = secp256k1.SECP256K1_CONTEXT_NONE
-
-HAS_RECOVERABLE = hasattr(secp256k1, 'secp256k1_ecdsa_sign_recoverable')
-HAS_SCHNORR = hasattr(secp256k1, 'secp256k1_schnorr_sign')
-HAS_ECDH = hasattr(secp256k1, 'secp256k1_ecdh')
-
-ECDSA_CONTEXT_SIGN = secp256k1.secp256k1_context_create(FLAG_SIGN)
-ECDSA_CONTEXT_VERIFY = secp256k1.secp256k1_context_create(FLAG_VERIFY)
-ECDSA_CONTEXT_ALL = secp256k1.secp256k1_context_create(ALL_FLAGS)
-secp256k1.secp256k1_context_randomize(ECDSA_CONTEXT_SIGN,
-                                      random.SystemRandom().randint(0,MAX_INT_PRIVATE_KEY).to_bytes(32,byteorder="big"))
-
-SCRIPT_TYPES = { "P2PKH":        0,
-                 "P2SH" :        1,
-                 "PUBKEY":       2,
-                 "NULL_DATA":    3,
-                 "MULTISIG":     4,
-                 "NON_STANDART": 5,
-                 "SP2PKH": 6
-                }
-
-b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
-
-#
-# Encoding functions
-#
-def encode_base58(b):
-    """Encode bytes to a base58-encoded string"""
-    # Convert big-endian bytes to integer
-    n = int('0x0' + hexlify(b).decode('utf8'), 16)
-    # Divide that integer into bas58
-    res = []
-    while n > 0:
-        n, r = divmod(n, 58)
-        res.append(b58_digits[r])
-    res = ''.join(res[::-1])
-    # Encode leading zeros as base58 zeros
-    czero = 0
-    pad = 0
-    for c in b:
-        if c == czero:
-            pad += 1
-        else:
-            break
-    return b58_digits[0] * pad + res
-
-def decode_base58(s):
-    """Decode a base58-encoding string, returning bytes"""
-    if not s:
-        return b''
-    # Convert the string to an integer
-    n = 0
-    for c in s:
-        n *= 58
-        if c not in b58_digits:
-            raise Exception('Character %r is not a valid base58 character' % c)
-        digit = b58_digits.index(c)
-        n += digit
-    # Convert the integer to bytes
-    h = '%x' % n
-    if len(h) % 2:
-        h = '0' + h
-    res = unhexlify(h.encode('utf8'))
-    # Add padding back.
-    pad = 0
-    for c in s[:-1]:
-        if c == b58_digits[0]:
-            pad += 1
-        else:
-            break
-    return b'\x00' * pad + res
-
-#
-# Hash functions
-#
-def sha256(bytes):
-    return hashlib.sha256(bytes).digest()
-
-def double_sha256(bytes):
-    return sha256(sha256(bytes))
-
-def hmac_sha512(key, data):
-    return hmac.new(key, data, hashlib.sha512).digest()
-
-def ripemd160(bytes):
-    h = hashlib.new('ripemd160')
-    h.update(bytes)
-    return h.digest()
-
-def hash160(bytes):
-    return ripemd160(sha256(bytes))
+from .hash import *
+from .encode import *
 
 
-#
 # Bitcoin keys/ addresses
 #
-def create_priv():
+def create_priv(hex=False):
     """
     :return: 32 bytes private key 
     """
@@ -131,6 +26,8 @@ def create_priv():
         else:
             if int.from_bytes(h,byteorder="big")<MAX_INT_PRIVATE_KEY:
                 break
+    if hex:
+        return hexlify(h).decode()
     return h
 
 def priv_from_int(k):
@@ -140,36 +37,56 @@ def priv_from_int(k):
 def priv2WIF(h, compressed = False, testnet = False):
     #uncompressed: 0x80 + [32-byte secret] + [4 bytes of Hash() of previous 33 bytes], base58 encoded
     #compressed: 0x80 + [32-byte secret] + 0x01 + [4 bytes of Hash() previous 34 bytes], base58 encoded
-    prefix = b'\x80'
+    if type(h) == str:
+        h = unhexlify(h)
     if testnet:
-        prefix = b'\xef'
-    h = prefix + h
+        h = TESTNET_PRIVATE_KEY_BYTE_PREFIX + h
+    else:
+        h = MAINNET_PRIVATE_KEY_BYTE_PREFIX + h
     if compressed: h += b'\x01'
-    h += hashlib.sha256(hashlib.sha256(h).digest()).digest()[:4]
+    h += double_sha256(h)[:4]
     return encode_base58(h)
 
-def WIF2priv(h):
+def WIF2priv(h, hex = False, verify = 1):
+    if verify:
+        assert is_WIF_valid(h)
     h = decode_base58(h)
+    if hex:
+        return hexlify(h[1:33]).decode()
     return h[1:33]
 
 def is_WIF_valid(wif):
-    if wif[0] not in ['5', 'K', 'L', '9', 'c']:
+    if wif[0] not in PRIVATE_KEY_PREFIX_LIST:
         return False
-    h = decode_base58(wif)
-    if len(h) != 37:  return False
+    try:
+        h = decode_base58(wif)
+    except:
+        return False
     checksum = h[-4:]
-    if hashlib.sha256(hashlib.sha256(h[:-4]).digest()).digest()[:4] != checksum: return False
+    if wif[0] in (MAINNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX,
+                  TESTNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX):
+        if len(h) != 37:
+            return False
+    elif len(h) != 38:
+        return False
+    if double_sha256(h[:-4])[:4] != checksum:
+        return False
     return True
-
 
 def priv2pub(private_key, compressed = True, hex = False):
     if type(private_key)!= bytes:
         if type(private_key) == bytearray:
             private_key = bytes(private_key)
         elif type(private_key) == str:
-            private_key = unhexlify(private_key)
+            if not is_WIF_valid(private_key):
+                private_key = unhexlify(private_key)
+            else:
+                if private_key[0] in (MAINNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX,
+                                      TESTNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX):
+                    compressed = False
+                private_key = WIF2priv(private_key, verify=0)
         else:
-            raise TypeError("private key must be a bytes or hex encoded string")
+            raise TypeError("private key must be a bytes or WIF or hex encoded string")
     pubkey_ptr = ffi.new('secp256k1_pubkey *')
     r = secp256k1.secp256k1_ec_pubkey_create(ECDSA_CONTEXT_ALL, pubkey_ptr, private_key)
     assert r == 1
@@ -185,74 +102,195 @@ def priv2pub(private_key, compressed = True, hex = False):
 def is_valid_pub(key):
     if len(key) < 33:
         return False
-
     if key[0] == 0x04 and len(key) != 65:
         return False
     elif key[0] == 0x02 or key[0] == 0x03:
         if len(key) != 33:
             return False
-    # else:  return  False
     return True
 
 
 #
 # Bitcoin addresses
 #
-def hash1602address(hash160, testnet = False, p2sh = False):
-    if type(hash160) == str:
-        hash160 = unhexlify(hash160)
-    if not p2sh:
-        prefix = b'\x6f' if testnet else b'\x00'
+
+
+def hash2address(address_hash, testnet = False,
+                 script_hash = False, witness_version = 0):
+    if type(address_hash) == str:
+        address_hash = unhexlify(address_hash)
+    if not script_hash:
+        if witness_version is None:
+            assert len(address_hash) == 20
+            if testnet:
+                prefix = TESTNET_ADDRESS_BYTE_PREFIX
+            else:
+                prefix = MAINNET_ADDRESS_BYTE_PREFIX
+            address_hash =  prefix + address_hash
+            address_hash += double_sha256(address_hash)[:4]
+            return encode_base58(address_hash)
+        else:
+            assert len(address_hash) in (20,32)
+    if witness_version is None:
+        if testnet:
+            prefix = TESTNET_SCRIPT_ADDRESS_BYTE_PREFIX
+        else:
+            prefix = MAINNET_SCRIPT_ADDRESS_BYTE_PREFIX
+        address_hash =  prefix + address_hash
+        address_hash += double_sha256(address_hash)[:4]
+        return encode_base58(address_hash)
+    if testnet:
+        prefix = TESTNET_SEGWIT_ADDRESS_BYTE_PREFIX
+        hrp = TESTNET_SEGWIT_ADDRESS_PREFIX
     else:
-        prefix = b'\xc4' if testnet else b'\x05'
-    hash160 = prefix + hash160
-    hash160 += double_sha256(hash160)[:4]
-    return encode_base58(hash160)
+        prefix = MAINNET_SEGWIT_ADDRESS_BYTE_PREFIX
+        hrp = MAINNET_SEGWIT_ADDRESS_PREFIX
+    address_hash = witness_version.to_bytes(1, "big") + rebase_8_to_5(  address_hash)
+    checksum = bech32_polymod(prefix + address_hash + b"\x00" * 6)
+    checksum = rebase_8_to_5(checksum.to_bytes(5, "big"))[2:]
+    return "%s1%s" % (hrp, rebase_5_to_32(address_hash + checksum).decode())
 
-def address2hash160(address):
-    return decode_base58(address)[1:-4]
 
-def address_type(address):
-    if address[0] in ('2', '3'):
-        return 'P2SH'
-    if address[0] in ('1', 'm', 'n'):
-        return 'P2PKH'
-    return 'UNKNOWN'
+def address2hash(address, hex = False):
+    if address[0] in ADDRESS_PREFIX_LIST:
+        h =  decode_base58(address)[1:-4]
+    elif address[:2] in (MAINNET_SEGWIT_ADDRESS_PREFIX,
+                         TESTNET_SEGWIT_ADDRESS_PREFIX):
+        address = address.split("1")[1]
+        h = rebase_5_to_8(rebase_32_to_5(address)[1:-6], False)
+    else:
+        return None
+    if hex:
+        return h.hex()
+    else:
+        return h
+
+def address_type(address, num = False):
+    if address[0] in (TESTNET_SCRIPT_ADDRESS_PREFIX,
+                      MAINNET_SCRIPT_ADDRESS_PREFIX):
+        t = 'P2SH'
+    elif address[0] in (MAINNET_ADDRESS_PREFIX,
+                      TESTNET_ADDRESS_PREFIX,
+                      TESTNET_ADDRESS_PREFIX_2):
+        t = 'P2PKH'
+    elif address[:2] in (MAINNET_SEGWIT_ADDRESS_PREFIX,
+                         TESTNET_SEGWIT_ADDRESS_PREFIX):
+        if len(address) == 42:
+            t = 'P2WPKH'
+        elif len(address) == 62:
+            t = 'P2WSH'
+        else:
+            return SCRIPT_TYPES['NON_STANDARD'] if num else 'UNKNOWN'
+    else:
+        return SCRIPT_TYPES['NON_STANDARD'] if num else 'UNKNOWN'
+    return SCRIPT_TYPES[t] if num else t
+
+def script2hash(s, witness = False, hex = False):
+    if type(s) == str:
+        s = unhexlify(s)
+    if witness:
+        return sha256(s, hex)
+    else:
+        return hash160(s, hex)
 
 def address2script(address):
-    if address[0] in ('2', '3'):
-        return OPCODE["OP_HASH160"] + b'\x14' + address2hash160(address) + OPCODE["OP_EQUAL"]
-    if address[0] in ('1', 'm', 'n'):
+    if address[0] in (TESTNET_SCRIPT_ADDRESS_PREFIX,
+                      MAINNET_SCRIPT_ADDRESS_PREFIX):
+        return OPCODE["OP_HASH160"] + b'\x14' + address2hash(address) + OPCODE["OP_EQUAL"]
+    if address[0] in (MAINNET_ADDRESS_PREFIX,
+                      TESTNET_ADDRESS_PREFIX,
+                      TESTNET_ADDRESS_PREFIX_2):
         return OPCODE["OP_DUP"] + OPCODE["OP_HASH160"] + b'\x14' + \
-               address2hash160(address) + OPCODE["OP_EQUALVERIFY"] + OPCODE["OP_CHECKSIG"]
+               address2hash(address) + OPCODE["OP_EQUALVERIFY"] + OPCODE["OP_CHECKSIG"]
+    if address[0] in (TESTNET_SEGWIT_ADDRESS_PREFIX,
+                      MAINNET_SEGWIT_ADDRESS_PREFIX):
+        h = address2hash(address)
+        return OPCODE["OP_0"] + bytes([len(h)]) + h
     raise Exception("Unknown address")
 
 
-def pub2address(pubkey, testnet = False, p2sh = False):
-    h = hash160(pubkey)
-    return hash1602address(h, testnet = testnet, p2sh = p2sh)
-
-def pub2segwit(pubkey, testnet = False):
-    return hash1602address(pub2hash160segwit(pubkey),
-                           testnet=testnet,
-                           p2sh=True)
-
-def pub2hash160segwit(pubkey):
-    return hash160(b'\x00\x14' + hash160(pubkey))
-
-
-def is_address_valid(addr, testnet = False):
-    if testnet:
-        if addr[0] not in ('m', 'n', '2'):
-            return False
+def pub2address(pubkey, testnet = False,
+                inside_p2sh = False,
+                witness_version = 0):
+    if type(pubkey) == str:
+        pubkey = unhexlify(pubkey)
+    if inside_p2sh:
+        assert len(pubkey) == 33
+        h = hash160(b'\x00\x14' + hash160(pubkey))
     else:
-        if addr[0] not in ('1','3'):
+        if witness_version is not None:
+            assert len(pubkey) == 33
+        h = hash160(pubkey)
+    return hash2address(h, testnet = testnet,
+                           script_hash = inside_p2sh,
+                           witness_version = witness_version)
+
+# def pub2P2SH_P2WPKH_hash(pubkey):
+#     return hash160(b'\x00\x14' + hash160(pubkey))
+#
+# def pub2P2SH_P2WPKH_address(pubkey, testnet = False):
+#     return hash2address(pub2P2SH_P2WPKH_hash(pubkey),
+#                         testnet=testnet,
+#                         script_hash=True,
+#                         witness_version=None)
+
+
+def is_address_valid(address, testnet = False):
+    if not address or type(address) != str:
+        return False
+    if address[0] in (MAINNET_ADDRESS_PREFIX,
+                      MAINNET_SCRIPT_ADDRESS_PREFIX,
+                      TESTNET_ADDRESS_PREFIX,
+                      TESTNET_ADDRESS_PREFIX_2,
+                      TESTNET_SCRIPT_ADDRESS_PREFIX):
+        if testnet:
+            if address[0] not in (TESTNET_ADDRESS_PREFIX,
+                                  TESTNET_ADDRESS_PREFIX_2,
+                                  TESTNET_SCRIPT_ADDRESS_PREFIX):
+                return False
+        else:
+            if address[0] not in (MAINNET_ADDRESS_PREFIX,
+                                  MAINNET_SCRIPT_ADDRESS_PREFIX):
+                return False
+        h = decode_base58(address)
+        if len(h) != 25:  return False
+        checksum = h[-4:]
+        if double_sha256(h[:-4])[:4] != checksum:
             return False
-    h = decode_base58(addr)
-    if len(h) != 25:  return False
-    checksum = h[-4:]
-    if hashlib.sha256(hashlib.sha256(h[:-4]).digest()).digest()[:4] != checksum: return False
-    return True
+        return True
+    elif address[:2].lower() in (TESTNET_SEGWIT_ADDRESS_PREFIX,
+                                 MAINNET_SEGWIT_ADDRESS_PREFIX):
+        if len(address) not in (42, 62):
+            return False
+        prefix, payload = address.split('1')
+        upp = True if prefix[0].isupper() else False
+        for i in payload[1:]:
+            if upp:
+                if not i.isupper() or i not in base32charset_upcase:
+                    return False
+            else:
+              if i.isupper() or i not in base32charset:
+                return False
+        payload = payload.lower()
+        prefix  = prefix.lower()
+        if testnet:
+            if prefix != TESTNET_SEGWIT_ADDRESS_PREFIX:
+                return False
+            stripped_prefix = TESTNET_SEGWIT_ADDRESS_BYTE_PREFIX
+        else:
+            if prefix != MAINNET_SEGWIT_ADDRESS_PREFIX:
+                return False
+            stripped_prefix = MAINNET_SEGWIT_ADDRESS_BYTE_PREFIX
+        d = rebase_32_to_5(payload)
+        address_hash = d[:-6]
+        checksum = d[-6:]
+        checksum2 = bech32_polymod(stripped_prefix + address_hash + b"\x00" * 6)
+        checksum2 = rebase_8_to_5(checksum2.to_bytes(5, "big"))[2:]
+        if checksum != checksum2:
+            return False
+        return True
+
+
 
 
 #
