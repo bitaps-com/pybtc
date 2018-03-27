@@ -267,9 +267,9 @@ class Transaction():
         self.tx_fee = None
         self.version = version
         self.tx_in_count = len(tx_in)
-        self.tx_in = tx_in
-        self.tx_out_count = len (tx_out)
-        self.tx_out = tx_out
+        self.tx_in = list(tx_in)
+        self.tx_out_count = len(tx_out)
+        self.tx_out = list(tx_out)
         self.lock_time = lock_time
         if self.tx_in:
             self.coinbase = self.tx_in[0].coinbase
@@ -292,9 +292,11 @@ class Transaction():
                 self.data = i.pk_script.data
         for out in self.tx_out:
             self.total_outs_value += out.value
+        if not self.tx_in:
+            self.witness = list()
         if witness is None:
             self.witness = [Witness.deserialize(b"\x00") for i in range(len(tx_in))]
-        if hash is None:
+        if hash is None :
             self.recalculate_txid()
 
     def recalculate_txid(self):
@@ -310,6 +312,9 @@ class Transaction():
         self.size = len(t)
         self.vsize = math.ceil((self.size * 3 + self.size) / 4)
 
+    def txid(self):
+        return rh2s(self.hash)
+
     def add_input(self, tx_hash, output_number,
                   sequence = 0xffffffff,
                   sig_script = b"",
@@ -320,15 +325,67 @@ class Transaction():
         self.tx_in_count += 1
         self.recalculate_txid()
 
-    def add_output(self, amount, script):
+    def add_output_script(self, amount, script):
         if type(script)==str:
             script = unhexlify(script)
         self.tx_out.append(Output(amount,script))
         self.tx_out_count += 1
         self.recalculate_txid()
 
+    def add_output_address(self, amount, address, testnet = False):
+        assert is_address_valid(address, testnet)
+        output_type = address_type(address, True)
+        if output_type == 0:
+            self.add_P2PKH_output(amount, address)
+        elif output_type == 1:
+            self.add_P2SH_output(amount, address)
+        elif output_type == 5:
+            self.add_P2WPKH_output(amount, address)
+        elif output_type == 6:
+            self.add_P2WSH_output(amount, address)
+
+
+    def add_output_hash(self, amount, output_hash, output_type, witness_version = 0):
+        if type(output_type)==str:
+            output_type = SCRIPT_TYPES[output_type]
+        if output_hash == str:
+            output_hash = unhexlify(output_hash)
+        assert output_type in (0, 1, 5, 6)
+        if output_type == 0:
+            self.add_P2PKH_output(amount, output_hash)
+        elif output_type == 1:
+            self.add_P2SH_output(amount, output_hash)
+        elif output_type == 5:
+            self.add_P2WPKH_output(amount, output_hash, witness_version)
+        elif output_type == 6:
+            self.add_P2WSH_output(amount, output_hash, witness_version)
+
+
+    def add_P2WPKH_output(self, amount, p2wpkh_address, witness_version = 0):
+        if type(p2wpkh_address)==str:
+            assert address_type(p2wpkh_address) == 'P2WPKH'
+            witness_version = get_witness_version(p2wpkh_address)
+            p2wpkh_address = address2hash(p2wpkh_address)
+        assert len(p2wpkh_address) == 20
+        self.tx_out.append(Output(amount,
+                           bytes([witness_version]) + b'\x14' + p2wpkh_address))
+        self.tx_out_count += 1
+        self.recalculate_txid()
+
+    def add_P2WSH_output(self, amount, p2wsh_address, witness_version = 0):
+        if type(p2wsh_address)==str:
+            assert address_type(p2wsh_address) == 'P2WSH'
+            witness_version = get_witness_version(p2wsh_address)
+            p2wsh_address = address2hash(p2wsh_address)
+        assert len(p2wsh_address) == 32
+        self.tx_out.append(Output(amount,
+                           bytes([witness_version]) + b'\x20' + p2wsh_address))
+        self.tx_out_count += 1
+        self.recalculate_txid()
+
     def add_P2SH_output(self, amount, p2sh_address):
         if type(p2sh_address)==str:
+            assert address_type(p2sh_address) == 'P2SH'
             p2sh_address = decode_base58(p2sh_address)[1:-4]
         if len(p2sh_address) != 20:
             raise Exception("Invalid output hash160")
@@ -337,8 +394,10 @@ class Transaction():
         self.tx_out_count += 1
         self.recalculate_txid()
 
+
     def add_P2PKH_output(self, amount, p2pkh_address):
         if type(p2pkh_address)==str:
+            assert address_type(p2pkh_address) == 'P2PKH'
             p2pkh_address = decode_base58(p2pkh_address)[1:-4]
         if len(p2pkh_address) != 20:
             raise p2pkh_address("Invalid output hash160")
@@ -367,7 +426,8 @@ class Transaction():
         nouts = to_var_int(self.tx_out_count)
         outputs = []
         for number, i in enumerate(self.tx_out):
-            outputs.append(i.value.to_bytes(8,'little')+to_var_int(len(i.pk_script.raw))+i.pk_script.raw)
+            a = i.pk_script.raw
+            outputs.append(i.value.to_bytes(8,'little')+to_var_int(len(a))+a)
         marke_flag = b"\x00\x01" if segwit else b""
         witness = b""
         if segwit:
@@ -491,7 +551,7 @@ class Transaction():
         return double_sha256(preimage) if not hex else hexlify(double_sha256(preimage)).decode()
 
 
-    def json(self):
+    def json(self, testnet = False):
         r = dict()
         r["txid"] = rh2s(self.hash)
         r["wtxid"] = r["txid"] if self.whash is None else rh2s(self.whash)
@@ -519,6 +579,18 @@ class Transaction():
                    "scriptPubKey": {"hex": hexlify(o.pk_script.raw).decode()},
                                     "asm": o.pk_script.asm,
                                     "type": o.pk_script.type}
+            if self.witness is not None:
+                out["witnessVersion"] = o.pk_script.witness_version
+            out["address"] = []
+            sh = False
+            if o.pk_script.ntype in (1,6):
+                sh =True
+            for a in o.pk_script.address:
+                out["address"].append(hash2address(a,
+                                                   testnet=testnet,
+                                                   script_hash= sh,
+                                                   witness_version=o.pk_script.witness_version))
+
             r["vout"].append(out)
 
         return json.dumps(r)

@@ -165,6 +165,11 @@ def address2hash(address, hex = False):
     else:
         return h
 
+def get_witness_version(address):
+    address = address.split("1")[1]
+    h = rebase_32_to_5(address)
+    return h[0]
+
 def address_type(address, num = False):
     if address[0] in (TESTNET_SCRIPT_ADDRESS_PREFIX,
                       MAINNET_SCRIPT_ADDRESS_PREFIX):
