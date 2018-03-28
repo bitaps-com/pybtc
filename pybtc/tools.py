@@ -34,7 +34,7 @@ def priv_from_int(k):
     return int.to_bytes(k,byteorder="big",length=32)
 
 
-def priv2WIF(h, compressed = False, testnet = False):
+def priv2WIF(h, compressed = True, testnet = False):
     #uncompressed: 0x80 + [32-byte secret] + [4 bytes of Hash() of previous 33 bytes], base58 encoded
     #compressed: 0x80 + [32-byte secret] + 0x01 + [4 bytes of Hash() previous 34 bytes], base58 encoded
     if type(h) == str:
@@ -213,13 +213,19 @@ def address2script(address):
         return OPCODE["OP_0"] + bytes([len(h)]) + h
     raise Exception("Unknown address")
 
+def script_P2SH_P2WPKH(pubkey, hash = False):
+    assert len(pubkey) == 33
+    if hash:
+        return hash160(b'\x00\x14' + hash160(pubkey))
+    return b'\x00\x14' + hash160(pubkey)
+
 
 def pub2address(pubkey, testnet = False,
-                inside_p2sh = False,
+                p2sh_p2wpkh = False,
                 witness_version = 0):
     if type(pubkey) == str:
         pubkey = unhexlify(pubkey)
-    if inside_p2sh:
+    if p2sh_p2wpkh:
         assert len(pubkey) == 33
         h = hash160(b'\x00\x14' + hash160(pubkey))
     else:
@@ -227,7 +233,7 @@ def pub2address(pubkey, testnet = False,
             assert len(pubkey) == 33
         h = hash160(pubkey)
     return hash2address(h, testnet = testnet,
-                           script_hash = inside_p2sh,
+                           script_hash = p2sh_p2wpkh,
                            witness_version = witness_version)
 
 # def pub2P2SH_P2WPKH_hash(pubkey):

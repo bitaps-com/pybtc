@@ -592,11 +592,11 @@ class BlockDeserializeTests(unittest.TestCase):
         block = blockchain.Block.deserialize(block_e)
 
 
-        print(">>>",block.bits)
-        print(">>>",block.hash)
-        print(">>>",block.timestamp)
-        target = int.from_bytes(block.bits[1:], 'big') * (2 ** (8 * (block.bits[0] - 3)))
-        print(int.from_bytes(block.hash, 'big')<target)
+        # print(">>>",block.bits)
+        # print(">>>",block.hash)
+        # print(">>>",block.timestamp)
+        # target = int.from_bytes(block.bits[1:], 'big') * (2 ** (8 * (block.bits[0] - 3)))
+        # print(int.from_bytes(block.hash, 'big')<target)
 
         # print(rh2s(block.transactions[0].hash))
         # cbm = block.coinbase

@@ -106,7 +106,7 @@ class AddressFunctionsTests(unittest.TestCase):
         self.assertEqual(tools.pub2address(pc, witness_version=None, testnet=1), "mvNyptwisQTmwL3vN8VMaVUrA3swVCX83c")
         p = "L32a8Mo1LgvjrVDbzcc3NkuUfkpoLsf2Y2oEWkV4t1KpQdFzuyff"
         pk = tools.priv2pub(p)
-        self.assertEqual(tools.pub2address(pk, inside_p2sh=1,witness_version=None), "33am12q3Bncnn3BfvLYHczyv23Sq2Wbwjw")
+        self.assertEqual(tools.pub2address(pk, p2sh_p2wpkh=1,witness_version=None), "33am12q3Bncnn3BfvLYHczyv23Sq2Wbwjw")
 
     def test_is_address_valid(self):
         self.assertEqual(tools.is_address_valid("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4"), 1)

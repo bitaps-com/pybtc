@@ -1,7 +1,7 @@
 import unittest
 from pybtc import blockchain
 from binascii import unhexlify
-from pybtc import address2hash  as address2hash160
+from pybtc import address2hash
 
 
 class ScriptDeserializeTests(unittest.TestCase):
@@ -14,7 +14,7 @@ class ScriptDeserializeTests(unittest.TestCase):
         self.assertEqual(s.type, "P2PKH")
         self.assertEqual(s.ntype, 0)
         self.assertEqual(s.asm, "OP_DUP OP_HASH160 3520dd524f6ca66f63182bb23efff6cc8ee3ee63 OP_EQUALVERIFY OP_CHECKSIG")
-        self.assertEqual(s.address[0], address2hash160("15qvBdqSWQCuLQPXVoWViG2GvjeARmpYPw"))
+        self.assertEqual(s.address[0], address2hash("15qvBdqSWQCuLQPXVoWViG2GvjeARmpYPw"))
         self.assertEqual(s.pattern, "OP_DUP OP_HASH160 <20> OP_EQUALVERIFY OP_CHECKSIG")
         self.assertEqual(s.op_sig_count, 1)
 
@@ -24,7 +24,7 @@ class ScriptDeserializeTests(unittest.TestCase):
         self.assertEqual(s.type, "P2SH")
         self.assertEqual(s.ntype, 1)
         self.assertEqual(s.asm, "OP_HASH160 69f37572ab1b69f304f987b119e2450e0b71bf5c OP_EQUAL")
-        self.assertEqual(s.address[0], address2hash160("3BMEXVsYyfKB5h3m53XRSFHkqi1zPwsvcK"))
+        self.assertEqual(s.address[0], address2hash("3BMEXVsYyfKB5h3m53XRSFHkqi1zPwsvcK"))
         self.assertEqual(s.pattern, "OP_HASH160 <20> OP_EQUAL")
         self.assertEqual(s.op_sig_count, 0)
 
