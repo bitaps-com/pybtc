@@ -200,6 +200,12 @@ class Input:
         sequence = int.from_bytes(stream.read(4), 'little')
         return cls(outpoint, script, sequence)
 
+    def serialize(self):
+        return  self.outpoint[0] + self.outpoint[1].to_bytes(4, 'little') \
+                + to_var_int(len(self.sig_script.raw)) + self.sig_script.raw \
+                + self.sequence.to_bytes(4, 'little')
+
+
 
 class Output:
     """ Transactin output class """
@@ -418,11 +424,11 @@ class Transaction():
         version = self.version.to_bytes(4,'little')
         ninputs = to_var_int(self.tx_in_count)
         inputs = []
-        for number, i in enumerate(self.tx_in):
-            input = i.outpoint[0]+i.outpoint[1].to_bytes(4,'little')
-            input += to_var_int(len(i.sig_script.raw)) + i.sig_script.raw
-            input += i.sequence.to_bytes(4,'little')
-            inputs.append(input)
+        for i in self.tx_in:
+            # input = i.outpoint[0]+i.outpoint[1].to_bytes(4,'little')
+            # input += to_var_int(len(i.sig_script.raw)) + i.sig_script.raw
+            # input += i.sequence.to_bytes(4,'little')
+            inputs.append(i.serialize())
         nouts = to_var_int(self.tx_out_count)
         outputs = []
         for number, i in enumerate(self.tx_out):
