@@ -228,6 +228,7 @@ def pub2address(pubkey, testnet = False,
     if p2sh_p2wpkh:
         assert len(pubkey) == 33
         h = hash160(b'\x00\x14' + hash160(pubkey))
+        witness_version = None
     else:
         if witness_version is not None:
             assert len(pubkey) == 33
