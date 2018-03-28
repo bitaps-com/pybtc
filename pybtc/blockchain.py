@@ -213,6 +213,11 @@ class Output:
         self.value = value
         self.pk_script = Script(script)
 
+    def serialize(self):
+        return i.value.to_bytes(8,'little') \
+               + to_var_int(len(self.pk_script.raw)) + self.pk_script.raw
+
+
     @classmethod
     def deserialize(cls, stream):
         stream = get_stream(stream)
@@ -423,17 +428,9 @@ class Transaction():
     def serialize(self, segwit = True, hex = False):
         version = self.version.to_bytes(4,'little')
         ninputs = to_var_int(self.tx_in_count)
-        inputs = []
-        for i in self.tx_in:
-            # input = i.outpoint[0]+i.outpoint[1].to_bytes(4,'little')
-            # input += to_var_int(len(i.sig_script.raw)) + i.sig_script.raw
-            # input += i.sequence.to_bytes(4,'little')
-            inputs.append(i.serialize())
-        nouts = to_var_int(self.tx_out_count)
-        outputs = []
-        for number, i in enumerate(self.tx_out):
-            a = i.pk_script.raw
-            outputs.append(i.value.to_bytes(8,'little')+to_var_int(len(a))+a)
+        inputs = [i.serialize() for i in self.tx_in]
+        nouts = to_var_int(len(self.tx_out))
+        outputs = [o.serialize() for o in self.tx_out]
         marke_flag = b"\x00\x01" if segwit else b""
         witness = b""
         if segwit:
