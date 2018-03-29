@@ -274,7 +274,10 @@ def is_address_valid(address, testnet = False):
                                  MAINNET_SEGWIT_ADDRESS_PREFIX):
         if len(address) not in (42, 62):
             return False
-        prefix, payload = address.split('1')
+        try:
+            prefix, payload = address.split('1')
+        except:
+            return False
         upp = True if prefix[0].isupper() else False
         for i in payload[1:]:
             if upp:
