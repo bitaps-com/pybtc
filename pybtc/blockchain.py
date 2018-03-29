@@ -214,7 +214,7 @@ class Output:
         self.pk_script = Script(script)
 
     def serialize(self):
-        return i.value.to_bytes(8,'little') \
+        return self.value.to_bytes(8,'little') \
                + to_var_int(len(self.pk_script.raw)) + self.pk_script.raw
 
 
