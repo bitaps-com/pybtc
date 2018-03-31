@@ -890,3 +890,16 @@ class BlockTemplate():
                 self.bits,
                 self.time,
                 clean_jobs]
+
+    def submit_job(self, extra_nonce_1, extra_nonce_2, nonce, time):
+        version = s2rh(self.version)
+        prev_hash = s2rh_step4(self.previous_block_hash)
+        cb = self.coinb1 + extra_nonce_1 + extra_nonce_2 + self.coinb2
+        time = s2rh(time)
+        bits = s2rh(self.bits)
+        nonce = s2rh(nonce)
+        cbh = double_sha256(unhexlify(cb))
+        merkle_root = merkleroot_from_branches(self.merkle_branches, cbh)
+        header = version + prev_hash + merkle_root + time + bits + nonce
+        return double_sha256(header,1)
+
