@@ -901,5 +901,9 @@ class BlockTemplate():
         cbh = double_sha256(unhexlify(cb))
         merkle_root = merkleroot_from_branches(self.merkle_branches, cbh)
         header = version + prev_hash + merkle_root + time + bits + nonce
-        return double_sha256(header,1)
+        block = hexlify(header)
+        block += cb
+        for t in self.transactions:
+            block += t["data"]
+        return double_sha256(header,1), block
 
