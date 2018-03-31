@@ -447,11 +447,32 @@ def is_valid_signature_encoding(sig):
 # Transaction encoding
 #
 
+def bits2target(bits):
+    if type(bits) == str:
+        bits = unhexlify(bits)
+    return int.from_bytes(bits[1:], 'big') * (2 ** (8 * (bits[0] - 3)))
+
+def target2diff(target):
+    return 0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target
+
+def bits2diff(bits):
+    return target2diff(bits2target(bits))
+
+
 def rh2s(tthash):
     return hexlify(tthash[::-1]).decode()
 
 def s2rh(hash_string):
     return unhexlify(hash_string)[::-1]
+
+def s2rh_step4(hash_string):
+    h = unhexlify(hash_string)
+    return reverse_hash(h)
+
+def reverse_hash(h):
+    return struct.pack('>IIIIIIII', *struct.unpack('>IIIIIIII', h)[::-1])[::-1]
+
+
 
 def merkleroot(tx_hash_list):
     tx_hash_list = list(tx_hash_list)
@@ -496,7 +517,13 @@ def merkle_branches(tx_hash_list):
                 branches.append(new_hash_list.pop(0))
             return branches
 
-
+def merkleroot_from_branches(merkle_branches, coinbase_hash_bin):
+    merkle_root = coinbase_hash_bin
+    for h in merkle_branches:
+        if type(h) == str:
+            h = unhexlify(h)
+        merkle_root = double_sha256(merkle_root + h)
+    return merkle_root
 #
 #
 #

@@ -747,7 +747,7 @@ class Block():
         len_coinbase = len(self.transactions[0].tx_in[0].sig_script.raw)
         if extranonce_start < 0:
             extranonce_start = len_coinbase + extranonce_start
-        return tx[:44 + extranonce_start], tx[44+ len_coinbase:]
+        return tx[:44 + extranonce_start], tx[44 + extranonce_start + extranonce_size:]
 
 
     @classmethod
@@ -787,5 +787,106 @@ class Block():
             return hexlify(block).decode()
         else:
             return block
-# class BlockTemplate():
-#     def __init__(self, data):
+
+
+class BlockTemplate():
+    def __init__(self, data, coinbase_output_address, testnet = False, coinbase_message = "",
+                 extranonce1 = "00000000",
+                 extranonce1_size = 4,
+                 extranonce2_size = 4):
+        self.testnet = testnet
+        self.version = hexlify(data["version"].to_bytes(4, "big")).decode()
+        self.previous_block_hash = hexlify(reverse_hash(s2rh(data["previousblockhash"]))).decode()
+        self.time = hexlify(data["curtime"].to_bytes(4, "big")).decode()
+        self.bits = data["bits"]
+        self.height = data["height"]
+        self.block_reward = 50 * 100000000 >> data["height"] // 210000
+        self.coinbasevalue = self.block_reward
+        self.extranonce1 = extranonce1
+        self.extranonce1_size = extranonce1_size
+        self.extranonce2 = "00000000"
+        self.extranonce2_size = extranonce2_size
+        self.coinbase_output_address = coinbase_output_address
+        self.sigoplimit = data["sigoplimit"]
+        self.weightlimit = data["weightlimit"]
+        self.sigop= 0
+        self.weight = 0
+        if type(coinbase_message) == bytes:
+            coinbase_message = hexlify(coinbase_message).decode()
+        self.coinbase_message = coinbase_message
+
+        self.transactions = list(data["transactions"])
+        self.txid_list = list()
+        self.scan_tx_list()
+        self.coinbase_tx = self.create_coinbase_transaction()
+        self.coinb1, self.coinb2 = self.split_coinbase()
+        self.target = bits2target(self.bits)
+        self.difficulty = target2diff(self.target)
+        self.merkle_branches = [hexlify(i).decode() for i in merkle_branches([self.coinbase_tx.hash,] + self.txid_list)]
+
+
+    def scan_tx_list(self):
+        self.coinbasevalue = self.block_reward
+        self.sigop = 0
+        self.weight = 0
+        self.txid_list = list()
+        for tx in self.transactions:
+            txid = s2rh(tx["txid"])
+            self.coinbasevalue += tx["fee"]
+            self.weight += tx["weight"]
+            self.sigop += tx["sigops"]
+            self.txid_list.append(txid)
+
+    def calculate_commitment(self, witness):
+        wtxid_list = [b"\x00" * 32,]
+        if self.transactions:
+            for tx in self.transactions:
+                wtxid_list.append(s2rh(tx["hash"]))
+        return double_sha256(merkleroot(wtxid_list) + witness)
+
+    def split_coinbase(self):
+        tx = self.coinbase_tx.serialize()
+        len_coinbase = len(self.coinbase_tx.tx_in[0].sig_script.raw)
+        return hexlify(tx[:44 + len_coinbase]).decode(),\
+               hexlify(tx[44 + len_coinbase:]).decode()
+
+
+    def create_coinbase_transaction(self):
+        tx = Transaction(version = 1,tx_in = [], tx_out = [], witness= [])
+        coinbase = b'\x03' + self.height.to_bytes(4,'little') + unhexlify(self.coinbase_message)
+        assert len(coinbase) <= 100 - self.extranonce1_size - self.extranonce2_size
+        tx.tx_in = [Input((b'\x00'*32 ,0xffffffff), coinbase, 0xffffffff)]
+        tx.witness = [Witness([b'\x00'*32])]
+        commitment = self.calculate_commitment(tx.witness[0].witness[0])
+        tx.add_output_address(self.coinbasevalue, self.coinbase_output_address, self.testnet)
+        tx.add_output_script(0, b'j$\xaa!\xa9\xed' + commitment)
+        tx.coinbase = True
+        tx.recalculate_txid()
+        return tx
+
+    def get_job(self, job_id, clean_jobs = True):
+        """
+        job_id - ID of the job. Use this ID while submitting share generated from this job.
+        prevhash - Hash of previous block.
+        coinb1 - Initial part of coinbase transaction.
+        coinb2 - Final part of coinbase transaction.
+        merkle_branch - List of hashes, will be used for calculation of merkle root. This is not a list of all 
+        transactions, it only contains prepared hashes of steps of merkle tree algorithm. Please read some 
+        materials for understanding how merkle trees calculation works. 
+        version - Bitcoin block version.
+        nbits - Encoded current network difficulty
+        ntime - Current ntime/
+        clean_jobs - When true, server indicates that submitting shares from previous jobs don't have a 
+        sense and such shares will be rejected. When this flag is set, miner should also drop all previous
+         jobs, so job_ids can be eventually rotated.
+
+        """
+        return [job_id,
+                self.previous_block_hash,
+                self.coinb1,
+                self.coinb2,
+                self.merkle_branches,
+                self.version,
+                self.bits,
+                self.time,
+                clean_jobs]
