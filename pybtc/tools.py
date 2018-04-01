@@ -500,12 +500,10 @@ def merkleroot(tx_hash_list):
             return new_hash_list[0]
 
 def merkle_branches(tx_hash_list):
-    if not tx_hash_list:
-        return []
     tx_hash_list = list(tx_hash_list)
     branches = []
     if len(tx_hash_list) == 1:
-        return tx_hash_list
+        return []
     tx_hash_list.pop(0)
     while True:
         branches.append(tx_hash_list.pop(0))
