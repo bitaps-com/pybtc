@@ -450,14 +450,21 @@ def is_valid_signature_encoding(sig):
 def bits2target(bits):
     if type(bits) == str:
         bits = unhexlify(bits)
-    return int.from_bytes(bits[1:], 'big') * (2 ** (8 * (bits[0] - 3)))
+    if type(bits) == bytes:
+        return int.from_bytes(bits[1:], 'big') * (2 ** (8 * (bits[0] - 3)))
+    else:
+        shift = bits >> 24
+        target = (bits & 0xffffff) * (1 << (8 * (shift - 3)))
+        return target
 
-def target2diff(target):
+def target2difficulty(target):
     return 0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target
 
-def bits2diff(bits):
-    return target2diff(bits2target(bits))
+def bits2difficulty(bits):
+    return target2difficulty(bits2target(bits))
 
+def difficulty2target(difficulty):
+    return int(0x00000000FFFF0000000000000000000000000000000000000000000000000000 / difficulty)
 
 def rh2s(tthash):
     return hexlify(tthash[::-1]).decode()

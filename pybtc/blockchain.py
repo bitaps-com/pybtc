@@ -902,6 +902,7 @@ class BlockTemplate():
         nonce = s2rh(nonce)
         cbh = double_sha256(unhexlify(cb))
         merkle_root = merkleroot_from_branches(self.merkle_branches, cbh)
+        print("merkle_root ", hexlify(merkle_root))
         header = version + prev_hash + merkle_root + time + bits + nonce
         block = hexlify(header).decode()
         block += hexlify(to_var_int(len (self.transactions)+1)).decode()
