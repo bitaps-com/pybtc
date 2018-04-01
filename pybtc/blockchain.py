@@ -821,7 +821,7 @@ class BlockTemplate():
         self.coinbase_tx = self.create_coinbase_transaction()
         self.coinb1, self.coinb2 = self.split_coinbase()
         self.target = bits2target(self.bits)
-        self.difficulty = target2diff(self.target)
+        self.difficulty = target2difficulty(self.target)
         self.merkle_branches = [hexlify(i).decode() for i in merkle_branches([self.coinbase_tx.hash,] + self.txid_list)]
 
 
