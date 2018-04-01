@@ -902,6 +902,7 @@ class BlockTemplate():
         merkle_root = merkleroot_from_branches(self.merkle_branches, cbh)
         header = version + prev_hash + merkle_root + time + bits + nonce
         block = hexlify(header).decode()
+        block += to_var_int(len (self.transactions)+1)
         block += cb
         for t in self.transactions:
             block += t["data"]
