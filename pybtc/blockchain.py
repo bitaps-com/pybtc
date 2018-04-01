@@ -847,14 +847,16 @@ class BlockTemplate():
     def split_coinbase(self):
         tx = self.coinbase_tx.serialize()
         len_coinbase = len(self.coinbase_tx.tx_in[0].sig_script.raw)
-        return hexlify(tx[:44 + len_coinbase]).decode(),\
+        extranonce_len = self.extranonce1_size + self.extranonce2_size
+        return hexlify(tx[:44 + len_coinbase - extranonce_len]).decode(),\
                hexlify(tx[44 + len_coinbase:]).decode()
 
 
     def create_coinbase_transaction(self):
         tx = Transaction(version = 1,tx_in = [], tx_out = [], witness= [])
         coinbase = b'\x03' + self.height.to_bytes(4,'little') + unhexlify(self.coinbase_message)
-        assert len(coinbase) <= 100 - self.extranonce1_size - self.extranonce2_size
+        coinbase += b"\x00" * (self.extranonce1_size + self.extranonce2_size)
+        assert len(coinbase) <= 100
         tx.tx_in = [Input((b'\x00'*32 ,0xffffffff), coinbase, 0xffffffff)]
         tx.witness = [Witness([b'\x00'*32])]
         commitment = self.calculate_commitment(tx.witness[0].witness[0])
