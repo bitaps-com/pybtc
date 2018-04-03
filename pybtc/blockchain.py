@@ -845,11 +845,11 @@ class BlockTemplate():
         return double_sha256(merkleroot(wtxid_list) + witness)
 
     def split_coinbase(self):
-        tx = self.coinbase_tx.serialize()
+        tx = self.coinbase_tx.serialize(segwit=0)
         len_coinbase = len(self.coinbase_tx.tx_in[0].sig_script.raw)
         extranonce_len = self.extranonce1_size + self.extranonce2_size
-        return hexlify(tx[:44 + len_coinbase - extranonce_len]).decode(),\
-               hexlify(tx[44 + len_coinbase:]).decode()
+        return hexlify(tx[:42 + len_coinbase - extranonce_len]).decode(),\
+               hexlify(tx[42 + len_coinbase:]).decode()
 
 
     def create_coinbase_transaction(self):
@@ -903,7 +903,7 @@ class BlockTemplate():
         cbh = double_sha256(unhexlify(cb))
         merkle_root = merkleroot_from_branches(self.merkle_branches, cbh)
         print("merkle_root ", hexlify(merkle_root))
-        print("branches ", hexlify(merkle_root))
+        print("branches ", self.merkle_branches)
         print(self.transactions)
         print(cb)
         header = version + prev_hash + merkle_root + time + bits + nonce
