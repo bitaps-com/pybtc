@@ -912,3 +912,15 @@ class BlockTemplate():
             block += t["data"]
         return double_sha256(header,1), block
 
+    def build_orphan(self, hash, ntime):
+        self.previous_block_hash = hexlify(reverse_hash(s2rh(hash))).decode()
+        self.time = hexlify(ntime.to_bytes(4, "big")).decode()
+        self.height += 1
+        self.transactions = list()
+        self.txid_list = list()
+        self.scan_tx_list()
+        self.coinbase_tx = self.create_coinbase_transaction()
+        self.coinb1, self.coinb2 = self.split_coinbase()
+        self.target = bits2target(self.bits)
+        self.difficulty = target2difficulty(self.target)
+        self.merkle_branches = [hexlify(i).decode() for i in merkle_branches([self.coinbase_tx.hash, ] + self.txid_list)]
