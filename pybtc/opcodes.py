@@ -1,148 +1,155 @@
+from binascii import hexlify
 
-OPCODE = {"OP_0": b'\x00',
-          "OP_PUSHDATA1": b'L',
-          "OP_PUSHDATA2": b'M',
-          "OP_PUSHDATA4": b'N',
-          "OP_1NEGATE": b'O',
-          "OP_RESERVED": b'P',
-          "OP_1": b'Q',
-          "OP_2": b'R',
-          "OP_3": b'S',
-          "OP_4": b'T',
-          "OP_5": b'U',
-          "OP_6": b'V',
-          "OP_7": b'W',
-          "OP_8": b'X',
-          "OP_9": b'Y',
-          "OP_10": b'Z',
-          "OP_11": b'[',
-          "OP_12": b'\\',
-          "OP_13": b']',
-          "OP_14": b'^',
-          "OP_15": b'_',
-          "OP_16": b'`',
-          "OP_NOP": b'a',
-          "OP_VER": b'b',
-          "OP_IF": b'c',
-          "OP_NOTIF": b'd',
-          "OP_VERIF": b'e',
-          "OP_VERNOTIF": b'f',
-          "OP_ELSE": b'g',
-          "OP_ENDIF": b'h',
-          "OP_VERIFY": b'i',
-          "OP_RETURN": b'j',
-          "OP_TOALTSTACK": b'k',
-          "OP_FROMALTSTACK": b'l',
-          "OP_2DROP": b'm',
-          "OP_2DUP": b'n',
-          "OP_3DUP": b'o',
-          "OP_2OVER": b'p',
-          "OP_2ROT": b'q',
-          "OP_2SWAP": b'r',
-          "OP_IFDUP": b's',
-          "OP_DEPTH": b't',
-          "OP_DROP": b'u',
-          "OP_DUP": b'v',
-          "OP_NIP": b'w',
-          "OP_OVER": b'x',
-          "OP_PICK": b'y',
-          "OP_ROLL": b'z',
-          "OP_ROT": b'{',
-          "OP_SWAP": b'|',
-          "OP_TUCK": b'}',
-          "OP_CAT": b'~',
-          "OP_SUBSTR": b'\x7f',
-          "OP_LEFT": b'\x80',
-          "OP_RIGHT": b'\x81',
-          "OP_SIZE": b'\x82',
-          "OP_INVERT": b'\x83',
-          "OP_AND": b'\x84',
-          "OP_OR": b'\x85',
-          "OP_XOR": b'\x86',
-          "OP_EQUAL": b'\x87',
-          "OP_EQUALVERIFY": b'\x88',
-          "OP_RESERVED1": b'\x89',
-          "OP_RESERVED2": b'\x8a',
-          "OP_1ADD": b'\x8b',
-          "OP_1SUB": b'\x8c',
-          "OP_2MUL": b'\x8d',
-          "OP_2DIV": b'\x8e',
-          "OP_NEGATE": b'\x8f',
-          "OP_ABS": b'\x90',
-          "OP_NOT": b'\x91',
-          "OP_0NOTEQUAL": b'\x92',
-          "OP_ADD": b'\x93',
-          "OP_SUB": b'\x94',
-          "OP_MUL": b'\x95',
-          "OP_DIV": b'\x96',
-          "OP_MOD": b'\x97',
-          "OP_LSHIFT": b'\x98',
-          "OP_RSHIFT": b'\x99',
-          "OP_BOOLAND": b'\x9a',
-          "OP_BOOLOR": b'\x9b',
-          "OP_NUMEQUAL": b'\x9c',
-          "OP_NUMEQUALVERIFY": b'\x9d',
-          "OP_NUMNOTEQUAL": b'\x9e',
-          "OP_LESSTHAN": b'\x9f',
-          "OP_GREATERTHAN": b'\xa0',
-          "OP_LESSTHANOREQUAL": b'\xa1',
-          "OP_GREATERTHANOREQUAL": b'\xa2',
-          "OP_MIN": b'\xa3',
-          "OP_MAX": b'\xa4',
-          "OP_WITHIN": b'\xa5',
-          "OP_RIPEMD160": b'\xa6',
-          "OP_SHA1": b'\xa7',
-          "OP_SHA256": b'\xa8',
-          "OP_HASH160": b'\xa9',
-          "OP_HASH256": b'\xaa',
-          "OP_CODESEPARATOR": b'\xab',
-          "OP_CHECKSIG": b'\xac',
-          "OP_CHECKSIGVERIFY": b'\xad',
-          "OP_CHECKMULTISIG": b'\xae',
-          "OP_CHECKMULTISIGVERIFY": b'\xaf',
-          "OP_NOP1": b'\xb0',
-          "OP_NOP2": b'\xb1',
-          "OP_NOP3": b'\xb2',
-          "OP_NOP4": b'\xb3',
-          "OP_NOP5": b'\xb4',
-          "OP_NOP6": b'\xb5',
-          "OP_NOP7": b'\xb6',
-          "OP_NOP8": b'\xb7',
-          "OP_NOP9": b'\xb8',
-          "OP_NOP10": b'\xb9',
-          "OP_NULLDATA": b'\xfc',
-          "OP_PUBKEYHASH": b'\xfd',
-          "OP_PUBKEY": b'\xfe',
-          "OP_INVALIDOPCODE": b'\xff'}
+OPCODE = dict()
+
+# push opcodes
+
+OPCODE["OP_FALSE"] = 0x00
+OPCODE["OP_0"] = 0x00
+OPCODE["OP_PUSHDATA1"] = 0x4c
+OPCODE["OP_PUSHDATA2"] = 0x4d
+OPCODE["OP_PUSHDATA4"] = 0x4e
+OPCODE["OP_1NEGATE"] = 0x4f
+OPCODE["OP_RESERVED"] = 0x50
+OPCODE["OP_1"] = 0x51
+OPCODE["OP_TRUE"] = 0x51
+OPCODE["OP_2"] = 0x52
+OPCODE["OP_3"] = 0x53
+OPCODE["OP_4"] = 0x54
+OPCODE["OP_5"] = 0x55
+OPCODE["OP_6"] = 0x56
+OPCODE["OP_7"] = 0x57
+OPCODE["OP_8"] = 0x58
+OPCODE["OP_9"] = 0x59
+OPCODE["OP_10"] = 0x5a
+OPCODE["OP_11"] = 0x5b
+OPCODE["OP_12"] = 0x5c
+OPCODE["OP_13"] = 0x5d
+OPCODE["OP_14"] = 0x5e
+OPCODE["OP_15"] = 0x5f
+OPCODE["OP_16"] = 0x60
+
+# control
+
+OPCODE["OP_NOP"] = 0x61
+OPCODE["OP_VER"] = 0x62
+OPCODE["OP_IF"] = 0x63
+OPCODE["OP_NOTIF"] = 0x64
+OPCODE["OP_VERIF"] = 0x65
+OPCODE["OP_ELSE"] = 0x67
+OPCODE["OP_ENDIF"] = 0x68
+OPCODE["OP_VERIFY"] = 0x69
+OPCODE["OP_RETURN"] = 0x6a
+
+# stack
+
+OPCODE["OP_TOALTSTACK"] = 0x6b
+OPCODE["OP_FROMALTSTACK"] = 0x6c
+OPCODE["OP_2DROP"] = 0x6d
+OPCODE["OP_2DUP"] = 0x6e
+OPCODE["OP_3DUP"] = 0x6f
+OPCODE["OP_2OVER"] = 0x70
+OPCODE["OP_2ROT"] = 0x71
+OPCODE["OP_2SWAP"] = 0x72
+OPCODE["OP_IFDUP"] = 0x73
+OPCODE["OP_DEPTH"] = 0x74
+OPCODE["OP_DROP"] = 0x75
+OPCODE["OP_DUP"] = 0x76
+OPCODE["OP_NIP"] = 0x77
+OPCODE["OP_OVER"] = 0x78
+OPCODE["OP_PICK"] = 0x79
+OPCODE["OP_ROLL"] = 0x7a
+OPCODE["OP_ROT"] = 0x7b
+OPCODE["OP_SWAP"] = 0x7c
+OPCODE["OP_TUCK"] = 0x7d
+
+# splice
+
+OPCODE["OP_CAT"] = 0x7e
+OPCODE["OP_SUBSTR"] = 0x7f
+OPCODE["OP_LEFT"] = 0x80
+OPCODE["OP_RIGHT"] = 0x81
+OPCODE["OP_SIZE"] = 0x82
+
+# bit operations
+
+OPCODE["OP_INVERT"] = 0x83
+OPCODE["OP_AND"] = 0x84
+OPCODE["OP_OR"] = 0x85
+OPCODE["OP_XOR"] = 0x86
+OPCODE["OP_EQUAL"] = 0x87
+OPCODE["OP_EQUALVERIFY"] = 0x88
+OPCODE["OP_RESERVED1"] = 0x89
+OPCODE["OP_RESERVED2"] = 0x8a
+
+# math
+
+OPCODE["OP_1ADD"] = 0x8b
+OPCODE["OP_1SUB"] = 0x8c
+OPCODE["OP_2MUL"] = 0x8d
+OPCODE["OP_2DIV"] = 0x8e
+OPCODE["OP_NEGATE"] = 0x8f
+OPCODE["OP_ABS"] = 0x90
+OPCODE["OP_NOT"] = 0x91
+OPCODE["OP_0NOTEQUAL"] = 0x92
+
+OPCODE["OP_ADD"] = 0x93
+OPCODE["OP_SUB"] = 0x94
+OPCODE["OP_MUL"] = 0x95
+OPCODE["OP_DIV"] = 0x96
+OPCODE["OP_MOD"] = 0x97
+OPCODE["OP_LSHIFT"] = 0x98
+OPCODE["OP_RSHIFT"] = 0x99
+
+OPCODE["OP_BOOLAND"] = 0x9a
+OPCODE["OP_BOOLOR"] = 0x9b
+OPCODE["OP_NUMEQUAL"] = 0x9c
+OPCODE["OP_NUMEQUALVERIFY"] = 0x9d
+OPCODE["OP_NUMNOTEQUAL"] = 0x9e
+OPCODE["OP_LESSTHAN"] = 0x9f
+OPCODE["OP_GREATERTHAN"] = 0xa0
+OPCODE["OP_LESSTHANOREQUAL"] = 0xa1
+OPCODE["OP_GREATERTHANOREQUAL"] = 0xa2
+OPCODE["OP_MIN"] = 0xa3
+OPCODE["OP_MAX"] = 0xa4
+
+OPCODE["OP_WITHIN"] = 0xa5
+
+# crypto
+
+OPCODE["OP_RIPEMD160"] = 0xa6
+OPCODE["OP_SHA1"] = 0xa7
+OPCODE["OP_SHA256"] = 0xa8
+OPCODE["OP_HASH160"] = 0xa9
+OPCODE["OP_HASH256"] = 0xaa
+OPCODE["OP_CODESEPARATOR"] = 0xab
+OPCODE["OP_CHECKSIG"] = 0xac
+OPCODE["OP_CHECKSIGVERIFY"] = 0xad
+OPCODE["OP_CHECKMULTISIG"] = 0xae
+OPCODE["OP_CHECKMULTISIGVERIFY"] = 0xaf
+
+# expansion
+
+OPCODE["OP_NOP1"] = 0xb0
+OPCODE["OP_CHECKLOCKTIMEVERIFY"] = 0xb1
+OPCODE["OP_CHECKSEQUENCEVERIFY"] = 0xb2
+OPCODE["OP_NOP4"] = 0xb3
+OPCODE["OP_NOP5"] = 0xb4
+OPCODE["OP_NOP6"] = 0xb5
+OPCODE["OP_NOP7"] = 0xb6
+OPCODE["OP_NOP8"] = 0xb7
+OPCODE["OP_NOP9"] = 0xb8
+OPCODE["OP_NOP10"] = 0xb9
+
+# template matching params
+
+OPCODE["OP_SMALLINTEGER"] = 0xfa
+OPCODE["OP_PUBKEYS"] = 0xfb
+OPCODE["OP_PUBKEYHASH"] = 0xfd
+OPCODE["OP_PUBKEY"] = 0xfe
+OPCODE["OP_INVALIDOPCODE"] = 0xff
+
 
 RAW_OPCODE = dict ( (OPCODE[i], i)  for i in OPCODE   )
-
-DISABLED_OPCODE = set ((
-           # OPCODE["OP_RETURN"],
-           OPCODE["OP_CAT"],
-           OPCODE["OP_SUBSTR"],
-           OPCODE["OP_LEFT"],
-           OPCODE["OP_RIGHT"],
-           OPCODE["OP_LEFT"],
-           OPCODE["OP_LEFT"],
-           OPCODE["OP_AND"],
-           OPCODE["OP_OR"],
-           OPCODE["OP_XOR"],
-           OPCODE["OP_2MUL"],
-           OPCODE["OP_2DIV"],
-           OPCODE["OP_MUL"],
-           OPCODE["OP_DIV"],
-           OPCODE["OP_MOD"],
-           OPCODE["OP_LSHIFT"],
-           OPCODE["OP_RSHIFT"],
-           OPCODE["OP_RESERVED"],
-           # OPCODE["OP_VER"],
-           OPCODE["OP_VERIF"],
-           OPCODE["OP_VERNOTIF"],
-           OPCODE["OP_RESERVED1"],
-           OPCODE["OP_RESERVED2"],
-           OPCODE["OP_PUBKEYHASH"],
-           OPCODE["OP_PUBKEY"],
-           OPCODE["OP_INVALIDOPCODE"]
-                             ))
-
+BYTE_OPCODE = dict ((i,bytes([OPCODE[i]]))  for i in OPCODE   )
+HEX_OPCODE = dict ((i,hexlify(bytes([OPCODE[i]])).decode())  for i in OPCODE   )

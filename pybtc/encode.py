@@ -14,8 +14,6 @@ for n, i in enumerate(base32charset_upcase):
     int_base32_map[i] = n
 
 
-
-
 def rebasebits(data, frombits, tobits, pad=True):
     """General power-of-2 base conversion."""
     acc = 0

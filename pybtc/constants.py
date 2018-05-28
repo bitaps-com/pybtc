@@ -74,3 +74,4 @@ SCRIPT_TYPES = { "P2PKH":        0,
                  "NON_STANDART": 7
                 }
 
+

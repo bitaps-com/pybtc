@@ -6,259 +6,10 @@ from .tools import *
 from .consensus import *
 from binascii import hexlify, unhexlify
 
-def get_stream(stream):
-    if type(stream) != io.BytesIO:
-        if type(stream) == str:
-            stream = unhexlify(stream)
-        if type(stream) == bytes:
-            stream = io.BytesIO(stream)
-        else:
-            raise TypeError
-    return stream
-
-class Opcode():
-  """ Class opcode """
-  def __init__(self, raw_opcode, data, data_length = b""):
-    self.raw     = raw_opcode
-    if self.raw in RAW_OPCODE:
-        if self.raw in (OPCODE["OP_PUSHDATA1"], OPCODE["OP_PUSHDATA2"], OPCODE["OP_PUSHDATA4"]):
-            self.str = '<%s>' % len(data)
-        else:
-            self.str = RAW_OPCODE[self.raw]
-    elif self.raw < b'L':
-      self.str = '<%s>' % len(data)
-    else:
-      self.str = '[?]'
-    self.data = data
-    self.data_length = data_length
-
-  def __str__(self):
-    return self.str
-
-  @classmethod
-  def to_raw(cls, name):
-    if name in OPCODE:
-      return OPCODE[name]
-    else:
-      return b''
-
-  @classmethod
-  def pop_from_stream (cls, stream):
-    b = stream.read(1)
-    if not b: return None
-    data = b''
-    data_length = b''
-    if b <= OPCODE["OP_PUSHDATA4"]:
-      if b < OPCODE["OP_PUSHDATA1"]: s = int.from_bytes(b,'little')
-      elif b == OPCODE["OP_PUSHDATA1"]:
-        data_length = stream.read(1)
-        s = int.from_bytes( data_length ,'little')
-      elif b == OPCODE["OP_PUSHDATA2"]:
-        data_length = stream.read(2)
-        s = int.from_bytes( data_length ,'little')
-      elif b == OPCODE["OP_PUSHDATA4"]:
-        data_length = stream.read(4)
-        s = int.from_bytes( data_length ,'little')
-      data = stream.read(s)
-      if len(data)!=s:
-        return None
-        raise Exception('opcode read error')
-    return cls(b,data,data_length)
+k = 0
 
 
 
-class Script():
-    """ 
-    Bitcoin script class 
-    """
-    def __init__(self, raw_script, coinbase = False, segwit = True):
-        if type(raw_script) == str:
-            raw_script = unhexlify(raw_script)
-        self.raw = raw_script
-        stream = io.BytesIO(raw_script)
-        self.script = []
-        self.address = list()
-        self.pattern = bytearray()
-        self.asm = bytearray()
-        self.data = b''
-        self.type = "NON_STANDARD"
-        self.ntype = 7
-        self.witness_version = None
-        self.op_sig_count = 0
-        if coinbase:
-            self.pattern = b"<coinbase>"
-            self.asm = hexlify(raw_script).decode()
-            return
-        t = time.time()
-        while True:
-            o = Opcode.pop_from_stream(stream)
-            if o is None:
-                break
-            if o.raw == OPCODE["OP_CHECKSIG"] or o.raw == OPCODE["OP_CHECKSIGVERIFY"]:
-                self.op_sig_count += 1
-            if o.raw  ==OPCODE["OP_CHECKMULTISIG"]:
-                self.op_sig_count += 20
-            self.script.append(o)
-            self.pattern += o.str.encode() + b' '
-            if o.data:
-                self.asm += hexlify(o.data) + b' '
-            else:
-                self.asm += o.str.encode() + b' '
-        self.asm = self.asm.decode().rstrip()
-        self.pattern= self.pattern.decode().rstrip()
-        # check script type
-        if self.pattern == "OP_DUP OP_HASH160 <20> OP_EQUALVERIFY OP_CHECKSIG":
-            self.type = "P2PKH"
-            self.ntype = 0
-            self.address.append(self.script[2].data)
-        elif self.pattern == "OP_HASH160 <20> OP_EQUAL":
-            self.type = "P2SH"
-            self.ntype = 1
-            self.address.append(self.script[1].data)
-        elif self.pattern == "<65> OP_CHECKSIG" or self.pattern == "<33> OP_CHECKSIG" :
-            self.type = "PUBKEY"
-            self.ntype = 2
-            self.address.append(hash160(self.script[0].data))
-        elif len(self.script) == 2 and self.script[0].raw == OPCODE["OP_RETURN"]:
-            # OP_RETURN
-            if len(self.script[1].data) < NULL_DATA_LIMIT: # <0 to 80 bytes of data>
-                self.data = self.script[1].data
-                self.type = "NULL_DATA"
-                self.ntype = 3
-        elif len(self.script)>= 4:
-            if self.script[-1].raw == OPCODE["OP_CHECKMULTISIG"] \
-                    and self.script[-2].raw <= OPCODE["OP_15"] \
-                    and self.script[-2].raw >= OPCODE["OP_1"] : #  OP_CHECKMULTISIG   "OP_1"  "OP_16"
-                if self.script[0].raw <= OPCODE["OP_15"] \
-                        and self.script[0].raw >= OPCODE["OP_1"]:
-                    self.op_sig_count = 0
-                    for o in self.script[1:-2]:
-                        if not o.data:
-                            self.op_sig_count = 20
-                            break
-                        self.op_sig_count += 1
-                        self.address.append(hash160(o.data))
-                    else:
-                        self.bare_multisig_accepted = ord(self.script[0].raw) - 80
-                        self.bare_multisig_from = ord(self.script[-2].raw) - 80
-                        self.type = "MULTISIG"
-                        self.ntype = 4
-
-        elif segwit:
-            if self.pattern == "OP_0 <20>":
-                self.type = "P2WPKH"
-                self.op_sig_count = 1
-                self.ntype = 5
-                self.witness_version = 0
-                self.address.append(self.script[1].data)
-            elif self.pattern == "OP_0 <32>":
-                self.type = "P2WSH"
-                self.ntype = 6
-                self.witness_version = 0
-                self.address.append(self.script[1].data)
-
-
-
-class Input:
-    """ Transaction Input class """
-    #  outpoint = (b'00f0f09...',n')
-    #  script   = raw bytes
-    #  sequense = int
-    def __init__(self, outpoint, script, sequence, amount = None, private_key = None):
-        if type(outpoint[0]) == str:
-            outpoint = (unhexlify(outpoint[0])[::-1], outpoint[1])
-        if type(outpoint[0]) == str:
-            private_key = WIF2priv(private_key)
-        self.outpoint = outpoint
-        self.sequence = sequence
-        self.pk_script = None
-        self.amount = amount
-        self.private_key = private_key
-        self.p2sh_type = None
-        self.coinbase = False
-        if outpoint == (b'\x00'*32 ,0xffffffff): self.coinbase = True
-        self.sig_script = Script(script, self.coinbase)
-        self.double_spend = None
-        self.lock = False
-        self.addresses = []
-        self.redeem_script = None
-        if len(self.sig_script.script) > 0:
-            try:
-                if len(self.sig_script.script[-1].data) <= 520:
-                    self.redeem_script = Script(self.sig_script.script[-1].data)
-                else:
-                    pass
-            except Exception as err:
-                pass
-
-    @classmethod
-    def deserialize(cls, stream):
-        stream = get_stream(stream)
-        outpoint = stream.read(32), int.from_bytes(stream.read(4), 'little')
-        script_len = from_var_int(read_var_int(stream))
-        script = stream.read(script_len)
-        sequence = int.from_bytes(stream.read(4), 'little')
-        return cls(outpoint, script, sequence)
-
-    def serialize(self):
-        return  self.outpoint[0] + self.outpoint[1].to_bytes(4, 'little') \
-                + to_var_int(len(self.sig_script.raw)) + self.sig_script.raw \
-                + self.sequence.to_bytes(4, 'little')
-
-
-
-class Output:
-    """ Transactin output class """
-    def __init__(self, value, script):
-        self.value = value
-        self.pk_script = Script(script)
-
-    def serialize(self):
-        return self.value.to_bytes(8,'little') \
-               + to_var_int(len(self.pk_script.raw)) + self.pk_script.raw
-
-
-    @classmethod
-    def deserialize(cls, stream):
-        stream = get_stream(stream)
-        value = int.from_bytes(stream.read(8), 'little')
-        script_len = from_var_int(read_var_int(stream))
-        pk_script = stream.read(script_len)
-        return cls(value, pk_script)
-
-class Witness:
-    def __init__(self, data, empty = False):
-        self.empty = empty
-        self.witness = [b"\x00"] if empty else data
-
-    def __str__(self):
-        return json.dumps([hexlify(w).decode() for w in self.witness])
-
-    def hex(self):
-        return [hexlify(w).decode() for w in self.witness]
-
-    @classmethod
-    def deserialize(cls, stream):
-        stream = get_stream(stream)
-        empty = True
-        witness_len = from_var_int(read_var_int(stream))
-        witness = []
-        if witness_len:
-            for i in range(witness_len):
-                l = from_var_int(read_var_int(stream))
-                w = stream.read(l)
-                witness.append(w)
-            empty = False
-        return cls(witness, empty)
-
-    def serialize(self):
-        if self.empty:
-            return b'\x00'
-
-        n = to_var_int(len(self.witness))
-        for w in self.witness:
-            n += to_var_int(len(w)) + w
-        return n
 
 
 class Transaction():
@@ -306,7 +57,7 @@ class Transaction():
         if not self.tx_in:
             self.witness = list()
         if witness is None:
-            self.witness = [Witness.deserialize(b"\x00") for i in range(len(tx_in))]
+            self.witness = (Witness.deserialize(b"\x00") for i in range(len(tx_in)))
         if hash is None :
             self.recalculate_txid()
 
@@ -376,7 +127,7 @@ class Transaction():
         if type(p2wpkh_address)==str:
             assert address_type(p2wpkh_address) == 'P2WPKH'
             witness_version = get_witness_version(p2wpkh_address)
-            p2wpkh_address = address2hash(p2wpkh_address)
+            p2wpkh_address = address_to_hash(p2wpkh_address)
         assert len(p2wpkh_address) == 20
         self.tx_out.append(Output(amount,
                            bytes([witness_version]) + b'\x14' + p2wpkh_address))
@@ -387,7 +138,7 @@ class Transaction():
         if type(p2wsh_address)==str:
             assert address_type(p2wsh_address) == 'P2WSH'
             witness_version = get_witness_version(p2wsh_address)
-            p2wsh_address = address2hash(p2wsh_address)
+            p2wsh_address = address_to_hash(p2wsh_address)
         assert len(p2wsh_address) == 32
         self.tx_out.append(Output(amount,
                            bytes([witness_version]) + b'\x20' + p2wsh_address))
@@ -427,9 +178,9 @@ class Transaction():
 
     def serialize(self, segwit = True, hex = False):
         version = self.version.to_bytes(4,'little')
-        ninputs = to_var_int(self.tx_in_count)
+        ninputs = int_to_var_int(self.tx_in_count)
         inputs = [i.serialize() for i in self.tx_in]
-        nouts = to_var_int(len(self.tx_out))
+        nouts = int_to_var_int(len(self.tx_out))
         outputs = [o.serialize() for o in self.tx_out]
         marke_flag = b"\x00\x01" if segwit else b""
         witness = b""
@@ -445,7 +196,7 @@ class Transaction():
 
     def sign_P2SHP2WPKH_input(self, sighash_type, input_index, private_key = None, amount = None):
         if type(private_key) == str:
-            private_key = WIF2priv(private_key)
+            private_key = WIF_to_private_key(private_key)
         if amount is not None:
             self.tx_in[input_index].amount = amount
         else:
@@ -454,7 +205,7 @@ class Transaction():
             self.tx_in[input_index].private_key = private_key
         else:
             private_key = self.tx_in[input_index].private_key
-        pubkey = priv2pub(private_key, True)
+        pubkey = private_to_public_key(private_key, True)
         pubkey_hash160 = hash160(pubkey)
         scriptCode  = b"\x19" + OPCODE["OP_DUP"] + OPCODE["OP_HASH160"]
         scriptCode += b'\x14' + pubkey_hash160 + OPCODE["OP_EQUALVERIFY"] + OPCODE["OP_CHECKSIG"]
@@ -469,7 +220,7 @@ class Transaction():
             self.tx_in[input_index].private_key = private_key
         else:
             private_key = self.tx_in[input_index].private_key
-        pubkey = priv2pub(private_key, compressed)
+        pubkey = private_to_public_key(private_key, compressed)
         pubkey_hash160 = hash160(pubkey)
         scriptCode = OPCODE["OP_DUP"] + OPCODE["OP_HASH160"] + b'\x14' + \
                      pubkey_hash160 + OPCODE["OP_EQUALVERIFY"] + OPCODE["OP_CHECKSIG"]
@@ -489,24 +240,24 @@ class Transaction():
         if ((sighash_type&31) == SIGHASH_SINGLE) and (input_index>(len(self.tx_out)-1)):
             return double_sha256(b'\x01'+b'\x00'*31 + sighash_type.to_bytes(4, 'little'))
         preimage += self.version.to_bytes(4,'little')
-        preimage += b'\x01' if sighash_type &  SIGHASH_ANYONECANPAY else to_var_int(self.tx_in_count)
+        preimage += b'\x01' if sighash_type &  SIGHASH_ANYONECANPAY else int_to_var_int(self.tx_in_count)
         for number, i in enumerate(self.tx_in):
             if (sighash_type &  SIGHASH_ANYONECANPAY) and (input_index != number): continue
             input = i.outpoint[0]+i.outpoint[1].to_bytes(4,'little')
             if sighash_type == 0 or input_index == number:
-                input += ((to_var_int(len(scriptCode)) + scriptCode) if sighash_type else \
-                (to_var_int(len(i.sig_script.raw)) + i.sig_script.raw)) + i.sequence.to_bytes(4,'little')
+                input += ((int_to_var_int(len(scriptCode)) + scriptCode) if sighash_type else \
+                (int_to_var_int(len(i.sig_script.raw)) + i.sig_script.raw)) + i.sequence.to_bytes(4, 'little')
             else:
                 input += b'\x00' + (i.sequence.to_bytes(4,'little') if \
                 ((sighash_type&31) == SIGHASH_ALL) else b'\x00\x00\x00\x00')
             preimage += input
-        preimage += b'\x00' if (sighash_type&31) == SIGHASH_NONE else ( to_var_int(input_index + 1) if \
-            (sighash_type&31) == SIGHASH_SINGLE else to_var_int(self.tx_out_count))
+        preimage += b'\x00' if (sighash_type&31) == SIGHASH_NONE else (int_to_var_int(input_index + 1) if \
+            (sighash_type&31) == SIGHASH_SINGLE else int_to_var_int(self.tx_out_count))
         if  (sighash_type&31) != SIGHASH_NONE:
             for number, i in enumerate(self.tx_out):
                 if number > input_index and (sighash_type&31) == SIGHASH_SINGLE: continue
                 preimage +=(b'\xff'*8+b'\x00' if (sighash_type&31) == SIGHASH_SINGLE and (input_index != number)\
-                else i.value.to_bytes(8,'little')+to_var_int(len(i.pk_script.raw))+i.pk_script.raw)
+                else i.value.to_bytes(8,'little') + int_to_var_int(len(i.pk_script.raw)) + i.pk_script.raw)
         preimage += self.lock_time.to_bytes(4,'little')
         preimage += sighash_type.to_bytes(4, 'little')
         return double_sha256(preimage) if not hex else hexlify(double_sha256(preimage)).decode()
@@ -543,10 +294,10 @@ class Transaction():
         ho = bytearray()
         for n, o in enumerate(self.tx_out):
             if  (sighash_type&31) != SIGHASH_SINGLE  and  (sighash_type&31) != SIGHASH_NONE:
-                ho += o.value.to_bytes(8,'little')+to_var_int(len(o.pk_script.raw))+o.pk_script.raw
+                ho += o.value.to_bytes(8,'little') + int_to_var_int(len(o.pk_script.raw)) + o.pk_script.raw
             elif (sighash_type&31) == SIGHASH_SINGLE and input_index < len(self.tx_out):
                 if input_index == n:
-                    ho += o.value.to_bytes(8, 'little') + to_var_int(len(o.pk_script.raw)) + o.pk_script.raw
+                    ho += o.value.to_bytes(8, 'little') + int_to_var_int(len(o.pk_script.raw)) + o.pk_script.raw
         hashOutputs = double_sha256(ho) if ho else b'\x00'*32
         preimage += hashPrevouts + hashSequence + outpoint + scriptCode + value + nSequence + hashOutputs
         preimage += self.lock_time.to_bytes(4, 'little')
@@ -589,10 +340,10 @@ class Transaction():
             if o.pk_script.ntype in (1,6):
                 sh =True
             for a in o.pk_script.address:
-                out["address"].append(hash2address(a,
-                                                   testnet=testnet,
-                                                   script_hash= sh,
-                                                   witness_version=o.pk_script.witness_version))
+                out["address"].append(hash_to_address(a,
+                                                      testnet=testnet,
+                                                      script_hash= sh,
+                                                      witness_version=o.pk_script.witness_version))
 
             r["vout"].append(out)
 
@@ -662,6 +413,7 @@ class Transaction():
 class Block():
     def __init__(self, version, prev_block, merkle_root,
                  timestamp, bits, nonce, txs, block_size, hash = None, header = None):
+        qt = time.time()
         self.hash = hash
         self.header = header
         self.version = version
@@ -671,6 +423,7 @@ class Block():
         self.timestamp = timestamp
         self.bits = bits
         self.nonce = nonce
+
         self.transactions = txs
         self.tx_hash_list = list()
         self.size = block_size
@@ -679,13 +432,12 @@ class Block():
         self.amount = 0
         self.fee = 0
         self.sigop = 0
-        for t in txs:
-            if t.hash in self.tx_hash_list:
-                raise Exception("CVE-2012-2459") # merkle tree malleability
-            self.tx_hash_list.append(t.hash)
+
+
         self.target = None
         self.fee = 0
         self.witness_root_hash = None
+
         if txs:
             if txs[0].coinbase:
                 if self.nversion > 1:
@@ -700,6 +452,7 @@ class Block():
                               self.witness_root_hash = out.pk_script.data[4:36]
                 except:
                     pass
+        print("t ", time.time() - qt)
 
     def calculate_commitment(self, witness = None):
         wtxid_list = [b"\x00" * 32,]
@@ -723,7 +476,7 @@ class Block():
         commitment = self.calculate_commitment(tx.witness[0].witness[0])
         for o in outputs:
             if type(o[1]) == str:
-                tx.tx_out.append(Output(o[0], address2script(o[1])))
+                tx.tx_out.append(Output(o[0], address_to_script(o[1])))
             else:
                 tx.tx_out.append(Output(o[0], o[1]))
         tx.tx_out.append(Output(0, b'j$\xaa!\xa9\xed' + commitment))
@@ -762,11 +515,14 @@ class Block():
             'merkle_root': stream.read(32),
             'timestamp': int.from_bytes(stream.read(4), 'little'),
             'bits': stream.read(4),
-            'nonce': stream.read(4),
-            'txs': read_var_list(stream, Transaction),
-            'block_size': stream.tell(),
-            'header': header
-        }
+            'nonce': stream.read(4)}
+        t = time.time()
+        kwargs['txs'] = read_var_list(stream, Transaction)
+        print("tx ",time.time() - t)
+        kwargs['block_size'] =  stream.tell()
+        kwargs['header'] =  header
+        global k
+        print(">.>.>.",k)
         return cls(**kwargs)
 
     def serialize(self, hex = False):
@@ -776,13 +532,12 @@ class Block():
                 self.timestamp.to_bytes(4,'little') + \
                 self.bits + \
                 self.nonce + \
-                to_var_int(len (self.transactions))
+                int_to_var_int(len (self.transactions))
         for t in self.transactions:
             if t.hash == t.whash:
                 block += t.serialize(segwit = 0)
             else:
                 block += t.serialize(segwit = 1)
-
         if hex:
             return hexlify(block).decode()
         else:
@@ -820,8 +575,8 @@ class BlockTemplate():
         self.scan_tx_list()
         self.coinbase_tx = self.create_coinbase_transaction()
         self.coinb1, self.coinb2 = self.split_coinbase()
-        self.target = bits2target(self.bits)
-        self.difficulty = target2difficulty(self.target)
+        self.target = bits_to_target(self.bits)
+        self.difficulty = target_to_difficulty(self.target)
         self.merkle_branches = [hexlify(i).decode() for i in merkle_branches([self.coinbase_tx.hash,] + self.txid_list)]
 
 
@@ -906,7 +661,7 @@ class BlockTemplate():
         print("branches ", self.merkle_branches)
         header = version + prev_hash + merkle_root + time + bits + nonce
         block = hexlify(header).decode()
-        block += hexlify(to_var_int(len (self.transactions)+1)).decode()
+        block += hexlify(int_to_var_int(len (self.transactions) + 1)).decode()
         block += cb
         for t in self.transactions:
             block += t["data"]

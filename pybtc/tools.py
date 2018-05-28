@@ -1,23 +1,20 @@
-import hashlib
-from binascii import hexlify, unhexlify
 import time
 import struct
-import hmac
 from .constants import *
 from .opcodes import *
 from .hash import *
 from .encode import *
+import math
+import io
 
 
-# Bitcoin keys/ addresses
+# Bitcoin keys
 #
-def create_priv(hex=False):
+def create_private_key(hex=False):
     """
     :return: 32 bytes private key 
     """
-    q = time.time()
-    rnd = random.SystemRandom()
-    a = rnd.randint(0,MAX_INT_PRIVATE_KEY)
+    a = random.SystemRandom().randint(0,MAX_INT_PRIVATE_KEY)
     i = int((time.time()%0.01)*100000)
     h = a.to_bytes(32,byteorder="big")
     while True:
@@ -30,15 +27,12 @@ def create_priv(hex=False):
         return hexlify(h).decode()
     return h
 
-def priv_from_int(k):
-    return int.to_bytes(k,byteorder="big",length=32)
-
-
-def priv2WIF(h, compressed = True, testnet = False):
+def private_key_to_WIF(h, compressed = True, testnet = False):
     #uncompressed: 0x80 + [32-byte secret] + [4 bytes of Hash() of previous 33 bytes], base58 encoded
     #compressed: 0x80 + [32-byte secret] + 0x01 + [4 bytes of Hash() previous 34 bytes], base58 encoded
     if type(h) == str:
         h = unhexlify(h)
+    assert len(h) == 32
     if testnet:
         h = TESTNET_PRIVATE_KEY_BYTE_PREFIX + h
     else:
@@ -47,15 +41,15 @@ def priv2WIF(h, compressed = True, testnet = False):
     h += double_sha256(h)[:4]
     return encode_base58(h)
 
-def WIF2priv(h, hex = False, verify = 1):
-    if verify:
-        assert is_WIF_valid(h)
+def WIF_to_private_key(h, hex = False):
+    assert is_WIF_valid(h)
     h = decode_base58(h)
     if hex:
         return hexlify(h[1:33]).decode()
     return h[1:33]
 
 def is_WIF_valid(wif):
+    assert type(wif) == str
     if wif[0] not in PRIVATE_KEY_PREFIX_LIST:
         return False
     try:
@@ -73,7 +67,7 @@ def is_WIF_valid(wif):
         return False
     return True
 
-def priv2pub(private_key, compressed = True, hex = False):
+def private_to_public_key(private_key, compressed = True, hex = False):
     if type(private_key)!= bytes:
         if type(private_key) == bytearray:
             private_key = bytes(private_key)
@@ -84,7 +78,7 @@ def priv2pub(private_key, compressed = True, hex = False):
                 if private_key[0] in (MAINNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX,
                                       TESTNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX):
                     compressed = False
-                private_key = WIF2priv(private_key, verify=0)
+                private_key = WIF_to_private_key(private_key)
         else:
             raise TypeError("private key must be a bytes or WIF or hex encoded string")
     pubkey_ptr = ffi.new('secp256k1_pubkey *')
@@ -99,7 +93,7 @@ def priv2pub(private_key, compressed = True, hex = False):
     pub = bytes(ffi.buffer(pubkey, len_key))
     return hexlify(pub).decode() if hex else pub
 
-def is_valid_pub(key):
+def is_valid_public_key(key):
     if len(key) < 33:
         return False
     if key[0] == 0x04 and len(key) != 65:
@@ -115,8 +109,8 @@ def is_valid_pub(key):
 #
 
 
-def hash2address(address_hash, testnet = False,
-                 script_hash = False, witness_version = 0):
+def hash_to_address(address_hash, testnet = False,
+                    script_hash = False, witness_version = 0):
     if type(address_hash) == str:
         address_hash = unhexlify(address_hash)
     if not script_hash:
@@ -151,7 +145,7 @@ def hash2address(address_hash, testnet = False,
     return "%s1%s" % (hrp, rebase_5_to_32(address_hash + checksum).decode())
 
 
-def address2hash(address, hex = False):
+def address_to_hash(address, hex = False):
     if address[0] in ADDRESS_PREFIX_LIST:
         h =  decode_base58(address)[1:-4]
     elif address[:2] in (MAINNET_SEGWIT_ADDRESS_PREFIX,
@@ -190,7 +184,7 @@ def address_type(address, num = False):
         return SCRIPT_TYPES['NON_STANDARD'] if num else 'UNKNOWN'
     return SCRIPT_TYPES[t] if num else t
 
-def script2hash(s, witness = False, hex = False):
+def script_to_hash(s, witness = False, hex = False):
     if type(s) == str:
         s = unhexlify(s)
     if witness:
@@ -198,31 +192,41 @@ def script2hash(s, witness = False, hex = False):
     else:
         return hash160(s, hex)
 
-def address2script(address):
+def address_to_script(address, hex = False):
     if address[0] in (TESTNET_SCRIPT_ADDRESS_PREFIX,
                       MAINNET_SCRIPT_ADDRESS_PREFIX):
-        return OPCODE["OP_HASH160"] + b'\x14' + address2hash(address) + OPCODE["OP_EQUAL"]
-    if address[0] in (MAINNET_ADDRESS_PREFIX,
+        s = [BYTE_OPCODE["OP_HASH160"],
+             b'\x14',
+             address_to_hash(address),
+             BYTE_OPCODE["OP_EQUAL"]]
+    elif address[0] in (MAINNET_ADDRESS_PREFIX,
                       TESTNET_ADDRESS_PREFIX,
                       TESTNET_ADDRESS_PREFIX_2):
-        return OPCODE["OP_DUP"] + OPCODE["OP_HASH160"] + b'\x14' + \
-               address2hash(address) + OPCODE["OP_EQUALVERIFY"] + OPCODE["OP_CHECKSIG"]
-    if address[0] in (TESTNET_SEGWIT_ADDRESS_PREFIX,
+        s =  [BYTE_OPCODE["OP_DUP"],
+              BYTE_OPCODE["OP_HASH160"],
+              b'\x14',
+              address_to_hash(address),
+              BYTE_OPCODE["OP_EQUALVERIFY"],
+              BYTE_OPCODE["OP_CHECKSIG"]]
+    elif address[:2] in (TESTNET_SEGWIT_ADDRESS_PREFIX,
                       MAINNET_SEGWIT_ADDRESS_PREFIX):
-        h = address2hash(address)
-        return OPCODE["OP_0"] + bytes([len(h)]) + h
-    raise Exception("Unknown address")
+        h = address_to_hash(address)
+        s =  [BYTE_OPCODE["OP_0"],
+              bytes([len(h)]),
+              h]
+    else:
+        assert False
+    s = b''.join(s)
+    return hexlify(s).decode() if hex else s
 
-def script_P2SH_P2WPKH(pubkey, hash = False):
+def public_key_to_P2SH_P2WPKH_script(pubkey):
     assert len(pubkey) == 33
-    if hash:
-        return hash160(b'\x00\x14' + hash160(pubkey))
     return b'\x00\x14' + hash160(pubkey)
 
 
-def pub2address(pubkey, testnet = False,
-                p2sh_p2wpkh = False,
-                witness_version = 0):
+def public_key_to_address(pubkey, testnet = False,
+                          p2sh_p2wpkh = False,
+                          witness_version = 0):
     if type(pubkey) == str:
         pubkey = unhexlify(pubkey)
     if p2sh_p2wpkh:
@@ -233,18 +237,122 @@ def pub2address(pubkey, testnet = False,
         if witness_version is not None:
             assert len(pubkey) == 33
         h = hash160(pubkey)
-    return hash2address(h, testnet = testnet,
+    return hash_to_address(h, testnet = testnet,
                            script_hash = p2sh_p2wpkh,
                            witness_version = witness_version)
 
-# def pub2P2SH_P2WPKH_hash(pubkey):
-#     return hash160(b'\x00\x14' + hash160(pubkey))
-#
-# def pub2P2SH_P2WPKH_address(pubkey, testnet = False):
-#     return hash2address(pub2P2SH_P2WPKH_hash(pubkey),
-#                         testnet=testnet,
-#                         script_hash=True,
-#                         witness_version=None)
+def parse_script(script, segwit=True):
+    if type(script) == str:
+        try:
+            script = unhexlify(script)
+        except:
+            pass
+        assert type(script) == bytes
+    l = len(script)
+    if segwit:
+        if l == 22 and script[0] == 0:
+            return {"nType": 5, "type": "P2WPKH", "reqSigs": 1, "addressHash": script[2:]}
+        if l == 34 and script[0] == 0:
+            return {"nType": 6, "type": "P2WSH", "reqSigs": None, "addressHash": script[2:]}
+    if l == 25 and \
+        script[:2] == b"\x76\xa9" and \
+        script[-2:] == b"\x88\xac":
+        return {"nType": 0, "type": "P2PKH", "reqSigs": 1, "addressHash": script[3:-2]}
+    if l == 23 and \
+        script[0] == 169 and \
+        script[-1] == 135:
+        return {"nType": 1, "type": "P2SH", "reqSigs": None, "addressHash": script[2:-1]}
+    if l == 67 and script[-1] == 172:
+        return {"nType": 2, "type": "PUBKEY", "reqSigs": 1, "addressHash": hash160(script[1:-1])}
+    if l == 35 and script[-1] == 172:
+        return {"nType": 2, "type": "PUBKEY", "reqSigs": 1, "addressHash": hash160(script[1:-1])}
+    if script[0] == 106 and l > 1 and l <= 82:
+        if script[1] == l - 2:
+            return {"nType": 3, "type": "NULL_DATA", "reqSigs": 0, "data": script[2:]}
+    if script[0] >= 81 and script[0] <= 96:
+        if script[-1] == 174:
+            if script[-2] >= 81 and script[-2] <= 96:
+                if script[-2] >= script[0]:
+                    c, s = 0, 1
+                    while l - 2 - s > 0:
+                        if script[s] < 0x4c:
+                            s += script[s]
+                            c += 1
+                        else:
+                            c = 0
+                            break
+                        s += 1
+                    if c == script[-2] - 80:
+                        return {"nType": 4, "type": "MULTISIG",  "reqSigs": script[0] - 80, "script": script}
+
+    s, m, n, last, req_sigs = 0, 0, 0, 0, 0
+    while l - s > 0:
+        if script[s] >= 81 and script[s] <= 96:
+            if not n:
+                n = script[s] - 80
+            else:
+                if m == 0:
+                    n, m = script[s] - 80, 0
+                elif n > m:
+                    n, m = script[s] - 80, 0
+                elif m == script[s] - 80:
+                    last = 0 if last else 2
+        elif script[s] < 0x4c:
+            s += script[s]
+            m += 1
+            if m > 16:
+                n, m = 0, 0
+        elif script[s] == OPCODE["OP_PUSHDATA1"]:
+            s += 1 + script[s + 1]
+        elif script[s] == OPCODE["OP_PUSHDATA2"]:
+            s += 2 + struct.unpack('<H', script[s: s + 2])
+        elif script[s] == OPCODE["OP_PUSHDATA4"]:
+            s += 4 + struct.unpack('<L', script[s: s + 4])
+        else:
+            if script[s] == OPCODE["OP_CHECKSIG"]:
+                req_sigs += 1
+            elif script[s] == OPCODE["OP_CHECKSIGVERIFY"]:
+                req_sigs += 1
+            elif script[s] in (OPCODE["OP_CHECKMULTISIG"], OPCODE["OP_CHECKMULTISIGVERIFY"]):
+                if last:
+                    req_sigs += n
+                else:
+                    req_sigs += 20
+            n, m = 0, 0
+        if last:
+            last -= 1
+        s += 1
+    return {"nType": 7, "type": "NON_STANDARD",  "reqSigs": req_sigs, "script": script}
+
+def decode_script(script, asm = False):
+    if type(script) == str:
+        try:
+            script = unhexlify(script)
+        except:
+            pass
+        assert type(script) == bytes
+    l = len(script)
+    s = 0
+    result = []
+    while l - s > 0:
+        if script[s] < 0x4c and script[s]:
+            if asm:
+                result.append(hexlify(script[s+1:s+1 +script[s]]).decode())
+            else:
+                result.append('[%s]' % script[s])
+            s += script[s] + 1
+            continue
+        elif script[s] == OPCODE["OP_PUSHDATA1"]:
+            s += 1 + script[s + 1]
+        elif script[s] == OPCODE["OP_PUSHDATA2"]:
+            s += 2 + struct.unpack('<H', script[s: s + 2])
+        elif script[s] == OPCODE["OP_PUSHDATA4"]:
+            s += 4 + struct.unpack('<L', script[s: s + 4])
+        result.append(RAW_OPCODE[script[s]])
+        s += 1
+    return ' '.join(result)
+
+
 
 
 def is_address_valid(address, testnet = False):
@@ -447,25 +555,6 @@ def is_valid_signature_encoding(sig):
 # Transaction encoding
 #
 
-def bits2target(bits):
-    if type(bits) == str:
-        bits = unhexlify(bits)
-    if type(bits) == bytes:
-        return int.from_bytes(bits[1:], 'big') * (2 ** (8 * (bits[0] - 3)))
-    else:
-        shift = bits >> 24
-        target = (bits & 0xffffff) * (1 << (8 * (shift - 3)))
-        return target
-
-def target2difficulty(target):
-    return 0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target
-
-def bits2difficulty(bits):
-    return target2difficulty(bits2target(bits))
-
-def difficulty2target(difficulty):
-    return int(0x00000000FFFF0000000000000000000000000000000000000000000000000000 / difficulty)
-
 def rh2s(tthash):
     return hexlify(tthash[::-1]).decode()
 
@@ -479,7 +568,9 @@ def s2rh_step4(hash_string):
 def reverse_hash(h):
     return struct.pack('>IIIIIIII', *struct.unpack('>IIIIIIII', h)[::-1])[::-1]
 
-
+#
+#
+#
 
 def merkleroot(tx_hash_list):
     tx_hash_list = list(tx_hash_list)
@@ -529,72 +620,142 @@ def merkleroot_from_branches(merkle_branches, coinbase_hash_bin):
             h = unhexlify(h)
         merkle_root = double_sha256(merkle_root + h)
     return merkle_root
+
+def bits_to_target(bits):
+    if type(bits) == str:
+        bits = unhexlify(bits)
+    if type(bits) == bytes:
+        return int.from_bytes(bits[1:], 'big') * (2 ** (8 * (bits[0] - 3)))
+    else:
+        shift = bits >> 24
+        target = (bits & 0xffffff) * (1 << (8 * (shift - 3)))
+        return target
+
+def target_to_difficulty(target):
+    return 0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target
+
+def bits_to_difficulty(bits):
+    return target_to_difficulty(bits_to_target(bits))
+
+def difficulty_to_target(difficulty):
+    return int(0x00000000FFFF0000000000000000000000000000000000000000000000000000 / difficulty)
+
+
 #
 #
 #
 
+def bytes_needed(n):
+    if n == 0:
+     return 1
+    return math.ceil(n.bit_length()/8)
 
-def var_int(data):
-    e, s = 1, 0
-    if data[:1] == b'\xfd':
-        s, e = 1, 3
-    elif data[:1] == b'\xfe':
-        s = 1
-        e = 5
-    elif data[:1] == b'\xff':
-        s = 1
-        e = 9
-    i = int.from_bytes(data[s:e], byteorder='little', signed=False)
-    return (i, e)
+def int_to_bytes(i, byteorder='big'):
+    return i.to_bytes(bytes_needed(i), byteorder=byteorder, signed=False)
+
+def bytes_to_int(i, byteorder='big'):
+    return int.from_bytes(i, byteorder=byteorder, signed=False)
 
 
-def from_var_int(data):
-    # retrun
-    e = 1
-    s = 0
-    if data[:1] == b'\xfd':
-        s = 1
-        e = 3
-    elif data[:1] == b'\xfe':
-        s = 1
-        e = 5
-    elif data[:1] == b'\xff':
-        s = 1
-        e = 9
-    i = int.from_bytes(data[s:e], byteorder='little', signed=False)
-    return i
+# variable integer
 
-
-def var_int_len(byte):
-    e = 1
-    if byte == 253:
-        e = 3
-    elif byte == 254:
-        e = 5
-    elif byte == 255:
-        e = 9
-    return e
-
-
-def to_var_int(i):
-    if i < 253:
-        return i.to_bytes(1, byteorder='little')
+def int_to_var_int(i):
+    if i < 0xfd:
+        return struct.pack('<B', i)
     if i <= 0xffff:
-        return b'\xfd' + i.to_bytes(2, byteorder='little')
+        return b'\xfd' + struct.pack('<H', i)
     if i <= 0xffffffff:
-        return b'\xfe' + i.to_bytes(4, byteorder='little')
-    return b'\xff' + i.to_bytes(8, byteorder='little')
+        return b'\xfe' + struct.pack('<L', i)
+    return b'\xff' +  struct.pack('<Q', i)
 
+def var_int_to_int(data):
+    if data[0] == 0xfd:
+        return struct.unpack('<H', data[1:3])[0]
+    elif data[0] == 0xfe:
+        return struct.unpack('<L', data[1:5])[0]
+    elif data[0] == 0xff:
+        return struct.unpack('<Q', data[1:9])[0]
+    return data[0]
+
+def var_int_len(n):
+    if n <= 0xfc:
+        return 1
+    if n <= 0xffff:
+        return 3
+    elif n <= 0xffffffff:
+        return 5
+    return 9
+
+def get_var_int_len(byte):
+    if byte[0] == 253:
+       return 3
+    elif byte[0] == 254:
+       return 5
+    elif byte[0] == 255:
+       return 9
+    return 1
 
 def read_var_int(stream):
     l = stream.read(1)
-    bytes_length = var_int_len(l[0])
+    bytes_length = get_var_int_len(l)
     return l + stream.read(bytes_length - 1)
 
-
 def read_var_list(stream, data_type):
-    count = from_var_int(read_var_int(stream))
+    count = var_int_to_int(read_var_int(stream))
     return [data_type.deserialize(stream) for i in range(count)]
+
+# compressed integer
+
+def int_to_c_int(n, base_bytes=1):
+    if n == 0:
+        return b'\x00'
+    else:
+        l = n.bit_length() + 1
+    min_bits = base_bytes * 8 - 1
+    if l <= min_bits + 1:
+        return n.to_bytes(base_bytes, byteorder="big")
+    prefix = 0
+    payload_bytes = math.ceil((l)/8) - base_bytes
+    extra_bytes = int(math.ceil((l+payload_bytes)/8) - base_bytes)
+    for i in range(extra_bytes):
+        prefix += 2 ** i
+    if l < base_bytes * 8:
+        l = base_bytes * 8
+    prefix = prefix << l
+    if prefix.bit_length()  % 8:
+        prefix = prefix << 8 - prefix.bit_length()  % 8
+    n ^= prefix
+    return n.to_bytes(math.ceil(n.bit_length()/8), byteorder="big")
+
+def c_int_to_int(b, base_bytes=1):
+    byte_length = 0
+    f = 0
+    while True:
+        v = b[f]
+        if v == 0xff:
+            byte_length += 8
+            f += 1
+            continue
+        while v & 0b10000000:
+            byte_length += 1
+            v = v << 1
+        break
+    n = int.from_bytes(b[:byte_length+base_bytes], byteorder="big")
+    if byte_length:
+        return n & ((1 << (byte_length+base_bytes) * 8 - byte_length) - 1)
+    return n
+
+def c_int_len(n, base_bytes=1):
+    if n == 0:
+        return 1
+    l = n.bit_length() + 1
+    min_bits = base_bytes * 8 - 1
+    if l <= min_bits + 1:
+        return 1
+    payload_bytes = math.ceil((l)/8) - base_bytes
+    return  int(math.ceil((l+payload_bytes)/8))
+
+
 
 
 
@@ -699,4 +860,14 @@ def i2b(i): return bn2vch(i)
 
 
 def b2i(b): return vch2bn(b)
+
+def get_stream(stream):
+    if type(stream) != io.BytesIO:
+        if type(stream) == str:
+            stream = unhexlify(stream)
+        if type(stream) == bytes:
+            stream = io.BytesIO(stream)
+        else:
+            raise TypeError
+    return stream
 
