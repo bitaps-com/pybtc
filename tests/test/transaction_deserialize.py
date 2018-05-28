@@ -10,14 +10,11 @@ from pybtc.transaction import *
 from binascii import unhexlify
 from pybtc import address_to_hash  as address2hash160
 
+
 def decode_block_tx(block):
     stream = get_stream(block)
-    tx = dict()
     stream.seek(80)
-    count = var_int_to_int(read_var_int(stream))
-    for i in range(count):
-        tx[i] = Transaction(stream)
-    return tx
+    return {i: Transaction(stream) for i in range(var_int_to_int(read_var_int(stream)))}
 
 
 class TransactionDeserializeTests(unittest.TestCase):

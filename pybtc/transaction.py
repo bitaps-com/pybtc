@@ -42,13 +42,13 @@ class Transaction(dict):
         for k in range(ic):
             self["vIn"][k] = dict()
             self["vIn"][k]["txId"] = stream.read(32)
-            (self["vIn"][k]["vOut"],) = unpack('<L', stream.read(4))
+            self["vIn"][k]["vOut"] = unpack('<L', stream.read(4))[0]
             n = var_int_to_int(read_var_int(stream))
             self["vIn"][k]["scriptSig"] = stream.read(n)
             (self["vIn"][k]["sequence"],) = unpack('<L', stream.read(4))
         for k in range(var_int_to_int(read_var_int(stream))):
             self["vOut"][k] = dict()
-            (self["vOut"][k]["value"],) = unpack('<Q', stream.read(8))
+            self["vOut"][k]["value"] = unpack('<Q', stream.read(8))[0]
             self["amount"] += self["vOut"][k]["value"]
             self["vOut"][k]["scriptPubKey"] = stream.read(var_int_to_int(read_var_int(stream)))
             s = parse_script(self["vOut"][k]["scriptPubKey"], sw)
@@ -66,7 +66,7 @@ class Transaction(dict):
                 self["vIn"][k]["txInWitness"] = [stream.read(var_int_to_int(read_var_int(stream))) \
                                                  for c in range(var_int_to_int(read_var_int(stream)))]
             sw_len = stream.tell() - sw + 2
-        (self["lockTime"],) = unpack('<L', stream.read(4))
+        self["lockTime"] = unpack('<L', stream.read(4))[0]
         end = stream.tell()
         stream.seek(start)
         b = stream.read(end - start)
@@ -221,5 +221,4 @@ class Transaction(dict):
             return json.dumps(self)
         except:
             pass
-        print(self)
         return json.dumps(self.decode())

@@ -1,6 +1,6 @@
-# from .tools import *
-# from .opcodes import *
+from .tools import *
+from .opcodes import *
 from .consensus import *
-from .blockchain import *
+from .transaction import *
 
 version = "2.0.1"

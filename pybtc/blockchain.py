@@ -12,7 +12,7 @@ k = 0
 
 
 
-class Transaction():
+class OLDTransaction():
     def __init__(self, version = 1, tx_in = [], tx_out = [] , lock_time = 0,
                  hash=None, size = 0, timestamp = None,
                  marker = None, flag = None, witness = [],
@@ -410,7 +410,7 @@ class Transaction():
                    witness = witness, whash = wtx_id, vsize = vsize)
 
 
-class Block():
+class OLDBlock():
     def __init__(self, version, prev_block, merkle_root,
                  timestamp, bits, nonce, txs, block_size, hash = None, header = None):
         qt = time.time()
