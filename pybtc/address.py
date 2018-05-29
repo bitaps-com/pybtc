@@ -19,7 +19,7 @@ class PrivateKey():
                 self.testnet = testnet
                 return
             assert type(key) == str
-            self.raw_key = WIF_to_private_key(key)
+            self.raw_key = wif_to_private_key(key)
             if key[0] in (MAINNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX,
                           TESTNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX):
                 self.compressed = False
@@ -39,7 +39,7 @@ class PrivateKey():
             compressed = self.compressed
         if testnet is None:
             testnet = self.testnet
-        return private_key_to_WIF(self.raw_key, compressed, testnet)
+        return private_key_to_wif(self.raw_key, compressed, testnet)
 
 
 class PublicKey():
@@ -95,7 +95,7 @@ class Address():
 
         if address_type == "P2SH_P2WPKH":
             self.script_hash = True
-            self.redeem_script = public_key_to_P2SH_P2WPKH_script(self.public_key.raw_key)
+            self.redeem_script = public_key_to_p2sh_p2wpkh_script(self.public_key.raw_key)
             self.redeem_script_hex = hexlify(self.redeem_script).decode()
             self.hash = hash160(self.redeem_script)
         else:

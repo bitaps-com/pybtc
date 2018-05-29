@@ -1,5 +1,4 @@
 from secp256k1 import lib as secp256k1
-from secp256k1 import ffi
 import random
 
 SIGHASH_ALL           = 0x00000001

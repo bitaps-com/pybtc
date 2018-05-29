@@ -1,14 +1,16 @@
 import unittest
-import os, sys
+import os
+import sys
 import time
 parentPath = os.path.abspath("..")
 if parentPath not in sys.path:
     sys.path.insert(0, parentPath)
+
 from pybtc.tools import *
 from pybtc.hash import *
 from pybtc.transaction import *
 from binascii import unhexlify
-from pybtc import address_to_hash  as address2hash160
+from pybtc import address_to_hash as address2hash160
 
 
 def decode_block_tx(block):

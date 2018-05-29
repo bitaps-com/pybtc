@@ -196,7 +196,7 @@ class OLDTransaction():
 
     def sign_P2SHP2WPKH_input(self, sighash_type, input_index, private_key = None, amount = None):
         if type(private_key) == str:
-            private_key = WIF_to_private_key(private_key)
+            private_key = wif_to_private_key(private_key)
         if amount is not None:
             self.tx_in[input_index].amount = amount
         else:

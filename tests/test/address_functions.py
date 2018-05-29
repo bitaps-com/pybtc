@@ -20,36 +20,36 @@ class AddressFunctionsTests(unittest.TestCase):
         pum = "5KPPLXhtga99qqMceRo4Z6LXV3Kx6a9hRx3ez2U7EwP5KZfy2Wf"
         put = "93A1vGXSGoDHotruGmgyRgtV8hgfFjgtmtuc4epcag886W9d44L"
         pct = "cUWo47XLYiyFByuFicFS3y4FAza3r3R5XA7Bm7wA3dgSKDYox7h6"
-        self.assertEqual(tools.private_key_to_WIF(p, compressed=1, testnet=0), pcm)
-        self.assertEqual(tools.private_key_to_WIF(p, compressed=0, testnet=0), pum)
-        self.assertEqual(tools.private_key_to_WIF(p, compressed=1, testnet=1), pct)
-        self.assertEqual(tools.private_key_to_WIF(p, compressed=0, testnet=1), put)
+        self.assertEqual(tools.private_key_to_wif(p, compressed=1, testnet=0), pcm)
+        self.assertEqual(tools.private_key_to_wif(p, compressed=0, testnet=0), pum)
+        self.assertEqual(tools.private_key_to_wif(p, compressed=1, testnet=1), pct)
+        self.assertEqual(tools.private_key_to_wif(p, compressed=0, testnet=1), put)
 
     def test_is_WIF_valid(self):
-        self.assertEqual(tools.is_WIF_valid("L49obCXV7fGz2YRzLCSJgeZBYmGeBbKPT7xiehUeYX2S4URkPFZX"),1)
-        self.assertEqual(tools.is_WIF_valid("5KPPLXhtga99qqMceRo4Z6LXV3Kx6a9hRx3ez2U7EwP5KZfy2Wf"),1)
-        self.assertEqual(tools.is_WIF_valid("5KPPLXhtga99qqMcWRo4Z6LXV3Kx6a9hRx3ez2U7EwP5KZfy2Wf"),0)
-        self.assertEqual(tools.is_WIF_valid("93A1vGXSGoDHotruGmgyRgtV8hgfFjgtmtuc4epcag886W9d44L"),1)
-        self.assertEqual(tools.is_WIF_valid("cUWo47XLYiyFByuFicFS3y4FAza3r3R5XA7Bm7wA3dgSKDYox7h6"),1)
-        self.assertEqual(tools.is_WIF_valid("cUWo47XLYiyByuFicFS3y4FAza3r3R5XA7Bm7wA3dgSKDYox7h6"),0)
+        self.assertEqual(tools.is_wif_valid("L49obCXV7fGz2YRzLCSJgeZBYmGeBbKPT7xiehUeYX2S4URkPFZX"), 1)
+        self.assertEqual(tools.is_wif_valid("5KPPLXhtga99qqMceRo4Z6LXV3Kx6a9hRx3ez2U7EwP5KZfy2Wf"), 1)
+        self.assertEqual(tools.is_wif_valid("5KPPLXhtga99qqMcWRo4Z6LXV3Kx6a9hRx3ez2U7EwP5KZfy2Wf"), 0)
+        self.assertEqual(tools.is_wif_valid("93A1vGXSGoDHotruGmgyRgtV8hgfFjgtmtuc4epcag886W9d44L"), 1)
+        self.assertEqual(tools.is_wif_valid("cUWo47XLYiyFByuFicFS3y4FAza3r3R5XA7Bm7wA3dgSKDYox7h6"), 1)
+        self.assertEqual(tools.is_wif_valid("cUWo47XLYiyByuFicFS3y4FAza3r3R5XA7Bm7wA3dgSKDYox7h6"), 0)
 
     def test_WIF_to_private_key(self):
         p = "ceda1ae4286015d45ec5147fe3f63e9377ccd6d4e98bcf0847df9937da1944a4"
-        self.assertEqual(tools.WIF_to_private_key("L49obCXV7fGz2YRzLCSJgeZBYmGeBbKPT7xiehUeYX2S4URkPFZX",
+        self.assertEqual(tools.wif_to_private_key("L49obCXV7fGz2YRzLCSJgeZBYmGeBbKPT7xiehUeYX2S4URkPFZX",
                                                   hex=1),p)
-        self.assertEqual(tools.WIF_to_private_key("L49obCXV7fGz2YRzLCSJgeZBYmGeBbKPT7xiehUeYX2S4URkPFZX",
+        self.assertEqual(tools.wif_to_private_key("L49obCXV7fGz2YRzLCSJgeZBYmGeBbKPT7xiehUeYX2S4URkPFZX",
                                                   hex=0),unhexlify(p))
-        self.assertEqual(tools.WIF_to_private_key("5KPPLXhtga99qqMceRo4Z6LXV3Kx6a9hRx3ez2U7EwP5KZfy2Wf",
+        self.assertEqual(tools.wif_to_private_key("5KPPLXhtga99qqMceRo4Z6LXV3Kx6a9hRx3ez2U7EwP5KZfy2Wf",
                                                   hex=1),p)
-        self.assertEqual(tools.WIF_to_private_key("93A1vGXSGoDHotruGmgyRgtV8hgfFjgtmtuc4epcag886W9d44L",
+        self.assertEqual(tools.wif_to_private_key("93A1vGXSGoDHotruGmgyRgtV8hgfFjgtmtuc4epcag886W9d44L",
                                                   hex=1),p)
-        self.assertEqual(tools.WIF_to_private_key("cUWo47XLYiyFByuFicFS3y4FAza3r3R5XA7Bm7wA3dgSKDYox7h6",
+        self.assertEqual(tools.wif_to_private_key("cUWo47XLYiyFByuFicFS3y4FAza3r3R5XA7Bm7wA3dgSKDYox7h6",
                                                   hex=1),p)
 
     def test_create_private_key(self):
         p = tools.create_private_key()
-        pw = tools.private_key_to_WIF(p)
-        self.assertEqual(tools.is_WIF_valid(pw), True)
+        pw = tools.private_key_to_wif(p)
+        self.assertEqual(tools.is_wif_valid(pw), True)
 
 
 
