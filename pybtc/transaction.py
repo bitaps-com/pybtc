@@ -76,8 +76,8 @@ class Transaction(dict):
         self["weight"] = self["bSize"] * 3 + self["size"]
         self["vSize"] = math.ceil(self["weight"] / 4)
         if ic == 1 and \
-            self["vIn"][0]["txId"] == b'\x00' * 32 and \
-            self["vIn"][0]["vOut"] == 0xffffffff:
+           self["vIn"][0]["txId"] == b'\x00' * 32 and \
+           self["vIn"][0]["vOut"] == 0xffffffff:
             self["coinbase"] = True
         if sw:
             self["segwit"] = True

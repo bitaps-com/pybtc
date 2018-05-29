@@ -1,5 +1,6 @@
 from .tools import *
 
+
 class PrivateKey():
     def __init__(self, key=None, compressed=True, testnet=False):
         if key is None:
@@ -34,7 +35,7 @@ class PrivateKey():
     def hex(self):
         return hexlify(self.raw_key).decode()
 
-    def WIF(self, compressed=None, testnet=None):
+    def wif(self, compressed=None, testnet=None):
         if compressed is None:
             compressed = self.compressed
         if testnet is None:
@@ -60,18 +61,16 @@ class PublicKey():
             self.compressed = False
         self.raw_key = key
 
-
     def hex(self):
         return hexlify(self.raw_key).decode()
 
 
-
 class Address():
     def __init__(self, key = None,
-                 address_type="P2WPKH", testnet=False, compressed = True):
+                 address_type="P2WPKH", testnet=False, compressed=True):
         if key is None:
-            self.private_key = PrivateKey(testnet = testnet,
-                                          compressed = compressed)
+            self.private_key = PrivateKey(testnet=testnet,
+                                          compressed=compressed)
             self.public_key = PublicKey(self.private_key)
         elif type(key) == PrivateKey:
             self.private_key = key
@@ -92,7 +91,6 @@ class Address():
         else:
             self.witness_version = None
         self.compressed = compressed
-
         if address_type == "P2SH_P2WPKH":
             self.script_hash = True
             self.redeem_script = public_key_to_p2sh_p2wpkh_script(self.public_key.raw_key)
@@ -102,5 +100,5 @@ class Address():
             self.script_hash = False
             self.hash = hash160(self.public_key.raw_key)
         self.address = hash_to_address(self.hash,
-                                       script_hash = self.script_hash,
-                                       witness_version = self.witness_version)
+                                       script_hash=self.script_hash,
+                                       witness_version=self.witness_version)

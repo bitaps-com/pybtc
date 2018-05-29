@@ -502,7 +502,6 @@ class OLDBlock():
             extranonce_start = len_coinbase + extranonce_start
         return tx[:44 + extranonce_start], tx[44 + extranonce_start + extranonce_size:]
 
-
     @classmethod
     def deserialize(cls, stream):
         stream = get_stream(stream)

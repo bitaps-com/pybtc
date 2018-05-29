@@ -589,7 +589,7 @@ def reverse_hash(h):
 #
 
 
-def merkleroot(tx_hash_list):
+def merkle_root(tx_hash_list):
     tx_hash_list = list(tx_hash_list)
     if len(tx_hash_list) == 1:
         return tx_hash_list[0]
