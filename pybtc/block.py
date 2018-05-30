@@ -15,8 +15,8 @@ class Block(dict):
         self["bits"] = s.read(4),
         self["nonce"] = unpack("<L", s.read(4))
         s.seek(-80, 1)
-        self["tx"] = {i: Transaction(s)
-                      for i in range(var_int_to_int(read_var_int(s)))}
+        # self["tx"] = {i: Transaction(s)
+        #               for i in range(var_int_to_int(read_var_int(s)))}
         self["weight"] = 0
         self["size"] = 0
         self["strippedSize"] = 0
