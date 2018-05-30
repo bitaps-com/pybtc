@@ -256,6 +256,8 @@ def public_key_to_address(pubkey, testnet=False,
 
 
 def parse_script(script, segwit=True):
+    if not script:
+        return {"nType": 7, "type": "NON_STANDARD",  "reqSigs": 0, "script": b""}
     if type(script) == str:
         try:
             script = unhexlify(script)

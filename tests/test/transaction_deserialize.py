@@ -62,3 +62,5 @@ class TransactionDeserializeTests(unittest.TestCase):
         self.assertEqual(s.serialize(segwit=True, hex = True), segwit_view)
         self.assertEqual(ns.serialize(segwit=False, hex = True), non_segwit_view)
 
+        tx = "01000000014cee27ba570d2cca50bb9b3f7374c7eb24ec16ffec0a077c84c1cc23b0161804010000008b48304502200f1100f78596c8d46fb2f39c570ce6945956a3dd33c48fbdbe53af1c383182ed022100a85b528ea21ee7f39b2ec1568ac19f26f4dd4fb9d3dbf70587986de3c2c90fa801410426e4d0890ad5272b2b9a10ca3f518f7e025932caa62f13467e444df89ed25f24f4fc5075cad32f468c8f7f913e30057449d65623726e7102f5eaa326d486ebf7ffffffff020010000000000000006020e908000000001976a914947236437233a71cb033a53932008dbfe346388e88ac00000000"
+        t = Transaction(tx)
