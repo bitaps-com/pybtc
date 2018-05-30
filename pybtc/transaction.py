@@ -140,9 +140,6 @@ class Transaction(dict):
                 self["vIn"][i]["scriptSigOpcodes"] = decode_script(self["vIn"][i]["scriptSig"])
                 self["vIn"][i]["scriptSigAsm"] = decode_script(self["vIn"][i]["scriptSig"], 1)
 
-
-
-
         for i in self["vOut"]:
             if type(self["vOut"][i]["scriptPubKey"]) == bytes:
                 self["vOut"][i]["scriptPubKey"] = hexlify(self["vOut"][i]["scriptPubKey"]).decode()

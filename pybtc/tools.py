@@ -321,9 +321,9 @@ def parse_script(script, segwit=True):
         elif script[s] == OPCODE["OP_PUSHDATA1"]:
             s += 1 + script[s + 1]
         elif script[s] == OPCODE["OP_PUSHDATA2"]:
-            s += 2 + struct.unpack('<H', script[s: s + 2])
+            s += 2 + struct.unpack('<H', script[s: s + 2])[0]
         elif script[s] == OPCODE["OP_PUSHDATA4"]:
-            s += 4 + struct.unpack('<L', script[s: s + 4])
+            s += 4 + struct.unpack('<L', script[s: s + 4])[0]
         else:
             if script[s] == OPCODE["OP_CHECKSIG"]:
                 req_sigs += 1
