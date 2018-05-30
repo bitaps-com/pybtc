@@ -1,4 +1,4 @@
-![pybtc logo](doc/img/pybtc.svg)
+![pybtc logo](doc/img/pybtc.png)
 
 # pybtc
 Python bitcoin library
