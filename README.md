@@ -1,5 +1,4 @@
-![pybtc logo](doc/img/pybtc.png)
+<img src="doc/img/pybtc.png" width="128">
 
-# pybtc
-Python bitcoin library
+### Python bitcoin library
 
