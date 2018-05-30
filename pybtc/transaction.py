@@ -171,7 +171,7 @@ class Transaction(dict):
                 raise TypeError
         return stream
 
-    def serialize(self, segwit = True, hex = False):
+    def serialize(self, segwit=True, hex=False):
         chunks = []
         chunks.append(struct.pack('<L', self["version"]))
         if segwit and "segwit" in self:
@@ -187,7 +187,7 @@ class Transaction(dict):
                 chunks.append(int_to_var_int(len(self["vIn"][i]['scriptSig'])))
                 chunks.append(self["vIn"][i]['scriptSig'])
             else:
-                chunks.append(int_to_var_int(int(len(self["vIn"][i]['scriptSig'])/ 2)) )
+                chunks.append(int_to_var_int(int(len(self["vIn"][i]['scriptSig']) / 2)))
                 chunks.append(unhexlify(self["vIn"][i]['scriptSig']))
             chunks.append(struct.pack('<L', self["vIn"][i]['sequence']))
         chunks.append(int_to_var_int(len(self["vOut"])))
@@ -197,7 +197,7 @@ class Transaction(dict):
                 chunks.append(int_to_var_int(len(self["vOut"][i]['scriptPubKey'])))
                 chunks.append(self["vOut"][i]['scriptPubKey'])
             else:
-                chunks.append(int_to_var_int(int(len(self["vOut"][i]['scriptPubKey'])/ 2)) )
+                chunks.append(int_to_var_int(int(len(self["vOut"][i]['scriptPubKey']) / 2)))
                 chunks.append(unhexlify(self["vOut"][i]['scriptPubKey']))
         if segwit and "segwit" in self:
             for i in self["vIn"]:
