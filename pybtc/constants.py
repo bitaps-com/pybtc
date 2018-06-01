@@ -1,6 +1,7 @@
 from secp256k1 import lib as secp256k1
 from secp256k1 import ffi
 import random
+import os
 
 SIGHASH_ALL           = 0x00000001
 SIGHASH_NONE          = 0x00000002
@@ -74,3 +75,5 @@ SCRIPT_TYPES = { "P2PKH":        0,
                  "NON_STANDART": 7
                 }
 
+ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
+BIP0039_DIR = os.path.normpath(os.path.join(ROOT_DIR, 'bip-0039'))
