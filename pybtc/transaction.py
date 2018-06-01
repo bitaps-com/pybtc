@@ -2,11 +2,13 @@
 from struct import unpack
 import json
 from .tools import *
+from .address import PrivateKey
 from binascii import hexlify, unhexlify
 
 
 class Transaction(dict):
-    def __init__(self, raw_tx = None):
+    def __init__(self, raw_tx=None):
+        self["format"] = "raw"
         self["txId"] = None
         self["hash"] = None
         self["version"] = None
@@ -22,7 +24,7 @@ class Transaction(dict):
         self["time"] = None
         self["blockTime"] = None
         self["blockIndex"] = None
-        self["coinbase"] = None
+        self["coinbase"] = False
         self["fee"] = None
         self["data"] = None
         self["amount"] = 0
@@ -79,15 +81,19 @@ class Transaction(dict):
            self["vIn"][0]["txId"] == b'\x00' * 32 and \
            self["vIn"][0]["vOut"] == 0xffffffff:
             self["coinbase"] = True
+        else:
+            self["coinbase"] = False
         if sw:
             self["segwit"] = True
             self["hash"] = double_sha256(b)
             self["txId"] = double_sha256(b[:4] + b[6:sw] + b[-4:])
         else:
+            self["segwit"] = False
             self["txId"] = double_sha256(b)
             self["hash"] = self["txId"]
 
     def decode(self, testnet = False):
+        self["format"] = "decoded"
         if type(self["txId"]) == bytes:
             self["txId"] = rh2s(self["txId"])
         if "flag" in self:
@@ -174,7 +180,7 @@ class Transaction(dict):
     def serialize(self, segwit=True, hex=False):
         chunks = []
         chunks.append(struct.pack('<L', self["version"]))
-        if segwit and "segwit" in self:
+        if segwit and self["segwit"]:
             chunks.append(b"\x00\x01")
         chunks.append(int_to_var_int(len(self["vIn"])))
         for i in self["vIn"]:
@@ -199,7 +205,7 @@ class Transaction(dict):
             else:
                 chunks.append(int_to_var_int(int(len(self["vOut"][i]['scriptPubKey']) / 2)))
                 chunks.append(unhexlify(self["vOut"][i]['scriptPubKey']))
-        if segwit and "segwit" in self:
+        if segwit and self["segwit"]:
             for i in self["vIn"]:
                 chunks.append(int_to_var_int(len(self["vIn"][i]['txInWitness'])))
                 for w in self["vIn"][i]['txInWitness']:
@@ -219,3 +225,89 @@ class Transaction(dict):
         except:
             pass
         return json.dumps(self.decode())
+
+    # def add_input(self, tx_id=None, v_out=0, sequence=0xffffffff,
+    #               script_sig=b"", tx_in_witness=None, amount=None,
+    #               script_pub_key=None, private_key=None):
+    #
+    #     if type(tx_id) == Input:
+    #
+    #     else:
+    #         i = Input(tx_id, )
+    #     if self["vIn"]:
+    #         # coinbase tx only one input allowed
+    #         assert tx_id != None
+    #     if tx_id is None:
+    #         tx_id = b"\x00" * 32
+    #         assert v_out == 0 and sequence == 0xffffffff
+    #
+    #     if type(tx_id) == str:
+    #         tx_id = unhexlify(tx_id)
+    #     else:
+    #         assert type(script_sig) == bytes
+    #     assert len(tx_id) == 32
+    #     assert type(v_out) == int
+    #     assert v_out <= 0xffffffff and v_out >= 0
+    #     assert type(sequence) == int
+    #     assert sequence <= 0xffffffff and sequence >= 0
+    #     if type(script_sig) == str:
+    #         script_sig = unhexlify(script_sig)
+    #     else:
+    #         assert type(script_sig) == bytes
+    #     assert len(script_sig) <= 520
+    #     if private_key:
+    #         if type(private_key) != PrivateKey:
+    #             private_key = PrivateKey(private_key)
+    #     if amount:
+    #         assert type(amount) == int
+    #         assert amount >= 0 and amount <= MAX_AMOUNT
+    #     if tx_in_witness:
+    #         assert type(tx_in_witness) == list
+    #         l = 0
+    #         witness = []
+    #         for w in tx_in_witness:
+    #             if type(w) == str:
+    #                 witness.append(unhexlify(w) if self["format"] == "raw" else w)
+    #             else:
+    #                 witness.append(w if self["format"] == "raw" else unhexlify(w))
+    #             l += 1 + len(w)
+    #             if len(w) >= 0x4c:
+    #                 l += 1
+    #             if len(w) > 0xff:
+    #                 l += 1
+    #         # witness script limit
+    #         assert l <= 10000
+    #     if tx_id == b"\x00" * 32:
+    #         assert v_out == 0 and sequence == 0xffffffff and len(script_sig) <= 100
+    #         self["coinbase"] = True
+    #
+    #     k = len(self["vIn"])
+    #     self["vIn"][k] = dict()
+    #     self["vIn"][k]["vOut"] = v_out
+    #     self["vIn"][k]["sequence"] = sequence
+    #     if self["format"] == "raw":
+    #         self["vIn"][k]["txId"] = tx_id
+    #         self["vIn"][k]["scriptSig"] = script_sig
+    #         if tx_in_witness:
+    #             self["segwit"] = True
+    #             self["vIn"][k]["txInWitness"] = witness
+    #     else:
+    #         self["vIn"][k]["txId"] = rh2s(tx_id)
+    #         self["vIn"][k]["scriptSig"] = script_sig
+    #         self["vIn"][i]["scriptSigOpcodes"] = decode_script(script_sig)
+    #         self["vIn"][i]["scriptSigAsm"] = decode_script(script_sig, 1)
+    #         if tx_in_witness:
+    #             self["segwit"] = True
+    #             self["vIn"][k]["txInWitness"] = witness
+    #     if amount:
+    #         self["value"] = amount
+    #     if private_key:
+    #         self["privateKey"] = private_key
+    #
+    #     # todo
+    #     # if self["vOut"]:
+    #     #     self.__refresh_tx__()
+    #
+    #     """
+    #     написать сценарии использования
+    #     """

@@ -1,6 +1,7 @@
 from secp256k1 import lib as secp256k1
 import random
 
+MAX_AMOUNT = 2100000000000000
 SIGHASH_ALL           = 0x00000001
 SIGHASH_NONE          = 0x00000002
 SIGHASH_SINGLE        = 0x00000003
