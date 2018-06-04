@@ -2,5 +2,5 @@
 import pytest
 
 
-pytest_plugins = ['bip0039_fixtures']
+pytest_plugins = ['bip0032_fixtures', 'bip0039_fixtures']
 
