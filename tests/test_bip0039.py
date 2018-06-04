@@ -65,6 +65,12 @@ def test_create_wordlist():
     assert 'ábaco' in wordlist_sp
 
 
+def test_create_seed(mnemonic_256):
+    passphrase = ' '.join(mnemonic_256)
+    seed = create_seed(passphrase, 'P@ssw0rd')
+    assert seed is not None
+    assert len(seed) == 64
+
 
 def test_create_passphrase():
     passphrase = create_passphrase(128, 'english')
