@@ -15,7 +15,8 @@ def create_passphrase(bits=256, language='english'):
         entropy = os.urandom(bits // 8)
         mnemonic = create_mnemonic(entropy, language)
         return ' '.join(mnemonic[::-1])
-    raise ValueError('Strength should be one of the following [128, 160, 192, 224, 256], but it is not (%d).' % bits)
+    else:
+        raise ValueError('Strength should be one of the following [128, 160, 192, 224, 256], but it is not (%d).' % bits)
 
 
 def create_mnemonic(entropy, language='english'):
@@ -77,6 +78,11 @@ def mnemonic2bytes(passphrase, language):
         fb = unhexlify(ent_hash)[0]
         assert (fb >> (8 - chk_sum_bit_len)) & chk_sum
         return entropy
-    raise ValueError('Number of words must be one of the following: [12, 15, 18, 21, 24], but it is not (%d).' % len(mnemonic))
+    else:
+        raise ValueError('Number of words must be one of the following: [12, 15, 18, 21, 24], but it is not (%d).' % len(mnemonic))
+
+
+def create_seed(passphrase, password=''):
+    return hashlib.pbkdf2_hmac('sha512', password.encode(), passphrase.encode(), 2048)
 
 
