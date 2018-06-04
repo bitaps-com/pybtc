@@ -1,8 +1,10 @@
 import os
-import hashlib
+import hmac
 
+from hashlib import sha256, sha512, pbkdf2_hmac
 from binascii import hexlify, unhexlify
 from .constants import *
+from .tools import priv2pub
 
 
 # BIP39
@@ -25,7 +27,7 @@ def create_mnemonic(entropy, language='english'):
     entropy_int = int.from_bytes(entropy, byteorder="big")
     entropy_bit_len = len(entropy) * 8
     chk_sum_bit_len = entropy_bit_len // 32
-    entropy_hash = hashlib.sha256(entropy).hexdigest()
+    entropy_hash = sha256(entropy).hexdigest()
     fbyte_hash = unhexlify(entropy_hash)[0]
     entropy_int = add_checksum(entropy)
     while entropy_int:
@@ -49,7 +51,7 @@ def add_checksum(data):
     mask = 0b10000000
     data_int = int.from_bytes(data, byteorder="big")
     data_bit_len = len(data) * 8 // 32
-    data_hash = hashlib.sha256(data).hexdigest()
+    data_hash = sha256(data).hexdigest()
     fbyte_hash = unhexlify(data_hash)[0]
     while data_bit_len:
         data_bit_len -= 1
@@ -74,7 +76,7 @@ def mnemonic2bytes(passphrase, language):
         chk_sum = entropy_int & (2 ** chk_sum_bit_len - 1)
         entropy_int = entropy_int >> chk_sum_bit_len
         entropy = entropy_int.to_bytes((bit_size - chk_sum_bit_len) // 8, byteorder="big")
-        ent_hash = hashlib.sha256(entropy).hexdigest()
+        ent_hash = sha256(entropy).hexdigest()
         fb = unhexlify(ent_hash)[0]
         assert (fb >> (8 - chk_sum_bit_len)) & chk_sum
         return entropy
@@ -83,6 +85,39 @@ def mnemonic2bytes(passphrase, language):
 
 
 def create_seed(passphrase, password=''):
-    return hashlib.pbkdf2_hmac('sha512', password.encode(), passphrase.encode(), 2048)
+    return pbkdf2_hmac('sha512', password.encode(), passphrase.encode(), 2048)
 
 
+
+# BIP32
+#
+#
+#
+
+def create_master_key_hdwallet(seed):
+    key = b'Bitcoin seed'
+    intermediary = unhexlify(hmac.new(key, seed, sha512).hexdigest())
+    master_key = intermediary[:32]
+    chain_code = intermediary[32:]
+    if validate_keys(master_key) and validate_keys(chain_code):
+        return dict(version=PRIVATEWALLETVERSION,
+                    key=master_key,
+                    chain_code=chain_code,
+                    depth=0,
+                    child=0,
+                    is_private=True)
+    else:
+        return None
+
+
+def create_public_key_hdwallet(master_key):
+    return priv2pub(master_key, True)
+
+
+def validate_keys(key):
+    if int.from_bytes(key, byteorder="big") > 0 and len(key) == 32:
+        return True
+    return False
+
+
+    
