@@ -1,10 +1,12 @@
 import os
 import hmac
 
-from hashlib import sha256, sha512, pbkdf2_hmac
+from struct import pack
+from hashlib import pbkdf2_hmac
 from binascii import hexlify, unhexlify
 from .constants import *
 from .tools import priv2pub
+from .hash import hmac_sha512, hash160, double_sha256, sha256, double_sha256
 
 
 # BIP39
@@ -27,9 +29,8 @@ def create_mnemonic(entropy, language='english'):
     entropy_int = int.from_bytes(entropy, byteorder="big")
     entropy_bit_len = len(entropy) * 8
     chk_sum_bit_len = entropy_bit_len // 32
-    entropy_hash = sha256(entropy).hexdigest()
-    fbyte_hash = unhexlify(entropy_hash)[0]
-    entropy_int = add_checksum(entropy)
+    fbyte_hash = sha256(entropy)[0]
+    entropy_int = add_checksum_ent(entropy)
     while entropy_int:
         mnemonic.append(wordlist[entropy_int & 0b11111111111])
         entropy_int = entropy_int >> 11
@@ -47,12 +48,11 @@ def create_wordlist(language, wordlist_dir=BIP0039_DIR):
     return content.split('\n')
 
 
-def add_checksum(data):
+def add_checksum_ent(data):
     mask = 0b10000000
     data_int = int.from_bytes(data, byteorder="big")
     data_bit_len = len(data) * 8 // 32
-    data_hash = sha256(data).hexdigest()
-    fbyte_hash = unhexlify(data_hash)[0]
+    fbyte_hash = sha256(data)[0]
     while data_bit_len:
         data_bit_len -= 1
         data_int = (data_int << 1) | 1 if fbyte_hash & mask else data_int << 1
@@ -76,8 +76,7 @@ def mnemonic2bytes(passphrase, language):
         chk_sum = entropy_int & (2 ** chk_sum_bit_len - 1)
         entropy_int = entropy_int >> chk_sum_bit_len
         entropy = entropy_int.to_bytes((bit_size - chk_sum_bit_len) // 8, byteorder="big")
-        ent_hash = sha256(entropy).hexdigest()
-        fb = unhexlify(ent_hash)[0]
+        fb = sha256(entropy)[0]
         assert (fb >> (8 - chk_sum_bit_len)) & chk_sum
         return entropy
     else:
@@ -94,30 +93,85 @@ def create_seed(passphrase, password=''):
 #
 #
 
+# создание родительского приватного ключа
 def create_master_key_hdwallet(seed):
     key = b'Bitcoin seed'
-    intermediary = unhexlify(hmac.new(key, seed, sha512).hexdigest())
+    intermediary = hmac_sha512(key, seed)
     master_key = intermediary[:32]
     chain_code = intermediary[32:]
-    if validate_keys(master_key) and validate_keys(chain_code):
-        return dict(version=PRIVATEWALLETVERSION,
+    if validate_private_key(master_key) and validate_private_key(chain_code):
+        return dict(version=MAINNET_PRIVATE_WALLET_VERSION,
                     key=master_key,
-                    chain_code=chain_code,
                     depth=0,
                     child=0,
+                    finger_print=b'\x00\x00\x00\x00',
+                    chain_code=chain_code,
                     is_private=True)
     else:
         return None
 
 
+# создание дочернего приватного ключа
+def create_child_key_hdwallet(key, child_idx):
+    if not key.get('is_private') and child_idx >= FIRST_HARDENED_CHILD:
+        return None
+    public_key = priv2pub(key['key'], True)
+    assert public_key is not None
+    seed = public_key + bytes([key['depth'] + 1])
+    intermediary = hmac_sha512(key['chain_code'], seed)
+    chain_code = intermediary[32:]
+    child_key = add_private_keys(intermediary[:32], key['key'])
+    finger_print = hash160(child_key)[:4]
+    if validate_private_key(child_key) and validate_private_key(chain_code):
+        return dict(version=MAINNET_PRIVATE_WALLET_VERSION,
+                    key=child_key,
+                    depth=key['depth'] + 1,
+                    child=0,
+                    finger_print=finger_print,
+                    chain_code=chain_code,
+                    is_private=True)
+    return None
+
+
+def add_private_keys(ext_value, key):
+    ext_value_int = int.from_bytes(ext_value, byteorder="big")
+    key_int = int.from_bytes(key, byteorder="big")
+    ext_value_int = (ext_value_int + key_int) % MAX_INT_PRIVATE_KEY
+    return ext_value_int.to_bytes((ext_value_int.bit_length() + 7) // 8, byteorder="big")
+    
+
+## Надо удалить в будущем как дублирование. И добавить в реализации ООП как метод
 def create_public_key_hdwallet(master_key):
     return priv2pub(master_key, True)
 
 
-def validate_keys(key):
-    if int.from_bytes(key, byteorder="big") > 0 and len(key) == 32:
+def validate_private_key(key):
+    key_int = int.from_bytes(key, byteorder="big")
+    if key_int > 0 and key_int < MAX_INT_PRIVATE_KEY and len(key) == 32:
         return True
     return False
 
 
-    
+def validate_child_public_key(key):
+    return False
+
+
+def serialize_key_hdwallet(key):
+    try:
+        key_bytes = key['key']
+        if key.get('is_private'):
+            key_bytes = bytes(1) + key_bytes
+
+        result = key['version']
+        result += pack('>B', key['depth'])
+        result += key['finger_print']
+        result += pack('>I', key['child'])
+        result += key['chain_code']
+        result += key_bytes
+        chk_sum = double_sha256(result)[:4]
+        return result + chk_sum
+    except:
+        raise Exception('Serialization error')
+
+
+
