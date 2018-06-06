@@ -19,7 +19,8 @@ def good_key():
 def master_key_hdwallet():
     return dict(version=b'\x04\x88\xad\xe4',
                 key=b"Y\x9e'\xe00or'\xacD\x9c(l\x99\x0fxB\x03\xbd/]|+\xfd\xe89K!\x93\x0bN\x9b",
-                chain_code=b'B\xa8\xe9v>y\xe2\x82\x10\x80\xc2\xa91\x10E\xe0XJ\xe6\xc7\x18\x9eE~\xa0^\xd1\x820\xe7\x18\x0c',
-                is_private=True,
                 depth=0,
-                child=0)
+                child=0,
+                finger_print=b'\x00\x00\x00\x00',
+                chain_code=b'B\xa8\xe9v>y\xe2\x82\x10\x80\xc2\xa91\x10E\xe0XJ\xe6\xc7\x18\x9eE~\xa0^\xd1\x820\xe7\x18\x0c',
+                is_private=True)
