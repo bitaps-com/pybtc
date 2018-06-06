@@ -89,28 +89,28 @@ def test_create_passphrase():
     assert len(passphrase.split()) == 24
 
 
-def test_add_checksum(entropy_128, entropy_160, entropy_192, entropy_224, entropy_256):
-    ent_add_chksum = add_checksum(entropy_128)
+def test_add_checksum_ent(entropy_128, entropy_160, entropy_192, entropy_224, entropy_256):
+    ent_add_chksum = add_checksum_ent(entropy_128)
     ent_hash = hashlib.sha256(entropy_128).hexdigest()
     fb = unhexlify(ent_hash)[0]
     assert (fb >> 4) & ent_add_chksum
 
-    ent_add_chksum = add_checksum(entropy_160)
+    ent_add_chksum = add_checksum_ent(entropy_160)
     ent_hash = hashlib.sha256(entropy_160).hexdigest()
     fb = unhexlify(ent_hash)[0]
     assert (fb >> 3) & ent_add_chksum
 
-    ent_add_chksum = add_checksum(entropy_192)
+    ent_add_chksum = add_checksum_ent(entropy_192)
     ent_hash = hashlib.sha256(entropy_192).hexdigest()
     fb = unhexlify(ent_hash)[0]
     assert (fb >> 2) & ent_add_chksum
 
-    ent_add_chksum = add_checksum(entropy_224)
+    ent_add_chksum = add_checksum_ent(entropy_224)
     ent_hash = hashlib.sha256(entropy_224).hexdigest()
     fb = unhexlify(ent_hash)[0]
     assert (fb >> 1) & ent_add_chksum
 
-    ent_add_chksum = add_checksum(entropy_256)
+    ent_add_chksum = add_checksum_ent(entropy_256)
     ent_hash = hashlib.sha256(entropy_256).hexdigest()
     fb = unhexlify(ent_hash)[0]
     assert fb & ent_add_chksum
