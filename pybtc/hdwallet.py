@@ -1,7 +1,7 @@
 import os
 import hmac
 
-from struct import pack
+from struct import pack, unpack
 from hashlib import pbkdf2_hmac
 from binascii import hexlify, unhexlify
 from .constants import *
@@ -133,6 +133,20 @@ def create_child_key_hdwallet(key, child_idx):
     return None
 
 
+# Создание расширенного приватного/публичного ключа
+def create_expanded_key(key, child_idx):
+    if isinstance(key, dict):
+        if not key.get('is_private') and child_idx < FIRST_HARDENED_CHILD:
+            seed = key['key'] + pack('I', child_idx)
+            return hmac_sha512(key['chain_code'], seed)
+        elif key.get('is_private') and child_idx < FIRST_HARDENED_CHILD:
+            public_key = priv2pub(key['key'])
+            seed = public_key + pack('I', child_idx)
+            return hmac_sha512(key['chain_code'], seed)
+    return None
+
+
+
 def add_private_keys(ext_value, key):
     ext_value_int = int.from_bytes(ext_value, byteorder="big")
     key_int = int.from_bytes(key, byteorder="big")
@@ -163,9 +177,9 @@ def serialize_key_hdwallet(key):
             key_bytes = bytes(1) + key_bytes
 
         result = key['version']
-        result += pack('>B', key['depth'])
+        result += pack('B', key['depth'])
         result += key['finger_print']
-        result += pack('>I', key['child'])
+        result += pack('I', key['child'])
         result += key['chain_code']
         result += key_bytes
         chk_sum = double_sha256(result)[:4]
