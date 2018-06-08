@@ -5,7 +5,7 @@ from struct import pack, unpack
 from hashlib import pbkdf2_hmac
 from binascii import hexlify, unhexlify
 from .constants import *
-from .tools import priv2pub
+from .tools import priv2pub, is_valid_public_key
 from .hash import hmac_sha512, hash160, double_sha256, sha256, double_sha256
 
 
@@ -111,25 +111,39 @@ def create_master_key_hdwallet(seed):
         return None
 
 
-# создание дочернего приватного ключа
-def create_child_key_hdwallet(key, child_idx):
-    if not key.get('is_private') and child_idx >= FIRST_HARDENED_CHILD:
-        return None
-    public_key = priv2pub(key['key'], True)
-    assert public_key is not None
-    seed = public_key + bytes([key['depth'] + 1])
-    intermediary = hmac_sha512(key['chain_code'], seed)
-    chain_code = intermediary[32:]
-    child_key = add_private_keys(intermediary[:32], key['key'])
-    finger_print = hash160(child_key)[:4]
-    if validate_private_key(child_key) and validate_private_key(chain_code):
-        return dict(version=MAINNET_PRIVATE_WALLET_VERSION,
-                    key=child_key,
-                    depth=key['depth'] + 1,
-                    child=0,
-                    finger_print=finger_print,
-                    chain_code=chain_code,
-                    is_private=True)
+# Создание дочернего приватного ключа
+def create_child_privkey(key, child_idx):
+    expanded_privkey = create_expanded_key(key, child_idx)
+    if expanded_pubkey:
+        child_chain_code = expanded_pubkey[32:]
+        child_privkey = add_private_keys(expanded_pubkey[:32], key['key'])
+        if validate_private_key(child_privkey):
+            finger_print = hash160(priv2pub(key['key']))[:4]
+            return dict(version=MAINNET_PRIVATE_WALLET_VERSION,
+                        key=child_pubkey,
+                        depth=key['depth'] + 1,
+                        child=child_idx,
+                        finger_print=finger_print,
+                        chain_code=child_chain_code,
+                        is_private=False)
+    return None
+
+
+# создание дочернего публичного ключа
+def create_child_pubkey(key, child_idx):
+    expanded_pubkey = create_expanded_key(key, child_idx)
+    if expanded_pubkey:
+        child_chain_code = expanded_pubkey[32:]
+        child_pubkey = add_public_keys(priv2pub(expanded_pubkey[:32])[1:], key['key'])
+        if is_valid_public_key(child_pubkey):
+            finger_print = hash160(key['key'])[:4]
+            return dict(version=MAINNET_PUBLIC_WALLET_VERSION,
+                        key=child_pubkey,           # надо сделать какое то добавление (преобразование addpublickey)
+                        depth=key['depth'] + 1,
+                        child=child_idx,
+                        finger_print=finger_print,
+                        chain_code=child_chain_code,
+                        is_private=False)
     return None
 
 
@@ -161,6 +175,14 @@ def add_private_keys(ext_value, key):
     ext_value_int = (ext_value_int + key_int) % MAX_INT_PRIVATE_KEY
     return ext_value_int.to_bytes((ext_value_int.bit_length() + 7) // 8, byteorder="big")
     
+
+def add_public_keys(ext_value, key):
+    #ext_value_int = int.from_bytes(ext_value, byteorder="big")
+    #key_int = int.from_bytes(key, byteorder="big")
+    #ext_value_int = (ext_value_int + key_int) % MAX_INT_PRIVATE_KEY
+    #return ext_value_int.to_bytes((ext_value_int.bit_length() + 7) // 8, byteorder="big")
+    return None
+
 
 ## Надо удалить в будущем как дублирование. И добавить в реализации ООП как метод
 def create_public_key_hdwallet(master_key):
