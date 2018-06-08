@@ -146,6 +146,14 @@ def create_expanded_key(key, child_idx):
     return None
 
 
+# Создание усиленного расширенного приватного ключа
+def create_expanded_hard_key(key, child_idx):
+    if isinstance(key, dict):
+        if key.get('is_private') and child_idx >= FIRST_HARDENED_CHILD:
+            seed = bytes([0]) + key['key'] + pack('I', child_idx)
+            return hmac_sha512(key['chain_code'], seed)
+    return None
+
 
 def add_private_keys(ext_value, key):
     ext_value_int = int.from_bytes(ext_value, byteorder="big")
