@@ -68,3 +68,11 @@ def test_create_expanded_key(master_key_hdwallet, public_key_hdwallet):
     result = create_expanded_key(public_key_hdwallet, 0)
     assert result is not None
     assert len(result) == 64
+
+
+def test_create_expanded_hard_key(master_key_hdwallet, public_key_hdwallet):
+    result = create_expanded_hard_key(master_key_hdwallet, 0)
+    assert result is None
+    result = create_expanded_hard_key(master_key_hdwallet, 0x80000000)
+    assert result is not None
+    assert len(result) == 64
