@@ -56,4 +56,15 @@ def test_serialize_key(master_key_hdwallet):
     serialize_key = serialize_key_hdwallet(master_key_hdwallet)
     assert serialize_key is not None
     assert type(serialize_key) is bytes
-    assert len(serialize_key) == 82
+    assert len(serialize_key[:-4]) == 78
+
+
+def test_create_expanded_key(master_key_hdwallet, public_key_hdwallet):
+    result = create_expanded_key(b'asdasdasd', 0)
+    assert result is None
+    result = create_expanded_key(master_key_hdwallet, 0)
+    assert result is not None
+    assert len(result) == 64
+    result = create_expanded_key(public_key_hdwallet, 0)
+    assert result is not None
+    assert len(result) == 64
