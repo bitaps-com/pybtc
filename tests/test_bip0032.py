@@ -15,7 +15,7 @@ def test_create_master_key(mnemonic_256):
     assert len(seed) == 64
     master_key = create_master_key_hdwallet(seed)
     assert master_key is not None
-    assert type(master_key) is dict
+    assert isinstance(master_key, dict)
     assert master_key.get('version') is not None
     assert master_key.get('key') is not None
     assert master_key.get('depth') is not None
@@ -38,24 +38,10 @@ def test_validate_private_key(fail_key1, fail_key2, good_key):
     assert validate_private_key(good_key)
 
 
-def test_create_child_key(master_key_hdwallet):
-    child_key = create_child_key_hdwallet(master_key_hdwallet, 0)
-    assert child_key is not None
-    assert type(child_key) is dict
-    assert child_key.get('version') is not None
-    assert child_key.get('key') is not None
-    assert child_key.get('depth') is not None
-    assert child_key.get('child') is not None
-    assert child_key.get('finger_print') is not None
-    assert child_key.get('chain_code') is not None
-    assert child_key.get('is_private') is not None
-    assert child_key.get('is_private')
-
-
 def test_serialize_key(master_key_hdwallet):
     serialize_key = serialize_key_hdwallet(master_key_hdwallet)
     assert serialize_key is not None
-    assert type(serialize_key) is bytes
+    assert isinstance(serialize_key, bytes)
     assert len(serialize_key[:-4]) == 78
 
 
@@ -76,3 +62,10 @@ def test_create_expanded_hard_key(master_key_hdwallet, public_key_hdwallet):
     result = create_expanded_hard_key(master_key_hdwallet, 0x80000000)
     assert result is not None
     assert len(result) == 64
+
+
+def test_create_child_pubkey(master_key_hdwallet, public_key_hdwallet):
+    result = create_child_pubkey(master_key_hdwallet, 0)
+    assert result is not None
+    assert isinstance(result, dict)
+    assert not result.get('is_private')
