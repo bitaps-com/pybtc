@@ -1,11 +1,12 @@
 import os
 import hmac
 
+from secp256k1 import ffi
 from struct import pack, unpack
 from hashlib import pbkdf2_hmac
 from binascii import hexlify, unhexlify
 from .constants import *
-from .tools import priv2pub, is_valid_public_key
+from .tools import priv2pub, is_valid_pub
 from .hash import hmac_sha512, hash160, double_sha256, sha256, double_sha256
 
 
@@ -134,11 +135,12 @@ def create_child_pubkey(key, child_idx):
     expanded_pubkey = create_expanded_key(key, child_idx)
     if expanded_pubkey:
         child_chain_code = expanded_pubkey[32:]
-        child_pubkey = add_public_keys(priv2pub(expanded_pubkey[:32])[1:], key['key'])
-        if is_valid_public_key(child_pubkey):
+        ext_value = priv2pub(expanded_pubkey[:32])
+        child_pubkey = add_public_keys(ext_value, key['key'])
+        if is_valid_pub(child_pubkey):
             finger_print = hash160(key['key'])[:4]
             return dict(version=MAINNET_PUBLIC_WALLET_VERSION,
-                        key=child_pubkey,           # надо сделать какое то добавление (преобразование addpublickey)
+                        key=child_pubkey,
                         depth=key['depth'] + 1,
                         child=child_idx,
                         finger_print=finger_print,
@@ -177,26 +179,21 @@ def add_private_keys(ext_value, key):
     
 
 def add_public_keys(ext_value, key):
-    #ext_value_int = int.from_bytes(ext_value, byteorder="big")
-    #key_int = int.from_bytes(key, byteorder="big")
-    #ext_value_int = (ext_value_int + key_int) % MAX_INT_PRIVATE_KEY
-    #return ext_value_int.to_bytes((ext_value_int.bit_length() + 7) // 8, byteorder="big")
+    pubkey_ptr = ffi.new('secp256k1_pubkey *')
+    if not secp256k1.secp256k1_ec_pubkey_parse(ECDSA_CONTEXT_VERIFY, pubkey_ptr, ext_value, len(ext_value)):
+        raise TypeError("public key format error")
+    if secp256k1.secp256k1_ec_pubkey_tweak_add(ECDSA_CONTEXT_ALL, pubkey_ptr, key):
+        pubkey = ffi.new('char [%d]' % 33)
+        outlen = ffi.new('size_t *', 33)
+        if secp256k1.secp256k1_ec_pubkey_serialize(ECDSA_CONTEXT_VERIFY, pubkey, outlen, pubkey_ptr, EC_COMPRESSED):
+            return bytes(ffi.buffer(pubkey, 33))
     return None
-
-
-## Надо удалить в будущем как дублирование. И добавить в реализации ООП как метод
-def create_public_key_hdwallet(master_key):
-    return priv2pub(master_key, True)
 
 
 def validate_private_key(key):
     key_int = int.from_bytes(key, byteorder="big")
     if key_int > 0 and key_int < MAX_INT_PRIVATE_KEY and len(key) == 32:
         return True
-    return False
-
-
-def validate_child_public_key(key):
     return False
 
 
