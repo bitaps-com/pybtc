@@ -6,7 +6,7 @@ from struct import pack, unpack
 from hashlib import pbkdf2_hmac
 from binascii import hexlify, unhexlify
 from .constants import *
-from .tools import priv2pub, is_valid_pub
+from .tools import priv2pub, is_valid_pub, encode_base58, decode_base58
 from .hash import hmac_sha512, hash160, double_sha256, sha256, double_sha256
 
 
@@ -112,6 +112,20 @@ def create_master_key_hdwallet(seed):
         return None
 
 
+## Надо удалить в будущем как дублирование. И добавить в реализации ООП как метод
+def create_parent_pubkey_hdwallet(master_key):
+    if master_key['is_private']:
+        pubkey = priv2pub(master_key['key'], True)
+        return dict(version=MAINNET_PUBLIC_WALLET_VERSION,
+                    key=pubkey,
+                    depth=master_key['depth'],
+                    child=master_key['child'],
+                    finger_print=master_key['finger_print'],
+                    chain_code=master_key['chain_code'],
+                    is_private=False)
+    return None
+
+
 # Создание дочернего приватного ключа
 def create_child_privkey(key, child_idx):
     expanded_privkey = create_expanded_key(key, child_idx)
@@ -215,4 +229,24 @@ def serialize_key_hdwallet(key):
         raise Exception('Serialization error')
 
 
-
+def deserialize_key_hdwallet(encode_key):
+    raw_key = decode_base58(encode_key)
+    decode_key = dict()
+    if raw_key[:4] in [MAINNET_PUBLIC_WALLET_VERSION, MAINNET_PRIVATE_WALLET_VERSION]:
+        decode_key['version'] = raw_key[:4]
+        decode_key['depth'] = raw_key[4:5]
+        decode_key['finger_print'] = raw_key[5:9]
+        decode_key['child'] = raw_key[9:13]
+        decode_key['chain_code'] = raw_key[13:45]
+        if decode_key['version'] in [MAINNET_PRIVATE_WALLET_VERSION]:
+            decode_key['is_private'] = True
+            decode_key['key'] = raw_key[46:78]
+        else:
+            decode_key['is_private'] = False
+            decode_key['key'] = raw_key[45:78]
+        chk_sum = raw_key[78:]
+        if chk_sum != double_sha256(raw_key[:-4])[:4]:
+            raise TypeError("key checksum does not match")
+    if decode_key:
+        return decode_key
+    return None
