@@ -5,10 +5,11 @@ import hmac
 
 from binascii import hexlify, unhexlify
 from pybtc.hdwallet import *
+from pybtc.tools import encode_base58, decode_base58
 
 
 
-def test_create_master_key(mnemonic_256):
+def test_create_master_key_hdwallet(mnemonic_256):
     passphrase = ' '.join(mnemonic_256)
     seed = create_seed(passphrase, 'P@ssw0rd')
     assert seed is not None
@@ -26,10 +27,10 @@ def test_create_master_key(mnemonic_256):
     assert master_key['is_private']
 
 
-def test_create_public_key(master_key_hdwallet):
-    public_key = create_public_key_hdwallet(master_key_hdwallet['key'])
+def test_create_public_key_hdwallet(master_key_hdwallet):
+    public_key = create_parent_pubkey_hdwallet(master_key_hdwallet)
     assert public_key is not None
-    assert len(public_key) == 33
+    assert len(public_key['key']) == 33
 
 
 def test_validate_private_key(fail_key1, fail_key2, good_key):
@@ -38,15 +39,10 @@ def test_validate_private_key(fail_key1, fail_key2, good_key):
     assert validate_private_key(good_key)
 
 
-def test_serialize_key(master_key_hdwallet):
-    serialize_key = serialize_key_hdwallet(master_key_hdwallet)
-    assert serialize_key is not None
-    assert isinstance(serialize_key, bytes)
-    assert len(serialize_key[:-4]) == 78
-
-
 def test_create_expanded_key(master_key_hdwallet, public_key_hdwallet):
     result = create_expanded_key(b'asdasdasd', 0)
+    assert result is None
+    result = create_expanded_key(master_key_hdwallet, 0x80000000)
     assert result is None
     result = create_expanded_key(master_key_hdwallet, 0)
     assert result is not None
@@ -69,3 +65,36 @@ def test_create_child_pubkey(master_key_hdwallet, public_key_hdwallet):
     assert result is not None
     assert isinstance(result, dict)
     assert not result.get('is_private')
+
+
+def test_serialize_key_hdwallet(master_key_hdwallet, public_key_hdwallet):
+    serialize_mkey = serialize_key_hdwallet(master_key_hdwallet)
+    assert serialize_mkey is not None
+    assert isinstance(serialize_mkey, bytes)
+    assert len(serialize_mkey[:-4]) == 78
+    ser_encode = encode_base58(serialize_mkey)
+    assert ser_encode[:4] in 'xprv'
+    
+    serialize_pkey = serialize_key_hdwallet(public_key_hdwallet)
+    assert serialize_pkey is not None
+    assert isinstance(serialize_pkey, bytes)
+    assert len(serialize_pkey[:-4]) == 78
+    ser_encode = encode_base58(serialize_pkey)
+    assert ser_encode[:4] in 'xpub'
+
+
+def test_deserialize_key(privkey_hdwallet_base58, pubkey_hdwallet_base58, bad_key_hdwallet_base58):
+    #десериализация приватного ключа
+    privkey = deserialize_key_hdwallet(privkey_hdwallet_base58)
+    assert privkey is not None
+    assert isinstance(privkey, dict)
+    assert privkey['is_private']
+    #десериализация публичного ключа
+    pubkey = deserialize_key_hdwallet(pubkey_hdwallet_base58)
+    assert pubkey is not None
+    assert isinstance(pubkey, dict)
+    assert not pubkey['is_private']
+    #десериализация некорретного ключа
+    pubkey = deserialize_key_hdwallet(bad_key_hdwallet_base58)
+    assert pubkey is None
+
