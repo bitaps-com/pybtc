@@ -95,13 +95,17 @@ def create_seed(passphrase, password=''):
 #
 
 # создание родительского приватного ключа
-def create_master_key_hdwallet(seed):
+def create_master_key_hdwallet(seed, testnet=False):
+    if testnet:
+        version = TESTNET_PRIVATE_WALLET_VERSION
+    else:
+        version = MAINNET_PRIVATE_WALLET_VERSION
     key = b'Bitcoin seed'
     intermediary = hmac_sha512(key, seed)
     master_key = intermediary[:32]
     chain_code = intermediary[32:]
     if validate_private_key(master_key) and validate_private_key(chain_code):
-        return dict(version=MAINNET_PRIVATE_WALLET_VERSION,
+        return dict(version=version,
                     key=master_key,
                     depth=0,
                     child=0,
@@ -115,8 +119,12 @@ def create_master_key_hdwallet(seed):
 ## Надо удалить в будущем как дублирование. И добавить в реализации ООП как метод
 def create_parent_pubkey_hdwallet(master_key):
     if master_key['is_private']:
+        if master_key['version'] == TESTNET_PRIVATE_WALLET_VERSION:
+            version = TESTNET_PUBLIC_WALLET_VERSION
+        else:
+            version = MAINNET_PUBLIC_WALLET_VERSION
         pubkey = priv2pub(master_key['key'], True)
-        return dict(version=MAINNET_PUBLIC_WALLET_VERSION,
+        return dict(version=version,
                     key=pubkey,
                     depth=master_key['depth'],
                     child=master_key['child'],
@@ -134,7 +142,7 @@ def create_child_privkey(key, child_idx):
         child_privkey = add_private_keys(expanded_pubkey[:32], key['key'])
         if validate_private_key(child_privkey):
             finger_print = hash160(priv2pub(key['key']))[:4]
-            return dict(version=MAINNET_PRIVATE_WALLET_VERSION,
+            return dict(version=key['version'],
                         key=child_pubkey,
                         depth=key['depth'] + 1,
                         child=child_idx,
@@ -153,7 +161,7 @@ def create_child_pubkey(key, child_idx):
         child_pubkey = add_public_keys(ext_value, key['key'])
         if is_valid_pub(child_pubkey):
             finger_print = hash160(key['key'])[:4]
-            return dict(version=MAINNET_PUBLIC_WALLET_VERSION,
+            return dict(version=key['version'],
                         key=child_pubkey,
                         depth=key['depth'] + 1,
                         child=child_idx,
