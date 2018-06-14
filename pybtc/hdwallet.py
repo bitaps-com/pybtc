@@ -6,7 +6,7 @@ from struct import pack, unpack
 from hashlib import pbkdf2_hmac
 from binascii import hexlify, unhexlify
 from .constants import *
-from .tools import priv2pub, is_valid_pub, encode_base58, decode_base58
+from .tools import private_to_public_key, is_valid_public_key, encode_base58, decode_base58
 from .hash import hmac_sha512, hash160, double_sha256, sha256, double_sha256
 
 
@@ -123,7 +123,7 @@ def create_parent_pubkey_hdwallet(master_key):
             version = TESTNET_PUBLIC_WALLET_VERSION
         else:
             version = MAINNET_PUBLIC_WALLET_VERSION
-        pubkey = priv2pub(master_key['key'], True)
+        pubkey = private_to_public_key(master_key['key'], True)
         return dict(version=version,
                     key=pubkey,
                     depth=master_key['depth'],
@@ -142,7 +142,7 @@ def create_child_privkey(key, child_idx):
             child_chain_code = expanded_privkey[32:]
             child_privkey = add_private_keys(expanded_privkey[:32], key['key'])
             if validate_private_key(child_privkey):
-                finger_print = hash160(priv2pub(key['key']))[:4]
+                finger_print = hash160(private_to_public_key(key['key']))[:4]
                 return dict(version=key['version'],
                             key=child_privkey,
                             depth=key['depth'] + 1,
@@ -159,9 +159,9 @@ def create_child_pubkey(key, child_idx):
         expanded_pubkey = create_expanded_key(key, child_idx)
         if expanded_pubkey:
             child_chain_code = expanded_pubkey[32:]
-            ext_value = priv2pub(expanded_pubkey[:32])
+            ext_value = private_to_public_key(expanded_pubkey[:32])
             child_pubkey = add_public_keys(ext_value, key['key'])
-            if is_valid_pub(child_pubkey):
+            if is_valid_public_key(child_pubkey):
                 finger_print = hash160(key['key'])[:4]
                 return dict(version=key['version'],
                             key=child_pubkey,
@@ -180,7 +180,7 @@ def create_expanded_key(key, child_idx):
             seed = key['key'] + pack('I', child_idx)
             return hmac_sha512(key['chain_code'], seed)
         elif key.get('is_private') and child_idx < FIRST_HARDENED_CHILD:
-            public_key = priv2pub(key['key'])
+            public_key = private_to_public_key(key['key'])
             seed = public_key + pack('I', child_idx)
             return hmac_sha512(key['chain_code'], seed)
     return None

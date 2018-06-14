@@ -1,11 +1,11 @@
 from secp256k1 import lib as secp256k1
-from secp256k1 import ffi
 import random
 import os
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 BIP0039_DIR = os.path.normpath(os.path.join(ROOT_DIR, 'bip-0039'))
 
+MAX_AMOUNT = 2100000000000000
 SIGHASH_ALL           = 0x00000001
 SIGHASH_NONE          = 0x00000002
 SIGHASH_SINGLE        = 0x00000003
@@ -85,3 +85,4 @@ MAINNET_PUBLIC_WALLET_VERSION = b'\x04\x88\xB2\x1E'
 TESTNET_PRIVATE_WALLET_VERSION = b'\x04\x35\x83\x94'
 TESTNET_PUBLIC_WALLET_VERSION = b'\x04\x35\x87\xCF'
 FIRST_HARDENED_CHILD = 0x80000000
+

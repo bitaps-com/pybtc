@@ -14,8 +14,6 @@ for n, i in enumerate(base32charset_upcase):
     int_base32_map[i] = n
 
 
-
-
 def rebasebits(data, frombits, tobits, pad=True):
     """General power-of-2 base conversion."""
     acc = 0
@@ -38,11 +36,14 @@ def rebasebits(data, frombits, tobits, pad=True):
         raise Exception("invalid padding")
     return ret
 
+
 def rebase_5_to_8(data, pad = True):
     return rebasebits(data, 5, 8, pad)
 
+
 def rebase_8_to_5(data, pad = True):
     return rebasebits(data, 8, 5, pad)
+
 
 def rebase_32_to_5(data):
     if type(data) == bytes:
@@ -55,11 +56,13 @@ def rebase_32_to_5(data):
         raise Exception("Non base32 characters")
     return b
 
+
 def rebase_5_to_32(data, bytes = True):
     r = bytearray()
     for i in data:
         r.append(base32_int_map[i])
     return r.decode() if not bytes else r
+
 
 def bech32_polymod(values):
     """Internal function that computes the Bech32 checksum."""
@@ -71,6 +74,7 @@ def bech32_polymod(values):
         for i in range(5):
             chk ^= generator[i] if ((top >> i) & 1) else 0
     return chk ^ 1
+
 
 def encode_base58(b):
     """Encode bytes to a base58-encoded string"""
@@ -91,6 +95,7 @@ def encode_base58(b):
         else:
             break
     return b58_digits[0] * pad + res
+
 
 def decode_base58(s):
     """Decode a base58-encoding string, returning bytes"""

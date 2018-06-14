@@ -1,7 +1,11 @@
 import unittest
+import os, sys
+parentPath = os.path.abspath("..")
+if parentPath not in sys.path:
+    sys.path.insert(0, parentPath)
 from pybtc import *
 from binascii import unhexlify
-from pybtc import address2hash  as address2hash160
+from pybtc import address_to_hash  as address2hash160
 
 class CreateTransactionTests(unittest.TestCase):
 

@@ -16,7 +16,6 @@ def double_sha256(h, hex = False):
         return sha256(sha256(h), 1)
     return sha256(sha256(h))
 
-
 def hmac_sha512(key, data, hex = False):
     if hex:
         return hmac.new(key, data, hashlib.sha512).hexdigest()
