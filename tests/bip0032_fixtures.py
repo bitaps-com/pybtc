@@ -16,7 +16,7 @@ def good_key():
     return b'B\xa8\xe9v>y\xe2\x82\x10\x80\xc2\xa91\x10E\xe0XJ\xe6\xc7\x18\x9eE~\xa0^\xd1\x820\xe7\x18\x0c'
 
 @pytest.fixture
-def master_key_hdwallet():
+def master_key_hdwallet_mnet():
     return dict(version=b'\x04\x88\xad\xe4',
                 key=b"Y\x9e'\xe00or'\xacD\x9c(l\x99\x0fxB\x03\xbd/]|+\xfd\xe89K!\x93\x0bN\x9b",
                 depth=0,
@@ -27,8 +27,29 @@ def master_key_hdwallet():
 
 
 @pytest.fixture
-def public_key_hdwallet():
+def public_key_hdwallet_mnet():
     return dict(version=b'\x04\x88\xB2\x1E',
+                key=b"\x03F\xcd\x96\xd7-\xc4Q\xee\xfc\xadc\n\xe4\xd2Xe\x02\x99(\x0f\xf5\x1c'\x16\xab\xd0\x05_\xb4:8\xfa",
+                depth=0,
+                child=0,
+                finger_print=b'\x00\x00\x00\x00',
+                chain_code=b'B\xa8\xe9v>y\xe2\x82\x10\x80\xc2\xa91\x10E\xe0XJ\xe6\xc7\x18\x9eE~\xa0^\xd1\x820\xe7\x18\x0c',
+                is_private=False)
+
+@pytest.fixture
+def master_key_hdwallet_tnet():
+    return dict(version=b'\x04\x35\x83\x94',
+                key=b"Y\x9e'\xe00or'\xacD\x9c(l\x99\x0fxB\x03\xbd/]|+\xfd\xe89K!\x93\x0bN\x9b",
+                depth=0,
+                child=0,
+                finger_print=b'\x00\x00\x00\x00',
+                chain_code=b'B\xa8\xe9v>y\xe2\x82\x10\x80\xc2\xa91\x10E\xe0XJ\xe6\xc7\x18\x9eE~\xa0^\xd1\x820\xe7\x18\x0c',
+                is_private=True)
+
+
+@pytest.fixture
+def public_key_hdwallet_tnet():
+    return dict(version=b'\x04\x35\x87\xCF',
                 key=b"\x03F\xcd\x96\xd7-\xc4Q\xee\xfc\xadc\n\xe4\xd2Xe\x02\x99(\x0f\xf5\x1c'\x16\xab\xd0\x05_\xb4:8\xfa",
                 depth=0,
                 child=0,

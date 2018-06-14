@@ -27,8 +27,8 @@ def test_create_master_key_hdwallet(mnemonic_256):
     assert master_key['is_private']
 
 
-def test_create_public_key_hdwallet(master_key_hdwallet):
-    public_key = create_parent_pubkey_hdwallet(master_key_hdwallet)
+def test_create_public_key_hdwallet(master_key_hdwallet_mnet):
+    public_key = create_parent_pubkey_hdwallet(master_key_hdwallet_mnet)
     assert public_key is not None
     assert len(public_key['key']) == 33
 
@@ -39,48 +39,49 @@ def test_validate_private_key(fail_key1, fail_key2, good_key):
     assert validate_private_key(good_key)
 
 
-def test_create_expanded_key(master_key_hdwallet, public_key_hdwallet):
+def test_create_expanded_key(master_key_hdwallet_mnet, public_key_hdwallet_mnet):
     result = create_expanded_key(b'asdasdasd', 0)
     assert result is None
-    result = create_expanded_key(master_key_hdwallet, 0x80000000)
+    result = create_expanded_key(master_key_hdwallet_mnet, 0x80000000)
     assert result is None
-    result = create_expanded_key(master_key_hdwallet, 0)
+    result = create_expanded_key(master_key_hdwallet_mnet, 0)
     assert result is not None
     assert len(result) == 64
-    result = create_expanded_key(public_key_hdwallet, 0)
+    result = create_expanded_key(public_key_hdwallet_mnet, 0)
     assert result is not None
     assert len(result) == 64
 
 
-def test_create_expanded_hard_key(master_key_hdwallet, public_key_hdwallet):
-    result = create_expanded_hard_key(master_key_hdwallet, 0)
+def test_create_expanded_hard_key(master_key_hdwallet_mnet, public_key_hdwallet_mnet):
+    result = create_expanded_hard_key(master_key_hdwallet_mnet, 0)
     assert result is None
-    result = create_expanded_hard_key(master_key_hdwallet, 0x80000000)
+    result = create_expanded_hard_key(master_key_hdwallet_mnet, 0x80000000)
     assert result is not None
     assert len(result) == 64
 
 
-def test_create_child_pubkey(master_key_hdwallet, public_key_hdwallet):
-    result = create_child_pubkey(master_key_hdwallet, 0)
+
+def test_create_child_pubkey(master_key_hdwallet_mnet, public_key_hdwallet_mnet):
+    result = create_child_pubkey(master_key_hdwallet_mnet, 0)
     assert result is not None
     assert isinstance(result, dict)
     assert not result.get('is_private')
 
 
-def test_serialize_key_hdwallet(master_key_hdwallet, public_key_hdwallet):
-    serialize_mkey = serialize_key_hdwallet(master_key_hdwallet)
+def test_serialize_key_hdwallet(master_key_hdwallet_mnet, public_key_hdwallet_tnet):
+    serialize_mkey = serialize_key_hdwallet(master_key_hdwallet_mnet)
     assert serialize_mkey is not None
     assert isinstance(serialize_mkey, bytes)
     assert len(serialize_mkey[:-4]) == 78
     ser_encode = encode_base58(serialize_mkey)
-    assert ser_encode[:4] in 'xprv'
+    assert ser_encode[:4] in ['xprv', 'tprv']
     
-    serialize_pkey = serialize_key_hdwallet(public_key_hdwallet)
+    serialize_pkey = serialize_key_hdwallet(public_key_hdwallet_tnet)
     assert serialize_pkey is not None
     assert isinstance(serialize_pkey, bytes)
     assert len(serialize_pkey[:-4]) == 78
     ser_encode = encode_base58(serialize_pkey)
-    assert ser_encode[:4] in 'xpub'
+    assert ser_encode[:4] in ['xpub', 'tpub']
 
 
 def test_deserialize_key(privkey_hdwallet_base58, pubkey_hdwallet_base58, bad_key_hdwallet_base58):
