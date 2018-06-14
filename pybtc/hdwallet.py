@@ -136,38 +136,40 @@ def create_parent_pubkey_hdwallet(master_key):
 
 # Создание дочернего приватного ключа
 def create_child_privkey(key, child_idx):
-    expanded_privkey = create_expanded_key(key, child_idx)
-    if expanded_pubkey:
-        child_chain_code = expanded_pubkey[32:]
-        child_privkey = add_private_keys(expanded_pubkey[:32], key['key'])
-        if validate_private_key(child_privkey):
-            finger_print = hash160(priv2pub(key['key']))[:4]
-            return dict(version=key['version'],
-                        key=child_pubkey,
-                        depth=key['depth'] + 1,
-                        child=child_idx,
-                        finger_print=finger_print,
-                        chain_code=child_chain_code,
-                        is_private=False)
+    if key['is_private']:
+        expanded_privkey = create_expanded_key(key, child_idx)
+        if expanded_privkey:
+            child_chain_code = expanded_privkey[32:]
+            child_privkey = add_private_keys(expanded_privkey[:32], key['key'])
+            if validate_private_key(child_privkey):
+                finger_print = hash160(priv2pub(key['key']))[:4]
+                return dict(version=key['version'],
+                            key=child_privkey,
+                            depth=key['depth'] + 1,
+                            child=child_idx,
+                            finger_print=finger_print,
+                            chain_code=child_chain_code,
+                            is_private=True)
     return None
 
 
 # создание дочернего публичного ключа
 def create_child_pubkey(key, child_idx):
-    expanded_pubkey = create_expanded_key(key, child_idx)
-    if expanded_pubkey:
-        child_chain_code = expanded_pubkey[32:]
-        ext_value = priv2pub(expanded_pubkey[:32])
-        child_pubkey = add_public_keys(ext_value, key['key'])
-        if is_valid_pub(child_pubkey):
-            finger_print = hash160(key['key'])[:4]
-            return dict(version=key['version'],
-                        key=child_pubkey,
-                        depth=key['depth'] + 1,
-                        child=child_idx,
-                        finger_print=finger_print,
-                        chain_code=child_chain_code,
-                        is_private=False)
+    if not key['is_private']:
+        expanded_pubkey = create_expanded_key(key, child_idx)
+        if expanded_pubkey:
+            child_chain_code = expanded_pubkey[32:]
+            ext_value = priv2pub(expanded_pubkey[:32])
+            child_pubkey = add_public_keys(ext_value, key['key'])
+            if is_valid_pub(child_pubkey):
+                finger_print = hash160(key['key'])[:4]
+                return dict(version=key['version'],
+                            key=child_pubkey,
+                            depth=key['depth'] + 1,
+                            child=child_idx,
+                            finger_print=finger_print,
+                            chain_code=child_chain_code,
+                            is_private=False)
     return None
 
 
