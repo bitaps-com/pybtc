@@ -60,9 +60,19 @@ def test_create_expanded_hard_key(master_key_hdwallet_mnet, public_key_hdwallet_
     assert len(result) == 64
 
 
+def test_create_child_privkey(master_key_hdwallet_mnet, public_key_hdwallet_mnet):
+    result = create_child_privkey(public_key_hdwallet_mnet, 0)
+    assert result is None
+    result = create_child_privkey(master_key_hdwallet_mnet, 0)
+    assert result is not None
+    assert isinstance(result, dict)
+    assert result.get('is_private')
+
 
 def test_create_child_pubkey(master_key_hdwallet_mnet, public_key_hdwallet_mnet):
     result = create_child_pubkey(master_key_hdwallet_mnet, 0)
+    assert result is None
+    result = create_child_pubkey(public_key_hdwallet_mnet, 0)
     assert result is not None
     assert isinstance(result, dict)
     assert not result.get('is_private')
