@@ -11,7 +11,7 @@ import io
 
 # Bitcoin keys
 #
-def create_private_key(hex=False):
+def create_private_key(compressed=True, testnet=False, wif=True):
     """
     :return: 32 bytes private key 
     """
@@ -26,7 +26,7 @@ def create_private_key(hex=False):
             if int.from_bytes(h, byteorder="big") < MAX_INT_PRIVATE_KEY:
                 break
     if hex:
-        return hexlify(h).decode()
+        return private_key_to_wif(h)
     return h
 
 
@@ -74,7 +74,7 @@ def is_wif_valid(wif):
     return True
 
 
-def private_to_public_key(private_key, compressed=True, hex=False):
+def private_to_public_key(private_key, compressed=True, hex=True):
     if type(private_key)!= bytes:
         if type(private_key) == bytearray:
             private_key = bytes(private_key)
@@ -102,6 +102,8 @@ def private_to_public_key(private_key, compressed=True, hex=False):
 
 
 def is_valid_public_key(key):
+    if isinstance(key, str):
+        key = unhexlify(key)
     if len(key) < 33:
         return False
     if key[0] == 0x04 and len(key) != 65:
@@ -552,6 +554,8 @@ def verify_signature(sig, pub_key, msg):
 
 def sign_message(msg, private_key, hex=False):
     """
+    Sign message
+    
     :param msg:  message to sign 
     :param private_key:  private key (bytes, hex encoded string)
     :param hex:  
