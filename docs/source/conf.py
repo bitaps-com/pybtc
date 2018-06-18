@@ -93,10 +93,26 @@ pygments_style = 'sphinx'
 html_theme = 'alabaster'
 
 html_theme_options = {
-    'logo': 'logo.png',
+    'logo': 'pybtc.png',
+    'description': ' ',
+    'github_banner': True,
     'github_button': True,
-    'github_user': '4tochka',
+    'github_user': 'bitaps-com',
     'github_repo': 'pybtc',
+    'page_width': '1100px',
+    'caption_font_family': "sans-serif",
+    'font_family': "sans-serif",
+    'font_size': '16px'
+}
+
+html_sidebars = {
+    '**': [
+        'about.html',
+        'navigation.html',
+        'relations.html',
+        'searchbox.html',
+        'donate.html',
+    ]
 }
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
