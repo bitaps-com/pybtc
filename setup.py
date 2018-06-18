@@ -9,5 +9,6 @@ setup(name='pybtc',
       author='Alexsei Karpov',
       author_email='admin@bitaps.com',
       url='https://github.com/bitaps-com/pybtc',
-      packages=['pybtc', ],
+      packages=['pybtc'],
+      package_data={'pybtc': ['bip-0039/*.txt']},
      )
