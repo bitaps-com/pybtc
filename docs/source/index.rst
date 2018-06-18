@@ -111,4 +111,4 @@ Table Of Contents
    :name: mastertoc
    :maxdepth: 2
 
-   tools.rst
+   functional.rst
