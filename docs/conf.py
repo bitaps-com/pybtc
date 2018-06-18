@@ -20,7 +20,7 @@
 # -- Project information -----------------------------------------------------
 
 project = 'pybtc'
-copyright = '2018, Aleksey Karpov'
+copyright = '2018, bitaps.com'
 author = 'Aleksey Karpov'
 
 # The short X.Y version
@@ -28,7 +28,7 @@ version = ''
 # The full version, including alpha/beta/rc tags
 release = ''
 
-
+highlight_language = 'python3'
 # -- General configuration ---------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -78,6 +78,13 @@ pygments_style = 'sphinx'
 # a list of builtin themes.
 #
 html_theme = 'alabaster'
+
+html_theme_options = {
+    'logo': 'pybtc.png',
+    'description': 'Python Bitcoin library'
+}
+
+
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
