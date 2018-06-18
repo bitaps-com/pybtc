@@ -9,31 +9,31 @@ from pybtc.hdwallet import *
 
 def test_recovery_from_passphrase_12(entropy_128, mnemonic_128):
     passphrase = ' '.join(mnemonic_128)
-    entropy = mnemonic2bytes(passphrase, 'english')
+    entropy = mnemonic_to_bytes(passphrase, 'english')
     assert entropy == entropy_128
 
 
 def test_recovery_from_passphrase_15(entropy_160, mnemonic_160):
     passphrase = ' '.join(mnemonic_160)
-    entropy = mnemonic2bytes(passphrase, 'english')
+    entropy = mnemonic_to_bytes(passphrase, 'english')
     assert entropy == entropy_160
 
 
 def test_recovery_from_passphrase_18(entropy_192, mnemonic_192):
     passphrase = ' '.join(mnemonic_192)
-    entropy = mnemonic2bytes(passphrase, 'english')
+    entropy = mnemonic_to_bytes(passphrase, 'english')
     assert entropy == entropy_192
 
 
 def test_recovery_from_passphrase_21(entropy_224, mnemonic_224):
     passphrase = ' '.join(mnemonic_224)
-    entropy = mnemonic2bytes(passphrase, 'english')
+    entropy = mnemonic_to_bytes(passphrase, 'english')
     assert entropy == entropy_224
 
 
 def test_recovery_from_passphrase_24(entropy_256, mnemonic_256):
     passphrase = ' '.join(mnemonic_256)
-    entropy = mnemonic2bytes(passphrase, 'english')
+    entropy = mnemonic_to_bytes(passphrase, 'english')
     assert entropy == entropy_256
 
 
