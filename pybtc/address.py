@@ -6,21 +6,22 @@ class PrivateKey():
         if key is None:
             self.compressed = compressed
             self.testnet = testnet
-            self.raw_key = create_private_key()
+            self.raw_key = create_private_key(wif=False)
         else:
-            if type(key) == str:
+            if isinstance(key, str):
                 try:
                     key = unhexlify(key)
                 except:
                     pass
-            if type(key) == bytes:
-                assert len(key) == 32
+            if isinstance(key, bytes):
+                if len(key) != 32:
+                    raise TypeError("private key invalid")
                 self.raw_key = key
                 self.compressed = compressed
                 self.testnet = testnet
                 return
-            assert type(key) == str
-            self.raw_key = wif_to_private_key(key)
+            assert isinstance(key, str)
+            self.raw_key = wif_to_private_key(key, hex=False)
             if key[0] in (MAINNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX,
                           TESTNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX):
                 self.compressed = False
@@ -48,16 +49,19 @@ class PrivateKey():
 
 class PublicKey():
     def __init__(self, key=None):
-        if type(key) == str:
+        if isinstance(key, str):
             try:
                 key = unhexlify(key)
             except:
                 pass
-        if type(key) == PrivateKey:
+        if isinstance(key, PrivateKey):
             key = private_to_public_key(key.raw_key,
-                                        compressed=key.compressed)
-        assert type(key) == bytes
-        assert len(key) == 33 or len(key) == 65
+                                        compressed=key.compressed,
+                                        hex=False)
+        if not isinstance(key, bytes):
+            raise TypeError("public key invalid")
+        if len(key) != 33 and len(key) != 65:
+            raise TypeError("public key invalid")
         if len(key) == 33:
             self.compressed = True
         else:
@@ -68,7 +72,7 @@ class PublicKey():
         return hexlify(self.raw_key).decode()
 
     def __str__(self):
-        return hex()
+        return self.hex()
 
 
 class Address():
@@ -79,18 +83,20 @@ class Address():
                                           compressed=compressed)
             self.public_key = PublicKey(self.private_key)
             self.testnet = testnet
-        elif type(key) == PrivateKey:
+        elif isinstance(key, PrivateKey):
             self.private_key = key
             self.testnet = key.testnet
             compressed = key.compressed
             self.public_key = PublicKey(self.private_key)
-        elif type(key) == PublicKey:
+        elif isinstance(key, PublicKey):
             self.public_key = key
             self.testnet = testnet
             compressed = key.compressed
-        assert address_type in ("P2PKH", "PUBKEY", "P2WPKH", "P2SH_P2WPKH")
+        if address_type not in ("P2PKH", "PUBKEY", "P2WPKH", "P2SH_P2WPKH"):
+            raise TypeError("address type invalid")
         if not compressed:
-            assert address_type in ("P2PKH", "PUBKEY")
+            if address_type not in ("P2PKH", "PUBKEY", "P2SH"):
+                raise TypeError("compressed public key invalid")
         self.type = address_type
 
         if address_type in ("P2WPKH"):
@@ -120,7 +126,7 @@ class ScriptAddress():
                  testnet=False, witness_version=None):
         self.witness_version = witness_version
         self.testnet = testnet
-        if type(script) == str:
+        if isinstance(script, str):
             script = unhexlify(script)
         self.script_raw = script
         self.script = hexlify(self.script_raw).decode()

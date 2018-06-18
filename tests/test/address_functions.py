@@ -47,7 +47,7 @@ class AddressFunctionsTests(unittest.TestCase):
                                                   hex=1),p)
 
     def test_create_private_key(self):
-        p = tools.create_private_key()
+        p = tools.create_private_key(wif=0)
         pw = tools.private_key_to_wif(p)
         self.assertEqual(tools.is_wif_valid(pw), True)
 

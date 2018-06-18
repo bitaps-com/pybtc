@@ -129,7 +129,7 @@ def private_to_public_key(private_key, compressed=True, hex=True):
                 if private_key[0] in (MAINNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX,
                                       TESTNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX):
                     compressed = False
-                private_key = wif_to_private_key(private_key)
+                private_key = wif_to_private_key(private_key, hex=0)
         else:
             raise TypeError("private key must be a bytes or WIF or hex encoded string")
     pubkey_ptr = ffi.new('secp256k1_pubkey *')
@@ -334,7 +334,7 @@ def address_to_script(address, hex=False):
                       MAINNET_SCRIPT_ADDRESS_PREFIX):
         s = [BYTE_OPCODE["OP_HASH160"],
              b'\x14',
-             address_to_hash(address),
+             address_to_hash(address, hex=False),
              BYTE_OPCODE["OP_EQUAL"]]
     elif address[0] in (MAINNET_ADDRESS_PREFIX,
                         TESTNET_ADDRESS_PREFIX,
@@ -342,12 +342,12 @@ def address_to_script(address, hex=False):
         s = [BYTE_OPCODE["OP_DUP"],
              BYTE_OPCODE["OP_HASH160"],
              b'\x14',
-             address_to_hash(address),
+             address_to_hash(address, hex=False),
              BYTE_OPCODE["OP_EQUALVERIFY"],
              BYTE_OPCODE["OP_CHECKSIG"]]
     elif address[:2] in (TESTNET_SEGWIT_ADDRESS_PREFIX,
                          MAINNET_SEGWIT_ADDRESS_PREFIX):
-        h = address_to_hash(address)
+        h = address_to_hash(address, hex=False)
         s = [BYTE_OPCODE["OP_0"],
              bytes([len(h)]),
              h]
