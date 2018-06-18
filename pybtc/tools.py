@@ -195,6 +195,21 @@ def address_type(address, num=False):
     return SCRIPT_TYPES[t] if num else t
 
 
+def address_net_type(address):
+    if address[0] in (MAINNET_SCRIPT_ADDRESS_PREFIX,
+                      MAINNET_ADDRESS_PREFIX):
+        return "mainnet"
+    elif address[:2] == MAINNET_SEGWIT_ADDRESS_PREFIX:
+        return "mainnet"
+    elif address[0] in (TESTNET_SCRIPT_ADDRESS_PREFIX,
+                        TESTNET_ADDRESS_PREFIX,
+                        TESTNET_ADDRESS_PREFIX_2):
+        return "testnet"
+    elif address[:2] == TESTNET_SEGWIT_ADDRESS_PREFIX:
+        return "testnet"
+    return None
+
+
 def script_to_hash(s, witness=False, hex=False):
     if type(s) == str:
         s = unhexlify(s)
@@ -379,6 +394,66 @@ def decode_script(script, asm=False):
     return ' '.join(result)
 
 
+def delete_from_script(script, sub_script):
+    if not sub_script:
+        return script
+    s_hex = False
+    if type(script) == str:
+        try:
+            script = unhexlify(script)
+            s_hex = True
+        except:
+            pass
+        assert type(script) == bytes
+    if type(sub_script) == str:
+        try:
+            sub_script = unhexlify(sub_script)
+        except:
+            pass
+        assert type(sub_script) == bytes
+    l = len(script)
+    ls = len(sub_script)
+    s = 0
+    k = 0
+    stack = []
+    result = []
+    while l - s > 0:
+        if script[s] < 0x4c and script[s]:
+            stack.append(script[s] + 1)
+            s += script[s] + 1
+        elif script[s] == OPCODE["OP_PUSHDATA1"]:
+            stack.append(1 + script[s + 1])
+            s += 1 + script[s + 1]
+        elif script[s] == OPCODE["OP_PUSHDATA2"]:
+            stack.append(2 + struct.unpack('<H', script[s: s + 2]))
+            s += 2 + struct.unpack('<H', script[s: s + 2])
+        elif script[s] == OPCODE["OP_PUSHDATA4"]:
+            stack.append(4 + struct.unpack('<L', script[s: s + 4]))
+            s += 4 + struct.unpack('<L', script[s: s + 4])
+        else:
+            stack.append(1)
+            s += 1
+        if s - k >= ls:
+            if script[k:s][:ls] == sub_script:
+                if s - k > ls:
+                    result.append(script[k + ls:s])
+                t = 0
+                while t != s - k:
+                    t += stack.pop(0)
+                k = s
+            else:
+                t = stack.pop(0)
+                result.append(script[k:k+t])
+                k += t
+    if script[k:s][:ls] == sub_script:
+        if s - k > ls:
+            result.append(script[k + ls:s])
+    else:
+        result.append(script[k:k + ls])
+
+    return b''.join(result) if not s_hex else hexlify(b''.join(result)).decode()
+
+
 def is_address_valid(address, testnet=False):
     if not address or type(address) != str:
         return False
@@ -488,7 +563,7 @@ def sign_message(msg, private_key, hex=False):
 
         elif type(msg) == str:
             msg = unhexlify(msg)
-        else :
+        else:
             raise TypeError("message must be a bytes or hex encoded string")
     if type(private_key) != bytes:
         if type(private_key) == bytearray:

@@ -27,7 +27,7 @@ class AddressClassTests(unittest.TestCase):
         self.assertEqual(a.address, '15m65JmFohJiioQbzMWhqFeCS3ZL1KVaNh')
         a = address.Address(p, address_type = "P2SH_P2WPKH")
         self.assertEqual(a.address, '37WJdFAoHDbxUQioDgtvPZuyJPyrrNQ7aL')
-        self.assertEqual(a.redeem_script_hex, '001434370a8d74e9965d7aade2ba2f30110b321bf236')
+        self.assertEqual(a.redeem_script, '001434370a8d74e9965d7aade2ba2f30110b321bf236')
         self.assertEqual(a.public_key.hex(), '02a8fb85e98c99b79150df12fde488639d8445c57babef83d53c66c1e5c818eeb4')
 
         # compressed public key
@@ -48,7 +48,7 @@ class AddressClassTests(unittest.TestCase):
         self.assertEqual(a.address, '15m65JmFohJiioQbzMWhqFeCS3ZL1KVaNh')
         a = address.Address(p, address_type="P2SH_P2WPKH")
         self.assertEqual(a.address, '37WJdFAoHDbxUQioDgtvPZuyJPyrrNQ7aL')
-        self.assertEqual(a.redeem_script_hex, '001434370a8d74e9965d7aade2ba2f30110b321bf236')
+        self.assertEqual(a.redeem_script, '001434370a8d74e9965d7aade2ba2f30110b321bf236')
         self.assertEqual(a.public_key.hex(), '02a8fb85e98c99b79150df12fde488639d8445c57babef83d53c66c1e5c818eeb4')
 
         # from uncompressed pubkey
@@ -57,3 +57,8 @@ class AddressClassTests(unittest.TestCase):
         self.assertEqual(a.address, '17suVjHXyWF9KiGkpRRQW4ysiEqdDkRqo1')
         a = address.Address(p, address_type="PUBKEY")
         self.assertEqual(a.address, '17suVjHXyWF9KiGkpRRQW4ysiEqdDkRqo1')
+
+        redeem = "5221032bfc25cf7cccc278b26473e2967b8fd403b4b544b836e71abdfebb08d8c96d6921032bfc25cf7cccc278b26473e2967b8fd403b4b544b836e71abdfebb08d8c96d6921032bfc25cf7cccc278b26473e2967b8fd403b4b544b836e71abdfebb08d8c96d6953ae"
+        a = address.ScriptAddress(redeem)
+        print(a.script_opcodes_asm)
+        self.assertEqual(a.address, '3KCqqS6eznp3ucVPxtNkiYcVg6kQKNX9sg')
