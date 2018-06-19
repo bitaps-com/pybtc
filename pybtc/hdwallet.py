@@ -262,7 +262,7 @@ def validate_private_key(key):
 def validate_path_level(path_level, testnet):
     if not len(path_level):
         return True
-    elif len(path_level) == 3:
+    elif len(path_level) == 5:
         if path_level[0] != 0x8000002C:
             return False
         elif testnet and path_level[1] != 0x80000001:
