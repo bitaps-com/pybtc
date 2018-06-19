@@ -34,9 +34,9 @@ def test_create_public_key_hdwallet(master_key_hdwallet_mnet):
 
 
 def test_validate_private_key(fail_key1, fail_key2, good_key):
-    assert not validate_private_key(fail_key1)
-    assert not validate_private_key(fail_key2)
-    assert validate_private_key(good_key)
+    assert not is_valid_private_key(fail_key1)
+    assert not is_valid_private_key(fail_key2)
+    assert is_valid_private_key(good_key)
 
 
 def test_create_expanded_key(master_key_hdwallet_mnet, public_key_hdwallet_mnet):
@@ -131,7 +131,7 @@ def test_xprivate_to_xpublic_key(privkey_hdwallet_base58):
     assert isinstance(xpubkey, bytes)
 
 
-def test_xkey_to_private_key(privkey_hdwallet_base58, pubkey_hdwallet_base58):
+def test_xkey_to_private_key(privkey_hdwallet_base58):
     privkey = xkey_to_private_key(privkey_hdwallet_base58, True, False)
     assert privkey is not None
     assert isinstance(privkey, str)
@@ -143,22 +143,38 @@ def test_xkey_to_private_key(privkey_hdwallet_base58, pubkey_hdwallet_base58):
     assert isinstance(privkey, bytes)
 
 
+def test_xkey_to_public_key(privkey_hdwallet_base58, pubkey_hdwallet_base58):
+    # from xpubkey to pubkey
+    pubkey = xkey_to_public_key(pubkey_hdwallet_base58, True)
+    assert pubkey is not None
+    assert isinstance(pubkey, str)
+    pubkey = xkey_to_public_key(pubkey_hdwallet_base58, False)
+    assert pubkey is not None
+    assert isinstance(pubkey, bytes)
+    # from xprivkey to pubkey
+    pubkey = xkey_to_public_key(privkey_hdwallet_base58, True)
+    assert pubkey is not None
+    assert isinstance(pubkey, str)
+    pubkey = xkey_to_public_key(privkey_hdwallet_base58, False)
+    assert pubkey is not None
+    assert isinstance(pubkey, bytes)
+
 
 def test_validate_path_level():
     params = [0x8000002C, 0x80000001, 0x80000000, 0, 0]
     testnet = True
-    assert validate_path_level(params, testnet)
+    assert is_validate_path_level(params, testnet)
     testnet = False
-    assert not validate_path_level(params, testnet)
+    assert not is_validate_path_level(params, testnet)
     params = [0, 0x80000001, 0x80000000, 0, 0]
     testnet = True
-    assert not validate_path_level(params, testnet)
+    assert not is_validate_path_level(params, testnet)
     params = [0x8000002C, 0x80000001, 0, 0, 0]
     testnet = True
-    assert not validate_path_level(params, testnet)
+    assert not is_validate_path_level(params, testnet)
     params = [0x8000002C, 0x80000001, 0, 0]
     testnet = True
-    assert not validate_path_level(params, testnet)
+    assert not is_validate_path_level(params, testnet)
     params = []
-    assert validate_path_level(params, testnet)
+    assert is_validate_path_level(params, testnet)
 
