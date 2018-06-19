@@ -104,7 +104,7 @@ def create_xmaster_key(seed, testnet=False):
     intermediary = hmac_sha512(key, seed)
     mkey = intermediary[:32]
     chain_code = intermediary[32:]
-    if validate_private_key(mkey) and validate_private_key(chain_code):
+    if is_validate_private_key(mkey) and is_validate_private_key(chain_code):
         return dict(version=version,
                     key=mkey,
                     depth=0,
@@ -148,7 +148,7 @@ def derive_xkey(seed, *path_level, bip44=True, testnet=True, wif=True):
             result = serialize_xkey(xkey)
         return result
     else:
-        if not validate_path_level(path_level, testnet):
+        if not is_validate_path_level(path_level, testnet):
             raise TypeError("path level does not match BIP-0044 - https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki")
         elif not len(path_level):
             if testnet:
@@ -168,7 +168,7 @@ def derive_xkey(seed, *path_level, bip44=True, testnet=True, wif=True):
 
 
 def xprivate_to_xpublic_key(xprv, encode_b58=True):
-    if validate_private_key(xprv):
+    if is_validate_private_key(xprv):
         xprivkey = deserialize_xkey(xprv)
         xpubkey = create_xpublic_key(xprivkey)
         if encode_b58:
@@ -181,7 +181,7 @@ def xprivate_to_xpublic_key(xprv, encode_b58=True):
 
 # получение из расширенного приватного ключа обычный приватный ключ
 def xkey_to_private_key(xkey, wif=True, hex=False):
-    if validate_private_key(xkey):
+    if is_validate_private_key(xkey):
         xprivkey = deserialize_xkey(xkey)
         privkey = xprivkey['key']
         if xprivkey['version'] in TESTNET_PRIVATE_WALLET_VERSION:
@@ -208,7 +208,7 @@ def create_child_privkey(key, child_idx):
         if expanded_privkey:
             child_chain_code = expanded_privkey[32:]
             child_privkey = add_private_keys(expanded_privkey[:32], key['key'])
-            if validate_private_key(child_privkey):
+            if is_validate_private_key(child_privkey):
                 finger_print = hash160(private_to_public_key(key['key']))[:4]
                 return dict(version=key['version'],
                             key=child_privkey,
@@ -281,7 +281,7 @@ def add_public_keys(ext_value, key):
     return None
 
 
-def validate_private_key(key):
+def is_validate_private_key(key):
     if isinstance(key, bytes):
         key_int = int.from_bytes(key, byteorder="big")
         if key_int > 0 and key_int < MAX_INT_PRIVATE_KEY and len(key) == 32:
@@ -293,7 +293,7 @@ def validate_private_key(key):
 
 
 # валидация path_level в соответствии с требованиями BIP-0044
-def validate_path_level(path_level, testnet):
+def is_validate_path_level(path_level, testnet):
     if not len(path_level):
         return True
     elif len(path_level) == 5:
