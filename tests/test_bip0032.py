@@ -126,6 +126,9 @@ def test_xprivate_to_xpublic_key(privkey_hdwallet_base58):
     assert isinstance(xpubkey, str)
     assert len(xpubkey) == 111
     assert xpubkey[:4] in ['xpub', 'tpub']
+    xpubkey = xprivate_to_xpublic_key(privkey_hdwallet_base58, False)
+    assert xpubkey is not None
+    assert isinstance(xpubkey, bytes)
 
 
 def test_validate_path_level():
