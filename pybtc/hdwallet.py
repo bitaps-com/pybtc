@@ -6,7 +6,7 @@ from struct import pack, unpack
 from hashlib import pbkdf2_hmac
 from binascii import hexlify, unhexlify
 from .constants import *
-from .tools import private_to_public_key, is_valid_public_key, encode_base58, decode_base58
+from .tools import private_to_public_key, is_valid_public_key, encode_base58, decode_base58, private_key_to_wif
 from .hash import hmac_sha512, hash160, double_sha256, sha256, double_sha256
 
 
@@ -166,6 +166,7 @@ def derive_xkey(seed, *path_level, bip44=True, testnet=True, wif=True):
             result = serialize_xkey(xkey)
         return result
 
+
 def xprivate_to_xpublic_key(xprv, encode_b58=True):
     if validate_private_key(xprv):
         xprivkey = deserialize_xkey(xprv)
@@ -173,6 +174,25 @@ def xprivate_to_xpublic_key(xprv, encode_b58=True):
         if encode_b58:
             return encode_base58(serialize_xkey(xpubkey))
         return serialize_xkey(xpubkey)
+    else:
+        raise TypeError("Private key must be serialized according to BIP-0032 - " \
+                        "https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki#serialization-format")
+
+
+# получение из расширенного приватного ключа обычный приватный ключ
+def xkey_to_private_key(xkey, wif=True, hex=False):
+    if validate_private_key(xkey):
+        xprivkey = deserialize_xkey(xkey)
+        privkey = xprivkey['key']
+        if xprivkey['version'] in TESTNET_PRIVATE_WALLET_VERSION:
+            testnet = True
+        else:
+            testnet = False
+        if wif:
+            return private_key_to_wif(privkey, testnet=testnet)
+        elif hex:
+            return hexlify(privkey).decode()
+        return privkey
     else:
         raise TypeError("Private key must be serialized according to BIP-0032 - " \
                         "https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki#serialization-format")
