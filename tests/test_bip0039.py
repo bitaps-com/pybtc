@@ -9,31 +9,31 @@ from pybtc.hdwallet import *
 
 def test_recovery_from_passphrase_12(entropy_128, mnemonic_128):
     passphrase = ' '.join(mnemonic_128)
-    entropy = mnemonic_to_bytes(passphrase, 'english')
+    entropy = mnemonic_to_entropy(passphrase, 'english')
     assert entropy == entropy_128
 
 
 def test_recovery_from_passphrase_15(entropy_160, mnemonic_160):
     passphrase = ' '.join(mnemonic_160)
-    entropy = mnemonic_to_bytes(passphrase, 'english')
+    entropy = mnemonic_to_entropy(passphrase, 'english')
     assert entropy == entropy_160
 
 
 def test_recovery_from_passphrase_18(entropy_192, mnemonic_192):
     passphrase = ' '.join(mnemonic_192)
-    entropy = mnemonic_to_bytes(passphrase, 'english')
+    entropy = mnemonic_to_entropy(passphrase, 'english')
     assert entropy == entropy_192
 
 
 def test_recovery_from_passphrase_21(entropy_224, mnemonic_224):
     passphrase = ' '.join(mnemonic_224)
-    entropy = mnemonic_to_bytes(passphrase, 'english')
+    entropy = mnemonic_to_entropy(passphrase, 'english')
     assert entropy == entropy_224
 
 
 def test_recovery_from_passphrase_24(entropy_256, mnemonic_256):
     passphrase = ' '.join(mnemonic_256)
-    entropy = mnemonic_to_bytes(passphrase, 'english')
+    entropy = mnemonic_to_entropy(passphrase, 'english')
     assert entropy == entropy_256
 
 
@@ -67,7 +67,7 @@ def test_create_wordlist():
 
 def test_create_seed(mnemonic_256):
     passphrase = ' '.join(mnemonic_256)
-    seed = create_seed(passphrase, 'P@ssw0rd')
+    seed = mnemonic_to_seed(passphrase, 'P@ssw0rd')
     assert seed is not None
     assert len(seed) == 64
 
