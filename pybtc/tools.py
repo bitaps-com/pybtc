@@ -104,10 +104,13 @@ def private_to_public_key(private_key, compressed=True, hex=False):
 def is_valid_public_key(key):
     if len(key) < 33:
         return False
-    if key[0] == 0x04 and len(key) != 65:
+    elif key[0] == 0x04 and len(key) != 65:
         return False
     elif key[0] == 0x02 or key[0] == 0x03:
         if len(key) != 33:
+            return False
+    elif isinstance(key, str):
+        if not key[:4] in ['xpub', 'tpub']:
             return False
     return True
 
