@@ -113,7 +113,7 @@ def test_deserialize_key(privkey_hdwallet_base58, pubkey_hdwallet_base58, bad_ke
 def test_derive_xkey(mnemonic_256):
     passphrase = ' '.join(mnemonic_256)
     seed = mnemonic_to_seed(passphrase, 'P@ssw0rd')
-    params = [0x8000002C, 0x80000001, 0x80000000]
+    params = [0x8000002C, 0x80000001, 0x80000000, 0, 0]
     result = derive_xkey(seed, *params, bip44=True, testnet=True, wif=True)
     assert result is not None
     assert isinstance(result, str)
@@ -121,15 +121,18 @@ def test_derive_xkey(mnemonic_256):
 
 
 def test_validate_path_level():
-    params = [0x8000002C, 0x80000001, 0x80000000]
+    params = [0x8000002C, 0x80000001, 0x80000000, 0, 0]
     testnet = True
     assert validate_path_level(params, testnet)
     testnet = False
     assert not validate_path_level(params, testnet)
-    params = [0, 0x80000001, 0x80000000]
+    params = [0, 0x80000001, 0x80000000, 0, 0]
     testnet = True
     assert not validate_path_level(params, testnet)
-    params = [0x8000002C, 0x80000001, 0]
+    params = [0x8000002C, 0x80000001, 0, 0, 0]
+    testnet = True
+    assert not validate_path_level(params, testnet)
+    params = [0x8000002C, 0x80000001, 0, 0]
     testnet = True
     assert not validate_path_level(params, testnet)
     params = []
