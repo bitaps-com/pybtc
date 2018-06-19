@@ -61,7 +61,7 @@ def add_checksum_ent(data):
     return data_int
 
 
-def mnemonic_to_bytes(passphrase, language):
+def mnemonic_to_entropy(passphrase, language):
     mnemonic = passphrase.split()
     if len(mnemonic) in [12, 15, 18, 21, 24]:
         wordlist = create_wordlist(language)
@@ -84,7 +84,7 @@ def mnemonic_to_bytes(passphrase, language):
         raise ValueError('Number of words must be one of the following: [12, 15, 18, 21, 24], but it is not (%d).' % len(mnemonic))
 
 
-def create_seed(passphrase, password):
+def mnemonic_to_seed(passphrase, password):
     return pbkdf2_hmac('sha512', passphrase.encode(), (passphrase + password).encode(), 2048)
 
 
@@ -116,6 +116,40 @@ def create_master_key_hdwallet(seed, testnet=False):
         return None
 
 
+def derive_xkey(seed, *path_level, bip44=True, testnet=True, wif=True):
+    if not bip44:
+        if not len(path_level):
+            raise TypeError("not specified path levels")
+        mkey = create_master_key_hdwallet(seed, testnet)
+        xkey = create_child_privkey(mkey, path_level[0])
+        for idx in path_level[1:]:
+            xkey = create_child_privkey(xkey, idx)
+        # сериализация и кодирование ключа
+        if wif:
+            result = encode_base58(serialize_key_hdwallet(xkey))
+        else:
+            result = serialize_key_hdwallet(xkey)
+        return result
+    else:
+        if not validate_path_level(path_level, testnet):
+            raise TypeError("path level does not match BIP-0044 - https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki")
+        elif not len(path_level):
+            if testnet:
+                path_level = TESTNET_PATH_LEVEL_BIP0044
+            else:
+                path_level = PATH_LEVEL_BIP0044
+        mkey = create_master_key_hdwallet(seed, testnet)
+        xkey = create_child_privkey(mkey, path_level[0])
+        for idx in path_level[1:]:
+            xkey = create_child_privkey(xkey, idx)
+        # сериализация и кодирование ключа
+        if wif:
+            result = encode_base58(serialize_key_hdwallet(xkey))
+        else:
+            result = serialize_key_hdwallet(xkey)
+        return result
+
+
 ## Надо удалить в будущем как дублирование. И добавить в реализации ООП как метод
 def create_parent_pubkey_hdwallet(master_key):
     if master_key['is_private']:
@@ -137,7 +171,10 @@ def create_parent_pubkey_hdwallet(master_key):
 # Создание дочернего приватного ключа
 def create_child_privkey(key, child_idx):
     if key['is_private']:
-        expanded_privkey = create_expanded_key(key, child_idx)
+        if child_idx < FIRST_HARDENED_CHILD:
+            expanded_privkey = create_expanded_key(key, child_idx)
+        else:
+            expanded_privkey = create_expanded_hard_key(key, child_idx)
         if expanded_privkey:
             child_chain_code = expanded_privkey[32:]
             child_privkey = add_private_keys(expanded_privkey[:32], key['key'])
@@ -217,6 +254,23 @@ def add_public_keys(ext_value, key):
 def validate_private_key(key):
     key_int = int.from_bytes(key, byteorder="big")
     if key_int > 0 and key_int < MAX_INT_PRIVATE_KEY and len(key) == 32:
+        return True
+    return False
+
+
+# валидация path_level в соответствии с требованиями BIP-0044
+def validate_path_level(path_level, testnet):
+    if not len(path_level):
+        return True
+    elif len(path_level) == 3:
+        if path_level[0] != 0x8000002C:
+            return False
+        elif testnet and path_level[1] != 0x80000001:
+            return False
+        elif not testnet and path_level[1] != 0x80000000:
+            return False
+        elif path_level[2] < 0x80000000:
+            return False
         return True
     return False
 
