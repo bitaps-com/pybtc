@@ -131,6 +131,19 @@ def test_xprivate_to_xpublic_key(privkey_hdwallet_base58):
     assert isinstance(xpubkey, bytes)
 
 
+def test_xkey_to_private_key(privkey_hdwallet_base58, pubkey_hdwallet_base58):
+    privkey = xkey_to_private_key(privkey_hdwallet_base58, True, False)
+    assert privkey is not None
+    assert isinstance(privkey, str)
+    privkey = xkey_to_private_key(privkey_hdwallet_base58, False, True)
+    assert privkey is not None
+    assert isinstance(privkey, str)
+    privkey = xkey_to_private_key(privkey_hdwallet_base58, False, False)
+    assert privkey is not None
+    assert isinstance(privkey, bytes)
+
+
+
 def test_validate_path_level():
     params = [0x8000002C, 0x80000001, 0x80000000, 0, 0]
     testnet = True
