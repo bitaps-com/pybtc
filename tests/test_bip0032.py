@@ -11,7 +11,7 @@ from pybtc.tools import encode_base58, decode_base58
 
 def test_create_master_key_hdwallet(mnemonic_256):
     passphrase = ' '.join(mnemonic_256)
-    seed = create_seed(passphrase, 'P@ssw0rd')
+    seed = mnemonic_to_seed(passphrase, 'P@ssw0rd')
     assert seed is not None
     assert len(seed) == 64
     master_key = create_master_key_hdwallet(seed)
@@ -108,4 +108,31 @@ def test_deserialize_key(privkey_hdwallet_base58, pubkey_hdwallet_base58, bad_ke
     #десериализация некорретного ключа
     pubkey = deserialize_key_hdwallet(bad_key_hdwallet_base58)
     assert pubkey is None
+
+
+def test_derive_xkey(mnemonic_256):
+    passphrase = ' '.join(mnemonic_256)
+    seed = mnemonic_to_seed(passphrase, 'P@ssw0rd')
+    params = [0x8000002C, 0x80000001, 0x80000000]
+    result = derive_xkey(seed, *params, bip44=True, testnet=True, wif=True)
+    assert result is not None
+    assert isinstance(result, str)
+    assert result[:4] in 'tprv'
+
+
+def test_validate_path_level():
+    params = [0x8000002C, 0x80000001, 0x80000000]
+    testnet = True
+    assert validate_path_level(params, testnet)
+    testnet = False
+    assert not validate_path_level(params, testnet)
+    params = [0, 0x80000001, 0x80000000]
+    testnet = True
+    assert not validate_path_level(params, testnet)
+    params = [0x8000002C, 0x80000001, 0]
+    testnet = True
+    assert not validate_path_level(params, testnet)
+    params = []
+    assert validate_path_level(params, testnet)
+
 
