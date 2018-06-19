@@ -312,9 +312,9 @@ def deserialize_xkey(encode_key):
     decode_key = dict()
     if raw_key[:4] in [MAINNET_PUBLIC_WALLET_VERSION, MAINNET_PRIVATE_WALLET_VERSION]:
         decode_key['version'] = raw_key[:4]
-        decode_key['depth'] = raw_key[4:5]
+        decode_key['depth'] = unpack('B', raw_key[4:5])[0]
         decode_key['finger_print'] = raw_key[5:9]
-        decode_key['child'] = raw_key[9:13]
+        decode_key['child'] = unpack('I', raw_key[9:13])[0]
         decode_key['chain_code'] = raw_key[13:45]
         if decode_key['version'] in [MAINNET_PRIVATE_WALLET_VERSION]:
             decode_key['is_private'] = True
