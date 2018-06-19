@@ -95,18 +95,18 @@ def mnemonic_to_seed(passphrase, password):
 #
 
 # создание родительского приватного ключа
-def create_master_key_hdwallet(seed, testnet=False):
+def create_xmaster_key(seed, testnet=False):
     if testnet:
         version = TESTNET_PRIVATE_WALLET_VERSION
     else:
         version = MAINNET_PRIVATE_WALLET_VERSION
     key = b'Bitcoin seed'
     intermediary = hmac_sha512(key, seed)
-    master_key = intermediary[:32]
+    mkey = intermediary[:32]
     chain_code = intermediary[32:]
-    if validate_private_key(master_key) and validate_private_key(chain_code):
+    if validate_private_key(mkey) and validate_private_key(chain_code):
         return dict(version=version,
-                    key=master_key,
+                    key=mkey,
                     depth=0,
                     child=0,
                     finger_print=b'\x00\x00\x00\x00',
@@ -116,19 +116,36 @@ def create_master_key_hdwallet(seed, testnet=False):
         return None
 
 
+def create_xpublic_key(key):
+    if key['is_private']:
+        if key['version'] == TESTNET_PRIVATE_WALLET_VERSION:
+            version = TESTNET_PUBLIC_WALLET_VERSION
+        else:
+            version = MAINNET_PUBLIC_WALLET_VERSION
+        pubkey = private_to_public_key(key['key'], True)
+        return dict(version=version,
+                    key=pubkey,
+                    depth=key['depth'],
+                    child=key['child'],
+                    finger_print=key['finger_print'],
+                    chain_code=key['chain_code'],
+                    is_private=False)
+    return None
+
+
 def derive_xkey(seed, *path_level, bip44=True, testnet=True, wif=True):
     if not bip44:
         if not len(path_level):
             raise TypeError("not specified path levels")
-        mkey = create_master_key_hdwallet(seed, testnet)
+        mkey = create_xmaster_key(seed, testnet)
         xkey = create_child_privkey(mkey, path_level[0])
         for idx in path_level[1:]:
             xkey = create_child_privkey(xkey, idx)
         # сериализация и кодирование ключа
         if wif:
-            result = encode_base58(serialize_key_hdwallet(xkey))
+            result = encode_base58(serialize_xkey(xkey))
         else:
-            result = serialize_key_hdwallet(xkey)
+            result = serialize_xkey(xkey)
         return result
     else:
         if not validate_path_level(path_level, testnet):
@@ -138,34 +155,27 @@ def derive_xkey(seed, *path_level, bip44=True, testnet=True, wif=True):
                 path_level = TESTNET_PATH_LEVEL_BIP0044
             else:
                 path_level = PATH_LEVEL_BIP0044
-        mkey = create_master_key_hdwallet(seed, testnet)
+        mkey = create_xmaster_key(seed, testnet)
         xkey = create_child_privkey(mkey, path_level[0])
         for idx in path_level[1:]:
             xkey = create_child_privkey(xkey, idx)
         # сериализация и кодирование ключа
         if wif:
-            result = encode_base58(serialize_key_hdwallet(xkey))
+            result = encode_base58(serialize_xkey(xkey))
         else:
-            result = serialize_key_hdwallet(xkey)
+            result = serialize_xkey(xkey)
         return result
 
-
-## Надо удалить в будущем как дублирование. И добавить в реализации ООП как метод
-def create_parent_pubkey_hdwallet(master_key):
-    if master_key['is_private']:
-        if master_key['version'] == TESTNET_PRIVATE_WALLET_VERSION:
-            version = TESTNET_PUBLIC_WALLET_VERSION
-        else:
-            version = MAINNET_PUBLIC_WALLET_VERSION
-        pubkey = private_to_public_key(master_key['key'], True)
-        return dict(version=version,
-                    key=pubkey,
-                    depth=master_key['depth'],
-                    child=master_key['child'],
-                    finger_print=master_key['finger_print'],
-                    chain_code=master_key['chain_code'],
-                    is_private=False)
-    return None
+def xprivate_to_xpublic_key(xprv, encode_b58=True):
+    if validate_private_key(xprv):
+        xprivkey = deserialize_xkey(xprv)
+        xpubkey = create_xpublic_key(xprivkey)
+        if encode_b58:
+            return encode_base58(serialize_xkey(xpubkey))
+        return serialize_xkey(xpubkey)
+    else:
+        raise TypeError("Private key must be serialized according to BIP-0032 - " \
+                        "https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki#serialization-format")
 
 
 # Создание дочернего приватного ключа
@@ -252,9 +262,13 @@ def add_public_keys(ext_value, key):
 
 
 def validate_private_key(key):
-    key_int = int.from_bytes(key, byteorder="big")
-    if key_int > 0 and key_int < MAX_INT_PRIVATE_KEY and len(key) == 32:
-        return True
+    if isinstance(key, bytes):
+        key_int = int.from_bytes(key, byteorder="big")
+        if key_int > 0 and key_int < MAX_INT_PRIVATE_KEY and len(key) == 32:
+            return True
+    elif isinstance(key, str):
+        if len(key) == 111 and key[:4] in ['xprv', 'tprv']:
+            return True
     return False
 
 
@@ -275,7 +289,7 @@ def validate_path_level(path_level, testnet):
     return False
 
 
-def serialize_key_hdwallet(key):
+def serialize_xkey(key):
     try:
         key_bytes = key['key']
         if key.get('is_private'):
@@ -293,7 +307,7 @@ def serialize_key_hdwallet(key):
         raise Exception('Serialization error')
 
 
-def deserialize_key_hdwallet(encode_key):
+def deserialize_xkey(encode_key):
     raw_key = decode_base58(encode_key)
     decode_key = dict()
     if raw_key[:4] in [MAINNET_PUBLIC_WALLET_VERSION, MAINNET_PRIVATE_WALLET_VERSION]:
