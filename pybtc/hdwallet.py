@@ -373,7 +373,7 @@ def create_wordlist(language='english', wordlist_dir=None):
     """
     Creating the wordlist.
 
-    :param str language: uses wordlist language, by default is english.
+    :param str language: uses wordlist language (chinese_simplified, chinese_traditional, english, french, italian, japanese, korean, spanish), by default is english.
     :param str wordlist_dir: path to a file containing a list of words.
     :return: list of words.
     """
