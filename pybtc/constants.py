@@ -3,9 +3,7 @@ import random
 import os
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
-tst = os.path.normpath(os.path.join(_CURRENT_DIR, '..', '..', '..', '..', '..','passwd'))
-#os.path.exists(path)
-BIP0039_DIR = os.path.normpath(os.path.join(tst, 'bip-0039'))
+BIP0039_DIR = os.path.normpath(os.path.join(ROOT_DIR, 'bip-0039'))
 
 MAX_AMOUNT = 2100000000000000
 SIGHASH_ALL = 0x00000001
