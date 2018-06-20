@@ -244,7 +244,7 @@ class AddressFunctionsTests(unittest.TestCase):
         h = ''.join(s)
         s = unhexlify(h)
         k = tools.parse_script(s)
-        sh = tools.script_to_hash(h, witness = False)
+        sh = tools.script_to_hash(h, 0, 0)
         address = tools.hash_to_address(sh,script_hash = True,
                                         witness_version = None, testnet = False)
         self.assertEqual(address, "3D2oetdNuZUqQHPJmcMDDHYoqkyNVsFk9r")
@@ -270,7 +270,7 @@ class AddressFunctionsTests(unittest.TestCase):
         h = ''.join(s)
         s = unhexlify(h)
         k = tools.parse_script(s)
-        sh = tools.script_to_hash(h, witness = False)
+        sh = tools.script_to_hash(h, 0,0)
         self.assertEqual(k["type"],"NON_STANDARD")
         self.assertEqual(k["nType"],7)
         self.assertEqual(k["reqSigs"],20)
@@ -318,7 +318,7 @@ class AddressFunctionsTests(unittest.TestCase):
         h = ''.join(s)
         s = unhexlify(h)
         k = tools.parse_script(s)
-        sh = tools.script_to_hash(h, witness = False)
+        sh = tools.script_to_hash(h, 0, 0)
         self.assertEqual(k["type"],"NON_STANDARD")
         self.assertEqual(k["nType"],7)
         self.assertEqual(k["reqSigs"],1)
@@ -342,9 +342,9 @@ class AddressFunctionsTests(unittest.TestCase):
         h = ''.join(s)
         s = unhexlify(h)
         k = tools.parse_script(s)
-        self.assertEqual(k["type"],"NON_STANDARD")
-        self.assertEqual(k["nType"],7)
-        self.assertEqual(k["reqSigs"],6)
+        self.assertEqual(k["type"], "NON_STANDARD")
+        self.assertEqual(k["nType"], 7)
+        self.assertEqual(k["reqSigs"], 6)
 
         s = [HEX_OPCODE['OP_1'],
              HEX_OPCODE['OP_6'],
