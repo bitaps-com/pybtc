@@ -18,11 +18,18 @@ Current version is 2.0
 
 To install pybtc, simply use pip
 
-    $ pip install pybtc
+    $ pip3 install pybtc
     
+#### Dependencies
+
+* Python 3.3.3+
+* secp256k1
+
+
 #### Documentation
 
 Documentation is available at https://pybtc.readthedocs.io
+
 
 #### How to Contribute
 
@@ -36,6 +43,7 @@ Workflow is pretty straightforward:
 4. Add a record intp file into change.log.
 5. Commit changes to own aiohttp clone
 6. Make pull request from github page for your clone against master branch
+
 
 
 #### Support a project
