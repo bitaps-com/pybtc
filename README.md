@@ -40,5 +40,5 @@ Workflow is pretty straightforward:
 
 #### Support a project
 
-You can support the future development of project and send same BTC to 1Bitapsw1aT8hkLXFtXwZQfHgNwNJEyJJ1
+You can support the future development of project and send send a little BTC to *1Bitapsw1aT8hkLXFtXwZQfHgNwNJEyJJ1*
 
