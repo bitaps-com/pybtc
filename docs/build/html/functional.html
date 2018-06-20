@@ -1,0 +1,979 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Pure functions reference &#8212; pybtc  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Contributing" href="contributing.html" />
+    <link rel="prev" title="Blocks" href="block.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="pure-functions-reference">
+<h1>Pure functions reference<a class="headerlink" href="#pure-functions-reference" title="Permalink to this headline">¶</a></h1>
+<p>Base function primitives implemented in functional programming paradigm.</p>
+<div class="section" id="private-keys">
+<h2>Private keys<a class="headerlink" href="#private-keys" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pybtc.create_private_key">
+<code class="descclassname">pybtc.</code><code class="descname">create_private_key</code><span class="sig-paren">(</span><em>compressed=True</em>, <em>testnet=False</em>, <em>wif=True</em>, <em>hex=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#create_private_key"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.create_private_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create private key</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>compressed</strong> – (optional) Type of public key, by default set to compressed. 
+Using uncompressed public keys is deprecated in new SEGWIT addresses, 
+use this option only for backward compatibility.</li>
+<li><strong>testnet</strong> – (optional) flag for testnet network, by default is False.</li>
+<li><strong>wif</strong> – (optional) If set to True return key in WIF format, by default is True.</li>
+<li><strong>hex</strong> – (optional) If set to True return key in HEX format, by default is False.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Private key in wif format (default), hex encoded byte string in case of hex flag or
+raw bytes string in case wif and hex flags set to False.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.private_key_to_wif">
+<code class="descclassname">pybtc.</code><code class="descname">private_key_to_wif</code><span class="sig-paren">(</span><em>h</em>, <em>compressed=True</em>, <em>testnet=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#private_key_to_wif"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.private_key_to_wif" title="Permalink to this definition">¶</a></dt>
+<dd><p>Encode private key in HEX or RAW bytes format to WIF format.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>h</strong> – private key 32 byte string or HEX encoded string.</li>
+<li><strong>compressed</strong> – (optional) flag of public key compressed format, by default set to True.</li>
+<li><strong>testnet</strong> – (optional) flag for testnet network, by default is False.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Private key in WIF format.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.wif_to_private_key">
+<code class="descclassname">pybtc.</code><code class="descname">wif_to_private_key</code><span class="sig-paren">(</span><em>h</em>, <em>hex=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#wif_to_private_key"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.wif_to_private_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decode WIF private key to bytes string or HEX encoded string</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>hex</strong> – (optional) if set to True return key in HEX format, by default is True.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Private key HEX encoded string or raw bytes string.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.is_wif_valid">
+<code class="descclassname">pybtc.</code><code class="descname">is_wif_valid</code><span class="sig-paren">(</span><em>wif</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#is_wif_valid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.is_wif_valid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check is private key in WIF format string is valid.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>wif</strong> – private key in WIF format string.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">boolean.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="public-keys">
+<h2>Public keys<a class="headerlink" href="#public-keys" title="Permalink to this headline">¶</a></h2>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Using uncompressed public keys is
+<a class="reference external" href="https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki#restrictions-on-public-key-type">deprecated</a>
+in  a new SEGWIT address format.
+To avoid potential future funds loss, users MUST NOT use uncompressed keys
+in version 0 witness programs. Use uncompressed keys only for backward
+compatibilitylegacy in legacy address format (PUBKEY, P2PKH).</p>
+</div>
+<dl class="function">
+<dt id="pybtc.private_to_public_key">
+<code class="descclassname">pybtc.</code><code class="descname">private_to_public_key</code><span class="sig-paren">(</span><em>private_key</em>, <em>compressed=True</em>, <em>hex=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#private_to_public_key"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.private_to_public_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get public key from private key using ECDSA secp256k1</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>private_key</strong> – private key in WIF, HEX or bytes.</li>
+<li><strong>compressed</strong> – (optional) flag of public key compressed format, by default set to True.
+In case private_key in WIF format, this flag is set in accordance with 
+the key format specified in WIF string.</li>
+<li><strong>hex</strong> – (optional) if set to True return key in HEX format, by default is True.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">33/65 bytes public key in HEX or bytes string.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.is_public_key_valid">
+<code class="descclassname">pybtc.</code><code class="descname">is_public_key_valid</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#is_public_key_valid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.is_public_key_valid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check public key is valid.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>key</strong> – public key in HEX or bytes string format.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">boolean.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="addresses">
+<h2>Addresses<a class="headerlink" href="#addresses" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pybtc.hash_to_address">
+<code class="descclassname">pybtc.</code><code class="descname">hash_to_address</code><span class="sig-paren">(</span><em>address_hash</em>, <em>testnet=False</em>, <em>script_hash=False</em>, <em>witness_version=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#hash_to_address"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.hash_to_address" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get address from public key/script hash. In case PUBKEY, P2PKH, P2PKH public key/script hash is SHA256+RIPEMD160,
+P2WSH script hash is SHA256.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>address_hash</strong> – public key hash or script hash in HEX or bytes string format.</li>
+<li><strong>testnet</strong> – (optional) flag for testnet network, by default is False.</li>
+<li><strong>script_hash</strong> – (optional) flag for script hash (P2SH address), by default is False.</li>
+<li><strong>witness_version</strong> – (optional) witness program version, by default is 0, for legacy
+address format use None.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">address in base58 or bech32 format.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.address_to_hash">
+<code class="descclassname">pybtc.</code><code class="descname">address_to_hash</code><span class="sig-paren">(</span><em>address</em>, <em>hex=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#address_to_hash"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.address_to_hash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get address hash from base58 or bech32 address format.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>address</strong> – address in base58 or bech32 format.</li>
+<li><strong>hex</strong> – (optional) If set to True return key in HEX format, by default is True.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">script in HEX or bytes string.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.public_key_to_address">
+<code class="descclassname">pybtc.</code><code class="descname">public_key_to_address</code><span class="sig-paren">(</span><em>pubkey</em>, <em>testnet=False</em>, <em>p2sh_p2wpkh=False</em>, <em>witness_version=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#public_key_to_address"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.public_key_to_address" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get address from public key/script hash. In case PUBKEY, P2PKH, P2PKH public key/script hash is SHA256+RIPEMD160,
+P2WSH script hash is SHA256.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>pubkey</strong> – public key HEX or bytes string format.</li>
+<li><strong>testnet</strong> – (optional) flag for testnet network, by default is False.</li>
+<li><strong>p2sh_p2wpkh</strong> – (optional) flag for P2WPKH inside P2SH address, by default is False.</li>
+<li><strong>witness_version</strong> – (optional) witness program version, by default is 0, for legacy
+address format use None.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">address in base58 or bech32 format.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.address_type">
+<code class="descclassname">pybtc.</code><code class="descname">address_type</code><span class="sig-paren">(</span><em>address</em>, <em>num=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#address_type"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.address_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get address type.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>address</strong> – address in base58 or bech32 format.</li>
+<li><strong>num</strong> – (optional) If set to True return type in numeric format, by default is False.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">address type in string or numeric format.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.address_to_script">
+<code class="descclassname">pybtc.</code><code class="descname">address_to_script</code><span class="sig-paren">(</span><em>address</em>, <em>hex=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#address_to_script"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.address_to_script" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get public key script from address.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>address</strong> – address in base58 or bech32 format.</li>
+<li><strong>hex</strong> – (optional) If set to True return key in HEX format, by default is True.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">public key script in HEX or bytes string.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.is_address_valid">
+<code class="descclassname">pybtc.</code><code class="descname">is_address_valid</code><span class="sig-paren">(</span><em>address</em>, <em>testnet=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#is_address_valid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.is_address_valid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check is address valid.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>address</strong> – address in base58 or bech32 format.</li>
+<li><strong>testnet</strong> – (optional) flag for testnet network, by default is False.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">boolean.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="script">
+<h2>Script<a class="headerlink" href="#script" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pybtc.decode_script">
+<code class="descclassname">pybtc.</code><code class="descname">decode_script</code><span class="sig-paren">(</span><em>script</em>, <em>asm=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#decode_script"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.decode_script" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decode script to ASM format or to human readable OPCODES string.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>script</strong> – script in bytes string or HEX encoded string format.</li>
+<li><strong>asm</strong> – (optional) If set to True decode to ASM fromat, by default set to False.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">script in ASM format string or OPCODES string.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.parse_script">
+<code class="descclassname">pybtc.</code><code class="descname">parse_script</code><span class="sig-paren">(</span><em>script</em>, <em>segwit=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#parse_script"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.parse_script" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse script and return script type, script address and required signatures count.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>script</strong> – script in bytes string or HEX encoded string format.</li>
+<li><strong>segwit</strong> – (optional) If set to True recognize P2WPKH and P2WSH sripts, by default set to True.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><p>dictionary:</p>
+<ul class="simple">
+<li>nType - numeric script type</li>
+<li>type  - script type</li>
+<li>addressHash - address hash in case address recognized</li>
+<li>script - script if no address recognized</li>
+<li>reqSigs - required signatures count</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.delete_from_script">
+<code class="descclassname">pybtc.</code><code class="descname">delete_from_script</code><span class="sig-paren">(</span><em>script</em>, <em>sub_script</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#delete_from_script"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.delete_from_script" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decode OPCODE or subscript from script.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>script</strong> – traget script in bytes or HEX encoded string.</li>
+<li><strong>sub_script</strong> – sub_script which is necessary to remove from target script in bytes or HEX encoded string.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">script in bytes or HEX encoded string corresponding to the format of target script.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.script_to_hash">
+<code class="descclassname">pybtc.</code><code class="descname">script_to_hash</code><span class="sig-paren">(</span><em>script</em>, <em>witness=False</em>, <em>hex=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#script_to_hash"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.script_to_hash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Encode script to hash HASH160 or SHA256 in dependency of the witness.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>script</strong> – script in bytes or HEX encoded string.</li>
+<li><strong>witness</strong> – (optional) If set to True return SHA256 hash for P2WSH, by default is False.</li>
+<li><strong>hex</strong> – (optional) If set to True return key in HEX format, by default is True.</li>
+<li><strong>sub_script</strong> – sub_script which is necessary to remove from target script in bytes or HEX encoded string.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">script in bytes or HEX encoded string corresponding to the format of target script.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="signatures">
+<h2>Signatures<a class="headerlink" href="#signatures" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pybtc.verify_signature">
+<code class="descclassname">pybtc.</code><code class="descname">verify_signature</code><span class="sig-paren">(</span><em>sig</em>, <em>pub_key</em>, <em>msg</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#verify_signature"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.verify_signature" title="Permalink to this definition">¶</a></dt>
+<dd><p>Verify signature for message and given public key</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>sig</strong> – signature in bytes or HEX encoded string.</li>
+<li><strong>pub_key</strong> – public key in bytes or HEX encoded string.</li>
+<li><strong>msg</strong> – message in bytes or HEX encoded string.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">boolean.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.sign_message">
+<code class="descclassname">pybtc.</code><code class="descname">sign_message</code><span class="sig-paren">(</span><em>msg</em>, <em>private_key</em>, <em>hex=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#sign_message"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.sign_message" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sign message</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>msg</strong> – message to sign  bytes or HEX encoded string.</li>
+<li><strong>private_key</strong> – private key (bytes, hex encoded string or WIF format)</li>
+<li><strong>hex</strong> – (optional) If set to True return key in HEX format, by default is True.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">DER encoded signature in bytes or HEX encoded string.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.is_valid_signature_encoding">
+<code class="descclassname">pybtc.</code><code class="descname">is_valid_signature_encoding</code><span class="sig-paren">(</span><em>sig</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#is_valid_signature_encoding"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.is_valid_signature_encoding" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check is valid signature encoded in DER format</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>sig</strong> – signature in bytes or HEX encoded string.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">boolean.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="hash-encoding">
+<h2>Hash encoding<a class="headerlink" href="#hash-encoding" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pybtc.rh2s">
+<code class="descclassname">pybtc.</code><code class="descname">rh2s</code><span class="sig-paren">(</span><em>raw_hash</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#rh2s"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.rh2s" title="Permalink to this definition">¶</a></dt>
+<dd><p>Encode raw transaction hash to HEX string with bytes order change</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>raw_hash</strong> – transaction hash in bytes string.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">HEX encoded string.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.s2rh">
+<code class="descclassname">pybtc.</code><code class="descname">s2rh</code><span class="sig-paren">(</span><em>hash_string</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#s2rh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.s2rh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decode HEX  transaction hash to bytes with byte order change</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>raw_hash</strong> – transaction hash in bytes string.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">bytes string.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.reverse_hash">
+<code class="descclassname">pybtc.</code><code class="descname">reverse_hash</code><span class="sig-paren">(</span><em>raw_hash</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#reverse_hash"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.reverse_hash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reverse hash order</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>raw_hash</strong> – bytes string.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">bytes string.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="merkle-root">
+<h2>Merkle root<a class="headerlink" href="#merkle-root" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pybtc.merkle_root">
+<code class="descclassname">pybtc.</code><code class="descname">merkle_root</code><span class="sig-paren">(</span><em>tx_hash_list</em>, <em>hex=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#merkle_root"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.merkle_root" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate merkle root from transaction hash list</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>tx_hash_list</strong> – list of transaction hashes in bytes or HEX encoded string.</li>
+<li><strong>hex</strong> – (optional) If set to True return result in HEX format, by default is True.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">merkle root in bytes or HEX encoded string corresponding hex flag.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.merkle_branches">
+<code class="descclassname">pybtc.</code><code class="descname">merkle_branches</code><span class="sig-paren">(</span><em>tx_hash_list</em>, <em>hex=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#merkle_branches"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.merkle_branches" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate merkle branches for coinbase transacton</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>tx_hash_list</strong> – list of transaction hashes in bytes or HEX encoded string.</li>
+<li><strong>hex</strong> – (optional) If set to True return result in HEX format, by default is True.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">list of merkle branches in bytes or HEX encoded string corresponding hex flag.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.merkleroot_from_branches">
+<code class="descclassname">pybtc.</code><code class="descname">merkleroot_from_branches</code><span class="sig-paren">(</span><em>merkle_branches</em>, <em>coinbase_hash</em>, <em>hex=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#merkleroot_from_branches"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.merkleroot_from_branches" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate merkle root from merkle branches and coinbase transacton hash</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>merkle_branches</strong> – list merkle branches in bytes or HEX encoded string.</li>
+<li><strong>coinbase_hash</strong> – list coinbase transaction hash in bytes or HEX encoded string.</li>
+<li><strong>hex</strong> – (optional) If set to True return result in HEX format, by default is True.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">merkle root in bytes or HEX encoded string corresponding hex flag.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="difficulty">
+<h2>Difficulty<a class="headerlink" href="#difficulty" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pybtc.bits_to_target">
+<code class="descclassname">pybtc.</code><code class="descname">bits_to_target</code><span class="sig-paren">(</span><em>bits</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#bits_to_target"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.bits_to_target" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate target from bits</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>bits</strong> – HEX string, bytes string or integer representation of bits.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">integer.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.target_to_difficulty">
+<code class="descclassname">pybtc.</code><code class="descname">target_to_difficulty</code><span class="sig-paren">(</span><em>target</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#target_to_difficulty"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.target_to_difficulty" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate difficulty from target</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>target</strong> – integer.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">float.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.bits_to_difficulty">
+<code class="descclassname">pybtc.</code><code class="descname">bits_to_difficulty</code><span class="sig-paren">(</span><em>bits</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#bits_to_difficulty"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.bits_to_difficulty" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate difficulty from bits</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>bits</strong> – HEX string, bytes string or integer representation of bits.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">integer.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.difficulty_to_target">
+<code class="descclassname">pybtc.</code><code class="descname">difficulty_to_target</code><span class="sig-paren">(</span><em>difficulty</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#difficulty_to_target"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.difficulty_to_target" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate target from difficulty</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>target</strong> – integer.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">float.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="tools">
+<h2>Tools<a class="headerlink" href="#tools" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pybtc.bytes_needed">
+<code class="descclassname">pybtc.</code><code class="descname">bytes_needed</code><span class="sig-paren">(</span><em>n</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#bytes_needed"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.bytes_needed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate bytes needed to convert integer to bytes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>n</strong> – integer.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">integer.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.int_to_bytes">
+<code class="descclassname">pybtc.</code><code class="descname">int_to_bytes</code><span class="sig-paren">(</span><em>i</em>, <em>byteorder='big'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#int_to_bytes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.int_to_bytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert integer to bytes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>n</strong> – integer.</li>
+<li><strong>byteorder</strong> – (optional) byte order ‘big’ or ‘little’, by default ‘big’.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">bytes.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.bytes_to_int">
+<code class="descclassname">pybtc.</code><code class="descname">bytes_to_int</code><span class="sig-paren">(</span><em>i</em>, <em>byteorder='big'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#bytes_to_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.bytes_to_int" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert bytes to integer.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>i</strong> – bytes.</li>
+<li><strong>byteorder</strong> – (optional) byte order ‘big’ or ‘little’, by default ‘big’.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">integer.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.int_to_var_int">
+<code class="descclassname">pybtc.</code><code class="descname">int_to_var_int</code><span class="sig-paren">(</span><em>i</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#int_to_var_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.int_to_var_int" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert integer to variable integer</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>i</strong> – integer.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">bytes.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.var_int_to_int">
+<code class="descclassname">pybtc.</code><code class="descname">var_int_to_int</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#var_int_to_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.var_int_to_int" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert variable integer to integer</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>data</strong> – bytes vriable integer.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">integer.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.var_int_len">
+<code class="descclassname">pybtc.</code><code class="descname">var_int_len</code><span class="sig-paren">(</span><em>n</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#var_int_len"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.var_int_len" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get variable integer length in bytes from integer value</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>n</strong> – integer.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">integer.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.get_var_int_len">
+<code class="descclassname">pybtc.</code><code class="descname">get_var_int_len</code><span class="sig-paren">(</span><em>bytes</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#get_var_int_len"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.get_var_int_len" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get variable integer length in bytes from bytes</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>bytes</strong> – bytes.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">integer.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.read_var_int">
+<code class="descclassname">pybtc.</code><code class="descname">read_var_int</code><span class="sig-paren">(</span><em>stream</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#read_var_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.read_var_int" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read variable integer from io.BytesIO stream to bytes</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>stream</strong> – io.BytesIO stream.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">bytes.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.read_var_list">
+<code class="descclassname">pybtc.</code><code class="descname">read_var_list</code><span class="sig-paren">(</span><em>stream</em>, <em>data_type</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#read_var_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.read_var_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read variable integer list from io.BytesIO stream to bytes</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>stream</strong> – io.BytesIO stream.</li>
+<li><strong>data_type</strong> – list data type.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">list of data_type.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.int_to_c_int">
+<code class="descclassname">pybtc.</code><code class="descname">int_to_c_int</code><span class="sig-paren">(</span><em>n</em>, <em>base_bytes=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#int_to_c_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.int_to_c_int" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert integer to compresed integer</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>n</strong> – integer.</li>
+<li><strong>base_bytes</strong> – len of bytes base from which start compression.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">bytes.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.c_int_to_int">
+<code class="descclassname">pybtc.</code><code class="descname">c_int_to_int</code><span class="sig-paren">(</span><em>b</em>, <em>base_bytes=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#c_int_to_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.c_int_to_int" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert compressed integer bytes to integer</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>b</strong> – compressed integer bytes.</li>
+<li><strong>base_bytes</strong> – len of bytes base from which start compression.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">integer.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pybtc.c_int_len">
+<code class="descclassname">pybtc.</code><code class="descname">c_int_len</code><span class="sig-paren">(</span><em>n</em>, <em>base_bytes=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/tools.html#c_int_len"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.c_int_len" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get length of compressed integer from integer value</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>n</strong> – bytes.</li>
+<li><strong>base_bytes</strong> – len of bytes base from which start compression.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">integer.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static/pybtc.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+<p class="blurb"> </p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=bitaps-com&repo=pybtc&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="classes.html">Reference</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Pure functions reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#private-keys">Private keys</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#public-keys">Public keys</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#addresses">Addresses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#script">Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#signatures">Signatures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#hash-encoding">Hash encoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#merkle-root">Merkle root</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#difficulty">Difficulty</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tools">Tools</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="block.html" title="previous chapter">Blocks</a></li>
+      <li>Next: <a href="contributing.html" title="next chapter">Contributing</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015-2018, bitaps.com.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.11</a>
+      
+      |
+      <a href="_sources/functional.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/bitaps-com/pybtc" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

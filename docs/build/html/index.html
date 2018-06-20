@@ -1,0 +1,226 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Welcome to PYBTC &#8212; pybtc  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="installation.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="welcome-to-pybtc">
+<h1>Welcome to PYBTC<a class="headerlink" href="#welcome-to-pybtc" title="Permalink to this headline">¶</a></h1>
+<p>Python library for Bitcoin.</p>
+<p>Current version is .</p>
+<div class="section" id="key-features">
+<h2>Key Features<a class="headerlink" href="#key-features" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Supports addresses types PUBKEY, P2PKH, P2SH, P2SH-PWPKH, P2WPKH, P2WSH.</li>
+<li>Supports BIP32(Hierarchical Deterministic Wallets), BIP39(Mnemonic code generation)</li>
+<li>Supports BIP141(Segregated Witness)</li>
+<li>Transaction constructor</li>
+<li>Mining pool basic primitives</li>
+</ul>
+</div>
+<div class="section" id="quick-library-installation">
+<span id="aiohttp-installation"></span><h2>Quick library Installation<a class="headerlink" href="#quick-library-installation" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ pip install pybtc
+</pre></div>
+</div>
+</div>
+<div class="section" id="getting-started">
+<h2>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h2>
+<p>Usage example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pybtc</span>
+<span class="n">a</span> <span class="o">=</span> <span class="n">pybtc</span><span class="o">.</span><span class="n">Address</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">address</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">private_key</span><span class="o">.</span><span class="n">wif</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="what-s-new-in-pybtc-2-0">
+<h2>What’s new in pybtc 2.0 ?<a class="headerlink" href="#what-s-new-in-pybtc-2-0" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Mnemonic code generation (BIP39)</li>
+<li>Hierarchical Deterministic Wallets (BIP32)</li>
+<li>Wallet class implemented acording BIP44</li>
+<li>Imporved transaction deserialization perfomance</li>
+</ul>
+</div>
+<div class="section" id="source-code">
+<h2>Source code<a class="headerlink" href="#source-code" title="Permalink to this headline">¶</a></h2>
+<p>The project is hosted on <a class="reference external" href="https://github.com/bitaps-com/pybtc">GitHub</a></p>
+<p>Please feel free to file an issue on the <a class="reference external" href="https://github.com/bitaps-com/pybtc/issues">bug tracker</a> if you have found a bug
+or have some suggestion in order to improve the library.</p>
+</div>
+<div class="section" id="dependencies">
+<h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Python 3.3.3+</li>
+<li><em>secp256k1</em></li>
+</ul>
+</div>
+<div class="section" id="authors-and-license">
+<h2>Authors and License<a class="headerlink" href="#authors-and-license" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">pybtc</span></code> package was initially written by <a class="reference external" href="https://github.com/4tochka">Aleksey Karpov</a> and development continues with contributors.</p>
+<p>Recent contributors:</p>
+<ul class="simple">
+<li><a class="reference external" href="https://github.com/4tochka">Aleksey Karpov</a></li>
+<li><a class="reference external" href="https://github.com/mboxk3team">Aleksey Karybkin</a></li>
+</ul>
+<p>It’s <em>GPL-3.0</em> licensed and freely available.</p>
+<p>Feel free to improve this package and send a pull request to <a class="reference external" href="https://github.com/bitaps-com/pybtc">GitHub</a>.</p>
+</div>
+<div class="section" id="table-of-contents">
+<h2>Table Of Contents<a class="headerlink" href="#table-of-contents" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound" id="mastertoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#get-from-pip-package">Get from pip package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#get-the-source-code">Get the Source Code</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#create-address">Create address</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#get-address-from-key">Get address from key</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#pure-functions-for-address">Pure functions for address</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#create-script-address">Create script address</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="classes.html">Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="address.html">Addresses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transaction.html">Transactions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="block.html">Blocks</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="functional.html">Pure functions reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="functional.html#private-keys">Private keys</a></li>
+<li class="toctree-l2"><a class="reference internal" href="functional.html#public-keys">Public keys</a></li>
+<li class="toctree-l2"><a class="reference internal" href="functional.html#addresses">Addresses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="functional.html#script">Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="functional.html#signatures">Signatures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="functional.html#hash-encoding">Hash encoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="functional.html#merkle-root">Merkle root</a></li>
+<li class="toctree-l2"><a class="reference internal" href="functional.html#difficulty">Difficulty</a></li>
+<li class="toctree-l2"><a class="reference internal" href="functional.html#tools">Tools</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#instructions-for-contributors">Instructions for contributors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#tests-coverage">Tests coverage</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="#">
+    <img class="logo" src="_static/pybtc.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+<p class="blurb"> </p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=bitaps-com&repo=pybtc&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="classes.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="functional.html">Pure functions reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="installation.html" title="next chapter">Installation</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015-2018, bitaps.com.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.11</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/bitaps-com/pybtc" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

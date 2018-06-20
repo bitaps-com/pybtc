@@ -1,0 +1,224 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Examples &#8212; pybtc  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Reference" href="classes.html" />
+    <link rel="prev" title="Installation" href="installation.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="examples">
+<h1>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="create-address">
+<h2>Create address<a class="headerlink" href="#create-address" title="Permalink to this headline">¶</a></h2>
+<p>This is example of usage Address class. The address class implements the work with addresses controlled by a private key.
+Supports the ability to create P2WPKH, P2PKH, PUBKEY address types and P2SH_P2WPKH as exception for SEGWIT adoption.
+It is recommended to use native SEGWIT address type - P2WPKH, which reduces costs of miner fee and expand block capacity.
+To create an address, you need to create a class object. Buy default,
+will be created P2WPKH address for mainnet.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>&gt;&gt;&gt; import pybtc
+&gt;&gt;&gt; <span class="nv">a</span> <span class="o">=</span> pybtc.Address<span class="o">()</span>
+&gt;&gt;&gt; a.address
+<span class="s1">&#39;bc1q6cxx5t8xkruz3s5khx7923xvsx5ry4c6p74m5s&#39;</span>
+&gt;&gt;&gt; a.private_key.wif
+<span class="s1">&#39;L5XKGA2xEHcinWEpmyiABS1bqQux8Av5dGVqcpRtVJC3ZCR5sXUe&#39;</span>
+&gt;&gt;&gt;
+&gt;&gt;&gt; <span class="c1"># create P2PKH legacy format</span>
+&gt;&gt;&gt; pybtc.Address<span class="o">(</span><span class="nv">address_type</span><span class="o">=</span><span class="s2">&quot;P2PKH&quot;</span><span class="o">)</span>.address
+<span class="s1">&#39;1ChpKurzFhdCULKaNHCc3Ra9KfxM2LRguw&#39;</span>
+&gt;&gt;&gt;
+&gt;&gt;&gt; <span class="c1"># create testnet address</span>
+&gt;&gt;&gt; pybtc.Address<span class="o">(</span><span class="nv">address_type</span><span class="o">=</span><span class="s2">&quot;P2PKH&quot;</span>, <span class="nv">testnet</span><span class="o">=</span>True<span class="o">)</span>.address
+<span class="s1">&#39;mpR4hDfu269yxgZtPVYSD21gtpvdxpTmH6&#39;</span>
+&gt;&gt;&gt;
+&gt;&gt;&gt; <span class="c1"># create P2SH_P2WPKH SEGWIT adoption address</span>
+&gt;&gt;&gt; pybtc.Address<span class="o">(</span><span class="nv">address_type</span><span class="o">=</span><span class="s2">&quot;P2SH_P2WPKH&quot;</span><span class="o">)</span>.address
+<span class="s1">&#39;3Bqeq3XqL6azMK3BxNyr8vXgXUtoG63J4T&#39;</span>
+&gt;&gt;&gt;
+</pre></div>
+</div>
+</div>
+<div class="section" id="get-address-from-key">
+<h2>Get address from key<a class="headerlink" href="#get-address-from-key" title="Permalink to this headline">¶</a></h2>
+<p>In case you already have private or public key you can object from your key.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>&gt;&gt;&gt; <span class="nv">a</span> <span class="o">=</span> pybtc.Address<span class="o">(</span><span class="s1">&#39;L5XKGA2xEHcinWEpmyiABS1bqQux8Av5dGVqcpRtVJC3ZCR5sXUe&#39;</span><span class="o">)</span>
+&gt;&gt;&gt; a.address
+<span class="s1">&#39;bc1q6cxx5t8xkruz3s5khx7923xvsx5ry4c6p74m5s&#39;</span>
+&gt;&gt;&gt; a.public_key.hex
+<span class="s1">&#39;03b8b44876e1f45be7e42953ea47026c39cc45341344d3ab32701b93de696107af&#39;</span>
+&gt;&gt;&gt;
+&gt;&gt;&gt; <span class="c1"># get address from public key</span>
+&gt;&gt;&gt; <span class="nv">pub</span> <span class="o">=</span> pybtc.PublicKey<span class="o">(</span><span class="s1">&#39;03b8b44876e1f45be7e42953ea47026c39cc45341344d3ab32701b93de696107af&#39;</span><span class="o">)</span>
+&gt;&gt;&gt;
+&gt;&gt;&gt; pybtc.Address<span class="o">(</span>pub<span class="o">)</span>.address
+<span class="s1">&#39;bc1q6cxx5t8xkruz3s5khx7923xvsx5ry4c6p74m5s&#39;</span>
+&gt;&gt;&gt;
+</pre></div>
+</div>
+</div>
+<div class="section" id="pure-functions-for-address">
+<h2>Pure functions for address<a class="headerlink" href="#pure-functions-for-address" title="Permalink to this headline">¶</a></h2>
+<p>Create private key</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>&gt;&gt;&gt; import pybtc
+&gt;&gt;&gt; pybtc.create_private_key<span class="o">()</span>
+<span class="s1">&#39;KyvZYvdzWD4JSPFt4wXwjG53as227zT2qiWbMTicZEUSjiwvbEqi&#39;</span>
+&gt;&gt;&gt;
+&gt;&gt;&gt; pybtc.create_private_key<span class="o">(</span><span class="nv">compressed</span><span class="o">=</span>False<span class="o">)</span>
+<span class="s1">&#39;5Jw8DY1uBrd35xup6eD6KLEFa4AJFbX381HWuHvPGirJto9ZTnr&#39;</span>
+&gt;&gt;&gt;
+&gt;&gt;&gt; pybtc.is_wif_valid<span class="o">(</span><span class="s1">&#39;5Jw8DY1uBrd35xup6eD6KLEFa4AJFbX381HWuHvPGirJto9ZTnr&#39;</span><span class="o">)</span>
+True
+&gt;&gt;&gt; pybtc.is_wif_valid<span class="o">(</span><span class="s1">&#39;5Jw8DY1uBrd35xup6eD6KLEFa4AJFbX381**********Jto9ZTnr&#39;</span><span class="o">)</span>
+False
+&gt;&gt;&gt;
+</pre></div>
+</div>
+<p>Get public key from private key</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>&gt;&gt;&gt; import pybtc
+&gt;&gt;&gt; pybtc.private_to_public_key<span class="o">(</span><span class="s1">&#39;5Jw8DY1uBrd35xup6eD6KLEFa4AJFbX381HWuHvPGirJto9ZTnr&#39;</span><span class="o">)</span>
+<span class="s1">&#39;0479f17a94410afd4f27588a192bacada53add0741765092dc0f8e2a29ea1bcd276dbc1ef74c3e0172d9db8047f2a0a5dc2e8e51a13f7f0cc072de906b765e0f7f&#39;</span>
+&gt;&gt;&gt;
+&gt;&gt;&gt; pybtc.public_key_to_address<span class="o">(</span><span class="s1">&#39;0479f17a94410afd4f27588a192bacada53add0741765092dc0f8e2a29ea1bcd276dbc1ef74c3e0172d9db8047f2a0a5dc2e8e51a13f7f0cc072de906b765e0f7f&#39;</span><span class="o">)</span>
+&gt;&gt;&gt;
+&gt;&gt;&gt; <span class="c1"># this is uncompressed public key, so we can&#39;t create witness address</span>
+&gt;&gt;&gt; <span class="c1"># we have to set witness_version to None to get non segwit address</span>
+&gt;&gt;&gt; <span class="nv">pub</span> <span class="o">=</span> pybtc.private_to_public_key<span class="o">(</span><span class="s1">&#39;5Jw8DY1uBrd35xup6eD6KLEFa4AJFbX381HWuHvPGirJto9ZTnr&#39;</span><span class="o">)</span>
+&gt;&gt;&gt; pybtc.public_key_to_address<span class="o">(</span>pub, <span class="nv">witness_version</span><span class="o">=</span>None<span class="o">)</span>
+<span class="s1">&#39;17mXwxxZRmj1nJJzDszZbW9URSAradEuAt&#39;</span>
+&gt;&gt;&gt;
+</pre></div>
+</div>
+<p>Tools</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>&gt;&gt;&gt; pybtc.is_address_valid<span class="o">(</span><span class="s1">&#39;17mXwxxZRmj1nJJzDszZbW9URSAradEuAt&#39;</span><span class="o">)</span>
+True
+&gt;&gt;&gt; pybtc.address_type<span class="o">(</span><span class="s1">&#39;17mXwxxZRmj1nJJzDszZbW9URSAradEuAt&#39;</span><span class="o">)</span>
+<span class="s1">&#39;P2PKH&#39;</span>
+&gt;&gt;&gt; pybtc.address_net_type<span class="o">(</span><span class="s1">&#39;17mXwxxZRmj1nJJzDszZbW9URSAradEuAt&#39;</span><span class="o">)</span>
+<span class="s1">&#39;mainnet&#39;</span>
+&gt;&gt;&gt;
+</pre></div>
+</div>
+</div>
+<div class="section" id="create-script-address">
+<h2>Create script address<a class="headerlink" href="#create-script-address" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static/pybtc.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+<p class="blurb"> </p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=bitaps-com&repo=pybtc&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#create-address">Create address</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#get-address-from-key">Get address from key</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pure-functions-for-address">Pure functions for address</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#create-script-address">Create script address</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="classes.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="functional.html">Pure functions reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="installation.html" title="previous chapter">Installation</a></li>
+      <li>Next: <a href="classes.html" title="next chapter">Reference</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015-2018, bitaps.com.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.11</a>
+      
+      |
+      <a href="_sources/examples.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/bitaps-com/pybtc" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

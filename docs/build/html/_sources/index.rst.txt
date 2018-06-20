@@ -44,7 +44,7 @@ Usage example::
     import pybtc
     a = pybtc.Address()
     print(a.address)
-    print(a.private_key.wif)
+    print(a.private_key.wif())
 
 
 

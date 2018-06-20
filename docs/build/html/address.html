@@ -1,0 +1,351 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Addresses &#8212; pybtc  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Transactions" href="transaction.html" />
+    <link rel="prev" title="Reference" href="classes.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="addresses">
+<h1>Addresses<a class="headerlink" href="#addresses" title="Permalink to this headline">¶</a></h1>
+<p>Collection of base classes that implement the work with Bitcoin addresses and address keys.
+Supports addresses types PUBKEY, P2PKH, P2SH, P2SH-PWPKH, P2WPKH, P2WSH.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+<dl class="class">
+<dt id="pybtc.PrivateKey">
+<em class="property">class </em><code class="descclassname">pybtc.</code><code class="descname">PrivateKey</code><span class="sig-paren">(</span><em>key=None</em>, <em>compressed=True</em>, <em>testnet=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/address.html#PrivateKey"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.PrivateKey" title="Permalink to this definition">¶</a></dt>
+<dd><p>The class for creating private key object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>key</strong> – (optional) private key in HEX,  bytes string or WIF format. In case no key specified
+new random private key will be created.</li>
+<li><strong>compressed</strong> – (optional) if set to True private key corresponding compressed public key,
+by default set to True. Recommended use only compressed public key.</li>
+<li><strong>testnet</strong> – (optional) if set to True mean that this private key for testnet Bitcoin network.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="pybtc.PrivateKey.compressed">
+<code class="descname">compressed</code><a class="headerlink" href="#pybtc.PrivateKey.compressed" title="Permalink to this definition">¶</a></dt>
+<dd><p>flag for compressed type of corresponding public key (boolean)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pybtc.PrivateKey.hex">
+<code class="descname">hex</code><a class="headerlink" href="#pybtc.PrivateKey.hex" title="Permalink to this definition">¶</a></dt>
+<dd><p>private key in HEX (string)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pybtc.PrivateKey.key">
+<code class="descname">key</code><a class="headerlink" href="#pybtc.PrivateKey.key" title="Permalink to this definition">¶</a></dt>
+<dd><p>private key in  bytes (bytes)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pybtc.PrivateKey.testnet">
+<code class="descname">testnet</code><a class="headerlink" href="#pybtc.PrivateKey.testnet" title="Permalink to this definition">¶</a></dt>
+<dd><p>flag for testnet network private key  (boolean)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pybtc.PrivateKey.wif">
+<code class="descname">wif</code><a class="headerlink" href="#pybtc.PrivateKey.wif" title="Permalink to this definition">¶</a></dt>
+<dd><p>private key in WIF format (string)</p>
+</dd></dl>
+
+</dd></dl>
+
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+<dl class="class">
+<dt id="pybtc.PublicKey">
+<em class="property">class </em><code class="descclassname">pybtc.</code><code class="descname">PublicKey</code><span class="sig-paren">(</span><em>key</em>, <em>compressed=True</em>, <em>testnet=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/address.html#PublicKey"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.PublicKey" title="Permalink to this definition">¶</a></dt>
+<dd><p>The class for public key object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>key</strong> – <p>one of this types allowed:</p>
+<ul>
+<li>private key is instance of <code class="docutils literal notranslate"><span class="pre">PrivateKey</span></code> class</li>
+<li>private key HEX encoded string</li>
+<li>private key 32 bytes string</li>
+<li>private key in WIF format</li>
+<li>public key in HEX encoded string</li>
+<li>public key [33/65] bytes string</li>
+</ul>
+<p>In case no key specified with HEX or bytes string you have to provide flag for testnet 
+and compressed key. WIF format and <code class="docutils literal notranslate"><span class="pre">PrivateKey</span></code> instance already contain this flags.
+For HEX or bytes public key only testnet flag has the meaning, comressed flag is determined 
+according to the length of key.</p>
+</li>
+<li><strong>compressed</strong> – (optional) if set to True private key corresponding compressed public key,
+by default set to True. Recommended use only compressed public key.</li>
+<li><strong>testnet</strong> – (optional) if set to True mean that this private key for testnet Bitcoin network.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="pybtc.PublicKey.compressed">
+<code class="descname">compressed</code><a class="headerlink" href="#pybtc.PublicKey.compressed" title="Permalink to this definition">¶</a></dt>
+<dd><p>flag for compressed type of corresponding public key (boolean)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pybtc.PublicKey.hex">
+<code class="descname">hex</code><a class="headerlink" href="#pybtc.PublicKey.hex" title="Permalink to this definition">¶</a></dt>
+<dd><p>public key in HEX (string)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pybtc.PublicKey.key">
+<code class="descname">key</code><a class="headerlink" href="#pybtc.PublicKey.key" title="Permalink to this definition">¶</a></dt>
+<dd><p>public key in  bytes (bytes)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pybtc.PublicKey.testnet">
+<code class="descname">testnet</code><a class="headerlink" href="#pybtc.PublicKey.testnet" title="Permalink to this definition">¶</a></dt>
+<dd><p>flag for testnet network private key  (boolean)</p>
+</dd></dl>
+
+</dd></dl>
+
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+<dl class="class">
+<dt id="pybtc.Address">
+<em class="property">class </em><code class="descclassname">pybtc.</code><code class="descname">Address</code><span class="sig-paren">(</span><em>key=None</em>, <em>address_type='P2WPKH'</em>, <em>testnet=False</em>, <em>compressed=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/address.html#Address"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.Address" title="Permalink to this definition">¶</a></dt>
+<dd><p>The class for Address object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>key</strong> – <p>(optional) one of this types allowed:</p>
+<ul>
+<li>private key WIF format</li>
+<li>instance of <code class="docutils literal notranslate"><span class="pre">PrivateKey</span></code></li>
+<li>private key HEX encoded string</li>
+<li>instance of <code class="docutils literal notranslate"><span class="pre">PublicKey</span></code></li>
+</ul>
+<p>In case no key specified new Address will be created with random keys.</p>
+</li>
+<li><strong>address_type</strong> – (optional) P2PKH, PUBKEY, P2WPKH, P2SH_P2WPKH, by default P2WPKH.</li>
+<li><strong>compressed</strong> – (optional) if set to True private key corresponding compressed public key,
+by default set to True. Recommended use only compressed public key.</li>
+<li><strong>testnet</strong> – (optional) if set to True mean that this private key for testnet Bitcoin network.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>In case instanse is created from WIF private key, <code class="docutils literal notranslate"><span class="pre">PrivateKey</span></code> or <code class="docutils literal notranslate"><span class="pre">PublicKey</span></code> compressed and testnet flags
+already contain in initial key parameter and will be ignored.</p>
+<dl class="attribute">
+<dt id="pybtc.Address.address">
+<code class="descname">address</code><a class="headerlink" href="#pybtc.Address.address" title="Permalink to this definition">¶</a></dt>
+<dd><p>address in base58 or bech32 encoding (string)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pybtc.Address.hash">
+<code class="descname">hash</code><a class="headerlink" href="#pybtc.Address.hash" title="Permalink to this definition">¶</a></dt>
+<dd><p>address hash</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pybtc.Address.hash_hex">
+<code class="descname">hash_hex</code><a class="headerlink" href="#pybtc.Address.hash_hex" title="Permalink to this definition">¶</a></dt>
+<dd><p>address hash HEX (string)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pybtc.Address.private_key">
+<code class="descname">private_key</code><a class="headerlink" href="#pybtc.Address.private_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>instance of <code class="docutils literal notranslate"><span class="pre">PrivateKey</span></code> class</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pybtc.Address.public_key">
+<code class="descname">public_key</code><a class="headerlink" href="#pybtc.Address.public_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>instance of <code class="docutils literal notranslate"><span class="pre">PublicKey</span></code> class</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pybtc.Address.redeem_script">
+<code class="descname">redeem_script</code><a class="headerlink" href="#pybtc.Address.redeem_script" title="Permalink to this definition">¶</a></dt>
+<dd><p>redeeem script, only for P2SH_P2WPKH (bytes)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pybtc.Address.redeem_script_hex">
+<code class="descname">redeem_script_hex</code><a class="headerlink" href="#pybtc.Address.redeem_script_hex" title="Permalink to this definition">¶</a></dt>
+<dd><p>redeeem script HEX, only for P2SH_P2WPKH (string)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pybtc.Address.script_hash">
+<code class="descname">script_hash</code><a class="headerlink" href="#pybtc.Address.script_hash" title="Permalink to this definition">¶</a></dt>
+<dd><p>flag for script hash address (boolean)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pybtc.Address.testnet">
+<code class="descname">testnet</code><a class="headerlink" href="#pybtc.Address.testnet" title="Permalink to this definition">¶</a></dt>
+<dd><p>flag for testnet network address  (boolean)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pybtc.Address.type">
+<code class="descname">type</code><a class="headerlink" href="#pybtc.Address.type" title="Permalink to this definition">¶</a></dt>
+<dd><p>flag for testnet network address  (boolean)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pybtc.Address.witness_version">
+<code class="descname">witness_version</code><a class="headerlink" href="#pybtc.Address.witness_version" title="Permalink to this definition">¶</a></dt>
+<dd><p>version of witness program for SEGWIT address (string)</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static/pybtc.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+<p class="blurb"> </p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=bitaps-com&repo=pybtc&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="classes.html">Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Addresses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transaction.html">Transactions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="block.html">Blocks</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="functional.html">Pure functions reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="classes.html">Reference</a><ul>
+      <li>Previous: <a href="classes.html" title="previous chapter">Reference</a></li>
+      <li>Next: <a href="transaction.html" title="next chapter">Transactions</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015-2018, bitaps.com.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.11</a>
+      
+      |
+      <a href="_sources/address.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/bitaps-com/pybtc" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,1423 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>pybtc.tools &#8212; pybtc  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for pybtc.tools</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">from</span> <span class="nn">secp256k1</span> <span class="k">import</span> <span class="n">ffi</span>
+<span class="kn">from</span> <span class="nn">.constants</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.opcodes</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.hash</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.encode</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">io</span>
+
+
+<span class="c1"># Key management</span>
+
+<div class="viewcode-block" id="create_private_key"><a class="viewcode-back" href="../../functional.html#pybtc.create_private_key">[docs]</a><span class="k">def</span> <span class="nf">create_private_key</span><span class="p">(</span><span class="n">compressed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">testnet</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">wif</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">hex</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create private key</span>
+<span class="sd">    </span>
+<span class="sd">    :param compressed: (optional) Type of public key, by default set to compressed. </span>
+<span class="sd">                                 Using uncompressed public keys is deprecated in new SEGWIT addresses, </span>
+<span class="sd">                                 use this option only for backward compatibility.  </span>
+<span class="sd">    :param testnet: (optional) flag for testnet network, by default is False.</span>
+<span class="sd">    :param wif:  (optional) If set to True return key in WIF format, by default is True.</span>
+<span class="sd">    :param hex:  (optional) If set to True return key in HEX format, by default is False.</span>
+<span class="sd">    :return: Private key in wif format (default), hex encoded byte string in case of hex flag or</span>
+<span class="sd">             raw bytes string in case wif and hex flags set to False.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">SystemRandom</span><span class="p">()</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">MAX_INT_PRIVATE_KEY</span><span class="p">)</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">%</span> <span class="mf">0.01</span><span class="p">)</span><span class="o">*</span><span class="mi">100000</span><span class="p">)</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="n">byteorder</span><span class="o">=</span><span class="s2">&quot;big&quot;</span><span class="p">)</span>
+    <span class="c1"># more entropy from system timer and sha256 derivation</span>
+    <span class="k">while</span> <span class="n">i</span><span class="p">:</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">h</span><span class="p">)</span><span class="o">.</span><span class="n">digest</span><span class="p">()</span>
+        <span class="n">i</span> <span class="o">-=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">i</span> <span class="ow">and</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">byteorder</span><span class="o">=</span><span class="s2">&quot;big&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">MAX_INT_PRIVATE_KEY</span><span class="p">:</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">wif</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">private_key_to_wif</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">compressed</span><span class="o">=</span><span class="n">compressed</span><span class="p">,</span> <span class="n">testnet</span><span class="o">=</span><span class="n">testnet</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">hex</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">hexlify</span><span class="p">(</span><span class="n">h</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">h</span></div>
+
+
+<div class="viewcode-block" id="private_key_to_wif"><a class="viewcode-back" href="../../functional.html#pybtc.private_key_to_wif">[docs]</a><span class="k">def</span> <span class="nf">private_key_to_wif</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">compressed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">testnet</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Encode private key in HEX or RAW bytes format to WIF format.</span>
+<span class="sd">    </span>
+<span class="sd">    :param h: private key 32 byte string or HEX encoded string.</span>
+<span class="sd">    :param compressed: (optional) flag of public key compressed format, by default set to True.  </span>
+<span class="sd">    :param testnet: (optional) flag for testnet network, by default is False.</span>
+<span class="sd">    :return: Private key in WIF format.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># uncompressed: 0x80 + [32-byte secret] + [4 bytes of Hash() of previous 33 bytes], base58 encoded.</span>
+    <span class="c1"># compressed: 0x80 + [32-byte secret] + 0x01 + [4 bytes of Hash() previous 34 bytes], base58 encoded.</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">h</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">32</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;private key must be a 32 bytes or hex encoded string&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">testnet</span><span class="p">:</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">TESTNET_PRIVATE_KEY_BYTE_PREFIX</span> <span class="o">+</span> <span class="n">h</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">MAINNET_PRIVATE_KEY_BYTE_PREFIX</span> <span class="o">+</span> <span class="n">h</span>
+    <span class="k">if</span> <span class="n">compressed</span><span class="p">:</span>
+        <span class="n">h</span> <span class="o">+=</span> <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\x01</span><span class="s1">&#39;</span>
+    <span class="n">h</span> <span class="o">+=</span> <span class="n">double_sha256</span><span class="p">(</span><span class="n">h</span><span class="p">)[:</span><span class="mi">4</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">encode_base58</span><span class="p">(</span><span class="n">h</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="wif_to_private_key"><a class="viewcode-back" href="../../functional.html#pybtc.wif_to_private_key">[docs]</a><span class="k">def</span> <span class="nf">wif_to_private_key</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="nb">hex</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Decode WIF private key to bytes string or HEX encoded string</span>
+<span class="sd">    </span>
+<span class="sd">    :param hex:  (optional) if set to True return key in HEX format, by default is True.</span>
+<span class="sd">    :return: Private key HEX encoded string or raw bytes string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_wif_valid</span><span class="p">(</span><span class="n">h</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;invalid wif key&quot;</span><span class="p">)</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">decode_base58</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">hex</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">hexlify</span><span class="p">(</span><span class="n">h</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">33</span><span class="p">])</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">h</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">33</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="is_wif_valid"><a class="viewcode-back" href="../../functional.html#pybtc.is_wif_valid">[docs]</a><span class="k">def</span> <span class="nf">is_wif_valid</span><span class="p">(</span><span class="n">wif</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check is private key in WIF format string is valid.</span>
+<span class="sd">        </span>
+<span class="sd">    :param wif: private key in WIF format string.</span>
+<span class="sd">    :return: boolean.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">wif</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;invalid wif key&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">wif</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">PRIVATE_KEY_PREFIX_LIST</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">decode_base58</span><span class="p">(</span><span class="n">wif</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">checksum</span> <span class="o">=</span> <span class="n">h</span><span class="p">[</span><span class="o">-</span><span class="mi">4</span><span class="p">:]</span>
+    <span class="k">if</span> <span class="n">wif</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="n">MAINNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX</span><span class="p">,</span>
+                  <span class="n">TESTNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">h</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">37</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">h</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">38</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">double_sha256</span><span class="p">(</span><span class="n">h</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">])[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">!=</span> <span class="n">checksum</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="private_to_public_key"><a class="viewcode-back" href="../../functional.html#pybtc.private_to_public_key">[docs]</a><span class="k">def</span> <span class="nf">private_to_public_key</span><span class="p">(</span><span class="n">private_key</span><span class="p">,</span> <span class="n">compressed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">hex</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get public key from private key using ECDSA secp256k1</span>
+<span class="sd">    </span>
+<span class="sd">    :param private_key: private key in WIF, HEX or bytes.</span>
+<span class="sd">    :param compressed: (optional) flag of public key compressed format, by default set to True.</span>
+<span class="sd">                       In case private_key in WIF format, this flag is set in accordance with </span>
+<span class="sd">                       the key format specified in WIF string.</span>
+<span class="sd">    :param hex:  (optional) if set to True return key in HEX format, by default is True.</span>
+<span class="sd">    :return: 33/65 bytes public key in HEX or bytes string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">private_key</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">private_key</span><span class="p">,</span> <span class="nb">bytearray</span><span class="p">):</span>
+            <span class="n">private_key</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">private_key</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">private_key</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">is_wif_valid</span><span class="p">(</span><span class="n">private_key</span><span class="p">):</span>
+                <span class="n">private_key</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">private_key</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">private_key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="n">MAINNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX</span><span class="p">,</span>
+                                      <span class="n">TESTNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX</span><span class="p">):</span>
+                    <span class="n">compressed</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="n">private_key</span> <span class="o">=</span> <span class="n">wif_to_private_key</span><span class="p">(</span><span class="n">private_key</span><span class="p">,</span> <span class="nb">hex</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;private key must be a bytes or WIF or hex encoded string&quot;</span><span class="p">)</span>
+    <span class="n">pubkey_ptr</span> <span class="o">=</span> <span class="n">ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;secp256k1_pubkey *&#39;</span><span class="p">)</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">secp256k1</span><span class="o">.</span><span class="n">secp256k1_ec_pubkey_create</span><span class="p">(</span><span class="n">ECDSA_CONTEXT_ALL</span><span class="p">,</span> <span class="n">pubkey_ptr</span><span class="p">,</span> <span class="n">private_key</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">r</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;secp256k1 error&quot;</span><span class="p">)</span>
+    <span class="n">len_key</span> <span class="o">=</span> <span class="mi">33</span> <span class="k">if</span> <span class="n">compressed</span> <span class="k">else</span> <span class="mi">65</span>
+    <span class="n">pubkey</span> <span class="o">=</span> <span class="n">ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;char [</span><span class="si">%d</span><span class="s1">]&#39;</span> <span class="o">%</span> <span class="n">len_key</span><span class="p">)</span>
+    <span class="n">outlen</span> <span class="o">=</span> <span class="n">ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;size_t *&#39;</span><span class="p">,</span> <span class="n">len_key</span><span class="p">)</span>
+    <span class="n">compflag</span> <span class="o">=</span> <span class="n">EC_COMPRESSED</span> <span class="k">if</span> <span class="n">compressed</span> <span class="k">else</span> <span class="n">EC_UNCOMPRESSED</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">secp256k1</span><span class="o">.</span><span class="n">secp256k1_ec_pubkey_serialize</span><span class="p">(</span><span class="n">ECDSA_CONTEXT_VERIFY</span><span class="p">,</span> <span class="n">pubkey</span><span class="p">,</span> <span class="n">outlen</span><span class="p">,</span> <span class="n">pubkey_ptr</span><span class="p">,</span> <span class="n">compflag</span><span class="p">)</span>
+    <span class="n">pub</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">ffi</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">pubkey</span><span class="p">,</span> <span class="n">len_key</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">r</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;secp256k1 error&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">hexlify</span><span class="p">(</span><span class="n">pub</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span> <span class="k">if</span> <span class="nb">hex</span> <span class="k">else</span> <span class="n">pub</span></div>
+
+
+<div class="viewcode-block" id="is_public_key_valid"><a class="viewcode-back" href="../../functional.html#pybtc.is_public_key_valid">[docs]</a><span class="k">def</span> <span class="nf">is_public_key_valid</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check public key is valid.</span>
+
+<span class="sd">    :param key: public key in HEX or bytes string format.</span>
+<span class="sd">    :return: boolean.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">33</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mh">0x04</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">65</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">elif</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mh">0x02</span> <span class="ow">or</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mh">0x03</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">33</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<span class="c1"># Addresses</span>
+
+<div class="viewcode-block" id="hash_to_address"><a class="viewcode-back" href="../../functional.html#pybtc.hash_to_address">[docs]</a><span class="k">def</span> <span class="nf">hash_to_address</span><span class="p">(</span><span class="n">address_hash</span><span class="p">,</span> <span class="n">testnet</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">script_hash</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">witness_version</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get address from public key/script hash. In case PUBKEY, P2PKH, P2PKH public key/script hash is SHA256+RIPEMD160,</span>
+<span class="sd">    P2WSH script hash is SHA256.</span>
+<span class="sd">    </span>
+
+<span class="sd">    :param address_hash: public key hash or script hash in HEX or bytes string format.</span>
+<span class="sd">    :param testnet: (optional) flag for testnet network, by default is False.</span>
+<span class="sd">    :param script_hash: (optional) flag for script hash (P2SH address), by default is False.</span>
+<span class="sd">    :param witness_version: (optional) witness program version, by default is 0, for legacy</span>
+<span class="sd">                            address format use None.</span>
+<span class="sd">    :return: address in base58 or bech32 format.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">address_hash</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">address_hash</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">address_hash</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">address_hash</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;address hash must be HEX encoded string or bytes&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">script_hash</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">witness_version</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">address_hash</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">20</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;address hash length incorrect&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">testnet</span><span class="p">:</span>
+                <span class="n">prefix</span> <span class="o">=</span> <span class="n">TESTNET_ADDRESS_BYTE_PREFIX</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">prefix</span> <span class="o">=</span> <span class="n">MAINNET_ADDRESS_BYTE_PREFIX</span>
+            <span class="n">address_hash</span> <span class="o">=</span> <span class="n">prefix</span> <span class="o">+</span> <span class="n">address_hash</span>
+            <span class="n">address_hash</span> <span class="o">+=</span> <span class="n">double_sha256</span><span class="p">(</span><span class="n">address_hash</span><span class="p">)[:</span><span class="mi">4</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">encode_base58</span><span class="p">(</span><span class="n">address_hash</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">address_hash</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">32</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;address hash length incorrect&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">witness_version</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">testnet</span><span class="p">:</span>
+            <span class="n">prefix</span> <span class="o">=</span> <span class="n">TESTNET_SCRIPT_ADDRESS_BYTE_PREFIX</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">prefix</span> <span class="o">=</span> <span class="n">MAINNET_SCRIPT_ADDRESS_BYTE_PREFIX</span>
+        <span class="n">address_hash</span> <span class="o">=</span> <span class="n">prefix</span> <span class="o">+</span> <span class="n">address_hash</span>
+        <span class="n">address_hash</span> <span class="o">+=</span> <span class="n">double_sha256</span><span class="p">(</span><span class="n">address_hash</span><span class="p">)[:</span><span class="mi">4</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">encode_base58</span><span class="p">(</span><span class="n">address_hash</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">testnet</span><span class="p">:</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">TESTNET_SEGWIT_ADDRESS_BYTE_PREFIX</span>
+        <span class="n">hrp</span> <span class="o">=</span> <span class="n">TESTNET_SEGWIT_ADDRESS_PREFIX</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">MAINNET_SEGWIT_ADDRESS_BYTE_PREFIX</span>
+        <span class="n">hrp</span> <span class="o">=</span> <span class="n">MAINNET_SEGWIT_ADDRESS_PREFIX</span>
+
+    <span class="n">address_hash</span> <span class="o">=</span> <span class="n">witness_version</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;big&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="n">rebase_8_to_5</span><span class="p">(</span><span class="n">address_hash</span><span class="p">)</span>
+    <span class="n">checksum</span> <span class="o">=</span> <span class="n">bech32_polymod</span><span class="p">(</span><span class="n">prefix</span> <span class="o">+</span> <span class="n">address_hash</span> <span class="o">+</span> <span class="sa">b</span><span class="s2">&quot;</span><span class="se">\x00</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="mi">6</span><span class="p">)</span>
+    <span class="n">checksum</span> <span class="o">=</span> <span class="n">rebase_8_to_5</span><span class="p">(</span><span class="n">checksum</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="s2">&quot;big&quot;</span><span class="p">))[</span><span class="mi">2</span><span class="p">:]</span>
+    <span class="k">return</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">1</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">hrp</span><span class="p">,</span> <span class="n">rebase_5_to_32</span><span class="p">(</span><span class="n">address_hash</span> <span class="o">+</span> <span class="n">checksum</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="public_key_to_address"><a class="viewcode-back" href="../../functional.html#pybtc.public_key_to_address">[docs]</a><span class="k">def</span> <span class="nf">public_key_to_address</span><span class="p">(</span><span class="n">pubkey</span><span class="p">,</span> <span class="n">testnet</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">p2sh_p2wpkh</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">witness_version</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get address from public key/script hash. In case PUBKEY, P2PKH, P2PKH public key/script hash is SHA256+RIPEMD160,</span>
+<span class="sd">    P2WSH script hash is SHA256.</span>
+
+<span class="sd">    :param pubkey: public key HEX or bytes string format.</span>
+<span class="sd">    :param testnet: (optional) flag for testnet network, by default is False.</span>
+<span class="sd">    :param p2sh_p2wpkh: (optional) flag for P2WPKH inside P2SH address, by default is False.</span>
+<span class="sd">    :param witness_version: (optional) witness program version, by default is 0, for legacy</span>
+<span class="sd">                            address format use None.</span>
+<span class="sd">    :return: address in base58 or bech32 format.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pubkey</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">pubkey</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">pubkey</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pubkey</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;public key invalid&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">p2sh_p2wpkh</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pubkey</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">33</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;public key invalid&quot;</span><span class="p">)</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">hash160</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;</span><span class="se">\x00\x14</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">hash160</span><span class="p">(</span><span class="n">pubkey</span><span class="p">))</span>
+        <span class="n">witness_version</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">witness_version</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pubkey</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">33</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;public key invalid&quot;</span><span class="p">)</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">hash160</span><span class="p">(</span><span class="n">pubkey</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">hash_to_address</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">testnet</span><span class="o">=</span><span class="n">testnet</span><span class="p">,</span>
+                           <span class="n">script_hash</span><span class="o">=</span><span class="n">p2sh_p2wpkh</span><span class="p">,</span>
+                           <span class="n">witness_version</span><span class="o">=</span><span class="n">witness_version</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="address_to_hash"><a class="viewcode-back" href="../../functional.html#pybtc.address_to_hash">[docs]</a><span class="k">def</span> <span class="nf">address_to_hash</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="nb">hex</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get address hash from base58 or bech32 address format.</span>
+
+<span class="sd">    :param address: address in base58 or bech32 format.</span>
+<span class="sd">    :param hex:  (optional) If set to True return key in HEX format, by default is True.</span>
+<span class="sd">    :return: script in HEX or bytes string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">address</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">ADDRESS_PREFIX_LIST</span><span class="p">:</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">decode_base58</span><span class="p">(</span><span class="n">address</span><span class="p">)[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">4</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">address</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="n">MAINNET_SEGWIT_ADDRESS_PREFIX</span><span class="p">,</span>
+                         <span class="n">TESTNET_SEGWIT_ADDRESS_PREFIX</span><span class="p">):</span>
+        <span class="n">address</span> <span class="o">=</span> <span class="n">address</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;1&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">rebase_5_to_8</span><span class="p">(</span><span class="n">rebase_32_to_5</span><span class="p">(</span><span class="n">address</span><span class="p">)[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">6</span><span class="p">],</span> <span class="kc">False</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">hex</span><span class="p">()</span> <span class="k">if</span> <span class="nb">hex</span> <span class="k">else</span> <span class="n">h</span></div>
+
+
+<div class="viewcode-block" id="address_type"><a class="viewcode-back" href="../../functional.html#pybtc.address_type">[docs]</a><span class="k">def</span> <span class="nf">address_type</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get address type.   </span>
+<span class="sd">    </span>
+<span class="sd">    :param address: address in base58 or bech32 format.</span>
+<span class="sd">    :param num: (optional) If set to True return type in numeric format, by default is False.</span>
+<span class="sd">    :return: address type in string or numeric format. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">address</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="n">TESTNET_SCRIPT_ADDRESS_PREFIX</span><span class="p">,</span>
+                      <span class="n">MAINNET_SCRIPT_ADDRESS_PREFIX</span><span class="p">):</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="s1">&#39;P2SH&#39;</span>
+    <span class="k">elif</span> <span class="n">address</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="n">MAINNET_ADDRESS_PREFIX</span><span class="p">,</span>
+                        <span class="n">TESTNET_ADDRESS_PREFIX</span><span class="p">,</span>
+                        <span class="n">TESTNET_ADDRESS_PREFIX_2</span><span class="p">):</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="s1">&#39;P2PKH&#39;</span>
+    <span class="k">elif</span> <span class="n">address</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="n">MAINNET_SEGWIT_ADDRESS_PREFIX</span><span class="p">,</span>
+                         <span class="n">TESTNET_SEGWIT_ADDRESS_PREFIX</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">address</span><span class="p">)</span> <span class="o">==</span> <span class="mi">42</span><span class="p">:</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="s1">&#39;P2WPKH&#39;</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">address</span><span class="p">)</span> <span class="o">==</span> <span class="mi">62</span><span class="p">:</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="s1">&#39;P2WSH&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">SCRIPT_TYPES</span><span class="p">[</span><span class="s1">&#39;NON_STANDARD&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">num</span> <span class="k">else</span> <span class="s1">&#39;UNKNOWN&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">SCRIPT_TYPES</span><span class="p">[</span><span class="s1">&#39;NON_STANDARD&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">num</span> <span class="k">else</span> <span class="s1">&#39;UNKNOWN&#39;</span>
+    <span class="k">return</span> <span class="n">SCRIPT_TYPES</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="k">if</span> <span class="n">num</span> <span class="k">else</span> <span class="n">t</span></div>
+
+
+<span class="k">def</span> <span class="nf">address_net_type</span><span class="p">(</span><span class="n">address</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get address network type.   </span>
+
+<span class="sd">    :param address: address in base58 or bech32 format.</span>
+<span class="sd">    :return: address network type in string format or None. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">address</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="n">MAINNET_SCRIPT_ADDRESS_PREFIX</span><span class="p">,</span>
+                      <span class="n">MAINNET_ADDRESS_PREFIX</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;mainnet&quot;</span>
+    <span class="k">elif</span> <span class="n">address</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="n">MAINNET_SEGWIT_ADDRESS_PREFIX</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;mainnet&quot;</span>
+    <span class="k">elif</span> <span class="n">address</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="n">TESTNET_SCRIPT_ADDRESS_PREFIX</span><span class="p">,</span>
+                        <span class="n">TESTNET_ADDRESS_PREFIX</span><span class="p">,</span>
+                        <span class="n">TESTNET_ADDRESS_PREFIX_2</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;testnet&quot;</span>
+    <span class="k">elif</span> <span class="n">address</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="n">TESTNET_SEGWIT_ADDRESS_PREFIX</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;testnet&quot;</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<div class="viewcode-block" id="address_to_script"><a class="viewcode-back" href="../../functional.html#pybtc.address_to_script">[docs]</a><span class="k">def</span> <span class="nf">address_to_script</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="nb">hex</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get public key script from address.</span>
+
+<span class="sd">    :param address: address in base58 or bech32 format.</span>
+<span class="sd">    :param hex:  (optional) If set to True return key in HEX format, by default is True.</span>
+<span class="sd">    :return: public key script in HEX or bytes string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">address</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="n">TESTNET_SCRIPT_ADDRESS_PREFIX</span><span class="p">,</span>
+                      <span class="n">MAINNET_SCRIPT_ADDRESS_PREFIX</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="p">[</span><span class="n">BYTE_OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_HASH160&quot;</span><span class="p">],</span>
+             <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\x14</span><span class="s1">&#39;</span><span class="p">,</span>
+             <span class="n">address_to_hash</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="nb">hex</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+             <span class="n">BYTE_OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_EQUAL&quot;</span><span class="p">]]</span>
+    <span class="k">elif</span> <span class="n">address</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="n">MAINNET_ADDRESS_PREFIX</span><span class="p">,</span>
+                        <span class="n">TESTNET_ADDRESS_PREFIX</span><span class="p">,</span>
+                        <span class="n">TESTNET_ADDRESS_PREFIX_2</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="p">[</span><span class="n">BYTE_OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_DUP&quot;</span><span class="p">],</span>
+             <span class="n">BYTE_OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_HASH160&quot;</span><span class="p">],</span>
+             <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\x14</span><span class="s1">&#39;</span><span class="p">,</span>
+             <span class="n">address_to_hash</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="nb">hex</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+             <span class="n">BYTE_OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_EQUALVERIFY&quot;</span><span class="p">],</span>
+             <span class="n">BYTE_OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_CHECKSIG&quot;</span><span class="p">]]</span>
+    <span class="k">elif</span> <span class="n">address</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="n">TESTNET_SEGWIT_ADDRESS_PREFIX</span><span class="p">,</span>
+                         <span class="n">MAINNET_SEGWIT_ADDRESS_PREFIX</span><span class="p">):</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">address_to_hash</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="nb">hex</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="p">[</span><span class="n">BYTE_OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_0&quot;</span><span class="p">],</span>
+             <span class="nb">bytes</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">h</span><span class="p">)]),</span>
+             <span class="n">h</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;address invalid&quot;</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">hexlify</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span> <span class="k">if</span> <span class="nb">hex</span> <span class="k">else</span> <span class="n">s</span></div>
+
+
+<span class="k">def</span> <span class="nf">public_key_to_p2sh_p2wpkh_script</span><span class="p">(</span><span class="n">pubkey</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pubkey</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">33</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;public key len invalid&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\x00\x14</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">hash160</span><span class="p">(</span><span class="n">pubkey</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="is_address_valid"><a class="viewcode-back" href="../../functional.html#pybtc.is_address_valid">[docs]</a><span class="k">def</span> <span class="nf">is_address_valid</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="n">testnet</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check is address valid.</span>
+
+<span class="sd">    :param address: address in base58 or bech32 format.</span>
+<span class="sd">    :param testnet: (optional) flag for testnet network, by default is False.</span>
+<span class="sd">    :return: boolean.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">address</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">address</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">address</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="n">MAINNET_ADDRESS_PREFIX</span><span class="p">,</span>
+                      <span class="n">MAINNET_SCRIPT_ADDRESS_PREFIX</span><span class="p">,</span>
+                      <span class="n">TESTNET_ADDRESS_PREFIX</span><span class="p">,</span>
+                      <span class="n">TESTNET_ADDRESS_PREFIX_2</span><span class="p">,</span>
+                      <span class="n">TESTNET_SCRIPT_ADDRESS_PREFIX</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">testnet</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">address</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">TESTNET_ADDRESS_PREFIX</span><span class="p">,</span>
+                                  <span class="n">TESTNET_ADDRESS_PREFIX_2</span><span class="p">,</span>
+                                  <span class="n">TESTNET_SCRIPT_ADDRESS_PREFIX</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">address</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">MAINNET_ADDRESS_PREFIX</span><span class="p">,</span>
+                                  <span class="n">MAINNET_SCRIPT_ADDRESS_PREFIX</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">decode_base58</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">h</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">25</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="n">checksum</span> <span class="o">=</span> <span class="n">h</span><span class="p">[</span><span class="o">-</span><span class="mi">4</span><span class="p">:]</span>
+        <span class="k">if</span> <span class="n">double_sha256</span><span class="p">(</span><span class="n">h</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">])[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">!=</span> <span class="n">checksum</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">elif</span> <span class="n">address</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="n">TESTNET_SEGWIT_ADDRESS_PREFIX</span><span class="p">,</span>
+                                 <span class="n">MAINNET_SEGWIT_ADDRESS_PREFIX</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">address</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">42</span><span class="p">,</span> <span class="mi">62</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">prefix</span><span class="p">,</span> <span class="n">payload</span> <span class="o">=</span> <span class="n">address</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;1&#39;</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="n">upp</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">isupper</span><span class="p">()</span> <span class="k">else</span> <span class="kc">False</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">payload</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="k">if</span> <span class="n">upp</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">i</span><span class="o">.</span><span class="n">isupper</span><span class="p">()</span> <span class="ow">or</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">base32charset_upcase</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">isupper</span><span class="p">()</span> <span class="ow">or</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">base32charset</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">prefix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">testnet</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">prefix</span> <span class="o">!=</span> <span class="n">TESTNET_SEGWIT_ADDRESS_PREFIX</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="n">stripped_prefix</span> <span class="o">=</span> <span class="n">TESTNET_SEGWIT_ADDRESS_BYTE_PREFIX</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">prefix</span> <span class="o">!=</span> <span class="n">MAINNET_SEGWIT_ADDRESS_PREFIX</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="n">stripped_prefix</span> <span class="o">=</span> <span class="n">MAINNET_SEGWIT_ADDRESS_BYTE_PREFIX</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">rebase_32_to_5</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+        <span class="n">address_hash</span> <span class="o">=</span> <span class="n">d</span><span class="p">[:</span><span class="o">-</span><span class="mi">6</span><span class="p">]</span>
+        <span class="n">checksum</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="o">-</span><span class="mi">6</span><span class="p">:]</span>
+        <span class="n">checksum2</span> <span class="o">=</span> <span class="n">bech32_polymod</span><span class="p">(</span><span class="n">stripped_prefix</span> <span class="o">+</span> <span class="n">address_hash</span> <span class="o">+</span> <span class="sa">b</span><span class="s2">&quot;</span><span class="se">\x00</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="mi">6</span><span class="p">)</span>
+        <span class="n">checksum2</span> <span class="o">=</span> <span class="n">rebase_8_to_5</span><span class="p">(</span><span class="n">checksum2</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="s2">&quot;big&quot;</span><span class="p">))[</span><span class="mi">2</span><span class="p">:]</span>
+        <span class="k">if</span> <span class="n">checksum</span> <span class="o">!=</span> <span class="n">checksum2</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<span class="k">def</span> <span class="nf">get_witness_version</span><span class="p">(</span><span class="n">address</span><span class="p">):</span>
+    <span class="n">address</span> <span class="o">=</span> <span class="n">address</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;1&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">rebase_32_to_5</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">h</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+
+<span class="c1">#  Script</span>
+
+<div class="viewcode-block" id="parse_script"><a class="viewcode-back" href="../../functional.html#pybtc.parse_script">[docs]</a><span class="k">def</span> <span class="nf">parse_script</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="n">segwit</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parse script and return script type, script address and required signatures count.</span>
+
+<span class="sd">    :param script: script in bytes string or HEX encoded string format.</span>
+<span class="sd">    :param segwit:  (optional) If set to True recognize P2WPKH and P2WSH sripts, by default set to True.</span>
+<span class="sd">    </span>
+<span class="sd">    :return: dictionary:</span>
+<span class="sd">    </span>
+<span class="sd">            - nType - numeric script type</span>
+<span class="sd">            - type  - script type</span>
+<span class="sd">            - addressHash - address hash in case address recognized</span>
+<span class="sd">            - script - script if no address recognized</span>
+<span class="sd">            - reqSigs - required signatures count</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">script</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;nType&quot;</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;NON_STANDARD&quot;</span><span class="p">,</span> <span class="s2">&quot;reqSigs&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;script&quot;</span><span class="p">:</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="p">}</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">script</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">script</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">script</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">script</span><span class="p">)</span> <span class="o">==</span> <span class="nb">bytes</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">script</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">segwit</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">l</span> <span class="o">==</span> <span class="mi">22</span> <span class="ow">and</span> <span class="n">script</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;nType&quot;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;P2WPKH&quot;</span><span class="p">,</span> <span class="s2">&quot;reqSigs&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;addressHash&quot;</span><span class="p">:</span> <span class="n">script</span><span class="p">[</span><span class="mi">2</span><span class="p">:]}</span>
+        <span class="k">if</span> <span class="n">l</span> <span class="o">==</span> <span class="mi">34</span> <span class="ow">and</span> <span class="n">script</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;nType&quot;</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;P2WSH&quot;</span><span class="p">,</span> <span class="s2">&quot;reqSigs&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;addressHash&quot;</span><span class="p">:</span> <span class="n">script</span><span class="p">[</span><span class="mi">2</span><span class="p">:]}</span>
+    <span class="k">if</span> <span class="n">l</span> <span class="o">==</span> <span class="mi">25</span> <span class="ow">and</span> \
+                    <span class="n">script</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">&quot;</span><span class="se">\x76\xa9</span><span class="s2">&quot;</span> <span class="ow">and</span> \
+                    <span class="n">script</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">&quot;</span><span class="se">\x88\xac</span><span class="s2">&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;nType&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;P2PKH&quot;</span><span class="p">,</span> <span class="s2">&quot;reqSigs&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;addressHash&quot;</span><span class="p">:</span> <span class="n">script</span><span class="p">[</span><span class="mi">3</span><span class="p">:</span><span class="o">-</span><span class="mi">2</span><span class="p">]}</span>
+    <span class="k">if</span> <span class="n">l</span> <span class="o">==</span> <span class="mi">23</span> <span class="ow">and</span> \
+                    <span class="n">script</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">169</span> <span class="ow">and</span> \
+                    <span class="n">script</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">135</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;nType&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;P2SH&quot;</span><span class="p">,</span> <span class="s2">&quot;reqSigs&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;addressHash&quot;</span><span class="p">:</span> <span class="n">script</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]}</span>
+    <span class="k">if</span> <span class="n">l</span> <span class="o">==</span> <span class="mi">67</span> <span class="ow">and</span> <span class="n">script</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">172</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;nType&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;PUBKEY&quot;</span><span class="p">,</span> <span class="s2">&quot;reqSigs&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;addressHash&quot;</span><span class="p">:</span> <span class="n">hash160</span><span class="p">(</span><span class="n">script</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])}</span>
+    <span class="k">if</span> <span class="n">l</span> <span class="o">==</span> <span class="mi">35</span> <span class="ow">and</span> <span class="n">script</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">172</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;nType&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;PUBKEY&quot;</span><span class="p">,</span> <span class="s2">&quot;reqSigs&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;addressHash&quot;</span><span class="p">:</span> <span class="n">hash160</span><span class="p">(</span><span class="n">script</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])}</span>
+    <span class="k">if</span> <span class="n">script</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">106</span> <span class="ow">and</span> <span class="n">l</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">l</span> <span class="o">&lt;=</span> <span class="mi">82</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">script</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">l</span> <span class="o">-</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;nType&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;NULL_DATA&quot;</span><span class="p">,</span> <span class="s2">&quot;reqSigs&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">script</span><span class="p">[</span><span class="mi">2</span><span class="p">:]}</span>
+    <span class="k">if</span> <span class="n">script</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">81</span> <span class="ow">and</span> <span class="n">script</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">96</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">script</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">174</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">script</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">81</span> <span class="ow">and</span> <span class="n">script</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">96</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">script</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">script</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                    <span class="n">c</span><span class="p">,</span> <span class="n">s</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span>
+                    <span class="k">while</span> <span class="n">l</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">s</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mh">0x4c</span><span class="p">:</span>
+                            <span class="n">s</span> <span class="o">+=</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span>
+                            <span class="n">c</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">c</span> <span class="o">=</span> <span class="mi">0</span>
+                            <span class="k">break</span>
+                        <span class="n">s</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="n">script</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="mi">80</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;nType&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;MULTISIG&quot;</span><span class="p">,</span> <span class="s2">&quot;reqSigs&quot;</span><span class="p">:</span> <span class="n">script</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">80</span><span class="p">,</span> <span class="s2">&quot;script&quot;</span><span class="p">:</span> <span class="n">script</span><span class="p">}</span>
+
+    <span class="n">s</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">last</span><span class="p">,</span> <span class="n">req_sigs</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">l</span> <span class="o">-</span> <span class="n">s</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">81</span> <span class="ow">and</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">96</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">n</span><span class="p">:</span>
+                <span class="n">n</span> <span class="o">=</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">-</span> <span class="mi">80</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">m</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">n</span><span class="p">,</span> <span class="n">m</span> <span class="o">=</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">-</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">0</span>
+                <span class="k">elif</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="n">m</span><span class="p">:</span>
+                    <span class="n">n</span><span class="p">,</span> <span class="n">m</span> <span class="o">=</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">-</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">0</span>
+                <span class="k">elif</span> <span class="n">m</span> <span class="o">==</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">-</span> <span class="mi">80</span><span class="p">:</span>
+                    <span class="n">last</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">last</span> <span class="k">else</span> <span class="mi">2</span>
+        <span class="k">elif</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mh">0x4c</span><span class="p">:</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span>
+            <span class="n">m</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">m</span> <span class="o">&gt;</span> <span class="mi">16</span><span class="p">:</span>
+                <span class="n">n</span><span class="p">,</span> <span class="n">m</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+        <span class="k">elif</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">==</span> <span class="n">OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_PUSHDATA1&quot;</span><span class="p">]:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="k">elif</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">==</span> <span class="n">OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_PUSHDATA2&quot;</span><span class="p">]:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;H&#39;</span><span class="p">,</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">:</span> <span class="n">s</span> <span class="o">+</span> <span class="mi">2</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="k">elif</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">==</span> <span class="n">OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_PUSHDATA4&quot;</span><span class="p">]:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="mi">4</span> <span class="o">+</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;L&#39;</span><span class="p">,</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">:</span> <span class="n">s</span> <span class="o">+</span> <span class="mi">4</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">==</span> <span class="n">OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_CHECKSIG&quot;</span><span class="p">]:</span>
+                <span class="n">req_sigs</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">==</span> <span class="n">OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_CHECKSIGVERIFY&quot;</span><span class="p">]:</span>
+                <span class="n">req_sigs</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="n">OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_CHECKMULTISIG&quot;</span><span class="p">],</span> <span class="n">OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_CHECKMULTISIGVERIFY&quot;</span><span class="p">]):</span>
+                <span class="k">if</span> <span class="n">last</span><span class="p">:</span>
+                    <span class="n">req_sigs</span> <span class="o">+=</span> <span class="n">n</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">req_sigs</span> <span class="o">+=</span> <span class="mi">20</span>
+            <span class="n">n</span><span class="p">,</span> <span class="n">m</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">last</span><span class="p">:</span>
+            <span class="n">last</span> <span class="o">-=</span> <span class="mi">1</span>
+        <span class="n">s</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;nType&quot;</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;NON_STANDARD&quot;</span><span class="p">,</span> <span class="s2">&quot;reqSigs&quot;</span><span class="p">:</span> <span class="n">req_sigs</span><span class="p">,</span> <span class="s2">&quot;script&quot;</span><span class="p">:</span> <span class="n">script</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="decode_script"><a class="viewcode-back" href="../../functional.html#pybtc.decode_script">[docs]</a><span class="k">def</span> <span class="nf">decode_script</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="n">asm</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Decode script to ASM format or to human readable OPCODES string.</span>
+
+<span class="sd">    :param script: script in bytes string or HEX encoded string format.</span>
+<span class="sd">    :param asm:  (optional) If set to True decode to ASM fromat, by default set to False.</span>
+<span class="sd">    :return: script in ASM format string or OPCODES string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">script</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">script</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">pass</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;script invalid&quot;</span><span class="p">)</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">script</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">while</span> <span class="n">l</span> <span class="o">-</span> <span class="n">s</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mh">0x4c</span> <span class="ow">and</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">asm</span><span class="p">:</span>
+                <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hexlify</span><span class="p">(</span><span class="n">script</span><span class="p">[</span><span class="n">s</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span><span class="n">s</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]])</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;[</span><span class="si">%s</span><span class="s1">]&#39;</span> <span class="o">%</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">])</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="k">continue</span>
+        <span class="k">elif</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">==</span> <span class="n">OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_PUSHDATA1&quot;</span><span class="p">]:</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">==</span> <span class="n">OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_PUSHDATA2&quot;</span><span class="p">]:</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;H&#39;</span><span class="p">,</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">:</span> <span class="n">s</span> <span class="o">+</span> <span class="mi">2</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">==</span> <span class="n">OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_PUSHDATA4&quot;</span><span class="p">]:</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="mi">4</span> <span class="o">+</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;L&#39;</span><span class="p">,</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">:</span> <span class="n">s</span> <span class="o">+</span> <span class="mi">4</span><span class="p">])</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">RAW_OPCODE</span><span class="p">[</span><span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]])</span>
+        <span class="n">s</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="delete_from_script"><a class="viewcode-back" href="../../functional.html#pybtc.delete_from_script">[docs]</a><span class="k">def</span> <span class="nf">delete_from_script</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="n">sub_script</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Decode OPCODE or subscript from script.</span>
+
+<span class="sd">    :param script: traget script in bytes or HEX encoded string.</span>
+<span class="sd">    :param sub_script:  sub_script which is necessary to remove from target script in bytes or HEX encoded string.</span>
+<span class="sd">    :return: script in bytes or HEX encoded string corresponding to the format of target script.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">sub_script</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">script</span>
+    <span class="n">s_hex</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">script</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">script</span><span class="p">)</span>
+            <span class="n">s_hex</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">pass</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sub_script</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">sub_script</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">sub_script</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;script invalid&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sub_script</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;sub_script invalid&quot;</span><span class="p">)</span>
+
+    <span class="n">l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">script</span><span class="p">)</span>
+    <span class="n">ls</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sub_script</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">stack</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">while</span> <span class="n">l</span> <span class="o">-</span> <span class="n">s</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mh">0x4c</span> <span class="ow">and</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]:</span>
+            <span class="n">stack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">==</span> <span class="n">OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_PUSHDATA1&quot;</span><span class="p">]:</span>
+            <span class="n">stack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">==</span> <span class="n">OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_PUSHDATA2&quot;</span><span class="p">]:</span>
+            <span class="n">stack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">2</span> <span class="o">+</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;H&#39;</span><span class="p">,</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">:</span> <span class="n">s</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]))</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;H&#39;</span><span class="p">,</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">:</span> <span class="n">s</span> <span class="o">+</span> <span class="mi">2</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">==</span> <span class="n">OPCODE</span><span class="p">[</span><span class="s2">&quot;OP_PUSHDATA4&quot;</span><span class="p">]:</span>
+            <span class="n">stack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">4</span> <span class="o">+</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;L&#39;</span><span class="p">,</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">:</span> <span class="n">s</span> <span class="o">+</span> <span class="mi">4</span><span class="p">]))</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="mi">4</span> <span class="o">+</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;L&#39;</span><span class="p">,</span> <span class="n">script</span><span class="p">[</span><span class="n">s</span><span class="p">:</span> <span class="n">s</span> <span class="o">+</span> <span class="mi">4</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">stack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="o">-</span> <span class="n">k</span> <span class="o">&gt;=</span> <span class="n">ls</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">script</span><span class="p">[</span><span class="n">k</span><span class="p">:</span><span class="n">s</span><span class="p">][:</span><span class="n">ls</span><span class="p">]</span> <span class="o">==</span> <span class="n">sub_script</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">s</span> <span class="o">-</span> <span class="n">k</span> <span class="o">&gt;</span> <span class="n">ls</span><span class="p">:</span>
+                    <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">script</span><span class="p">[</span><span class="n">k</span> <span class="o">+</span> <span class="n">ls</span><span class="p">:</span><span class="n">s</span><span class="p">])</span>
+                <span class="n">t</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">while</span> <span class="n">t</span> <span class="o">!=</span> <span class="n">s</span> <span class="o">-</span> <span class="n">k</span><span class="p">:</span>
+                    <span class="n">t</span> <span class="o">+=</span> <span class="n">stack</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">k</span> <span class="o">=</span> <span class="n">s</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">t</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">script</span><span class="p">[</span><span class="n">k</span><span class="p">:</span><span class="n">k</span> <span class="o">+</span> <span class="n">t</span><span class="p">])</span>
+                <span class="n">k</span> <span class="o">+=</span> <span class="n">t</span>
+    <span class="k">if</span> <span class="n">script</span><span class="p">[</span><span class="n">k</span><span class="p">:</span><span class="n">s</span><span class="p">][:</span><span class="n">ls</span><span class="p">]</span> <span class="o">==</span> <span class="n">sub_script</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="o">-</span> <span class="n">k</span> <span class="o">&gt;</span> <span class="n">ls</span><span class="p">:</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">script</span><span class="p">[</span><span class="n">k</span> <span class="o">+</span> <span class="n">ls</span><span class="p">:</span><span class="n">s</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">script</span><span class="p">[</span><span class="n">k</span><span class="p">:</span><span class="n">k</span> <span class="o">+</span> <span class="n">ls</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">s_hex</span> <span class="k">else</span> <span class="n">hexlify</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result</span><span class="p">))</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="script_to_hash"><a class="viewcode-back" href="../../functional.html#pybtc.script_to_hash">[docs]</a><span class="k">def</span> <span class="nf">script_to_hash</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="n">witness</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="nb">hex</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Encode script to hash HASH160 or SHA256 in dependency of the witness.</span>
+
+<span class="sd">    :param script: script in bytes or HEX encoded string.</span>
+<span class="sd">    :param witness:  (optional) If set to True return SHA256 hash for P2WSH, by default is False.</span>
+<span class="sd">    :param hex:  (optional) If set to True return key in HEX format, by default is True.</span>
+<span class="sd">    :param sub_script:  sub_script which is necessary to remove from target script in bytes or HEX encoded string.</span>
+<span class="sd">    :return: script in bytes or HEX encoded string corresponding to the format of target script.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">script</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">witness</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">sha256</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="nb">hex</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">hash160</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="nb">hex</span><span class="p">)</span></div>
+
+
+<span class="c1">#  Signatures</span>
+
+<div class="viewcode-block" id="verify_signature"><a class="viewcode-back" href="../../functional.html#pybtc.verify_signature">[docs]</a><span class="k">def</span> <span class="nf">verify_signature</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="n">pub_key</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Verify signature for message and given public key</span>
+
+<span class="sd">    :param sig: signature in bytes or HEX encoded string.</span>
+<span class="sd">    :param pub_key:  public key in bytes or HEX encoded string.</span>
+<span class="sd">    :param msg:  message in bytes or HEX encoded string.</span>
+<span class="sd">    :return: boolean.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="nb">bytearray</span><span class="p">):</span>
+            <span class="n">sig</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">sig</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;signature must be a bytes or hex encoded string&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pub_key</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pub_key</span><span class="p">,</span> <span class="nb">bytearray</span><span class="p">):</span>
+            <span class="n">pub_key</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">pub_key</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pub_key</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">pub_key</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">pub_key</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;public key must be a bytes or hex encoded string&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="nb">bytearray</span><span class="p">):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;message must be a bytes or hex encoded string&quot;</span><span class="p">)</span>
+
+    <span class="n">raw_sig</span> <span class="o">=</span> <span class="n">ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;secp256k1_ecdsa_signature *&#39;</span><span class="p">)</span>
+    <span class="n">raw_pubkey</span> <span class="o">=</span> <span class="n">ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;secp256k1_pubkey *&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">secp256k1</span><span class="o">.</span><span class="n">secp256k1_ecdsa_signature_parse_der</span><span class="p">(</span><span class="n">ECDSA_CONTEXT_VERIFY</span><span class="p">,</span> <span class="n">raw_sig</span><span class="p">,</span> <span class="n">sig</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">sig</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;signature must be DER encoded&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">secp256k1</span><span class="o">.</span><span class="n">secp256k1_ec_pubkey_parse</span><span class="p">(</span><span class="n">ECDSA_CONTEXT_VERIFY</span><span class="p">,</span> <span class="n">raw_pubkey</span><span class="p">,</span> <span class="n">pub_key</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">pub_key</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;public key format error&quot;</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">secp256k1</span><span class="o">.</span><span class="n">secp256k1_ecdsa_verify</span><span class="p">(</span><span class="n">ECDSA_CONTEXT_VERIFY</span><span class="p">,</span> <span class="n">raw_sig</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">raw_pubkey</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">True</span> <span class="k">if</span> <span class="n">result</span> <span class="k">else</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="sign_message"><a class="viewcode-back" href="../../functional.html#pybtc.sign_message">[docs]</a><span class="k">def</span> <span class="nf">sign_message</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">private_key</span><span class="p">,</span> <span class="nb">hex</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Sign message</span>
+<span class="sd">    </span>
+<span class="sd">    :param msg:  message to sign  bytes or HEX encoded string.</span>
+<span class="sd">    :param private_key:  private key (bytes, hex encoded string or WIF format)</span>
+<span class="sd">    :param hex:  (optional) If set to True return key in HEX format, by default is True.</span>
+<span class="sd">    :return:  DER encoded signature in bytes or HEX encoded string.  </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="nb">bytearray</span><span class="p">):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">pass</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;message must be a bytes or hex encoded string&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">private_key</span><span class="p">,</span> <span class="nb">bytearray</span><span class="p">):</span>
+        <span class="n">private_key</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">private_key</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">private_key</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">private_key</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">private_key</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">is_wif_valid</span><span class="p">(</span><span class="n">private_key</span><span class="p">):</span>
+                <span class="n">private_key</span> <span class="o">=</span> <span class="n">wif_to_private_key</span><span class="p">(</span><span class="n">private_key</span><span class="p">,</span> <span class="nb">hex</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">private_key</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;private key must be a bytes, hex encoded string or in WIF format&quot;</span><span class="p">)</span>
+
+    <span class="n">raw_sig</span> <span class="o">=</span> <span class="n">ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;secp256k1_ecdsa_signature *&#39;</span><span class="p">)</span>
+    <span class="n">signed</span> <span class="o">=</span> <span class="n">secp256k1</span><span class="o">.</span><span class="n">secp256k1_ecdsa_sign</span><span class="p">(</span><span class="n">ECDSA_CONTEXT_SIGN</span><span class="p">,</span> <span class="n">raw_sig</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span>
+                                            <span class="n">private_key</span><span class="p">,</span> <span class="n">ffi</span><span class="o">.</span><span class="n">NULL</span><span class="p">,</span> <span class="n">ffi</span><span class="o">.</span><span class="n">NULL</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">signed</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;secp256k1 error&quot;</span><span class="p">)</span>
+    <span class="n">len_sig</span> <span class="o">=</span> <span class="mi">74</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;unsigned char[</span><span class="si">%d</span><span class="s1">]&#39;</span> <span class="o">%</span> <span class="n">len_sig</span><span class="p">)</span>
+    <span class="n">outputlen</span> <span class="o">=</span> <span class="n">ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;size_t *&#39;</span><span class="p">,</span> <span class="n">len_sig</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">secp256k1</span><span class="o">.</span><span class="n">secp256k1_ecdsa_signature_serialize_der</span><span class="p">(</span><span class="n">ECDSA_CONTEXT_SIGN</span><span class="p">,</span>
+                                                            <span class="n">output</span><span class="p">,</span> <span class="n">outputlen</span><span class="p">,</span> <span class="n">raw_sig</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">res</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;secp256k1 error&quot;</span><span class="p">)</span>
+    <span class="n">signature</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">ffi</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">outputlen</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">return</span> <span class="n">hexlify</span><span class="p">(</span><span class="n">signature</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span> <span class="k">if</span> <span class="nb">hex</span> <span class="k">else</span> <span class="n">signature</span></div>
+
+
+<div class="viewcode-block" id="is_valid_signature_encoding"><a class="viewcode-back" href="../../functional.html#pybtc.is_valid_signature_encoding">[docs]</a><span class="k">def</span> <span class="nf">is_valid_signature_encoding</span><span class="p">(</span><span class="n">sig</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check is valid signature encoded in DER format</span>
+
+<span class="sd">    :param sig:  signature in bytes or HEX encoded string.</span>
+<span class="sd">    :return:  boolean.  </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Format: 0x30 [total-length] 0x02 [R-length] [R] 0x02 [S-length] [S] [sighash]</span>
+    <span class="c1"># * total-length: 1-byte length descriptor of everything that follows,</span>
+    <span class="c1">#   excluding the sighash byte.</span>
+    <span class="c1"># * R-length: 1-byte length descriptor of the R value that follows.</span>
+    <span class="c1"># * R: arbitrary-length big-endian encoded R value. It must use the shortest</span>
+    <span class="c1">#   possible encoding for a positive integers (which means no null bytes at</span>
+    <span class="c1">#   the start, except a single one when the next byte has its highest bit set).</span>
+    <span class="c1"># * S-length: 1-byte length descriptor of the S value that follows.</span>
+    <span class="c1"># * S: arbitrary-length big-endian encoded S value. The same rules apply.</span>
+    <span class="c1"># * sighash: 1-byte value indicating what data is hashed (not part of the DER</span>
+    <span class="c1">#   signature)</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span>
+    <span class="c1"># Minimum and maximum size constraints.</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">length</span> <span class="o">&lt;</span> <span class="mi">9</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">length</span> <span class="o">&gt;</span> <span class="mi">73</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="c1"># A signature is of type 0x30 (compound).</span>
+    <span class="k">if</span> <span class="n">sig</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mh">0x30</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="c1"># Make sure the length covers the entire signature.</span>
+    <span class="k">if</span> <span class="n">sig</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="p">(</span><span class="n">length</span> <span class="o">-</span> <span class="mi">3</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="c1"># Extract the length of the R element.</span>
+    <span class="n">len_r</span> <span class="o">=</span> <span class="n">sig</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+    <span class="c1"># Make sure the length of the S element is still inside the signature.</span>
+    <span class="k">if</span> <span class="p">(</span><span class="mi">5</span> <span class="o">+</span> <span class="n">len_r</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">length</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="c1"># Extract the length of the S element.</span>
+    <span class="n">len_s</span> <span class="o">=</span> <span class="n">sig</span><span class="p">[</span><span class="mi">5</span> <span class="o">+</span> <span class="n">len_r</span><span class="p">]</span>
+    <span class="c1"># Verify that the length of the signature matches the sum of the length</span>
+    <span class="c1"># of the elements.</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">len_r</span> <span class="o">+</span> <span class="n">len_s</span> <span class="o">+</span> <span class="mi">7</span><span class="p">)</span> <span class="o">!=</span> <span class="n">length</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="c1"># Check whether the R element is an integer.</span>
+    <span class="k">if</span> <span class="n">sig</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="mh">0x02</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="c1"># Zero-length integers are not allowed for R.</span>
+    <span class="k">if</span> <span class="n">len_r</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="c1"># Negative numbers are not allowed for R.</span>
+    <span class="k">if</span> <span class="n">sig</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">&amp;</span> <span class="mh">0x80</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="c1"># Null bytes at the start of R are not allowed, unless R would</span>
+    <span class="c1"># otherwise be interpreted as a negative number.</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">len_r</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">sig</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="mh">0x00</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">sig</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">&amp;</span> <span class="mh">0x80</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="c1"># Check whether the S element is an integer.</span>
+    <span class="k">if</span> <span class="n">sig</span><span class="p">[</span><span class="n">len_r</span> <span class="o">+</span> <span class="mi">4</span><span class="p">]</span> <span class="o">!=</span> <span class="mh">0x02</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="c1"># Zero-length integers are not allowed for S.</span>
+    <span class="k">if</span> <span class="n">len_s</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="c1"># Negative numbers are not allowed for S.</span>
+    <span class="k">if</span> <span class="n">sig</span><span class="p">[</span><span class="n">len_r</span> <span class="o">+</span> <span class="mi">6</span><span class="p">]</span> <span class="o">&amp;</span> <span class="mh">0x80</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="c1"># Null bytes at the start of S are not allowed, unless S would otherwise be</span>
+    <span class="c1"># interpreted as a negative number.</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">len_s</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">sig</span><span class="p">[</span><span class="n">len_r</span> <span class="o">+</span> <span class="mi">6</span><span class="p">]</span> <span class="o">==</span> <span class="mh">0x00</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">sig</span><span class="p">[</span><span class="n">len_r</span> <span class="o">+</span> <span class="mi">7</span><span class="p">]</span> <span class="o">&amp;</span> <span class="mh">0x80</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<span class="c1"># Hash encoding</span>
+
+<div class="viewcode-block" id="rh2s"><a class="viewcode-back" href="../../functional.html#pybtc.rh2s">[docs]</a><span class="k">def</span> <span class="nf">rh2s</span><span class="p">(</span><span class="n">raw_hash</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Encode raw transaction hash to HEX string with bytes order change</span>
+
+<span class="sd">    :param raw_hash: transaction hash in bytes string.</span>
+<span class="sd">    :return:  HEX encoded string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">hexlify</span><span class="p">(</span><span class="n">raw_hash</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="s2rh"><a class="viewcode-back" href="../../functional.html#pybtc.s2rh">[docs]</a><span class="k">def</span> <span class="nf">s2rh</span><span class="p">(</span><span class="n">hash_string</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Decode HEX  transaction hash to bytes with byte order change</span>
+
+<span class="sd">    :param raw_hash: transaction hash in bytes string.</span>
+<span class="sd">    :return:  bytes string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">hash_string</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span></div>
+
+
+<span class="k">def</span> <span class="nf">s2rh_step4</span><span class="p">(</span><span class="n">hash_string</span><span class="p">):</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">hash_string</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">reverse_hash</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="reverse_hash"><a class="viewcode-back" href="../../functional.html#pybtc.reverse_hash">[docs]</a><span class="k">def</span> <span class="nf">reverse_hash</span><span class="p">(</span><span class="n">raw_hash</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Reverse hash order</span>
+
+<span class="sd">    :param raw_hash: bytes string.</span>
+<span class="sd">    :return:  bytes string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s1">&#39;&gt;IIIIIIII&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;IIIIIIII&#39;</span><span class="p">,</span> <span class="n">raw_hash</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span></div>
+
+
+<span class="c1"># Merkle root</span>
+
+<div class="viewcode-block" id="merkle_root"><a class="viewcode-back" href="../../functional.html#pybtc.merkle_root">[docs]</a><span class="k">def</span> <span class="nf">merkle_root</span><span class="p">(</span><span class="n">tx_hash_list</span><span class="p">,</span> <span class="nb">hex</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate merkle root from transaction hash list</span>
+
+<span class="sd">    :param tx_hash_list: list of transaction hashes in bytes or HEX encoded string.</span>
+<span class="sd">    :param hex:  (optional) If set to True return result in HEX format, by default is True.</span>
+<span class="sd">    :return: merkle root in bytes or HEX encoded string corresponding hex flag.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">tx_hash_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">h</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)</span> <span class="k">else</span> <span class="n">s2rh</span><span class="p">(</span><span class="n">h</span><span class="p">)</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">tx_hash_list</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tx_hash_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">tx_hash_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">new_hash_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">while</span> <span class="n">tx_hash_list</span><span class="p">:</span>
+            <span class="n">h1</span> <span class="o">=</span> <span class="n">tx_hash_list</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">h2</span> <span class="o">=</span> <span class="n">tx_hash_list</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">h2</span> <span class="o">=</span> <span class="n">h1</span>
+            <span class="n">new_hash_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">double_sha256</span><span class="p">(</span><span class="n">h1</span> <span class="o">+</span> <span class="n">h2</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_hash_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">tx_hash_list</span> <span class="o">=</span> <span class="n">new_hash_list</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">new_hash_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">hex</span> <span class="k">else</span> <span class="n">hexlify</span><span class="p">(</span><span class="n">new_hash_list</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="merkle_branches"><a class="viewcode-back" href="../../functional.html#pybtc.merkle_branches">[docs]</a><span class="k">def</span> <span class="nf">merkle_branches</span><span class="p">(</span><span class="n">tx_hash_list</span><span class="p">,</span> <span class="nb">hex</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate merkle branches for coinbase transacton</span>
+
+<span class="sd">    :param tx_hash_list: list of transaction hashes in bytes or HEX encoded string.</span>
+<span class="sd">    :param hex:  (optional) If set to True return result in HEX format, by default is True.</span>
+<span class="sd">    :return: list of merkle branches in bytes or HEX encoded string corresponding hex flag.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">tx_hash_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">h</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)</span> <span class="k">else</span> <span class="n">s2rh</span><span class="p">(</span><span class="n">h</span><span class="p">)</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">tx_hash_list</span><span class="p">]</span>
+    <span class="n">branches</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tx_hash_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="n">tx_hash_list</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">branches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tx_hash_list</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+        <span class="n">new_hash_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">while</span> <span class="n">tx_hash_list</span><span class="p">:</span>
+            <span class="n">h1</span> <span class="o">=</span> <span class="n">tx_hash_list</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">h2</span> <span class="o">=</span> <span class="n">tx_hash_list</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">h2</span> <span class="o">=</span> <span class="n">h1</span>
+            <span class="n">new_hash_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">double_sha256</span><span class="p">(</span><span class="n">h1</span> <span class="o">+</span> <span class="n">h2</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_hash_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">tx_hash_list</span> <span class="o">=</span> <span class="n">new_hash_list</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">new_hash_list</span><span class="p">:</span>
+                <span class="n">branches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_hash_list</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">branches</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">hex</span> <span class="k">else</span> <span class="p">[</span><span class="n">hexlify</span><span class="p">(</span><span class="n">h</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">branches</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="merkleroot_from_branches"><a class="viewcode-back" href="../../functional.html#pybtc.merkleroot_from_branches">[docs]</a><span class="k">def</span> <span class="nf">merkleroot_from_branches</span><span class="p">(</span><span class="n">merkle_branches</span><span class="p">,</span> <span class="n">coinbase_hash</span><span class="p">,</span> <span class="nb">hex</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate merkle root from merkle branches and coinbase transacton hash</span>
+
+<span class="sd">    :param merkle_branches: list merkle branches in bytes or HEX encoded string.</span>
+<span class="sd">    :param coinbase_hash: list coinbase transaction hash in bytes or HEX encoded string.</span>
+<span class="sd">    :param hex:  (optional) If set to True return result in HEX format, by default is True.</span>
+<span class="sd">    :return: merkle root in bytes or HEX encoded string corresponding hex flag.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">merkle_root</span> <span class="o">=</span> <span class="n">coinbase_hash</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">coinbase_hash</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">coinbase_hash</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">merkle_branches</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">h</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+        <span class="n">merkle_root</span> <span class="o">=</span> <span class="n">double_sha256</span><span class="p">(</span><span class="n">merkle_root</span> <span class="o">+</span> <span class="n">h</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">merkle_root</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">hex</span> <span class="k">else</span> <span class="n">hexlify</span><span class="p">(</span><span class="n">merkle_root</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span></div>
+
+
+<span class="c1">#  Difficulty</span>
+
+
+<div class="viewcode-block" id="bits_to_target"><a class="viewcode-back" href="../../functional.html#pybtc.bits_to_target">[docs]</a><span class="k">def</span> <span class="nf">bits_to_target</span><span class="p">(</span><span class="n">bits</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate target from bits</span>
+
+<span class="sd">    :param bits: HEX string, bytes string or integer representation of bits.</span>
+<span class="sd">    :return: integer.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">bits</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">bits</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">bits</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">bits</span><span class="p">)</span> <span class="o">==</span> <span class="nb">bytes</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">bits</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="s1">&#39;big&#39;</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="p">(</span><span class="mi">8</span> <span class="o">*</span> <span class="p">(</span><span class="n">bits</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">3</span><span class="p">)))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">shift</span> <span class="o">=</span> <span class="n">bits</span> <span class="o">&gt;&gt;</span> <span class="mi">24</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="p">(</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0xffffff</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="mi">8</span> <span class="o">*</span> <span class="p">(</span><span class="n">shift</span> <span class="o">-</span> <span class="mi">3</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">target</span></div>
+
+
+<div class="viewcode-block" id="target_to_difficulty"><a class="viewcode-back" href="../../functional.html#pybtc.target_to_difficulty">[docs]</a><span class="k">def</span> <span class="nf">target_to_difficulty</span><span class="p">(</span><span class="n">target</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate difficulty from target</span>
+
+<span class="sd">    :param target: integer.</span>
+<span class="sd">    :return: float.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="mh">0x00000000FFFF0000000000000000000000000000000000000000000000000000</span> <span class="o">/</span> <span class="n">target</span></div>
+
+
+<div class="viewcode-block" id="bits_to_difficulty"><a class="viewcode-back" href="../../functional.html#pybtc.bits_to_difficulty">[docs]</a><span class="k">def</span> <span class="nf">bits_to_difficulty</span><span class="p">(</span><span class="n">bits</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate difficulty from bits</span>
+
+<span class="sd">    :param bits: HEX string, bytes string or integer representation of bits.</span>
+<span class="sd">    :return: integer.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">target_to_difficulty</span><span class="p">(</span><span class="n">bits_to_target</span><span class="p">(</span><span class="n">bits</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="difficulty_to_target"><a class="viewcode-back" href="../../functional.html#pybtc.difficulty_to_target">[docs]</a><span class="k">def</span> <span class="nf">difficulty_to_target</span><span class="p">(</span><span class="n">difficulty</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate target from difficulty</span>
+
+<span class="sd">    :param target: integer.</span>
+<span class="sd">    :return: float.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="mh">0x00000000FFFF0000000000000000000000000000000000000000000000000000</span> <span class="o">/</span> <span class="n">difficulty</span><span class="p">)</span></div>
+
+
+<span class="c1"># Tools</span>
+
+
+<div class="viewcode-block" id="bytes_needed"><a class="viewcode-back" href="../../functional.html#pybtc.bytes_needed">[docs]</a><span class="k">def</span> <span class="nf">bytes_needed</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate bytes needed to convert integer to bytes.</span>
+
+<span class="sd">    :param n: integer.</span>
+<span class="sd">    :return: integer.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">bit_length</span><span class="p">()</span><span class="o">/</span><span class="mi">8</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="int_to_bytes"><a class="viewcode-back" href="../../functional.html#pybtc.int_to_bytes">[docs]</a><span class="k">def</span> <span class="nf">int_to_bytes</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">byteorder</span><span class="o">=</span><span class="s1">&#39;big&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert integer to bytes.</span>
+
+<span class="sd">    :param n: integer.</span>
+<span class="sd">    :param byteorder: (optional) byte order &#39;big&#39; or &#39;little&#39;, by default &#39;big&#39;.</span>
+<span class="sd">    :return: bytes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">i</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="n">bytes_needed</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">byteorder</span><span class="o">=</span><span class="n">byteorder</span><span class="p">,</span> <span class="n">signed</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="bytes_to_int"><a class="viewcode-back" href="../../functional.html#pybtc.bytes_to_int">[docs]</a><span class="k">def</span> <span class="nf">bytes_to_int</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">byteorder</span><span class="o">=</span><span class="s1">&#39;big&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert bytes to integer.</span>
+
+<span class="sd">    :param i: bytes.</span>
+<span class="sd">    :param byteorder: (optional) byte order &#39;big&#39; or &#39;little&#39;, by default &#39;big&#39;.</span>
+<span class="sd">    :return: integer.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">byteorder</span><span class="o">=</span><span class="n">byteorder</span><span class="p">,</span> <span class="n">signed</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+
+<span class="c1"># variable integer</span>
+
+<div class="viewcode-block" id="int_to_var_int"><a class="viewcode-back" href="../../functional.html#pybtc.int_to_var_int">[docs]</a><span class="k">def</span> <span class="nf">int_to_var_int</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert integer to variable integer</span>
+
+<span class="sd">    :param i: integer.</span>
+<span class="sd">    :return: bytes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mh">0xfd</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s1">&#39;&lt;B&#39;</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="mh">0xffff</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\xfd</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s1">&#39;&lt;H&#39;</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="mh">0xffffffff</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\xfe</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s1">&#39;&lt;L&#39;</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+    <span class="k">return</span> <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\xff</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s1">&#39;&lt;Q&#39;</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="var_int_to_int"><a class="viewcode-back" href="../../functional.html#pybtc.var_int_to_int">[docs]</a><span class="k">def</span> <span class="nf">var_int_to_int</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert variable integer to integer</span>
+
+<span class="sd">    :param data: bytes vriable integer.</span>
+<span class="sd">    :return: integer.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mh">0xfd</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;H&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mh">0xfe</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;L&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">5</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mh">0xff</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;Q&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">9</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="var_int_len"><a class="viewcode-back" href="../../functional.html#pybtc.var_int_len">[docs]</a><span class="k">def</span> <span class="nf">var_int_len</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get variable integer length in bytes from integer value</span>
+
+<span class="sd">    :param n: integer.</span>
+<span class="sd">    :return: integer.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;=</span> <span class="mh">0xfc</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;=</span> <span class="mh">0xffff</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">3</span>
+    <span class="k">elif</span> <span class="n">n</span> <span class="o">&lt;=</span> <span class="mh">0xffffffff</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">5</span>
+    <span class="k">return</span> <span class="mi">9</span></div>
+
+
+<div class="viewcode-block" id="get_var_int_len"><a class="viewcode-back" href="../../functional.html#pybtc.get_var_int_len">[docs]</a><span class="k">def</span> <span class="nf">get_var_int_len</span><span class="p">(</span><span class="nb">bytes</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get variable integer length in bytes from bytes</span>
+
+<span class="sd">    :param bytes: bytes.</span>
+<span class="sd">    :return: integer.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">bytes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">253</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">3</span>
+    <span class="k">elif</span> <span class="nb">bytes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">254</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">5</span>
+    <span class="k">elif</span> <span class="nb">bytes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">255</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">9</span>
+    <span class="k">return</span> <span class="mi">1</span></div>
+
+
+<div class="viewcode-block" id="read_var_int"><a class="viewcode-back" href="../../functional.html#pybtc.read_var_int">[docs]</a><span class="k">def</span> <span class="nf">read_var_int</span><span class="p">(</span><span class="n">stream</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read variable integer from io.BytesIO stream to bytes</span>
+
+<span class="sd">    :param stream: io.BytesIO stream.</span>
+<span class="sd">    :return: bytes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="n">stream</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">bytes_length</span> <span class="o">=</span> <span class="n">get_var_int_len</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">l</span> <span class="o">+</span> <span class="n">stream</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">bytes_length</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="read_var_list"><a class="viewcode-back" href="../../functional.html#pybtc.read_var_list">[docs]</a><span class="k">def</span> <span class="nf">read_var_list</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span> <span class="n">data_type</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read variable integer list from io.BytesIO stream to bytes</span>
+
+<span class="sd">    :param stream: io.BytesIO stream.</span>
+<span class="sd">    :param data_type: list data type.</span>
+<span class="sd">    :return: list of data_type.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="n">var_int_to_int</span><span class="p">(</span><span class="n">read_var_int</span><span class="p">(</span><span class="n">stream</span><span class="p">))</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">data_type</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">stream</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">count</span><span class="p">)]</span></div>
+
+<span class="c1"># compressed integer</span>
+
+
+<div class="viewcode-block" id="int_to_c_int"><a class="viewcode-back" href="../../functional.html#pybtc.int_to_c_int">[docs]</a><span class="k">def</span> <span class="nf">int_to_c_int</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">base_bytes</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert integer to compresed integer</span>
+
+<span class="sd">    :param n: integer.</span>
+<span class="sd">    :param base_bytes: len of bytes base from which start compression.</span>
+<span class="sd">    :return: bytes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\x00</span><span class="s1">&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">l</span> <span class="o">=</span> <span class="n">n</span><span class="o">.</span><span class="n">bit_length</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">min_bits</span> <span class="o">=</span> <span class="n">base_bytes</span> <span class="o">*</span> <span class="mi">8</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">l</span> <span class="o">&lt;=</span> <span class="n">min_bits</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">n</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="n">base_bytes</span><span class="p">,</span> <span class="n">byteorder</span><span class="o">=</span><span class="s2">&quot;big&quot;</span><span class="p">)</span>
+    <span class="n">prefix</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">payload_bytes</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">((</span><span class="n">l</span><span class="p">)</span><span class="o">/</span><span class="mi">8</span><span class="p">)</span> <span class="o">-</span> <span class="n">base_bytes</span>
+    <span class="n">extra_bytes</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">((</span><span class="n">l</span><span class="o">+</span><span class="n">payload_bytes</span><span class="p">)</span><span class="o">/</span><span class="mi">8</span><span class="p">)</span> <span class="o">-</span> <span class="n">base_bytes</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">extra_bytes</span><span class="p">):</span>
+        <span class="n">prefix</span> <span class="o">+=</span> <span class="mi">2</span> <span class="o">**</span> <span class="n">i</span>
+    <span class="k">if</span> <span class="n">l</span> <span class="o">&lt;</span> <span class="n">base_bytes</span> <span class="o">*</span> <span class="mi">8</span><span class="p">:</span>
+        <span class="n">l</span> <span class="o">=</span> <span class="n">base_bytes</span> <span class="o">*</span> <span class="mi">8</span>
+    <span class="n">prefix</span> <span class="o">=</span> <span class="n">prefix</span> <span class="o">&lt;&lt;</span> <span class="n">l</span>
+    <span class="k">if</span> <span class="n">prefix</span><span class="o">.</span><span class="n">bit_length</span><span class="p">()</span> <span class="o">%</span> <span class="mi">8</span><span class="p">:</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">prefix</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span> <span class="o">-</span> <span class="n">prefix</span><span class="o">.</span><span class="n">bit_length</span><span class="p">()</span> <span class="o">%</span> <span class="mi">8</span>
+    <span class="n">n</span> <span class="o">^=</span> <span class="n">prefix</span>
+    <span class="k">return</span> <span class="n">n</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">bit_length</span><span class="p">()</span><span class="o">/</span><span class="mi">8</span><span class="p">),</span> <span class="n">byteorder</span><span class="o">=</span><span class="s2">&quot;big&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="c_int_to_int"><a class="viewcode-back" href="../../functional.html#pybtc.c_int_to_int">[docs]</a><span class="k">def</span> <span class="nf">c_int_to_int</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">base_bytes</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert compressed integer bytes to integer</span>
+
+<span class="sd">    :param b: compressed integer bytes.</span>
+<span class="sd">    :param base_bytes: len of bytes base from which start compression.</span>
+<span class="sd">    :return: integer.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">byte_length</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="n">f</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">v</span> <span class="o">==</span> <span class="mh">0xff</span><span class="p">:</span>
+            <span class="n">byte_length</span> <span class="o">+=</span> <span class="mi">8</span>
+            <span class="n">f</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">continue</span>
+        <span class="k">while</span> <span class="n">v</span> <span class="o">&amp;</span> <span class="mb">0b10000000</span><span class="p">:</span>
+            <span class="n">byte_length</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">v</span> <span class="o">&lt;&lt;</span> <span class="mi">1</span>
+        <span class="k">break</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">b</span><span class="p">[:</span><span class="n">byte_length</span><span class="o">+</span><span class="n">base_bytes</span><span class="p">],</span> <span class="n">byteorder</span><span class="o">=</span><span class="s2">&quot;big&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">byte_length</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">n</span> <span class="o">&amp;</span> <span class="p">((</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">byte_length</span><span class="o">+</span><span class="n">base_bytes</span><span class="p">)</span> <span class="o">*</span> <span class="mi">8</span> <span class="o">-</span> <span class="n">byte_length</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">n</span></div>
+
+
+<div class="viewcode-block" id="c_int_len"><a class="viewcode-back" href="../../functional.html#pybtc.c_int_len">[docs]</a><span class="k">def</span> <span class="nf">c_int_len</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">base_bytes</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get length of compressed integer from integer value</span>
+
+<span class="sd">    :param n: bytes.</span>
+<span class="sd">    :param base_bytes: len of bytes base from which start compression.</span>
+<span class="sd">    :return: integer.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">1</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="n">n</span><span class="o">.</span><span class="n">bit_length</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">min_bits</span> <span class="o">=</span> <span class="n">base_bytes</span> <span class="o">*</span> <span class="mi">8</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">l</span> <span class="o">&lt;=</span> <span class="n">min_bits</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">1</span>
+    <span class="n">payload_bytes</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">((</span><span class="n">l</span><span class="p">)</span><span class="o">/</span><span class="mi">8</span><span class="p">)</span> <span class="o">-</span> <span class="n">base_bytes</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">((</span><span class="n">l</span><span class="o">+</span><span class="n">payload_bytes</span><span class="p">)</span><span class="o">/</span><span class="mi">8</span><span class="p">))</span></div>
+
+
+<span class="c1"># generic big endian MPI format</span>
+<span class="k">def</span> <span class="nf">bn_bytes</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">have_ext</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="n">ext</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="n">have_ext</span><span class="p">:</span>
+        <span class="n">ext</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="p">((</span><span class="n">v</span><span class="o">.</span><span class="n">bit_length</span><span class="p">()</span> <span class="o">+</span> <span class="mi">7</span><span class="p">)</span> <span class="o">//</span> <span class="mi">8</span><span class="p">)</span> <span class="o">+</span> <span class="n">ext</span>
+
+
+<span class="k">def</span> <span class="nf">bn2bin</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">()</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="n">bn_bytes</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+    <span class="k">while</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">v</span> <span class="o">&gt;&gt;</span> <span class="p">((</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">8</span><span class="p">))</span> <span class="o">&amp;</span> <span class="mh">0xff</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">-=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">s</span>
+
+
+<span class="k">def</span> <span class="nf">bin2bn</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">s</span><span class="p">:</span>
+        <span class="n">l</span> <span class="o">=</span> <span class="p">(</span><span class="n">l</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">|</span> <span class="n">ch</span>
+    <span class="k">return</span> <span class="n">l</span>
+
+
+<span class="k">def</span> <span class="nf">bn2mpi</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+    <span class="n">have_ext</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">bit_length</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">have_ext</span> <span class="o">=</span> <span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">bit_length</span><span class="p">()</span> <span class="o">&amp;</span> <span class="mh">0x07</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+    <span class="n">neg</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">v</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">neg</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="o">-</span><span class="n">v</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;&gt;I&quot;</span><span class="p">,</span> <span class="n">bn_bytes</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">have_ext</span><span class="p">))</span>
+    <span class="n">ext</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">have_ext</span><span class="p">:</span>
+        <span class="n">ext</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">v_bin</span> <span class="o">=</span> <span class="n">bn2bin</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">neg</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">have_ext</span><span class="p">:</span>
+            <span class="n">ext</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">|=</span> <span class="mh">0x80</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">v_bin</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">|=</span> <span class="mh">0x80</span>
+    <span class="k">return</span> <span class="n">s</span> <span class="o">+</span> <span class="n">ext</span> <span class="o">+</span> <span class="n">v_bin</span>
+
+
+<span class="k">def</span> <span class="nf">mpi2bn</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">s_size</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">s</span><span class="p">[:</span><span class="mi">4</span><span class="p">])</span>
+    <span class="n">v_len</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;&gt;I&quot;</span><span class="p">,</span> <span class="n">s_size</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">!=</span> <span class="p">(</span><span class="n">v_len</span> <span class="o">+</span> <span class="mi">4</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">v_len</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="n">v_str</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">4</span><span class="p">:])</span>
+    <span class="n">neg</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="n">v_str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">&amp;</span> <span class="mh">0x80</span><span class="p">:</span>
+        <span class="n">neg</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">i</span> <span class="o">&amp;=</span> <span class="o">~</span><span class="mh">0x80</span>
+        <span class="n">v_str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">bin2bn</span><span class="p">(</span><span class="n">v_str</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">neg</span><span class="p">:</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">v</span>
+    <span class="k">return</span> <span class="n">v</span>
+
+<span class="c1"># bitcoin-specific little endian format, with implicit size</span>
+
+
+<span class="k">def</span> <span class="nf">mpi2vch</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="mi">4</span><span class="p">:]</span>           <span class="c1"># strip size</span>
+    <span class="c1"># if r:</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">r</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>         <span class="c1"># reverse string, converting BE-&gt;LE</span>
+    <span class="c1"># else: r=b&#39;\x00&#39;</span>
+    <span class="k">return</span> <span class="n">r</span>
+
+
+<span class="k">def</span> <span class="nf">bn2vch</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">mpi2vch</span><span class="p">(</span><span class="n">bn2mpi</span><span class="p">(</span><span class="n">v</span><span class="p">)))</span>
+
+
+<span class="k">def</span> <span class="nf">vch2mpi</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;&gt;I&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">))</span>   <span class="c1"># size</span>
+    <span class="n">r</span> <span class="o">+=</span> <span class="n">s</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>            <span class="c1"># reverse string, converting LE-&gt;BE</span>
+    <span class="k">return</span> <span class="n">r</span>
+
+
+<span class="k">def</span> <span class="nf">vch2bn</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">mpi2bn</span><span class="p">(</span><span class="n">vch2mpi</span><span class="p">(</span><span class="n">s</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">i2b</span><span class="p">(</span><span class="n">i</span><span class="p">):</span> <span class="k">return</span> <span class="n">bn2vch</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">b2i</span><span class="p">(</span><span class="n">b</span><span class="p">):</span> <span class="k">return</span> <span class="n">vch2bn</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">get_stream</span><span class="p">(</span><span class="n">stream</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">stream</span><span class="p">)</span> <span class="o">!=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">stream</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="n">stream</span> <span class="o">=</span> <span class="n">unhexlify</span><span class="p">(</span><span class="n">stream</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">stream</span><span class="p">)</span> <span class="o">==</span> <span class="nb">bytes</span><span class="p">:</span>
+            <span class="n">stream</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">stream</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span>
+    <span class="k">return</span> <span class="n">stream</span>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../../index.html">
+    <img class="logo" src="../../_static/pybtc.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+<p class="blurb"> </p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=bitaps-com&repo=pybtc&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../classes.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../functional.html">Pure functions reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015-2018, bitaps.com.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.11</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/bitaps-com/pybtc" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
