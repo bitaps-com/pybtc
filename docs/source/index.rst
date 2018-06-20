@@ -28,39 +28,36 @@ Key Features
 
 .. _aiohttp-installation:
 
-Library Installation
-====================
+Quick library Installation
+==========================
 
 .. code-block:: bash
 
-   $ pip install secp256k1
    $ pip install pybtc
 
 
 Getting Started
 ===============
 
-Client example::
+Usage example::
 
     import pybtc
-    import asyncio
-
-Server example::
-
-    import pybtc
+    a = pybtc.Address()
+    print(a.address)
+    print(a.private_key.wif())
 
 
 
 
 
-What's new in pybtc 2?
-========================
 
+What's new in pybtc 2.0 ?
+=========================
 
-
-Tutorial
-========
-
+- Mnemonic code generation (BIP39)
+- Hierarchical Deterministic Wallets (BIP32)
+- Wallet class implemented acording BIP44
+- Imporved transaction deserialization perfomance
 
 
 
@@ -81,21 +78,16 @@ Dependencies
 - *secp256k1*
 
 
-Communication channels
-======================
-
-
-
-Contributing
-============
-
-
-
 
 Authors and License
 ===================
 
-The ``pybtc`` package is written mostly by Aleksey Karpov.
+The ``pybtc`` package was initially written by `Aleksey Karpov <https://github.com/4tochka>`_ and development continues with contributors.
+
+Recent contributors:
+
+- `Aleksey Karpov <https://github.com/4tochka>`_
+- `Aleksey Karybkin <https://github.com/mboxk3team>`_
 
 It's *GPL-3.0* licensed and freely available.
 
@@ -111,4 +103,11 @@ Table Of Contents
    :name: mastertoc
    :maxdepth: 2
 
+   installation.rst
+   examples.rst
+   classes.rst
    functional.rst
+   contributing.rst
+
+
+

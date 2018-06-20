@@ -1,18 +1,14 @@
 
-==============
-Pure functions
-==============
+========================
+Pure functions reference
+========================
 
-Base function primitives implemeted in  functional programming paradigm.
-
-Key management
-==============
-
-Tools for private and public key managment
+Base function primitives implemented in functional programming paradigm.
 
 
-Private key
------------
+
+Private keys
+============
 
 .. autofunction:: pybtc.create_private_key
 .. autofunction:: pybtc.private_key_to_wif
@@ -20,8 +16,8 @@ Private key
 .. autofunction:: pybtc.is_wif_valid
 
 
-Public key
-----------
+Public keys
+===========
 
 .. WARNING::
    Using uncompressed public keys is
@@ -47,6 +43,66 @@ Addresses
 .. autofunction:: pybtc.is_address_valid
 
 
+Script
+======
+
+.. autofunction:: pybtc.decode_script
+.. autofunction:: pybtc.parse_script
+.. autofunction:: pybtc.delete_from_script
+.. autofunction:: pybtc.script_to_hash
+
+
 Signatures
 ==========
+
+.. autofunction:: pybtc.verify_signature
+.. autofunction:: pybtc.sign_message
+.. autofunction:: pybtc.is_valid_signature_encoding
+
+
+Hash encoding
+=============
+
+.. autofunction:: pybtc.rh2s
+.. autofunction:: pybtc.s2rh
+.. autofunction:: pybtc.reverse_hash
+
+
+Merkle root
+===========
+
+.. autofunction:: pybtc.merkle_root
+.. autofunction:: pybtc.merkle_branches
+.. autofunction:: pybtc.merkleroot_from_branches
+
+
+Difficulty
+==========
+
+.. autofunction:: pybtc.bits_to_target
+.. autofunction:: pybtc.target_to_difficulty
+.. autofunction:: pybtc.bits_to_difficulty
+.. autofunction:: pybtc.difficulty_to_target
+
+
+Tools
+=====
+
+.. autofunction:: pybtc.bytes_needed
+.. autofunction:: pybtc.int_to_bytes
+.. autofunction:: pybtc.bytes_to_int
+.. autofunction:: pybtc.int_to_var_int
+.. autofunction:: pybtc.var_int_to_int
+.. autofunction:: pybtc.var_int_len
+.. autofunction:: pybtc.get_var_int_len
+.. autofunction:: pybtc.read_var_int
+.. autofunction:: pybtc.read_var_list
+.. autofunction:: pybtc.int_to_c_int
+.. autofunction:: pybtc.c_int_to_int
+.. autofunction:: pybtc.c_int_len
+
+
+
+
+
 

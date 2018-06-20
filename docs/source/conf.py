@@ -14,6 +14,9 @@
 #
 import os
 import sys
+from sphinx.ext.autodoc import (
+    ClassLevelDocumenter, InstanceAttributeDocumenter)
+
 
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('..'))
@@ -28,10 +31,14 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'pybtc'
-copyright = '2018, Aleksey Karpov'
+copyright = '2015-2018, bitaps.com'
 author = 'Aleksey Karpov'
 
 
+def iad_add_directive_header(self, sig):
+    ClassLevelDocumenter.add_directive_header(self, sig)
+
+InstanceAttributeDocumenter.add_directive_header = iad_add_directive_header
 
 # The short X.Y version
 version = ''

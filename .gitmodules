@@ -1,0 +1,3 @@
+[submodule "docs/src/alabaster"]
+	path = docs/src/alabaster
+	url = https://github.com/bitprophet/alabaster.git
