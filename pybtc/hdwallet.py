@@ -10,89 +10,9 @@ from .tools import private_to_public_key, is_public_key_valid, encode_base58, de
 from .hash import hmac_sha512, hash160, double_sha256, sha256, double_sha256
 
 
-# BIP39
-#
-#
-#
 
-def create_passphrase(bits=256, language='english'):
-    if bits in [128, 160, 192, 224, 256]:
-        entropy = os.urandom(bits // 8)
-        mnemonic = create_mnemonic(entropy, language)
-        return ' '.join(mnemonic)
-    else:
-        raise ValueError('Strength should be one of the following [128, 160, 192, 224, 256], but it is not (%d).' % bits)
-
-
-def create_mnemonic(entropy, language='english'):
-    mnemonic = []
-    wordlist = create_wordlist(language)
-    entropy_int = int.from_bytes(entropy, byteorder="big")
-    entropy_bit_len = len(entropy) * 8
-    chk_sum_bit_len = entropy_bit_len // 32
-    fbyte_hash = sha256(entropy)[0]
-    entropy_int = add_checksum_ent(entropy)
-    while entropy_int:
-        mnemonic.append(wordlist[entropy_int & 0b11111111111])
-        entropy_int = entropy_int >> 11
-    return mnemonic[::-1]
-
-
-def create_wordlist(language, wordlist_dir=BIP0039_DIR):
-    f = None
-    path = os.path.join(wordlist_dir, '.'.join((language, 'txt')))
-    assert os.path.exists(path)
-    f = open(path)
-    content = f.read().rstrip('\n')
-    assert content
-    f.close()
-    return content.split('\n')
-
-
-def add_checksum_ent(data):
-    mask = 0b10000000
-    data_int = int.from_bytes(data, byteorder="big")
-    data_bit_len = len(data) * 8 // 32
-    fbyte_hash = sha256(data)[0]
-    while data_bit_len:
-        data_bit_len -= 1
-        data_int = (data_int << 1) | 1 if fbyte_hash & mask else data_int << 1
-        mask = mask >> 1
-    return data_int
-
-
-def mnemonic_to_entropy(passphrase, language):
-    mnemonic = passphrase.split()
-    if len(mnemonic) in [12, 15, 18, 21, 24]:
-        wordlist = create_wordlist(language)
-        codes = dict()
-        for code, word in enumerate(wordlist):
-            codes[word] = code
-        word_count = len(mnemonic)
-        entropy_int = None
-        bit_size = word_count * 11
-        chk_sum_bit_len = word_count * 11 % 32
-        for word in mnemonic:
-            entropy_int = (entropy_int << 11) | codes[word] if entropy_int else codes[word]
-        chk_sum = entropy_int & (2 ** chk_sum_bit_len - 1)
-        entropy_int = entropy_int >> chk_sum_bit_len
-        entropy = entropy_int.to_bytes((bit_size - chk_sum_bit_len) // 8, byteorder="big")
-        fb = sha256(entropy)[0]
-        assert (fb >> (8 - chk_sum_bit_len)) & chk_sum
-        return entropy
-    else:
-        raise ValueError('Number of words must be one of the following: [12, 15, 18, 21, 24], but it is not (%d).' % len(mnemonic))
-
-
-def mnemonic_to_seed(passphrase, password):
-    return pbkdf2_hmac('sha512', passphrase.encode(), (passphrase + password).encode(), 2048)
-
-
-
-# BIP32
-#
-#
-#
+# Hierarchical Deterministic Wallets (HD Wallets)
+# BIP-0032/0044
 
 # создание родительского приватного ключа
 def create_xmaster_key(seed, testnet=False):
@@ -302,7 +222,7 @@ def add_public_keys(ext_value, key):
 
 def is_xpublic_key_valid(key):
     """
-    Check extended public key is valid.
+    Check extended public key is valid according to BIP-0032.
 
     :param key: extended public key in BASE58 or bytes string format.
     :return: boolean.
@@ -310,10 +230,18 @@ def is_xpublic_key_valid(key):
     if isinstance(key, str):
         if not key[:4] in ['xpub', 'tpub']:
             return False
+        elif len(key) != 111:
+            return False
     return True
 
 
 def is_xprivate_key_valid(key):
+    """
+    Check the extended private key is valid according to BIP-0032.
+
+    :param key: extended private key in BASE58 or bytes string format.
+    :return: boolean.
+    """
     if isinstance(key, bytes):
         key_int = int.from_bytes(key, byteorder="big")
         if key_int > 0 and key_int < MAX_INT_PRIVATE_KEY and len(key) == 32:
@@ -324,8 +252,14 @@ def is_xprivate_key_valid(key):
     return False
 
 
-# валидация path_level в соответствии с требованиями BIP-0044
 def is_validate_path_level(path_level, testnet):
+    """
+    Check path level is valid according to BIP-0044.
+    
+    :param list path_level: list of 5 levels in BIP32 path.
+    :param testnet: if True, the check will be executed for TESTNET wallets.
+    :return: boolean.
+    """
     if not len(path_level):
         return True
     elif len(path_level) == 5:
@@ -342,6 +276,12 @@ def is_validate_path_level(path_level, testnet):
 
 
 def serialize_xkey(key):
+    """
+    Serialization of extended keys.
+
+    :param dict key: extended private or public key in Dict format.
+    :return: bytes string.
+    """
     try:
         key_bytes = key['key']
         if key.get('is_private'):
@@ -360,6 +300,12 @@ def serialize_xkey(key):
 
 
 def deserialize_xkey(encode_key):
+    """
+    Deserialization of extended keys.
+
+    :param str key: extended private or public key in base58 format.
+    :return: bytes string.
+    """
     raw_key = decode_base58(encode_key)
     decode_key = dict()
     if raw_key[:4] in [MAINNET_PUBLIC_WALLET_VERSION, MAINNET_PRIVATE_WALLET_VERSION]:
@@ -380,3 +326,122 @@ def deserialize_xkey(encode_key):
     if decode_key:
         return decode_key
     return None
+
+
+
+# Mnemonic code for generating deterministic keys
+# BIP-0039
+
+def create_passphrase(bits=256, language='english'):
+    """
+    Creating the passphrase.
+
+    :param int bits: size of entropy is 128-256 bits, by default is 256.
+    :param str language: uses wordlist language.
+    :return: string is passphrase.
+    """
+    if bits in [128, 160, 192, 224, 256]:
+        entropy = os.urandom(bits // 8)
+        mnemonic = create_mnemonic(entropy, language)
+        return ' '.join(mnemonic)
+    else:
+        raise ValueError('Strength should be one of the following [128, 160, 192, 224, 256], but it is not (%d).' % bits)
+
+
+def create_mnemonic(entropy, language='english'):
+    """
+    Generating the mnemonic.
+
+    :param bytes entropy: random entropy bytes.
+    :param str language: uses wordlist language.
+    :return: list of words.
+    """
+    mnemonic = []
+    wordlist = create_wordlist(language)
+    entropy_int = int.from_bytes(entropy, byteorder="big")
+    entropy_bit_len = len(entropy) * 8
+    chk_sum_bit_len = entropy_bit_len // 32
+    fbyte_hash = sha256(entropy)[0]
+    entropy_int = add_checksum_ent(entropy)
+    while entropy_int:
+        mnemonic.append(wordlist[entropy_int & 0b11111111111])
+        entropy_int = entropy_int >> 11
+    return mnemonic[::-1]
+
+
+def create_wordlist(language='english', wordlist_dir=BIP0039_DIR):
+    """
+    Creating the wordlist.
+
+    :param str language: uses wordlist language, by default is english.
+    :param str wordlist_dir: path to a file containing a list of words.
+    :return: list of words.
+    """
+    f = None
+    path = os.path.join(wordlist_dir, '.'.join((language, 'txt')))
+    assert os.path.exists(path)
+    f = open(path)
+    content = f.read().rstrip('\n')
+    assert content
+    f.close()
+    return content.split('\n')
+
+
+def add_checksum_ent(data):
+    """
+    Adding a checksum of a entropy to a entropy.
+
+    :param bytes data: random entropy bytes.
+    :return: bytes string.
+    """
+    mask = 0b10000000
+    data_int = int.from_bytes(data, byteorder="big")
+    data_bit_len = len(data) * 8 // 32
+    fbyte_hash = sha256(data)[0]
+    while data_bit_len:
+        data_bit_len -= 1
+        data_int = (data_int << 1) | 1 if fbyte_hash & mask else data_int << 1
+        mask = mask >> 1
+    return data_int
+
+
+def mnemonic_to_entropy(passphrase, language):
+    """
+    Converting passphrase to entropy.
+
+    :param str passphrase: key passphrase.
+    :param str language: uses wordlist language.
+    :return: bytes string.
+    """
+    mnemonic = passphrase.split()
+    if len(mnemonic) in [12, 15, 18, 21, 24]:
+        wordlist = create_wordlist(language)
+        codes = dict()
+        for code, word in enumerate(wordlist):
+            codes[word] = code
+        word_count = len(mnemonic)
+        entropy_int = None
+        bit_size = word_count * 11
+        chk_sum_bit_len = word_count * 11 % 32
+        for word in mnemonic:
+            entropy_int = (entropy_int << 11) | codes[word] if entropy_int else codes[word]
+        chk_sum = entropy_int & (2 ** chk_sum_bit_len - 1)
+        entropy_int = entropy_int >> chk_sum_bit_len
+        entropy = entropy_int.to_bytes((bit_size - chk_sum_bit_len) // 8, byteorder="big")
+        fb = sha256(entropy)[0]
+        assert (fb >> (8 - chk_sum_bit_len)) & chk_sum
+        return entropy
+    else:
+        raise ValueError('Number of words must be one of the following: [12, 15, 18, 21, 24], but it is not (%d).' % len(mnemonic))
+
+
+def mnemonic_to_seed(passphrase, password):
+    """
+    Converting passphrase to seed.
+
+    :param str passphrase: key passphrase.
+    :param str password: password for key passphrase.
+    :return: bytes string.
+    """
+    return pbkdf2_hmac('sha512', passphrase.encode(), (passphrase + password).encode(), 2048)
+

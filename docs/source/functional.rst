@@ -7,6 +7,17 @@ Base function primitives implemented in functional programming paradigm.
 
 
 
+Mnemonic
+============
+
+.. autofunction:: pybtc.create_passphrase
+.. autofunction:: pybtc.create_mnemonic
+.. autofunction:: pybtc.create_wordlist
+.. autofunction:: pybtc.add_checksum_ent
+.. autofunction:: pybtc.mnemonic_to_entropy
+.. autofunction:: pybtc.mnemonic_to_seed
+
+
 Private keys
 ============
 
@@ -31,7 +42,6 @@ Public keys
 .. autofunction:: pybtc.private_to_public_key
 .. autofunction:: pybtc.is_public_key_valid
 
-
 Addresses
 =========
 
@@ -41,6 +51,16 @@ Addresses
 .. autofunction:: pybtc.address_type
 .. autofunction:: pybtc.address_to_script
 .. autofunction:: pybtc.is_address_valid
+
+
+HD Walelts
+=========
+
+.. autofunction:: pybtc.is_xprivate_key_valid
+.. autofunction:: pybtc.is_xpublic_key_valid
+.. autofunction:: pybtc.is_validate_path_level
+.. autofunction:: pybtc.serialize_xkey
+.. autofunction:: pybtc.deserialize_xkey
 
 
 Script
