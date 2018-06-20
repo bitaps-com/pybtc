@@ -1,7 +1,11 @@
 import unittest
+import os, sys
+parentPath = os.path.abspath("..")
+if parentPath not in sys.path:
+    sys.path.insert(0, parentPath)
 from pybtc import blockchain
 from binascii import unhexlify
-from pybtc import address2hash160
+from pybtc import address_to_hash
 
 
 class ScriptDeserializeTests(unittest.TestCase):
@@ -14,7 +18,7 @@ class ScriptDeserializeTests(unittest.TestCase):
         self.assertEqual(s.type, "P2PKH")
         self.assertEqual(s.ntype, 0)
         self.assertEqual(s.asm, "OP_DUP OP_HASH160 3520dd524f6ca66f63182bb23efff6cc8ee3ee63 OP_EQUALVERIFY OP_CHECKSIG")
-        self.assertEqual(s.address[0], address2hash160("15qvBdqSWQCuLQPXVoWViG2GvjeARmpYPw"))
+        self.assertEqual(s.address[0], address_to_hash("15qvBdqSWQCuLQPXVoWViG2GvjeARmpYPw"))
         self.assertEqual(s.pattern, "OP_DUP OP_HASH160 <20> OP_EQUALVERIFY OP_CHECKSIG")
         self.assertEqual(s.op_sig_count, 1)
 
@@ -24,7 +28,7 @@ class ScriptDeserializeTests(unittest.TestCase):
         self.assertEqual(s.type, "P2SH")
         self.assertEqual(s.ntype, 1)
         self.assertEqual(s.asm, "OP_HASH160 69f37572ab1b69f304f987b119e2450e0b71bf5c OP_EQUAL")
-        self.assertEqual(s.address[0], address2hash160("3BMEXVsYyfKB5h3m53XRSFHkqi1zPwsvcK"))
+        self.assertEqual(s.address[0], address_to_hash("3BMEXVsYyfKB5h3m53XRSFHkqi1zPwsvcK"))
         self.assertEqual(s.pattern, "OP_HASH160 <20> OP_EQUAL")
         self.assertEqual(s.op_sig_count, 0)
 
@@ -117,7 +121,7 @@ class ScriptDeserializeTests(unittest.TestCase):
         self.assertEqual(s.type, "P2WPKH")
         self.assertEqual(s.ntype, 5)
         self.assertEqual(s.asm, "OP_0 4160bb1870159a08724557f75c7bb665a3a132e0")
-        self.assertEqual(s.address[0], unhexlify("004160bb1870159a08724557f75c7bb665a3a132e0"))
+        self.assertEqual(s.address[0], unhexlify("4160bb1870159a08724557f75c7bb665a3a132e0"))
         self.assertEqual(s.pattern, "OP_0 <20>")
         self.assertEqual(s.op_sig_count, 1)
         s = blockchain.Script("00144160bb1870159a08724557f75c7bb665a3a132e0", segwit=False)
@@ -135,7 +139,7 @@ class ScriptDeserializeTests(unittest.TestCase):
         self.assertEqual(s.type, "P2WSH")
         self.assertEqual(s.ntype, 6)
         self.assertEqual(s.asm, "OP_0 cdbf909e935c855d3e8d1b61aeb9c5e3c03ae8021b286839b1a72f2e48fdba70")
-        self.assertEqual(s.address[0], unhexlify("00cdbf909e935c855d3e8d1b61aeb9c5e3c03ae8021b286839b1a72f2e48fdba70"))
+        self.assertEqual(s.address[0], unhexlify("cdbf909e935c855d3e8d1b61aeb9c5e3c03ae8021b286839b1a72f2e48fdba70"))
         self.assertEqual(s.pattern, "OP_0 <32>")
         self.assertEqual(s.op_sig_count, 0)
         s = blockchain.Script("0020cdbf909e935c855d3e8d1b61aeb9c5e3c03ae8021b286839b1a72f2e48fdba70",  segwit=False)
