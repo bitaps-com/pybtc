@@ -337,7 +337,7 @@ def create_passphrase(bits=256, language='english'):
     Creating the passphrase.
 
     :param int bits: size of entropy is 128-256 bits, by default is 256.
-    :param str language: uses wordlist language.
+    :param str language: uses wordlist language (chinese_simplified, chinese_traditional, english, french, italian, japanese, korean, spanish), by default is english.
     :return: string is passphrase.
     """
     if bits in [128, 160, 192, 224, 256]:
@@ -353,7 +353,7 @@ def create_mnemonic(entropy, language='english'):
     Generating the mnemonic.
 
     :param bytes entropy: random entropy bytes.
-    :param str language: uses wordlist language.
+    :param str language: uses wordlist language (chinese_simplified, chinese_traditional, english, french, italian, japanese, korean, spanish), by default is english.
     :return: list of words.
     """
     mnemonic = []
