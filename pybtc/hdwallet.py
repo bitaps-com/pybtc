@@ -14,8 +14,14 @@ from .hash import hmac_sha512, hash160, double_sha256, sha256, double_sha256
 # Hierarchical Deterministic Wallets (HD Wallets)
 # BIP-0032/0044
 
-# создание родительского приватного ключа
 def create_xmaster_key(seed, testnet=False):
+    """
+    Creating master private key from seed
+
+    :param bytes seed: cryptographically secure seed.
+    :param bool testnet: if True, the check will be executed for TESTNET wallets.
+    :return: extended private key (xprivate key) in dict format (fields: version, key, chain_code, depth, child, finger_print, is_private).
+    """
     if testnet:
         version = TESTNET_PRIVATE_WALLET_VERSION
     else:
@@ -37,6 +43,12 @@ def create_xmaster_key(seed, testnet=False):
 
 
 def create_xpublic_key(key):
+    """
+    Creating parent xpublic key from xprivate key
+
+    :param dict key: xprivate key.
+    :return: extended public key (xpublic key) in dict format (fields: version, key, chain_code, depth, child, finger_print, is_private).
+    """
     if key['is_private']:
         if key['version'] == TESTNET_PRIVATE_WALLET_VERSION:
             version = TESTNET_PUBLIC_WALLET_VERSION
@@ -54,6 +66,16 @@ def create_xpublic_key(key):
 
 
 def derive_xkey(seed, *path_level, bip44=True, testnet=True, wif=True):
+    """
+    Key derivation
+
+    :param bytes seed: cryptographically secure seed.
+    :param list path_level: list of levels in BIP32 path. For BIP-0044 of 5 levels. For bip44 is True can be None or empty list.
+    :param bool bip44: define specification BIP-0044, by default True.
+    :param bool testnet: if True, the derivation will be executed for TESTNET wallets.
+    :param bool wif: define xkey wallet import format, by default True.
+    :return: string (serialized xprivate key).
+    """
     if not bip44:
         if not len(path_level):
             raise TypeError("not specified path levels")
@@ -88,6 +110,13 @@ def derive_xkey(seed, *path_level, bip44=True, testnet=True, wif=True):
 
 
 def xprivate_to_xpublic_key(xprv, encode_b58=True):
+    """
+    Get xpublic key from xprivate key
+
+    :param str xprv: extended private in base58 format (serialized).
+    :param bool wif: define return format (encoded base58 or bytes string), by default True is encode base58.
+    :return: string (serialized xpublic key).
+    """
     if is_xprivate_key_valid(xprv):
         xprivkey = deserialize_xkey(xprv)
         xpubkey = create_xpublic_key(xprivkey)
@@ -101,6 +130,14 @@ def xprivate_to_xpublic_key(xprv, encode_b58=True):
 
 # получение из расширенного приватного ключа обычный приватный ключ
 def xkey_to_private_key(xkey, wif=True, hex=False):
+    """
+    Get private key from xprivate key
+
+    :param str xkey: extended private key in base58 format (serialized).
+    :param bool wif: define xkey return, by default wallet import format. If wif up then hex ignore.
+    :param bool hex: define xkey return format (hex or bytes string). 
+    :return: string (wif or hex) or bytes string.
+    """
     if is_xprivate_key_valid(xkey):
         xprivkey = deserialize_xkey(xkey)
         privkey = xprivkey['key']
@@ -120,6 +157,13 @@ def xkey_to_private_key(xkey, wif=True, hex=False):
 
 # получение из расширенного приватного/публичного ключа обычный публичный ключ
 def xkey_to_public_key(xkey, hex=False):
+    """
+    Get public key from xprivate/xpublic key
+
+    :param str xkey: extended private or extended public key in base58 format (serialized).
+    :param bool hex: define xkey return format (hex or bytes string). 
+    :return: string or bytes string.
+    """
     if is_xprivate_key_valid(xkey):
         xkey = xprivate_to_xpublic_key(xkey)
     if is_xpublic_key_valid(xkey):
@@ -139,6 +183,13 @@ def xkey_to_public_key(xkey, hex=False):
 
 # Создание дочернего приватного ключа
 def create_child_privkey(key, child_idx):
+    """
+    Get child xprivate key from parent xprivate key
+
+    :param dict key: extended private key in dict format.
+    :param int8 child_idx: chidl index. 
+    :return: dict (xprivate key).
+    """
     if key['is_private']:
         if child_idx < FIRST_HARDENED_CHILD:
             expanded_privkey = create_expanded_key(key, child_idx)
@@ -161,6 +212,13 @@ def create_child_privkey(key, child_idx):
 
 # создание дочернего публичного ключа
 def create_child_pubkey(key, child_idx):
+    """
+    Get child xpublic key from parent xpublic key
+
+    :param dict key: extended public key in dict format.
+    :param int8 child_idx: child index. 
+    :return: dict (xpublic key).
+    """
     if not key['is_private']:
         expanded_pubkey = create_expanded_key(key, child_idx)
         if expanded_pubkey:
@@ -181,6 +239,13 @@ def create_child_pubkey(key, child_idx):
 
 # Создание расширенного приватного/публичного ключа
 def create_expanded_key(key, child_idx):
+    """
+    Get intermediary expanded key from parent xprivate/xpublic key
+
+    :param dict key: extended private or public key in dict format.
+    :param int8 child_idx: child index. 
+    :return: bytes string.
+    """
     if isinstance(key, dict):
         if not key.get('is_private') and child_idx < FIRST_HARDENED_CHILD:
             seed = key['key'] + pack('I', child_idx)
@@ -194,6 +259,13 @@ def create_expanded_key(key, child_idx):
 
 # Создание усиленного расширенного приватного ключа
 def create_expanded_hard_key(key, child_idx):
+    """
+    Get intermediary hardened key from parent xprivate key
+
+    :param dict key: extended private key in dict format.
+    :param int8 child_idx: child index. 
+    :return: bytes string.
+    """
     if isinstance(key, dict):
         if key.get('is_private') and child_idx >= FIRST_HARDENED_CHILD:
             seed = bytes([0]) + key['key'] + pack('I', child_idx)
@@ -202,6 +274,7 @@ def create_expanded_hard_key(key, child_idx):
 
 
 def add_private_keys(ext_value, key):
+    
     ext_value_int = int.from_bytes(ext_value, byteorder="big")
     key_int = int.from_bytes(key, byteorder="big")
     ext_value_int = (ext_value_int + key_int) % MAX_INT_PRIVATE_KEY

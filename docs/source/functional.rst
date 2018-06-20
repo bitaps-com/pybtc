@@ -53,9 +53,19 @@ Addresses
 .. autofunction:: pybtc.is_address_valid
 
 
-HD Walelts
+HD Wallets
 =========
 
+.. autofunction:: pybtc.create_xmaster_key
+.. autofunction:: pybtc.create_xpublic_key
+.. autofunction:: pybtc.derive_xkey
+.. autofunction:: pybtc.xprivate_to_xpublic_key
+.. autofunction:: pybtc.xkey_to_private_key
+.. autofunction:: pybtc.xkey_to_public_key
+.. autofunction:: pybtc.create_child_privkey
+.. autofunction:: pybtc.create_child_pubkey
+.. autofunction:: pybtc.create_expanded_key
+.. autofunction:: pybtc.create_expanded_hard_key
 .. autofunction:: pybtc.is_xprivate_key_valid
 .. autofunction:: pybtc.is_xpublic_key_valid
 .. autofunction:: pybtc.is_validate_path_level
