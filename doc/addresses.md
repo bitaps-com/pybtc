@@ -1,1 +1,0 @@
-![Address map](img/address_map.jpg)

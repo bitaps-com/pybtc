@@ -6,11 +6,11 @@ ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 BIP0039_DIR = os.path.normpath(os.path.join(ROOT_DIR, 'bip-0039'))
 
 MAX_AMOUNT = 2100000000000000
-SIGHASH_ALL           = 0x00000001
-SIGHASH_NONE          = 0x00000002
-SIGHASH_SINGLE        = 0x00000003
-SIGHASH_ANYONECANPAY  = 0x00000080
-MAX_INT_PRIVATE_KEY   = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141
+SIGHASH_ALL = 0x00000001
+SIGHASH_NONE = 0x00000002
+SIGHASH_SINGLE = 0x00000003
+SIGHASH_ANYONECANPAY = 0x00000080
+MAX_INT_PRIVATE_KEY = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141
 
 MAINNET_ADDRESS_BYTE_PREFIX = b'\x00'
 TESTNET_ADDRESS_BYTE_PREFIX = b'\x6f'
@@ -66,16 +66,16 @@ ECDSA_CONTEXT_SIGN = secp256k1.secp256k1_context_create(FLAG_SIGN)
 ECDSA_CONTEXT_VERIFY = secp256k1.secp256k1_context_create(FLAG_VERIFY)
 ECDSA_CONTEXT_ALL = secp256k1.secp256k1_context_create(ALL_FLAGS)
 secp256k1.secp256k1_context_randomize(ECDSA_CONTEXT_SIGN,
-                                      random.SystemRandom().randint(0,MAX_INT_PRIVATE_KEY).to_bytes(32,byteorder="big"))
+                                      random.SystemRandom().randint(0, MAX_INT_PRIVATE_KEY).to_bytes(32,byteorder="big"))
 
-SCRIPT_TYPES = { "P2PKH":        0,
-                 "P2SH" :        1,
-                 "PUBKEY":       2,
-                 "NULL_DATA":    3,
-                 "MULTISIG":     4,
-                 "P2WPKH":       5,
-                 "P2WSH":        6,
-                 "NON_STANDART": 7
+SCRIPT_TYPES = {"P2PKH":        0,
+                "P2SH":         1,
+                "PUBKEY":       2,
+                "NULL_DATA":    3,
+                "MULTISIG":     4,
+                "P2WPKH":       5,
+                "P2WSH":        6,
+                "NON_STANDART": 7
                 }
 
 

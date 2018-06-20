@@ -47,7 +47,7 @@ class AddressFunctionsTests(unittest.TestCase):
                                                   hex=1),p)
 
     def test_create_private_key(self):
-        p = tools.create_private_key()
+        p = tools.create_private_key(wif=0)
         pw = tools.private_key_to_wif(p)
         self.assertEqual(tools.is_wif_valid(pw), True)
 
@@ -77,7 +77,8 @@ class AddressFunctionsTests(unittest.TestCase):
         pk = "03b635dbdc16dbdf4bb9cf5b55e7d03e514fb04dcef34208155c7d3ec88e9045f4"
         h = tools.hash160(pk)
         self.assertEqual(tools.hash_to_address(h, witness_version=None), "1Fs2Xqrk4P2XADaJeZWykaGXJ4HEb6RyT1")
-        self.assertEqual(tools.hash_to_address(h, witness_version=None, testnet=1), "mvNyptwisQTmwL3vN8VMaVUrA3swVCX83c")
+        self.assertEqual(tools.hash_to_address(h, witness_version=None, testnet=1),
+                         "mvNyptwisQTmwL3vN8VMaVUrA3swVCX83c")
         # p2wpkh inside p2sh
         p = "L32a8Mo1LgvjrVDbzcc3NkuUfkpoLsf2Y2oEWkV4t1KpQdFzuyff"
         pk = tools.private_to_public_key(p)
@@ -113,6 +114,18 @@ class AddressFunctionsTests(unittest.TestCase):
         self.assertEqual(tools.address_type("mvNyptwisQTmwL3vN8VMaVUrA3swVCX83c"), 'P2PKH')
         self.assertEqual(tools.address_type("33am12q3Bncnn3BfvLYHczyv23Sq2Wbwjw"), 'P2SH')
         self.assertEqual(tools.address_type("2Mu8y4mm4oF88yppDbUAAEwyBEPezrx7CLh"), 'P2SH')
+
+    def test_address_net_type(self):
+        self.assertEqual(tools.address_net_type("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4"), 'mainnet')
+        self.assertEqual(tools.address_net_type("tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx"), 'testnet')
+        self.assertEqual(tools.address_net_type("bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3"),
+                         'mainnet')
+        self.assertEqual(tools.address_net_type("tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7"),
+                         'testnet')
+        self.assertEqual(tools.address_net_type("1Fs2Xqrk4P2XADaJeZWykaGXJ4HEb6RyT1"), 'mainnet')
+        self.assertEqual(tools.address_net_type("mvNyptwisQTmwL3vN8VMaVUrA3swVCX83c"), 'testnet')
+        self.assertEqual(tools.address_net_type("33am12q3Bncnn3BfvLYHczyv23Sq2Wbwjw"), 'mainnet')
+        self.assertEqual(tools.address_net_type("2Mu8y4mm4oF88yppDbUAAEwyBEPezrx7CLh"), 'testnet')
 
     def test_public_key_to_address(self):
         pc = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
@@ -231,7 +244,7 @@ class AddressFunctionsTests(unittest.TestCase):
         h = ''.join(s)
         s = unhexlify(h)
         k = tools.parse_script(s)
-        sh = tools.script_to_hash(h, witness = False)
+        sh = tools.script_to_hash(h, 0, 0)
         address = tools.hash_to_address(sh,script_hash = True,
                                         witness_version = None, testnet = False)
         self.assertEqual(address, "3D2oetdNuZUqQHPJmcMDDHYoqkyNVsFk9r")
@@ -257,7 +270,7 @@ class AddressFunctionsTests(unittest.TestCase):
         h = ''.join(s)
         s = unhexlify(h)
         k = tools.parse_script(s)
-        sh = tools.script_to_hash(h, witness = False)
+        sh = tools.script_to_hash(h, 0,0)
         self.assertEqual(k["type"],"NON_STANDARD")
         self.assertEqual(k["nType"],7)
         self.assertEqual(k["reqSigs"],20)
@@ -305,7 +318,7 @@ class AddressFunctionsTests(unittest.TestCase):
         h = ''.join(s)
         s = unhexlify(h)
         k = tools.parse_script(s)
-        sh = tools.script_to_hash(h, witness = False)
+        sh = tools.script_to_hash(h, 0, 0)
         self.assertEqual(k["type"],"NON_STANDARD")
         self.assertEqual(k["nType"],7)
         self.assertEqual(k["reqSigs"],1)
@@ -329,9 +342,9 @@ class AddressFunctionsTests(unittest.TestCase):
         h = ''.join(s)
         s = unhexlify(h)
         k = tools.parse_script(s)
-        self.assertEqual(k["type"],"NON_STANDARD")
-        self.assertEqual(k["nType"],7)
-        self.assertEqual(k["reqSigs"],6)
+        self.assertEqual(k["type"], "NON_STANDARD")
+        self.assertEqual(k["nType"], 7)
+        self.assertEqual(k["reqSigs"], 6)
 
         s = [HEX_OPCODE['OP_1'],
              HEX_OPCODE['OP_6'],
