@@ -6,7 +6,7 @@ from struct import pack, unpack
 from hashlib import pbkdf2_hmac
 from binascii import hexlify, unhexlify
 from .constants import *
-from .tools import private_to_public_key, is_valid_public_key, encode_base58, decode_base58, private_key_to_wif
+from .tools import private_to_public_key, is_public_key_valid, encode_base58, decode_base58, private_key_to_wif
 from .hash import hmac_sha512, hash160, double_sha256, sha256, double_sha256
 
 
@@ -104,7 +104,7 @@ def create_xmaster_key(seed, testnet=False):
     intermediary = hmac_sha512(key, seed)
     mkey = intermediary[:32]
     chain_code = intermediary[32:]
-    if is_valid_private_key(mkey) and is_valid_private_key(chain_code):
+    if is_xprivate_key_valid(mkey) and is_xprivate_key_valid(chain_code):
         return dict(version=version,
                     key=mkey,
                     depth=0,
@@ -122,7 +122,7 @@ def create_xpublic_key(key):
             version = TESTNET_PUBLIC_WALLET_VERSION
         else:
             version = MAINNET_PUBLIC_WALLET_VERSION
-        pubkey = private_to_public_key(key['key'], True)
+        pubkey = private_to_public_key(key['key'], hex=False)
         return dict(version=version,
                     key=pubkey,
                     depth=key['depth'],
@@ -168,7 +168,7 @@ def derive_xkey(seed, *path_level, bip44=True, testnet=True, wif=True):
 
 
 def xprivate_to_xpublic_key(xprv, encode_b58=True):
-    if is_valid_private_key(xprv):
+    if is_xprivate_key_valid(xprv):
         xprivkey = deserialize_xkey(xprv)
         xpubkey = create_xpublic_key(xprivkey)
         if encode_b58:
@@ -181,7 +181,7 @@ def xprivate_to_xpublic_key(xprv, encode_b58=True):
 
 # получение из расширенного приватного ключа обычный приватный ключ
 def xkey_to_private_key(xkey, wif=True, hex=False):
-    if is_valid_private_key(xkey):
+    if is_xprivate_key_valid(xkey):
         xprivkey = deserialize_xkey(xkey)
         privkey = xprivkey['key']
         if xprivkey['version'] in TESTNET_PRIVATE_WALLET_VERSION:
@@ -200,9 +200,9 @@ def xkey_to_private_key(xkey, wif=True, hex=False):
 
 # получение из расширенного приватного/публичного ключа обычный публичный ключ
 def xkey_to_public_key(xkey, hex=False):
-    if is_valid_private_key(xkey):
+    if is_xprivate_key_valid(xkey):
         xkey = xprivate_to_xpublic_key(xkey)
-    if is_valid_public_key(xkey):
+    if is_xpublic_key_valid(xkey):
         xpubkey = deserialize_xkey(xkey)
         pubkey = xpubkey['key']
         if xpubkey['version'] in TESTNET_PUBLIC_WALLET_VERSION:
@@ -227,8 +227,8 @@ def create_child_privkey(key, child_idx):
         if expanded_privkey:
             child_chain_code = expanded_privkey[32:]
             child_privkey = add_private_keys(expanded_privkey[:32], key['key'])
-            if is_valid_private_key(child_privkey):
-                finger_print = hash160(private_to_public_key(key['key']))[:4]
+            if is_xprivate_key_valid(child_privkey):
+                finger_print = hash160(private_to_public_key(key['key'], hex=False))[:4]
                 return dict(version=key['version'],
                             key=child_privkey,
                             depth=key['depth'] + 1,
@@ -245,9 +245,9 @@ def create_child_pubkey(key, child_idx):
         expanded_pubkey = create_expanded_key(key, child_idx)
         if expanded_pubkey:
             child_chain_code = expanded_pubkey[32:]
-            ext_value = private_to_public_key(expanded_pubkey[:32])
+            ext_value = private_to_public_key(expanded_pubkey[:32], hex=False)
             child_pubkey = add_public_keys(ext_value, key['key'])
-            if is_valid_public_key(child_pubkey):
+            if is_xpublic_key_valid(child_pubkey):
                 finger_print = hash160(key['key'])[:4]
                 return dict(version=key['version'],
                             key=child_pubkey,
@@ -266,7 +266,7 @@ def create_expanded_key(key, child_idx):
             seed = key['key'] + pack('I', child_idx)
             return hmac_sha512(key['chain_code'], seed)
         elif key.get('is_private') and child_idx < FIRST_HARDENED_CHILD:
-            public_key = private_to_public_key(key['key'])
+            public_key = private_to_public_key(key['key'], hex=False)
             seed = public_key + pack('I', child_idx)
             return hmac_sha512(key['chain_code'], seed)
     return None
@@ -300,7 +300,20 @@ def add_public_keys(ext_value, key):
     return None
 
 
-def is_valid_private_key(key):
+def is_xpublic_key_valid(key):
+    """
+    Check extended public key is valid.
+
+    :param key: extended public key in BASE58 or bytes string format.
+    :return: boolean.
+    """
+    if isinstance(key, str):
+        if not key[:4] in ['xpub', 'tpub']:
+            return False
+    return True
+
+
+def is_xprivate_key_valid(key):
     if isinstance(key, bytes):
         key_int = int.from_bytes(key, byteorder="big")
         if key_int > 0 and key_int < MAX_INT_PRIVATE_KEY and len(key) == 32:

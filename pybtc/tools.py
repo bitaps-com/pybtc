@@ -163,9 +163,6 @@ def is_public_key_valid(key):
     elif key[0] == 0x02 or key[0] == 0x03:
         if len(key) != 33:
             return False
-    elif isinstance(key, str):
-        if not key[:4] in ['xpub', 'tpub']:
-            return False
     return True
 
 
