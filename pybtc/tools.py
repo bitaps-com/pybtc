@@ -35,7 +35,7 @@ def create_private_key(compressed=True, testnet=False, wif=True, hex=False):
         if not i and int.from_bytes(h, byteorder="big") > MAX_INT_PRIVATE_KEY:
             i += 1
     if wif:
-        return private_key_to_wif(h)
+        return private_key_to_wif(h, compressed=compressed, testnet=testnet)
     elif hex:
         return hexlify(h).decode()
     return h
@@ -48,7 +48,7 @@ def private_key_to_wif(h, compressed=True, testnet=False):
     :param h: private key 32 byte string or HEX encoded string.
     :param compressed: (optional) flag of public key compressed format, by default set to True.  
     :param testnet: (optional) flag for testnet network, by default is False.
-    :return: Private key in WIF format
+    :return: Private key in WIF format.
     """
     # uncompressed: 0x80 + [32-byte secret] + [4 bytes of Hash() of previous 33 bytes], base58 encoded.
     # compressed: 0x80 + [32-byte secret] + 0x01 + [4 bytes of Hash() previous 34 bytes], base58 encoded.
@@ -86,7 +86,7 @@ def is_wif_valid(wif):
     Check is private key in WIF format string is valid.
         
     :param wif: private key in WIF format string.
-    :return: boolean 
+    :return: boolean.
     """
     if not isinstance(wif, str):
         raise TypeError("invalid wif key")
@@ -117,7 +117,7 @@ def private_to_public_key(private_key, compressed=True, hex=True):
                        In case private_key in WIF format, this flag is set in accordance with 
                        the key format specified in WIF string.
     :param hex:  (optional) if set to True return key in HEX format, by default is True.
-    :return: 33/65 bytes public key in HEX or bytes string 
+    :return: 33/65 bytes public key in HEX or bytes string.
     """
     if not isinstance(private_key, bytes):
         if isinstance(private_key, bytearray):
@@ -152,7 +152,7 @@ def is_public_key_valid(key):
     Check public key is valid.
 
     :param key: public key in HEX or bytes string format.
-    :return: boolean 
+    :return: boolean.
     """
     if isinstance(key, str):
         key = unhexlify(key)
@@ -260,7 +260,7 @@ def address_to_hash(address, hex=True):
 
     :param address: address in base58 or bech32 format.
     :param hex:  (optional) If set to True return key in HEX format, by default is True.
-    :return: script in HEX or bytes string 
+    :return: script in HEX or bytes string.
     """
     if address[0] in ADDRESS_PREFIX_LIST:
         h = decode_base58(address)[1:-4]
@@ -328,7 +328,7 @@ def address_to_script(address, hex=False):
 
     :param address: address in base58 or bech32 format.
     :param hex:  (optional) If set to True return key in HEX format, by default is True.
-    :return: public key script in HEX or bytes string 
+    :return: public key script in HEX or bytes string.
     """
     if address[0] in (TESTNET_SCRIPT_ADDRESS_PREFIX,
                       MAINNET_SCRIPT_ADDRESS_PREFIX):
@@ -358,8 +358,9 @@ def address_to_script(address, hex=False):
 
 
 def public_key_to_p2sh_p2wpkh_script(pubkey):
-    assert len(pubkey) == 33
-    return b'\x00\x14' + hash160(pubkey)
+    if len(pubkey) != 33:
+        raise TypeError("public key len invalid")
+    return b'\x00\x14%s' % hash160(pubkey)
 
 
 def is_address_valid(address, testnet=False):
@@ -368,7 +369,7 @@ def is_address_valid(address, testnet=False):
 
     :param address: address in base58 or bech32 format.
     :param testnet: (optional) flag for testnet network, by default is False.
-    :return: boolean 
+    :return: boolean.
     """
     if not address or type(address) != str:
         return False
@@ -438,6 +439,20 @@ def get_witness_version(address):
 #  Script
 
 def parse_script(script, segwit=True):
+    """
+    Parse script and return script type, script address and required signatures count.
+
+    :param script: script in bytes string or HEX encoded string format.
+    :param segwit:  (optional) If set to True recognize P2WPKH and P2WSH sripts, by default set to True.
+    
+    :return: dictionary:
+    
+            - nType - numeric script type
+            - type  - script type
+            - addressHash - address hash in case address recognized
+            - script - script if no address recognized
+            - reqSigs - required signatures count
+    """
     if not script:
         return {"nType": 7, "type": "NON_STANDARD", "reqSigs": 0, "script": b""}
     if type(script) == str:
@@ -533,12 +548,20 @@ def parse_script(script, segwit=True):
 
 
 def decode_script(script, asm=False):
-    if type(script) == str:
+    """
+    Decode script to ASM format or to human readable OPCODES string.
+
+    :param script: script in bytes string or HEX encoded string format.
+    :param asm:  (optional) If set to True decode to ASM fromat, by default set to False.
+    :return: script in ASM format string or OPCODES string.
+    """
+    if isinstance(script, str):
         try:
             script = unhexlify(script)
         except:
             pass
-        assert type(script) == bytes
+    if not isinstance(script, bytes):
+        raise TypeError("script invalid")
     l = len(script)
     s = 0
     result = []
@@ -562,22 +585,33 @@ def decode_script(script, asm=False):
 
 
 def delete_from_script(script, sub_script):
+    """
+    Decode OPCODE or subscript from script.
+
+    :param script: traget script in bytes or HEX encoded string.
+    :param sub_script:  sub_script which is necessary to remove from target script in bytes or HEX encoded string.
+    :return: script in bytes or HEX encoded string corresponding to the format of target script.
+    """
     if not sub_script:
         return script
     s_hex = False
-    if type(script) == str:
+    if isinstance(script, str):
         try:
             script = unhexlify(script)
             s_hex = True
         except:
             pass
-        assert type(script) == bytes
-    if type(sub_script) == str:
+    if isinstance(sub_script, str):
         try:
             sub_script = unhexlify(sub_script)
         except:
             pass
-        assert type(sub_script) == bytes
+
+    if not isinstance(script, bytes):
+        raise TypeError("script invalid")
+    if not isinstance(sub_script, bytes):
+        raise TypeError("sub_script invalid")
+
     l = len(script)
     ls = len(sub_script)
     s = 0
@@ -621,41 +655,57 @@ def delete_from_script(script, sub_script):
     return b''.join(result) if not s_hex else hexlify(b''.join(result)).decode()
 
 
-def script_to_hash(s, witness=False, hex=False):
-    if type(s) == str:
-        s = unhexlify(s)
+def script_to_hash(script, witness=False, hex=True):
+    """
+    Encode script to hash HASH160 or SHA256 in dependency of the witness.
+
+    :param script: script in bytes or HEX encoded string.
+    :param witness:  (optional) If set to True return SHA256 hash for P2WSH, by default is False.
+    :param hex:  (optional) If set to True return key in HEX format, by default is True.
+    :param sub_script:  sub_script which is necessary to remove from target script in bytes or HEX encoded string.
+    :return: script in bytes or HEX encoded string corresponding to the format of target script.
+    """
+    if isinstance(script, str):
+        s = unhexlify(script)
     if witness:
-        return sha256(s, hex)
+        return sha256(script, hex)
     else:
-        return hash160(s, hex)
+        return hash160(script, hex)
 
 
-#
-# ECDSA
-#
+#  Signatures
 
 def verify_signature(sig, pub_key, msg):
-    if type(sig) != bytes:
-        if type(sig) == bytearray:
+    """
+    Verify signature for message and given public key
+
+    :param sig: signature in bytes or HEX encoded string.
+    :param pub_key:  public key in bytes or HEX encoded string.
+    :param msg:  message in bytes or HEX encoded string.
+    :return: boolean.
+    """
+    if not isinstance(sig, bytes):
+        if isinstance(sig, bytearray):
             sig = bytes(sig)
-        elif type(sig) == str:
+        elif isinstance(sig, str):
             sig = unhexlify(sig)
         else:
             raise TypeError("signature must be a bytes or hex encoded string")
-    if type(pub_key) != bytes:
-        if type(pub_key) == bytearray:
+    if not isinstance(pub_key, bytes):
+        if isinstance(pub_key, bytearray):
             pub_key = bytes(pub_key)
-        elif type(pub_key) == str:
+        elif isinstance(pub_key, str):
             pub_key = unhexlify(pub_key)
         else:
             raise TypeError("public key must be a bytes or hex encoded string")
-    if type(msg) != bytes:
-        if type(msg) == bytearray:
+    if not isinstance(msg, bytes):
+        if isinstance(msg, bytearray):
             msg = bytes(msg)
-        elif type(msg) == str:
+        elif isinstance(msg, str):
             msg = unhexlify(msg)
         else:
             raise TypeError("message must be a bytes or hex encoded string")
+
     raw_sig = ffi.new('secp256k1_ecdsa_signature *')
     raw_pubkey = ffi.new('secp256k1_pubkey *')
     if not secp256k1.secp256k1_ecdsa_signature_parse_der(ECDSA_CONTEXT_VERIFY, raw_sig, sig, len(sig)):
@@ -666,45 +716,59 @@ def verify_signature(sig, pub_key, msg):
     return True if result else False
 
 
-def sign_message(msg, private_key, hex=False):
+def sign_message(msg, private_key, hex=True):
     """
     Sign message
     
-    :param msg:  message to sign 
-    :param private_key:  private key (bytes, hex encoded string)
-    :param hex:  
-    :return:  DER encoded sinature  
+    :param msg:  message to sign  bytes or HEX encoded string.
+    :param private_key:  private key (bytes, hex encoded string or WIF format)
+    :param hex:  (optional) If set to True return key in HEX format, by default is True.
+    :return:  DER encoded signature in bytes or HEX encoded string.  
     """
-    if type(msg) != bytes:
-        if type(msg) == bytearray:
-            msg = bytes(msg)
-
-        elif type(msg) == str:
+    if isinstance(msg, bytearray):
+        msg = bytes(msg)
+    if isinstance(msg, str):
+        try:
             msg = unhexlify(msg)
-        else:
+        except:
+            pass
+    if not isinstance(msg, bytes):
             raise TypeError("message must be a bytes or hex encoded string")
-    if type(private_key) != bytes:
-        if type(private_key) == bytearray:
-            private_key = bytes(private_key)
-        elif type(private_key) == str:
+
+    if isinstance(private_key, bytearray):
+        private_key = bytes(private_key)
+    if isinstance(private_key, str):
+        try:
             private_key = unhexlify(private_key)
-        else:
-            raise TypeError("private key must be a bytes or hex encoded string")
+        except:
+            if is_wif_valid(private_key):
+                private_key = wif_to_private_key(private_key, hex=False)
+    if not isinstance(private_key, bytes):
+            raise TypeError("private key must be a bytes, hex encoded string or in WIF format")
+
     raw_sig = ffi.new('secp256k1_ecdsa_signature *')
     signed = secp256k1.secp256k1_ecdsa_sign(ECDSA_CONTEXT_SIGN, raw_sig, msg,
                                             private_key, ffi.NULL, ffi.NULL)
-    assert signed == 1
+    if not signed:
+        raise RuntimeError("secp256k1 error")
     len_sig = 74
     output = ffi.new('unsigned char[%d]' % len_sig)
     outputlen = ffi.new('size_t *', len_sig)
     res = secp256k1.secp256k1_ecdsa_signature_serialize_der(ECDSA_CONTEXT_SIGN,
                                                             output, outputlen, raw_sig)
-    assert res == 1
+    if not res:
+        raise RuntimeError("secp256k1 error")
     signature = bytes(ffi.buffer(output, outputlen[0]))
     return hexlify(signature).decode() if hex else signature
 
 
 def is_valid_signature_encoding(sig):
+    """
+    Check is valid signature encoded in DER format
+
+    :param sig:  signature in bytes or HEX encoded string.
+    :return:  boolean.  
+    """
     # Format: 0x30 [total-length] 0x02 [R-length] [R] 0x02 [S-length] [S] [sighash]
     # * total-length: 1-byte length descriptor of everything that follows,
     #   excluding the sighash byte.
@@ -766,17 +830,25 @@ def is_valid_signature_encoding(sig):
     return True
 
 
-#
-# Transaction encoding
-#
+# Hash encoding
 
-def rh2s(tthash):
-    # raw hash to string
-    return hexlify(tthash[::-1]).decode()
+def rh2s(raw_hash):
+    """
+    Encode raw transaction hash to HEX string with bytes order change
+
+    :param raw_hash: transaction hash in bytes string.
+    :return:  HEX encoded string.
+    """
+    return hexlify(raw_hash[::-1]).decode()
 
 
 def s2rh(hash_string):
-    # string to raw hash
+    """
+    Decode HEX  transaction hash to bytes with byte order change
+
+    :param raw_hash: transaction hash in bytes string.
+    :return:  bytes string.
+    """
     return unhexlify(hash_string)[::-1]
 
 
@@ -785,16 +857,27 @@ def s2rh_step4(hash_string):
     return reverse_hash(h)
 
 
-def reverse_hash(h):
-    return struct.pack('>IIIIIIII', *struct.unpack('>IIIIIIII', h)[::-1])[::-1]
+def reverse_hash(raw_hash):
+    """
+    Reverse hash order
 
-#
-#
-#
+    :param raw_hash: bytes string.
+    :return:  bytes string.
+    """
+    return struct.pack('>IIIIIIII', *struct.unpack('>IIIIIIII', raw_hash)[::-1])[::-1]
 
 
-def merkle_root(tx_hash_list):
-    tx_hash_list = list(tx_hash_list)
+# Merkle root
+
+def merkle_root(tx_hash_list, hex=True):
+    """
+    Calculate merkle root from transaction hash list
+
+    :param tx_hash_list: list of transaction hashes in bytes or HEX encoded string.
+    :param hex:  (optional) If set to True return result in HEX format, by default is True.
+    :return: merkle root in bytes or HEX encoded string corresponding hex flag.
+    """
+    tx_hash_list = [h if isinstance(h, bytes) else s2rh(h) for h in tx_hash_list]
     if len(tx_hash_list) == 1:
         return tx_hash_list[0]
     while True:
@@ -809,11 +892,18 @@ def merkle_root(tx_hash_list):
         if len(new_hash_list) > 1:
             tx_hash_list = new_hash_list
         else:
-            return new_hash_list[0]
+            return new_hash_list[0] if not hex else hexlify(new_hash_list[0]).decode()
 
 
-def merkle_branches(tx_hash_list):
-    tx_hash_list = list(tx_hash_list)
+def merkle_branches(tx_hash_list, hex=True):
+    """
+    Calculate merkle branches for coinbase transacton
+
+    :param tx_hash_list: list of transaction hashes in bytes or HEX encoded string.
+    :param hex:  (optional) If set to True return result in HEX format, by default is True.
+    :return: list of merkle branches in bytes or HEX encoded string corresponding hex flag.
+    """
+    tx_hash_list = [h if isinstance(h, bytes) else s2rh(h) for h in tx_hash_list]
     branches = []
     if len(tx_hash_list) == 1:
         return []
@@ -833,19 +923,36 @@ def merkle_branches(tx_hash_list):
         else:
             if new_hash_list:
                 branches.append(new_hash_list.pop(0))
-            return branches
+            return branches if not hex else [hexlify(h).decode() for h in branches]
 
 
-def merkleroot_from_branches(merkle_branches, coinbase_hash_bin):
-    merkle_root = coinbase_hash_bin
+def merkleroot_from_branches(merkle_branches, coinbase_hash, hex=True):
+    """
+    Calculate merkle root from merkle branches and coinbase transacton hash
+
+    :param merkle_branches: list merkle branches in bytes or HEX encoded string.
+    :param coinbase_hash: list coinbase transaction hash in bytes or HEX encoded string.
+    :param hex:  (optional) If set to True return result in HEX format, by default is True.
+    :return: merkle root in bytes or HEX encoded string corresponding hex flag.
+    """
+    merkle_root = coinbase_hash if not isinstance(coinbase_hash, str) else unhexlify(coinbase_hash)
     for h in merkle_branches:
         if type(h) == str:
             h = unhexlify(h)
         merkle_root = double_sha256(merkle_root + h)
-    return merkle_root
+    return merkle_root if not hex else hexlify(merkle_root).decode()
+
+
+#  Difficulty
 
 
 def bits_to_target(bits):
+    """
+    Calculate target from bits
+
+    :param bits: HEX string, bytes string or integer representation of bits.
+    :return: integer.
+    """
     if type(bits) == str:
         bits = unhexlify(bits)
     if type(bits) == bytes:
@@ -857,48 +964,97 @@ def bits_to_target(bits):
 
 
 def target_to_difficulty(target):
+    """
+    Calculate difficulty from target
+
+    :param target: integer.
+    :return: float.
+    """
     return 0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target
 
 
 def bits_to_difficulty(bits):
+    """
+    Calculate difficulty from bits
+
+    :param bits: HEX string, bytes string or integer representation of bits.
+    :return: integer.
+    """
     return target_to_difficulty(bits_to_target(bits))
 
 
 def difficulty_to_target(difficulty):
+    """
+    Calculate target from difficulty
+
+    :param target: integer.
+    :return: float.
+    """
     return int(0x00000000FFFF0000000000000000000000000000000000000000000000000000 / difficulty)
 
 
-#
-#
-#
+# Tools
+
 
 def bytes_needed(n):
+    """
+    Calculate bytes needed to convert integer to bytes.
+
+    :param n: integer.
+    :return: integer.
+    """
     if n == 0:
         return 1
     return math.ceil(n.bit_length()/8)
 
 
 def int_to_bytes(i, byteorder='big'):
+    """
+    Convert integer to bytes.
+
+    :param n: integer.
+    :param byteorder: (optional) byte order 'big' or 'little', by default 'big'.
+    :return: bytes.
+    """
     return i.to_bytes(bytes_needed(i), byteorder=byteorder, signed=False)
 
 
 def bytes_to_int(i, byteorder='big'):
+    """
+    Convert bytes to integer.
+
+    :param i: bytes.
+    :param byteorder: (optional) byte order 'big' or 'little', by default 'big'.
+    :return: integer.
+    """
     return int.from_bytes(i, byteorder=byteorder, signed=False)
 
 
 # variable integer
 
 def int_to_var_int(i):
+    """
+    Convert integer to variable integer
+
+    :param i: integer.
+    :return: bytes.
+    """
     if i < 0xfd:
         return struct.pack('<B', i)
     if i <= 0xffff:
         return b'\xfd' + struct.pack('<H', i)
     if i <= 0xffffffff:
         return b'\xfe' + struct.pack('<L', i)
-    return b'\xff' +  struct.pack('<Q', i)
+    return b'\xff' + struct.pack('<Q', i)
 
 
 def var_int_to_int(data):
+    """
+    Convert variable integer to integer
+
+    :param data: bytes vriable integer.
+    :return: integer.
+    """
     if data[0] == 0xfd:
         return struct.unpack('<H', data[1:3])[0]
     elif data[0] == 0xfe:
@@ -909,6 +1065,12 @@ def var_int_to_int(data):
 
 
 def var_int_len(n):
+    """
+    Get variable integer length in bytes from integer value
+
+    :param n: integer.
+    :return: integer.
+    """
     if n <= 0xfc:
         return 1
     if n <= 0xffff:
@@ -918,23 +1080,42 @@ def var_int_len(n):
     return 9
 
 
-def get_var_int_len(byte):
-    if byte[0] == 253:
+def get_var_int_len(bytes):
+    """
+    Get variable integer length in bytes from bytes
+
+    :param bytes: bytes.
+    :return: integer.
+    """
+    if bytes[0] == 253:
         return 3
-    elif byte[0] == 254:
+    elif bytes[0] == 254:
         return 5
-    elif byte[0] == 255:
+    elif bytes[0] == 255:
         return 9
     return 1
 
 
 def read_var_int(stream):
+    """
+    Read variable integer from io.BytesIO stream to bytes
+
+    :param stream: io.BytesIO stream.
+    :return: bytes.
+    """
     l = stream.read(1)
     bytes_length = get_var_int_len(l)
     return l + stream.read(bytes_length - 1)
 
 
 def read_var_list(stream, data_type):
+    """
+    Read variable integer list from io.BytesIO stream to bytes
+
+    :param stream: io.BytesIO stream.
+    :param data_type: list data type.
+    :return: list of data_type.
+    """
     count = var_int_to_int(read_var_int(stream))
     return [data_type.deserialize(stream) for i in range(count)]
 
@@ -942,6 +1123,13 @@ def read_var_list(stream, data_type):
 
 
 def int_to_c_int(n, base_bytes=1):
+    """
+    Convert integer to compresed integer
+
+    :param n: integer.
+    :param base_bytes: len of bytes base from which start compression.
+    :return: bytes.
+    """
     if n == 0:
         return b'\x00'
     else:
@@ -964,6 +1152,13 @@ def int_to_c_int(n, base_bytes=1):
 
 
 def c_int_to_int(b, base_bytes=1):
+    """
+    Convert compressed integer bytes to integer
+
+    :param b: compressed integer bytes.
+    :param base_bytes: len of bytes base from which start compression.
+    :return: integer.
+    """
     byte_length = 0
     f = 0
     while True:
@@ -983,6 +1178,13 @@ def c_int_to_int(b, base_bytes=1):
 
 
 def c_int_len(n, base_bytes=1):
+    """
+    Get length of compressed integer from integer value
+
+    :param n: bytes.
+    :param base_bytes: len of bytes base from which start compression.
+    :return: integer.
+    """
     if n == 0:
         return 1
     l = n.bit_length() + 1

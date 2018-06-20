@@ -473,13 +473,13 @@ class Transaction(dict):
                     if private_key:
                         if type(private_key) != PrivateKey:
                             private_key_obj = PrivateKey(private_key)
-                            public_key = PublicKey(private_key_obj).raw_key
-                            private_key = private_key_obj.raw_key
+                            public_key = PublicKey(private_key_obj).key
+                            private_key = private_key_obj.key
                 else:
                     if "privateKey" not in self["vIn"][n]:
                         return self
-                    private_key = self["vIn"][n].private_key.raw_key
-                    public_key = PublicKey(self["vIn"][n].private_key).raw_key
+                    private_key = self["vIn"][n].private_key.key
+                    public_key = PublicKey(self["vIn"][n].private_key).key
 
                 if redeem_script:
                     if type(redeem_script) == str:
@@ -492,7 +492,7 @@ class Transaction(dict):
                 sighash = self.sig_hash_input(n, script_pub_key=script, sighash_type=sighash_type)
                 if type(sighash) == str:
                     sighash = s2rh(sighash)
-                signature = sign_message(sighash, private_key) + bytes([sighash_type])
+                signature = sign_message(sighash, private_key, 0) + bytes([sighash_type])
                 if redeem_script:
                     if self["vIn"][n]["scriptSig"]:
                         sig_script = self["vIn"][n]["scriptSig"]
