@@ -369,7 +369,7 @@ def create_mnemonic(entropy, language='english'):
     return mnemonic[::-1]
 
 
-def create_wordlist(language='english', wordlist_dir=BIP0039_DIR):
+def create_wordlist(language='english', wordlist_dir=None):
     """
     Creating the wordlist.
 
@@ -377,6 +377,8 @@ def create_wordlist(language='english', wordlist_dir=BIP0039_DIR):
     :param str wordlist_dir: path to a file containing a list of words.
     :return: list of words.
     """
+    if not wordlist_dir:
+        wordlist_dir = BIP0039_DIR
     f = None
     path = os.path.join(wordlist_dir, '.'.join((language, 'txt')))
     assert os.path.exists(path)
