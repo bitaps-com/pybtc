@@ -5,7 +5,7 @@
 Current version is 2.0
 
 
-#### Feature Support
+### Feature Support
 
 * Basic functions
 * Supports addresses types PUBKEY, P2PKH, P2SH, P2SH-PWPKH, P2WPKH, P2WSH.
@@ -14,24 +14,24 @@ Current version is 2.0
 * Transaction constructor
 * Mining pool basic primitives
 
-#### Installation
+### Installation
 
 To install pybtc, simply use pip
 
     $ pip3 install pybtc
     
-#### Dependencies
+### Dependencies
 
 * Python 3.3.3+
 * secp256k1
 
 
-#### Documentation
+### Documentation
 
 Documentation is available at https://pybtc.readthedocs.io
 
 
-#### How to Contribute
+### How to Contribute
 
 In order to make a clone of the GitHub repo: open the link and press the “Fork” button on the upper-right menu of the web page.
 
@@ -46,7 +46,7 @@ Workflow is pretty straightforward:
 
 
 
-#### Support a project
+### Support a project
 
 You can support the future development of project and send send a little BTC to *1Bitapsw1aT8hkLXFtXwZQfHgNwNJEyJJ1*
 
