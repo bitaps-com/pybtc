@@ -512,7 +512,7 @@ def mnemonic_to_entropy(passphrase, language):
 
 def mnemonic_to_seed(passphrase, password):
     """
-    Converting passphrase to seed.
+    Converting passphrase to seed for uses in key derivation (BIP-0032).
 
     :param str passphrase: key passphrase.
     :param str password: password for key passphrase.
