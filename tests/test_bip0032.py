@@ -34,9 +34,9 @@ def test_create_public_key_hdwallet(master_key_hdwallet_mnet):
 
 
 def test_validate_private_key(fail_key1, fail_key2, good_key):
-    assert not is_valid_private_key(fail_key1)
-    assert not is_valid_private_key(fail_key2)
-    assert is_valid_private_key(good_key)
+    assert not is_xprivate_key_valid(fail_key1)
+    assert not is_xprivate_key_valid(fail_key2)
+    assert is_xprivate_key_valid(good_key)
 
 
 def test_create_expanded_key(master_key_hdwallet_mnet, public_key_hdwallet_mnet):
