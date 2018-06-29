@@ -39,8 +39,79 @@
 <p>The class for creating transaction.</p>
 <dl class="class">
 <dt id="pybtc.Transaction">
-<em class="property">class </em><code class="descclassname">pybtc.</code><code class="descname">Transaction</code><span class="sig-paren">(</span><em>raw_tx=None</em>, <em>tx_format='decoded'</em>, <em>version=1</em>, <em>lockTime=0</em>, <em>testnet=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/transaction.html#Transaction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.Transaction" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<em class="property">class </em><code class="descclassname">pybtc.</code><code class="descname">Transaction</code><span class="sig-paren">(</span><em>raw_tx=None</em>, <em>tx_format='decoded'</em>, <em>version=1</em>, <em>lock_time=0</em>, <em>testnet=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/transaction.html#Transaction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.Transaction" title="Permalink to this definition">¶</a></dt>
+<dd><p>The class for Transaction object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>raw_tx</strong> – (optional) raw transaction in bytes or HEX encoded string, if no raw transaction provided
+well be created new empty transaction template.</li>
+<li><strong>tx_format</strong> – “raw” or “decoded” format. Raw format is mean that all transaction represented in bytes
+for best performance.
+Decoded transaction is represented in human readable format using base68, hex, bech32, 
+asm and opcodes. By default “decoded” format using.</li>
+<li><strong>version</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)"><em>int</em></a>) – transaction version for new template, by default 1.</li>
+<li><strong>lock_time</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)"><em>int</em></a>) – transaction lock time for new template, by default 0.</li>
+<li><strong>testnet</strong> (<em>boolean</em>) – address type for “decoded” transaction representation.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pybtc.Transaction.decode">
+<code class="descname">decode</code><span class="sig-paren">(</span><em>testnet=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/transaction.html#Transaction.decode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.Transaction.decode" title="Permalink to this definition">¶</a></dt>
+<dd><p>change Transacion object representation to “decoded” human readable format</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>testnet</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.6)"><em>bool</em></a>) – (optional) address type for “decoded” transaction representation, by default None.
+if None used type from transaction property “format”.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pybtc.Transaction.encode">
+<code class="descname">encode</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/transaction.html#Transaction.encode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.Transaction.encode" title="Permalink to this definition">¶</a></dt>
+<dd><p>change Transaction object representation to “raw” bytes format, 
+all human readable part will be stripped.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pybtc.Transaction.json">
+<code class="descname">json</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/transaction.html#Transaction.json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.Transaction.json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get json transaction representation</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pybtc.Transaction.serialize">
+<code class="descname">serialize</code><span class="sig-paren">(</span><em>segwit=True</em>, <em>hex=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pybtc/transaction.html#Transaction.serialize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pybtc.Transaction.serialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get serialized transaction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>segwit</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.6)"><em>bool</em></a>) – (optional) flag for segwit representation of serialized transaction, by 
+default True.</li>
+<li><strong>hex</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.6)"><em>bool</em></a>) – (optional) if set to True return HEX encoded string, by default True.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Return str,bytes:</th></tr>
+<tr class="field-even field"><td>&#160;</td><td class="field-body"><p class="first last">serialized transaction in HEX or bytes.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
 
 </div>
 

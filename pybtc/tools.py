@@ -438,6 +438,13 @@ def get_witness_version(address):
 
 #  Script
 
+def public_key_to_pubkey_script(key, hex=True):
+    if isinstance(key, str):
+        key = unhexlify(key)
+    s = bytes([len(key)]) + key + OP_CHECKSIG
+    return hexlify(s).decode() if hex else s
+
+
 def parse_script(script, segwit=True):
     """
     Parse script and return script type, script address and required signatures count.
@@ -552,9 +559,10 @@ def decode_script(script, asm=False):
     Decode script to ASM format or to human readable OPCODES string.
 
     :param script: script in bytes string or HEX encoded string format.
-    :param asm:  (optional) If set to True decode to ASM fromat, by default set to False.
+    :param asm:  (optional) If set to True decode to ASM format, by default set to False.
     :return: script in ASM format string or OPCODES string.
     """
+
     if isinstance(script, str):
         try:
             script = unhexlify(script)
@@ -573,14 +581,35 @@ def decode_script(script, asm=False):
                 result.append('[%s]' % script[s])
             s += script[s] + 1
             continue
-        elif script[s] == OPCODE["OP_PUSHDATA1"]:
-            s += 1 + script[s + 1]
+
+        if script[s] == OPCODE["OP_PUSHDATA1"]:
+            ld = script[s + 1]
+            if asm:
+                result.append(hexlify(script[s + 1:s + 1 + ld]).decode())
+            else:
+                result.append(RAW_OPCODE[script[s]])
+                result.append('[%s]' % ld)
+            s += 1 + script[s + 1] + 1
         elif script[s] == OPCODE["OP_PUSHDATA2"]:
-            s += 2 + struct.unpack('<H', script[s: s + 2])
+
+            ld = struct.unpack('<H', script[s+1: s + 3])[0]
+            if asm:
+                result.append(hexlify(script[s + 1:s + 1 + ld]).decode())
+            else:
+                result.append(RAW_OPCODE[script[s]])
+                result.append('[%s]' % ld)
+            s += 2 + 1 + ld
         elif script[s] == OPCODE["OP_PUSHDATA4"]:
-            s += 4 + struct.unpack('<L', script[s: s + 4])
-        result.append(RAW_OPCODE[script[s]])
-        s += 1
+            ld = struct.unpack('<L', script[s + 1: s + 5])[0]
+            if asm:
+                result.append(hexlify(script[s + 1:s + 1 + ld]).decode())
+            else:
+                result.append(RAW_OPCODE[script[s]])
+                result.append('[%s]' % ld)
+            s += 5 + 1 + ld
+        else:
+            result.append(RAW_OPCODE[script[s]])
+            s += 1
     return ' '.join(result)
 
 
@@ -673,7 +702,44 @@ def script_to_hash(script, witness=False, hex=True):
         return hash160(script, hex)
 
 
-#  Signatures
+def op_push_data(data):
+    if len(data) <= 0x4b:
+        return b''.join([bytes([len(data)]),data])
+    elif len(data) <= 0xff:
+        return b''.join([OP_PUSHDATA1, bytes([len(data)]), data])
+    elif len(data) <= 0xffff:
+        return b''.join([OP_PUSHDATA2, int_to_bytes(len(data), byteorder="little"), data])
+
+    else:
+        return b''.join([OP_PUSHDATA4, int_to_bytes(len(data), byteorder="little"), data])
+
+
+def get_multisig_public_keys(script):
+    pub_keys = []
+    s = get_stream(script)
+    o, d = read_opcode(s)
+    while o:
+        o, d = read_opcode(s)
+        if d:
+            pub_keys.append(d)
+    return pub_keys
+
+
+def read_opcode(stream):
+    b = stream.read(1)
+    if not b:
+        return None, None
+    if b[0] <= 0x4b:
+        return b, stream.read(b[0])
+    elif b[0] == OP_PUSHDATA1:
+        return b, stream.read(stream.read(1)[0])
+    elif b[0] == OP_PUSHDATA2:
+        return b, stream.read(struct.unpack("<H", stream.read(2)[0]))
+    elif b[0] == OP_PUSHDATA4:
+        return b, stream.read(struct.unpack("<L", stream.read(4)[0]))
+    else:
+        return b, None
+
 
 def verify_signature(sig, pub_key, msg):
     """
@@ -759,7 +825,49 @@ def sign_message(msg, private_key, hex=True):
     if not res:
         raise RuntimeError("secp256k1 error")
     signature = bytes(ffi.buffer(output, outputlen[0]))
+    raw_sig = ffi.new('secp256k1_ecdsa_signature *')
     return hexlify(signature).decode() if hex else signature
+
+
+def public_key_recovery(signature, messsage, rec_id, compressed=True, hex=True):
+    if isinstance(signature, str):
+        signature = unhexlify(signature)
+    if isinstance(messsage, str):
+        messsage = unhexlify(messsage)
+    raw_sig = ffi.new('secp256k1_ecdsa_signature *')
+    r = secp256k1.secp256k1_ecdsa_signature_parse_der(ECDSA_CONTEXT_SIGN,
+                                                      raw_sig,
+                                                      signature,
+                                                      len(signature))
+    if not r:
+        raise RuntimeError("secp256k1 error")
+    compact_sig = ffi.new('unsigned char[%d]' % 64)
+    r = secp256k1.secp256k1_ecdsa_signature_serialize_compact(ECDSA_CONTEXT_VERIFY,
+                                                              compact_sig,
+                                                              raw_sig)
+    if not r:
+        raise RuntimeError("secp256k1 error")
+
+    recover_sig = ffi.new('secp256k1_ecdsa_recoverable_signature *')
+    t = secp256k1.secp256k1_ecdsa_recoverable_signature_parse_compact(
+                                            ECDSA_CONTEXT_ALL, recover_sig, compact_sig, rec_id)
+    if not r:
+        raise RuntimeError("secp256k1 error")
+
+    pubkey_ptr = ffi.new('secp256k1_pubkey *')
+    t = secp256k1.secp256k1_ecdsa_recover(
+                 ECDSA_CONTEXT_ALL, pubkey_ptr, recover_sig, messsage)
+    len_key = 33 if compressed else 65
+    pubkey = ffi.new('char [%d]' % len_key)
+    outlen = ffi.new('size_t *', len_key)
+    compflag = EC_COMPRESSED if compressed else EC_UNCOMPRESSED
+    if bytes(ffi.buffer(pubkey_ptr.data, 64)) == b"\x00" * 64:
+        return None
+    r = secp256k1.secp256k1_ec_pubkey_serialize(ECDSA_CONTEXT_VERIFY, pubkey, outlen, pubkey_ptr, compflag)
+    if not r:
+        raise RuntimeError("secp256k1 error")
+    pub = bytes(ffi.buffer(pubkey, len_key))
+    return hexlify(pub).decode() if hex else pub
 
 
 def is_valid_signature_encoding(sig):

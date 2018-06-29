@@ -43,10 +43,11 @@ class PrivateKey():
                 self.hex = hexlify(self.key).decode()
                 self.wif = private_key_to_wif(self.key, compressed, testnet)
                 return
-            assert isinstance(key, str)
+            if not isinstance(key, str) or not is_wif_valid(key):
+                raise TypeError("private key invalid")
+
             self.key = wif_to_private_key(key, hex=False)
             self.hex = hexlify(self.key).decode()
-            self.wif = private_key_to_wif(self.key, compressed, testnet)
             if key[0] in (MAINNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX,
                           TESTNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX):
                 self.compressed = False
@@ -57,6 +58,7 @@ class PrivateKey():
                 self.testnet = True
             else:
                 self.testnet = False
+            self.wif = private_key_to_wif(self.key, self.compressed, self.testnet)
 
     def __str__(self):
         return self.wif
@@ -201,15 +203,18 @@ class Address():
 
 
 class ScriptAddress():
-    def __init__(self, script, address_type="P2SH",
-                 testnet=False, witness_version=None):
+    def __init__(self, script,
+                 testnet=False, witness_version=0):
         self.witness_version = witness_version
         self.testnet = testnet
         if isinstance(script, str):
             script = unhexlify(script)
         self.script = script
         self.script_hex = hexlify(self.script).decode()
-        self.hash = hash160(self.script)
+        if witness_version is None:
+            self.hash = hash160(self.script)
+        else:
+            self.hash = sha256(self.script)
         self.script_opcodes = decode_script(self.script)
         self.script_opcodes_asm = decode_script(self.script, 1)
         self.address = hash_to_address(self.hash,
@@ -217,3 +222,49 @@ class ScriptAddress():
                                        witness_version=self.witness_version,
                                        testnet=self.testnet)
 
+    @classmethod
+    def multisig(cls, n, m, public_key_list,
+                 testnet=False, witness_version=0):
+        """
+        The class method for creating a multisig address.
+
+        :param n: count of required signatures (max 15).
+        :param m: count of total addresses of participants (max 15).
+        :param list address_list: addresses list, allowed types:
+                       
+                             - bytes or HEX encoded private key
+                             - private key in WIF format
+                             - PrivateKey instance,
+                             - bytes or HEX encoded public key
+                             - PublicKey instance
+                             
+                             
+        """
+        if n > 15 or m > 15 or n > m or n < 1 or m < 1:
+            raise TypeError("invalid n of m maximum 15 of 15 multisig allowed")
+        if len(public_key_list) != m:
+            raise TypeError("invalid address list count")
+        script = bytes([0x50 + n])
+        for a in list(public_key_list):
+            if isinstance(a, str):
+                try:
+                    a = unhexlify(a)
+                except:
+                    if is_wif_valid(a):
+                        a = private_to_public_key(a, hex=False)
+                    pass
+            if isinstance(a, Address):
+                a = a.public_key.key
+            elif isinstance(a, PublicKey):
+                a = a.key
+            elif isinstance(a, PrivateKey):
+                a = private_to_public_key(a.key)
+            if not isinstance(a, bytes):
+                raise TypeError("invalid public key list element")
+            if len(a) == 32:
+                a = private_to_public_key(a)
+            if len(a) != 33:
+                raise TypeError("invalid public key list element size")
+            script += int_to_var_int(len(a)) + a
+        script += bytes([0x50 + m]) + OP_CHECKMULTISIG
+        return cls(script, testnet=testnet, witness_version=witness_version)
