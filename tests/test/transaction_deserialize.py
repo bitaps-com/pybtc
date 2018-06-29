@@ -16,7 +16,7 @@ from pybtc import address_to_hash as address2hash160
 def decode_block_tx(block):
     stream = get_stream(block)
     stream.seek(80)
-    return {i: Transaction(stream, tx_format="raw") for i in range(var_int_to_int(read_var_int(stream)))}
+    return {i: Transaction(stream, format="raw") for i in range(var_int_to_int(read_var_int(stream)))}
 
 
 class TransactionDeserializeTests(unittest.TestCase):

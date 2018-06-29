@@ -21,10 +21,10 @@ class Transaction(dict):
     :param boolean testnet: address type for "decoded" transaction representation.
 
     """
-    def __init__(self, raw_tx=None, tx_format="decoded", version=1, lock_time=0, testnet=False):
-        if tx_format not in ("decoded", "raw"):
-            raise TypeError("tx_format error, raw or decoded allowed")
-        self["format"] = tx_format
+    def __init__(self, raw_tx=None, format="decoded", version=1, lock_time=0, testnet=False):
+        if format not in ("decoded", "raw"):
+            raise ValueError("format error, raw or decoded allowed")
+        self["format"] = format
         self["testnet"] = testnet
         self["segwit"] = False
         self["txId"] = None
@@ -94,7 +94,7 @@ class Transaction(dict):
             for k in range(ic):
                 self["vIn"][k]["txInWitness"] = [stream.read(var_int_to_int(read_var_int(stream))) \
                                                  for c in range(var_int_to_int(read_var_int(stream)))]
-            sw_len = stream.tell() - sw + 2
+            sw_len = (stream.tell() - start) - sw + 2
 
         self["lockTime"] = unpack('<L', stream.read(4))[0]
 
@@ -282,7 +282,8 @@ class Transaction(dict):
         self["format"] = "raw"
         return self
 
-    def get_stream(self, stream):
+    @staticmethod
+    def get_stream(stream):
         if type(stream) != io.BytesIO:
             if type(stream) == str:
                 stream = unhexlify(stream)

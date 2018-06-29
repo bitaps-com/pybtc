@@ -104,7 +104,7 @@ class AddressClassTests(unittest.TestCase):
         redeem = "5221032bfc25cf7cccc278b26473e2967b8fd403b4b544b836e71abdfebb08d8c96d6921032bfc25cf7cccc278b2" \
                  "6473e2967b8fd403b4b544b836e71abdfebb08d8c96d6921032bfc25cf7cccc278b26473e2967b8fd403b4b544b8" \
                  "36e71abdfebb08d8c96d6953ae"
-        a = address.ScriptAddress(redeem)
+        a = address.ScriptAddress(redeem, witness_version=None)
         self.assertEqual(a.address, '3KCqqS6eznp3ucVPxtNkiYcVg6kQKNX9sg')
 
 
