@@ -1,5 +1,9 @@
 from secp256k1 import lib as secp256k1
 import random
+import os
+
+ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
+BIP0039_DIR = os.path.normpath(os.path.join(ROOT_DIR, 'bip-0039'))
 
 MAX_AMOUNT = 2100000000000000
 SIGHASH_ALL = 0x00000001
@@ -74,4 +78,13 @@ SCRIPT_TYPES = {"P2PKH":        0,
                 "NON_STANDART": 7
                 }
 
+
+# CONSTANTS hierarchical deterministic wallets (HD Wallets)
+MAINNET_PRIVATE_WALLET_VERSION = b'\x04\x88\xAD\xE4'
+MAINNET_PUBLIC_WALLET_VERSION = b'\x04\x88\xB2\x1E'
+TESTNET_PRIVATE_WALLET_VERSION = b'\x04\x35\x83\x94'
+TESTNET_PUBLIC_WALLET_VERSION = b'\x04\x35\x87\xCF'
+FIRST_HARDENED_CHILD = 0x80000000
+PATH_LEVEL_BIP0044 = [0x8000002C, 0x80000000, 0x80000000, 0, 0]
+TESTNET_PATH_LEVEL_BIP0044 = [0x8000002C, 0x80000001, 0x80000000, 0, 0]
 

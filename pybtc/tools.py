@@ -158,7 +158,7 @@ def is_public_key_valid(key):
         key = unhexlify(key)
     if len(key) < 33:
         return False
-    if key[0] == 0x04 and len(key) != 65:
+    elif key[0] == 0x04 and len(key) != 65:
         return False
     elif key[0] == 0x02 or key[0] == 0x03:
         if len(key) != 33:

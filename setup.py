@@ -15,4 +15,7 @@ setup(name='pybtc',
       packages=find_packages(),
       install_requires=[ 'secp256k1'],
       include_package_data=True,
+      package_data={
+          'pybtc': ['bip-0039/*.txt'],
+      },
       zip_safe=False)
