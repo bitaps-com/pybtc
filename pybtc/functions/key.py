@@ -11,6 +11,7 @@ from pybtc.constants import *
 from .hash import *
 from .encode import *
 from .hash import *
+from .bip39_mnemonic import generate_entropy
 
 
 def create_private_key(compressed=True, testnet=False, wif=True, hex=False):
@@ -27,20 +28,11 @@ def create_private_key(compressed=True, testnet=False, wif=True, hex=False):
              raw bytes string in case wif and hex flags set to False.
 
     """
-    a = random.SystemRandom().randint(0, MAX_INT_PRIVATE_KEY)
-    i = int((time.time() % 0.01 ) * 100000)
-    h = a.to_bytes(32, byteorder="big")
-    # more entropy from system timer and sha256 derivation
-    while i:
-        h = hashlib.sha256(h).digest()
-        i -= 1
-        if not i and int.from_bytes(h, byteorder="big") > MAX_INT_PRIVATE_KEY:
-            i += 1
     if wif:
-        return private_key_to_wif(h, compressed=compressed, testnet=testnet)
+        return private_key_to_wif(generate_entropy(hex=False), compressed=compressed, testnet=testnet)
     elif hex:
-        return h.hex()
-    return h
+        return generate_entropy()
+    return generate_entropy(hex=False)
 
 
 def private_key_to_wif(h, compressed=True, testnet=False):

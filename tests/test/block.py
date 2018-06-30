@@ -609,6 +609,10 @@ class BlockDeserializeTests(unittest.TestCase):
                      "f = open('./test/raw_block.txt');"
                      "fc = f.readline();"
                      "pybtc.Block(fc[:-1], format='decoded')")
+        cProfile.run("import pybtc;"
+                     "f = open('./test/raw_block.txt');"
+                     "fc = f.readline();"
+                     "pybtc.Block(fc[:-1], format='raw')")
         # print(">>>",block.bits)
         # print(">>>",block.hash)
         # print(">>>",block.timestamp)

@@ -16,6 +16,6 @@ setup(name='pybtc',
       install_requires=[ 'secp256k1'],
       include_package_data=True,
       package_data={
-          'pybtc': ['bip-0039/*.txt'],
+          'pybtc': ['bip39_word_list/*.txt'],
       },
       zip_safe=False)

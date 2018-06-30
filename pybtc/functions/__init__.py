@@ -5,3 +5,4 @@ from .tools import *
 from .hash import *
 from .block import *
 from .encode import *
+from .bip39_mnemonic import *

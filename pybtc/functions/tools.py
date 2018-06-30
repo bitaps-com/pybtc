@@ -146,8 +146,7 @@ def read_var_int(stream):
     :return: bytes.
     """
     l = stream.read(1)
-    bytes_length = get_var_int_len(l)
-    return b"%s%s" % (l, stream.read(bytes_length - 1))
+    return b"".join((l, stream.read(get_var_int_len(l) - 1)))
 
 
 def read_var_list(stream, data_type):
