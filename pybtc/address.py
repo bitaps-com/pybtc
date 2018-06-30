@@ -1,4 +1,4 @@
-from .tools import *
+from .functions import *
 
 
 class PrivateKey():
@@ -24,14 +24,14 @@ class PrivateKey():
             #: private key in  bytes (bytes)
             self.key = create_private_key(wif=False)
             #: private key in HEX (string)
-            self.hex = hexlify(self.key).decode()
+            self.hex = self.key.hex()
             #: private key in WIF format (string)
             self.wif = private_key_to_wif(self.key, compressed, testnet)
 
         else:
             if isinstance(key, str):
                 try:
-                    key = unhexlify(key)
+                    key = bytes.fromhex(key)
                 except:
                     pass
             if isinstance(key, bytes):
@@ -40,14 +40,14 @@ class PrivateKey():
                 self.key = key
                 self.compressed = compressed
                 self.testnet = testnet
-                self.hex = hexlify(self.key).decode()
+                self.hex = self.key.hex()
                 self.wif = private_key_to_wif(self.key, compressed, testnet)
                 return
             if not isinstance(key, str) or not is_wif_valid(key):
                 raise TypeError("private key invalid")
 
             self.key = wif_to_private_key(key, hex=False)
-            self.hex = hexlify(self.key).decode()
+            self.hex = self.key.hex()
             if key[0] in (MAINNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX,
                           TESTNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX):
                 self.compressed = False
@@ -90,7 +90,7 @@ class PublicKey():
     def __init__(self, key, compressed=True, testnet=False):
         if isinstance(key, str):
             try:
-                key = unhexlify(key)
+                key = bytes.fromhex(key)
             except:
                 if is_wif_valid(key):
                     key = PrivateKey(key)
@@ -116,7 +116,7 @@ class PublicKey():
         #: public key in  bytes (bytes)
         self.key = public_key
         #: public key in HEX (string)
-        self.hex = hexlify(self.key).decode()
+        self.hex = self.key.hex()
 
     def __str__(self):
         return self.hex
@@ -183,7 +183,7 @@ class Address():
             #: redeeem script, only for P2SH_P2WPKH (bytes)
             self.redeem_script = public_key_to_p2sh_p2wpkh_script(self.public_key.key)
             #: redeeem script HEX, only for P2SH_P2WPKH (string)
-            self.redeem_script_hex = hexlify(self.redeem_script).decode()
+            self.redeem_script_hex = self.redeem_script.hex()
             #: address hash
             self.hash = hash160(self.redeem_script)
             self.witness_version = None
@@ -191,7 +191,7 @@ class Address():
             self.script_hash = False
             self.hash = hash160(self.public_key.key)
         #: address hash HEX (string)
-        self.hash_hex = hexlify(self.hash).decode()
+        self.hash_hex = self.hash.hex()
         #: address in base58 or bech32 encoding (string)
         self.address = hash_to_address(self.hash,
                                        script_hash=self.script_hash,
@@ -208,9 +208,9 @@ class ScriptAddress():
         self.witness_version = witness_version
         self.testnet = testnet
         if isinstance(script, str):
-            script = unhexlify(script)
+            script = bytes.fromhex(script)
         self.script = script
-        self.script_hex = hexlify(self.script).decode()
+        self.script_hex = self.script.hex()
         if witness_version is None:
             self.hash = hash160(self.script)
         else:
@@ -248,7 +248,7 @@ class ScriptAddress():
         for a in list(public_key_list):
             if isinstance(a, str):
                 try:
-                    a = unhexlify(a)
+                    a = bytes.fromhex(a)
                 except:
                     if is_wif_valid(a):
                         a = private_to_public_key(a, hex=False)

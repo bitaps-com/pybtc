@@ -7,7 +7,7 @@ if parentPath not in sys.path:
 
 from secp256k1 import ffi
 import secp256k1
-from pybtc.tools import *
+from pybtc.functions import *
 from pybtc.opcodes import *
 from pybtc.transaction import *
 from pybtc.address import *

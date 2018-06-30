@@ -6,8 +6,7 @@ parentPath = os.path.abspath("..")
 if parentPath not in sys.path:
     sys.path.insert(0, parentPath)
 
-from pybtc.tools import *
-from pybtc.hash import *
+from pybtc.functions import *
 from pybtc.transaction import *
 from binascii import unhexlify
 from pybtc import address_to_hash as address2hash160

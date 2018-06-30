@@ -3,7 +3,7 @@ import os, sys
 parentPath = os.path.abspath("..")
 if parentPath not in sys.path:
     sys.path.insert(0, parentPath)
-from pybtc import tools
+from pybtc.functions import hash as tools
 from binascii import unhexlify, hexlify
 
 

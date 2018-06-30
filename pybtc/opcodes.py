@@ -1,5 +1,3 @@
-from binascii import hexlify
-
 OPCODE = dict()
 
 # push opcodes
@@ -152,7 +150,7 @@ OPCODE["OP_INVALIDOPCODE"] = 0xff
 
 RAW_OPCODE = dict((OPCODE[i], i) for i in OPCODE)
 BYTE_OPCODE = dict((i, bytes([OPCODE[i]])) for i in OPCODE)
-HEX_OPCODE = dict((i, hexlify(bytes([OPCODE[i]])).decode()) for i in OPCODE)
+HEX_OPCODE = dict((i, bytes([OPCODE[i]]).hex()) for i in OPCODE)
 
 OP_FALSE = BYTE_OPCODE["OP_FALSE"]
 OP_0 = BYTE_OPCODE["OP_0"]

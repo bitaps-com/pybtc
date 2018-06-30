@@ -1,7 +1,6 @@
-from .tools import *
 from .transaction import Transaction
 from struct import pack, unpack
-
+from .functions import *
 
 class Block(dict):
     def __init__(self, raw_block=None, format="decoded", version=536870912, testnet=False):
@@ -12,7 +11,7 @@ class Block(dict):
         self["header"] = None
         self["hash"] = None
         self["version"] = version
-        self["versionHex"] = hexlify(struct.pack(">L", version)).decode()
+        self["versionHex"] = struct.pack(">L", version).hex()
         self["previousBlockHash"] = None
         self["merkleRoot"] = None
         self["tx"] = dict()
@@ -33,7 +32,7 @@ class Block(dict):
         s = self.get_stream(raw_block)
         self["format"] = "raw"
         self["version"] = unpack("<L", s.read(4))[0]
-        self["versionHex"] = hexlify(struct.pack(">L", self["version"])).decode()
+        self["versionHex"] = struct.pack(">L", self["version"]).hex()
         self["previousBlockHash"] = s.read(32)
         self["merkleRoot"] = s.read(32)
         self["time"] = unpack("<L", s.read(4))[0]
@@ -75,7 +74,7 @@ class Block(dict):
         if isinstance(self["merkleRoot"], bytes):
             self["merkleRoot"] = rh2s(self["merkleRoot"])
         if isinstance(self["header"], bytes):
-            self["header"] = hexlify(self["header"]).decode()
+            self["header"] = self["header"].hex()
         if isinstance(self["bits"], bytes):
             self["bits"] = rh2s(self["bits"])
         for i in self["tx"]:
@@ -85,7 +84,7 @@ class Block(dict):
     def get_stream(stream):
         if type(stream) != io.BytesIO:
             if type(stream) == str:
-                stream = unhexlify(stream)
+                stream = bytes.fromhex(stream)
             if type(stream) == bytes:
                 stream = io.BytesIO(stream)
             else:

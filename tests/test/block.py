@@ -4,7 +4,7 @@ parentPath = os.path.abspath("..")
 if parentPath not in sys.path:
     sys.path.insert(0, parentPath)
 
-from pybtc import block
+from pybtc import *
 from binascii import unhexlify
 from pybtc import rh2s
 from pybtc import *
@@ -596,13 +596,19 @@ class BlockDeserializeTests(unittest.TestCase):
     def test_block_class(self):
         block_c = "2000000000000000000029a1a0390376afd72db120d698c2d8ebc41c545c7d4bc2b9033c303dd3d09d455da1c587406820a4dd77c5aa3fcc546dcceb1becc639829c4fe6535e815a1a372b405cc0829701010000000001010000000000000000000000000000000000000000000000000000000000000000ffffffff2303f88e130068747470733a5c6170692e6269746170732e636f6d20f251bec0cb000000ffffffff02c817a804000000001976a914d4e49947b9f545218cd20389244c249d3520545d88ac0000000000000000266a24aa21a9ede2f61c3f71d1defd3fa999dfa36953755c690689799962b48bebd836974e8cf90120000000000000000000000000000000000000000000000000000000000000000000000000"
         block_e = "2000000000000000000029a1a0390376afd72db120d698c2d8ebc41c545c7d4bc2b9033c303dd3d09d455da1c587406820a4dd77c5aa3fcc546dcceb1becc639829c4fe65a815e531a372b405cc0829701010000000001010000000000000000000000000000000000000000000000000000000000000000ffffffff2303f88e130068747470733a5c6170692e6269746170732e636f6d20f251bec0cb000000ffffffff02c817a804000000001976a914d4e49947b9f545218cd20389244c249d3520545d88ac0000000000000000266a24aa21a9ede2f61c3f71d1defd3fa999dfa36953755c690689799962b48bebd836974e8cf90120000000000000000000000000000000000000000000000000000000000000000000000000"
-        l = block.Block(block_a, format="decoded")
+        l = Block(block_a, format="decoded")
         f = open('./test/raw_block.txt')
         fc = f.readline()
         qt = time.time()
-        bt = block.Block(fc[:-1], format="decoded")
-        # self.assertEqual(time.time() - qt < 1, 1)
+        bt = Block(fc[:-1], format="decoded")
+        print("decoded block", time.time() - qt )
 
+        import cProfile
+
+        cProfile.run("import pybtc;"
+                     "f = open('./test/raw_block.txt');"
+                     "fc = f.readline();"
+                     "pybtc.Block(fc[:-1], format='decoded')")
         # print(">>>",block.bits)
         # print(">>>",block.hash)
         # print(">>>",block.timestamp)

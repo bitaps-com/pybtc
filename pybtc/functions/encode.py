@@ -1,5 +1,3 @@
-from binascii import hexlify, unhexlify
-
 b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 base32charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 base32charset_upcase = "QPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L"
@@ -23,7 +21,7 @@ def rebasebits(data, frombits, tobits, pad=True):
     max_acc = (1 << (frombits + tobits - 1)) - 1
     for value in data:
         if value < 0 or (value >> frombits):
-            raise Exception("invalid bytes")
+            raise ValueError("invalid bytes")
         acc = ((acc << frombits) | value) & max_acc
         bits += frombits
         while bits >= tobits:
@@ -33,7 +31,7 @@ def rebasebits(data, frombits, tobits, pad=True):
         if bits:
             ret.append((acc << (tobits - bits)) & maxv)
     elif bits >= frombits or ((acc << (tobits - bits)) & maxv):
-        raise Exception("invalid padding")
+        raise ValueError("invalid padding")
     return ret
 
 
@@ -79,7 +77,9 @@ def bech32_polymod(values):
 def encode_base58(b):
     """Encode bytes to a base58-encoded string"""
     # Convert big-endian bytes to integer
-    n = int('0x0' + hexlify(b).decode('utf8'), 16)
+
+    n= int('0x0' + b.hex(), 16)
+
     # Divide that integer into bas58
     res = []
     while n > 0:
@@ -113,7 +113,7 @@ def decode_base58(s):
     h = '%x' % n
     if len(h) % 2:
         h = '0' + h
-    res = unhexlify(h.encode('utf8'))
+    res = bytes.fromhex(h)
     # Add padding back.
     pad = 0
     for c in s[:-1]:
