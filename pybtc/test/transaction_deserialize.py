@@ -24,7 +24,7 @@ class TransactionDeserializeTests(unittest.TestCase):
         print("\nTesting Transaction class deserialization:\n")
 
     def test_serialaize_and_perfomance(self):
-        f = open('./test/raw_block.txt')
+        f = open(ROOT_DIR + '/test/raw_block.txt')
         fc = f.readline()
         qt = time.time()
         bt = decode_block_tx(fc[:-1])
