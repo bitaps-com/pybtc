@@ -22,6 +22,14 @@ class BlockDeserializeTests(unittest.TestCase):
 
         self.assertEqual(mnemonic_to_entropy(mnemonic), entropy)
         self.assertEqual(mnemonic_to_seed(mnemonic), seed)
-
-        print(generate_entropy())
-        print(generate_entropy(128))
+        self.assertEqual(create_master_xprivate_key(seed),
+                         "xprv9s21ZrQH143K2hwbLgL4Rh1Vvk4F44e51kK2gdUWF9UbMXbySexrVp3ekFN2fbAQQpsZeakuk"
+                         "RBpxr5y2cMwTCi7Fuyv7TYpu5zgDFB4UFE")
+        xpriv = "xprv9s21ZrQH143K2hwbLgL4Rh1Vvk4F44e51kK2gdUWF9UbMXbySexrVp3ekFN2fbAQQpsZeakukRBpxr5y2c" \
+                "MwTCi7Fuyv7TYpu5zgDFB4UFE"
+        xpub = "xpub661MyMwAqRbcFC24Shs4npxEUmtjTXMvNyEdV1t7oV1aEKw7zCH73cN8bWyUWRUNzJ6NyVssfhZziyTUFB6" \
+               "J3HQkd9xe9GGzk1rMK81JL4b"
+        self.assertEqual(xprivate_to_xpublic_key(xpriv), xpub)
+        self.assertEqual(private_from_xprivate_key(xpriv), "L2VnL3zxnNE1jRSemyP7U6PvWuNLvuV5iMJdc2RJGALjZ6HYik7y")
+        self.assertEqual(public_from_xpublic_key(xpub),
+                         private_to_public_key("L2VnL3zxnNE1jRSemyP7U6PvWuNLvuV5iMJdc2RJGALjZ6HYik7y"))

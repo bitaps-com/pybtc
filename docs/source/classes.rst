@@ -9,5 +9,5 @@ Reference
    address.rst
    transaction.rst
    block.rst
-
+   wallet.rst
 

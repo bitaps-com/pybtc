@@ -7,13 +7,12 @@ Base function primitives implemented in functional programming paradigm.
 
 
 
-Mnemonic
-============
+Mnemonic(BIP39)
+===============
 
-.. autofunction:: pybtc.create_passphrase
-.. autofunction:: pybtc.create_mnemonic
-.. autofunction:: pybtc.create_wordlist
-.. autofunction:: pybtc.add_checksum_ent
+.. autofunction:: pybtc.generate_entropy
+.. autofunction:: pybtc.load_word_list
+.. autofunction:: pybtc.entropy_to_mnemonic
 .. autofunction:: pybtc.mnemonic_to_entropy
 .. autofunction:: pybtc.mnemonic_to_seed
 
@@ -42,6 +41,19 @@ Public keys
 .. autofunction:: pybtc.private_to_public_key
 .. autofunction:: pybtc.is_public_key_valid
 
+
+
+Extended keys(BIP32)
+====================
+
+.. autofunction:: pybtc.create_master_xprivate_key
+.. autofunction:: pybtc.xprivate_to_xpublic_key
+.. autofunction:: pybtc.derive_xkey
+.. autofunction:: pybtc.public_from_xpublic_key
+.. autofunction:: pybtc.private_from_xprivate_key
+
+
+
 Addresses
 =========
 
@@ -52,25 +64,6 @@ Addresses
 .. autofunction:: pybtc.address_to_script
 .. autofunction:: pybtc.is_address_valid
 
-
-HD Wallets
-=========
-
-.. autofunction:: pybtc.create_xmaster_key
-.. autofunction:: pybtc.create_xpublic_key
-.. autofunction:: pybtc.derive_xkey
-.. autofunction:: pybtc.xprivate_to_xpublic_key
-.. autofunction:: pybtc.xkey_to_private_key
-.. autofunction:: pybtc.xkey_to_public_key
-.. autofunction:: pybtc.create_child_privkey
-.. autofunction:: pybtc.create_child_pubkey
-.. autofunction:: pybtc.create_expanded_key
-.. autofunction:: pybtc.create_expanded_hard_key
-.. autofunction:: pybtc.is_xprivate_key_valid
-.. autofunction:: pybtc.is_xpublic_key_valid
-.. autofunction:: pybtc.is_validate_path_level
-.. autofunction:: pybtc.serialize_xkey
-.. autofunction:: pybtc.deserialize_xkey
 
 
 Script

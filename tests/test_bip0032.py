@@ -11,7 +11,7 @@ parentPath = os.path.abspath("..")
 if parentPath not in sys.path:
     sys.path.insert(0, parentPath)
 
-from pybtc.hdwallet import *
+from pybtc.wallet import *
 from pybtc.tools import encode_base58, decode_base58
 
 

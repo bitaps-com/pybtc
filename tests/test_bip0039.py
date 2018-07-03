@@ -3,7 +3,7 @@ import random
 import hashlib
 import hmac
 from binascii import hexlify, unhexlify
-from pybtc.hdwallet import *
+from pybtc.wallet import *
 
 
 

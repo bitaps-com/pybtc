@@ -1,3 +1,5 @@
+from .hash import double_sha256
+
 b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 base32charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 base32charset_upcase = "QPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L"
@@ -122,3 +124,13 @@ def decode_base58(s):
         else:
             break
     return b'\x00' * pad + res
+
+
+def encode_base58_with_checksum(b):
+    return encode_base58(b"%s%s" % (b, double_sha256(b)[:4]))
+
+
+def decode_base58_with_checksum(s):
+    b = decode_base58(s)
+    assert double_sha256(b[:-4])[:4] == b[-4:]
+    return b[:-4]
