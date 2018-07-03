@@ -9,7 +9,7 @@ Welcome to PYBTC
 
 Python library for Bitcoin.
 
-Current version is |release|.
+Current version is 2.0.
 
 
 .. _GitHub: https://github.com/bitaps-com/pybtc
@@ -58,6 +58,7 @@ What's new in pybtc 2.0 ?
 - Hierarchical Deterministic Wallets (BIP32)
 - Wallet class implemented acording BIP44
 - Imporved transaction deserialization perfomance
+- Multisig transacton signing regardless of sequence
 
 
 
