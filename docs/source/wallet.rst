@@ -1,5 +1,5 @@
 ======
-Blocks
+Wallet
 ======
 
 The class for creating transaction.
