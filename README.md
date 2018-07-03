@@ -12,7 +12,7 @@ Current version is 2.0
 * Supports BIP32(Hierarchical Deterministic Wallets), BIP39(Mnemonic code generation)
 * Supports BIP141(Segregated Witness)
 * Transaction constructor
-* Mining pool basic primitives
+
 
 ### Installation
 
