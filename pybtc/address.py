@@ -171,11 +171,11 @@ class Address():
         #: flag for testnet network address  (boolean)
         self.type = address_type
 
-        if address_type in ("P2WPKH"):
+        if address_type == "PUBKEY":
+            self.pubkey_script = b"%s%s" % (op_push_data(self.public_key.key), OP_CHECKSIG)
+            self.pubkey_script_hex = self.pubkey_script.hex()
             #: version of witness program for SEGWIT address (string)
-            self.witness_version = 0
-        else:
-            self.witness_version = None
+        self.witness_version = 0 if address_type == "P2WPKH" else None
         self.compressed = compressed
         if address_type == "P2SH_P2WPKH":
             #: flag for script hash address (boolean)
