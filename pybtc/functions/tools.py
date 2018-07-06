@@ -172,7 +172,7 @@ def int_to_c_int(n, base_bytes=1):
     :return: bytes.
     """
     if n == 0:
-        return b'\x00'
+        return b'\x00' * base_bytes
     else:
         l = n.bit_length() + 1
     min_bits = base_bytes * 8 - 1
