@@ -609,6 +609,8 @@ class Transaction(dict):
         elif st["type"] == "P2WSH":
             script_sig = self.__sign_p2wsh(n, private_key, public_key, script_pub_key,
                                            redeem_script, sighash_type, amount)
+        elif st["type"] == "MULTISIG":
+            script_sig = self.__sign_bare_multisig__(n, private_key, public_key, script_pub_key, sighash_type)
         else:
             raise RuntimeError("not implemented")
 
@@ -620,6 +622,15 @@ class Transaction(dict):
             self["vIn"][n]["scriptSigAsm"] = decode_script(script_sig, 1)
         self.__refresh__()
         return self
+
+    def __sign_bare_multisig__(self, n, private_key, public_key, script_pub_key, sighash_type):
+        sighash = self.sig_hash(n, script_pub_key=script_pub_key, sighash_type=sighash_type)
+        sighash = s2rh(sighash) if isinstance(sighash, str) else sighash
+        sig = [sign_message(sighash, p, 0) + bytes([sighash_type]) for p in private_key]
+        return b''.join(self.__get_bare_multisig_script_sig__(self["vIn"][n]["scriptSig"],
+                                                              script_pub_key,
+                                                              public_key, sig,
+                                                              n))
 
     def __sign_pubkey__(self, n, private_key, script_pub_key, sighash_type):
         sighash = self.sig_hash(n, script_pub_key=script_pub_key, sighash_type=sighash_type)
@@ -781,6 +792,31 @@ class Transaction(dict):
             self["vIn"][n]["txInWitness"] = list([w.hex() for w in witness])
         # calculate P2SH redeem script from P2WSH redeem script
         return op_push_data(b"\x00" + op_push_data(sha256(redeem_script)))
+
+    def __get_bare_multisig_script_sig__(self,  script_sig, script_pub_key,
+                                         keys, signatures, n):
+        sig_map = {keys[i]:signatures[i] for i in range(len(keys))}
+        pub_keys = get_multisig_public_keys(script_pub_key)
+        s = get_stream(script_sig)
+        o, d = read_opcode(s)
+        while o:
+            o, d = read_opcode(s)
+            if d and is_valid_signature_encoding(d):
+                for i in range(4):
+                    sighash = self.sig_hash(n, script_pub_key=script_pub_key, sighash_type=d[-1])
+                    sighash = s2rh(sighash) if isinstance(sighash, str) else sighash
+                    pk = public_key_recovery(d[:-1], sighash, i, hex=0)
+                    if pk in pub_keys:
+                        sig_map[pk] = d
+                        break
+        # recreate script sig
+        r = [OP_0]
+        for k in pub_keys:
+            try:
+                r.append(op_push_data(sig_map[k]))
+            except:
+                pass
+        return r
 
     def __get_multisig_script_sig__(self,  script_sig,
                                     keys, signatures,

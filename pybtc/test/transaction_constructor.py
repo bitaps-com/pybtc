@@ -1009,23 +1009,74 @@ class TransactionConstructorTests(unittest.TestCase):
                       redeem_script=redeem, amount=987654321, p2sh_p2wsh=1, sighash_type=SIGHASH_SINGLE)
         self.assertEqual(r, tx.serialize())
 
+        a1 = Address("cPBuqn4ZsddXunx6EEev6khbfUzFnh3xxdEUPCrm5uy9qGcmbBEt", address_type="P2PKH", testnet=True)
+        a2 = Address("cVgShyj2q4YKFX8VzCffuQcrJVYhp522NFozNi7ih2KgNVbnysKX", address_type="P2PKH", testnet=True)
+        a3 = Address("cQWBhFENcN8bKEBsUHvpCyCfWVHDLfn1M65Gd6nenQkpEqL4DNUH", address_type="P2PKH", testnet=True)
+        script = b"".join([OP_2,
+                          op_push_data(a1.public_key.key),
+                          op_push_data(a2.public_key.key),
+                          op_push_data(a3.public_key.key),
+                          OP_3,
+                          OP_CHECKMULTISIG])
+        assert a1.address == "mwJMtn5hW54pJC748EExvhRm6FRVmUZXQt"
+        tx = Transaction(testnet=True)
+        tx.add_input("d791f8386516bc464e7702159775734559d884a3fd50e45191c6207cdedac8ae", 0)
+        tx.add_output(64000000, script_pub_key=script)
+        tx.sign_input(0, private_key="cPBuqn4ZsddXunx6EEev6khbfUzFnh3xxdEUPCrm5uy9qGcmbBEt",
+                      address="mwJMtn5hW54pJC748EExvhRm6FRVmUZXQt")
+        assert tx.serialize() == "0100000001aec8dade7c20c69151e450fda384d859457375971502774e46bc166538f891d7000000" \
+                                 "006a47304402200edb1ded443ea8015390c38afeb0564b52f6f9895c45952461f6ccfaf6639b8402" \
+                                 "206c0d3bfd2f7d8c68d5cc3c774a9403d843cd27e33148927e3f575607b91d05c2012103b4603330" \
+                                 "291721c0a8e9cae65124a7099ecf0df3b46921d0e30c4220597702cbffffffff010090d003000000" \
+                                 "0069522103b4603330291721c0a8e9cae65124a7099ecf0df3b46921d0e30c4220597702cb2102b2" \
+                                 "ec7de7e811c05aaf8443e3810483d5dbcf671512d9999f9c9772b0ce9da47a2102c711ad61c9fbd3" \
+                                 "600716b981d101cf0a000ab3524525235c42f2cbcd8c17c6da53ae00000000"
+
+        "cfe002d20590e2400a26b2dd9e2e6af2369cbb1f5442af286485841798590068"
+        tx = Transaction(testnet=True)
+        tx.add_input("cfe002d20590e2400a26b2dd9e2e6af2369cbb1f5442af286485841798590068", 0)
+        tx.add_output(63000000, address="mwJMtn5hW54pJC748EExvhRm6FRVmUZXQt")
+        tx.sign_input(0, private_key=["cPBuqn4ZsddXunx6EEev6khbfUzFnh3xxdEUPCrm5uy9qGcmbBEt",
+                                      "cVgShyj2q4YKFX8VzCffuQcrJVYhp522NFozNi7ih2KgNVbnysKX"],
+                      script_pub_key=script)
+        self.assertEqual(tx.serialize(), "0100000001680059981784856428af42541fbb9c36f26a2e9eddb2260a40e29005d202e"
+                                         "0cf000000009300483045022100a7383d84ee35fb965978144d9243ca0892a1be81ce70"
+                                         "058e70b2ba1ea5a762a7022058647d131fcec2e3a63e57fa475b779b94c81a95b5c164f"
+                                         "dfdbcee0124e3448c01483045022100b3945861a5a8a406bd575857e19accdb0f6385eb"
+                                         "f1c02938b35462cddeef400802205857f56d83e9ed7e98082d9127b8934262d3a046142"
+                                         "9747e865b06345bbf8f9e01ffffffff01c04dc103000000001976a914ad204de226b3d1"
+                                         "1a70dc53b4998f4603e138ff3f88ac00000000")
+
+        tx = Transaction(testnet=True)
+        tx.add_input("cfe002d20590e2400a26b2dd9e2e6af2369cbb1f5442af286485841798590068", 0)
+        tx.add_output(63000000, address="mwJMtn5hW54pJC748EExvhRm6FRVmUZXQt")
+        tx.sign_input(0, private_key="cPBuqn4ZsddXunx6EEev6khbfUzFnh3xxdEUPCrm5uy9qGcmbBEt",
+                      script_pub_key=script)
+        tx.sign_input(0, private_key="cVgShyj2q4YKFX8VzCffuQcrJVYhp522NFozNi7ih2KgNVbnysKX",
+                      script_pub_key=script)
+        self.assertEqual(tx.serialize(), "0100000001680059981784856428af42541fbb9c36f26a2e9eddb2260a40e29005d202e"
+                                         "0cf000000009300483045022100a7383d84ee35fb965978144d9243ca0892a1be81ce70"
+                                         "058e70b2ba1ea5a762a7022058647d131fcec2e3a63e57fa475b779b94c81a95b5c164f"
+                                         "dfdbcee0124e3448c01483045022100b3945861a5a8a406bd575857e19accdb0f6385eb"
+                                         "f1c02938b35462cddeef400802205857f56d83e9ed7e98082d9127b8934262d3a046142"
+                                         "9747e865b06345bbf8f9e01ffffffff01c04dc103000000001976a914ad204de226b3d1"
+                                         "1a70dc53b4998f4603e138ff3f88ac00000000")
+        tx = Transaction(testnet=True)
+        tx.add_input("cfe002d20590e2400a26b2dd9e2e6af2369cbb1f5442af286485841798590068", 0)
+        tx.add_output(63000000, address="mwJMtn5hW54pJC748EExvhRm6FRVmUZXQt")
+
+        tx.sign_input(0, private_key="cVgShyj2q4YKFX8VzCffuQcrJVYhp522NFozNi7ih2KgNVbnysKX",
+                      script_pub_key=script)
+        tx.sign_input(0, private_key="cPBuqn4ZsddXunx6EEev6khbfUzFnh3xxdEUPCrm5uy9qGcmbBEt",
+                      script_pub_key=script)
+        self.assertEqual(tx.serialize(), "0100000001680059981784856428af42541fbb9c36f26a2e9eddb2260a40e29005d202e"
+                                         "0cf000000009300483045022100a7383d84ee35fb965978144d9243ca0892a1be81ce70"
+                                         "058e70b2ba1ea5a762a7022058647d131fcec2e3a63e57fa475b779b94c81a95b5c164f"
+                                         "dfdbcee0124e3448c01483045022100b3945861a5a8a406bd575857e19accdb0f6385eb"
+                                         "f1c02938b35462cddeef400802205857f56d83e9ed7e98082d9127b8934262d3a046142"
+                                         "9747e865b06345bbf8f9e01ffffffff01c04dc103000000001976a914ad204de226b3d1"
+                                         "1a70dc53b4998f4603e138ff3f88ac00000000")
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        # print(parse_script("56210307b8ae49ac90a048e9b53357a2354b3334e9c8bee813ecb98e99a7e07e8c3ba32103b28f0c28bfab54554ae8c658ac5c3e0ce6e79ad336331f78c428dd43eea8449b21034b8113d703413d57761b8b9781957b8c0ac1dfe69f492580ca4195f50376ba4a21033400f6afecb833092a9a21cfdf1ed1376e58c5d1f47de74683123987e967a8f42103a6d48b1131e94ba04d9737d61acdaa1322008af9602b3b14862c07a1789aac162102d8b661b0b3302ee2f162b09e07a55ad5dfbe673a9f01d9f0c19617681024306b56ae"))
