@@ -1,1 +1,2 @@
 12094bf6a3badf1c2eccd4446cea3a89fa7220c4  added pubkey address generation to Address class with pubkey script field
+28254bc38c46c33b04d8204a2117ed1091364998  bare multisig input signing
