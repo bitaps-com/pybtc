@@ -36,7 +36,7 @@ class Wallet():
                         init_vector = bytes.fromhex(init_vector)
                     else:
                         init_vector = decode_base58_with_checksum(init_vector)
-                elif  is_xpublic_key_valid(init_vector):
+                elif is_xpublic_key_valid(init_vector):
                     if len(init_vector) == 156:
                         init_vector = bytes.fromhex(init_vector)
                     else:
@@ -101,8 +101,6 @@ class Wallet():
         self.create_account("%s_internal" % account, [44|HARDENED_KEY, HARDENED_KEY, account, 1])
 
     def get_bip44_address(self, i, chain="external", account_index=0, address_type="P2WPKH"):
-
-        print(chain)
         if chain not in ("internal", "external"):
             raise ValueError("chain should be inetrnal or external")
         account_name = "%s_%s" % (account_index, chain)

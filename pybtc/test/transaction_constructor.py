@@ -1077,6 +1077,3 @@ class TransactionConstructorTests(unittest.TestCase):
                                          "9747e865b06345bbf8f9e01ffffffff01c04dc103000000001976a914ad204de226b3d1"
                                          "1a70dc53b4998f4603e138ff3f88ac00000000")
 
-
-
-
