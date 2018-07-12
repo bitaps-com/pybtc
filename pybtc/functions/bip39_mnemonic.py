@@ -83,7 +83,9 @@ def entropy_to_mnemonic(entropy, language='english', word_list_dir=None, word_li
     i = int.from_bytes(entropy, byteorder="big")
     # append checksum
     i = (i << len(entropy) * 8 // 32) | sha256(entropy)[0]
-    return " ".join([word_list[i.__rshift__(((d - 1) * 11)) & 2047] for d in range(int(i.bit_length() // 11), 0, -1)])
+
+    return " ".join([word_list[i.__rshift__(((d - 1) * 11)) & 2047]
+                     for d in range(int((len(entropy) * 8 + 8) // 11), 0, -1)])
 
 
 def mnemonic_to_entropy(mnemonic, language='english', word_list_dir=None,

@@ -33,3 +33,7 @@ class BlockDeserializeTests(unittest.TestCase):
         self.assertEqual(private_from_xprivate_key(xpriv), "L2VnL3zxnNE1jRSemyP7U6PvWuNLvuV5iMJdc2RJGALjZ6HYik7y")
         self.assertEqual(public_from_xpublic_key(xpub),
                          private_to_public_key("L2VnL3zxnNE1jRSemyP7U6PvWuNLvuV5iMJdc2RJGALjZ6HYik7y"))
+        for i in range(100):
+            e = generate_entropy()
+            m = entropy_to_mnemonic(e)
+            self.assertEqual(e, mnemonic_to_entropy(m))
