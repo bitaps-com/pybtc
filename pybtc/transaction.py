@@ -870,7 +870,7 @@ class Transaction(dict):
             r += [redeem_script]
         return r
 
-    def sig_hash(self, n, script_pub_key=None, sighash_type=SIGHASH_ALL):
+    def sig_hash(self, n, script_pub_key=None, sighash_type=SIGHASH_ALL, preimage=False):
         # check n
         assert n >= 0
         tx_in_count = len(self["vIn"])
@@ -893,7 +893,7 @@ class Transaction(dict):
 
         # remove opcode separators
         script_code = delete_from_script(script_code, BYTE_OPCODE["OP_CODESEPARATOR"])
-        preimage = bytearray()
+        pm = bytearray()
 
         if ((sighash_type & 31) == SIGHASH_SINGLE) and (n >= (len(self["vOut"]))):
             if self["format"] == "raw":
@@ -901,8 +901,8 @@ class Transaction(dict):
             else:
                 return rh2s(b'\x01' + b'\x00' * 31)
 
-        preimage += struct.pack('<L', self["version"])
-        preimage += b'\x01' if sighash_type & SIGHASH_ANYONECANPAY else int_to_var_int(tx_in_count)
+        pm += struct.pack('<L', self["version"])
+        pm += b'\x01' if sighash_type & SIGHASH_ANYONECANPAY else int_to_var_int(tx_in_count)
 
         for i in self["vIn"]:
             # skip all other inputs for SIGHASH_ANYONECANPAY case
@@ -922,15 +922,15 @@ class Transaction(dict):
                 input += struct.pack('<L', sequence)
             else:
                 input += b'\x00' + struct.pack('<L', sequence)
-            preimage += input
+            pm += input
 
         if (sighash_type & 31) == SIGHASH_NONE:
-            preimage += b'\x00'
+            pm += b'\x00'
         else:
             if (sighash_type & 31) == SIGHASH_SINGLE:
-                preimage += int_to_var_int(n + 1)
+                pm += int_to_var_int(n + 1)
             else:
-                preimage += int_to_var_int(len(self["vOut"]))
+                pm += int_to_var_int(len(self["vOut"]))
 
         if (sighash_type & 31) != SIGHASH_NONE:
             for i in self["vOut"]:
@@ -940,16 +940,18 @@ class Transaction(dict):
                 if i > n and (sighash_type & 31) == SIGHASH_SINGLE:
                     continue
                 if (sighash_type & 31) == SIGHASH_SINGLE and (n != i):
-                    preimage += b'\xff' * 8 + b'\x00'
+                    pm += b'\xff' * 8 + b'\x00'
                 else:
-                    preimage += self["vOut"][i]["value"].to_bytes(8, 'little')
-                    preimage += int_to_var_int(len(script_pub_key)) + script_pub_key
+                    pm += self["vOut"][i]["value"].to_bytes(8, 'little')
+                    pm += int_to_var_int(len(script_pub_key)) + script_pub_key
 
-        preimage += self["lockTime"].to_bytes(4, 'little')
-        preimage += struct.pack(b"<i", sighash_type)
-        return double_sha256(preimage) if self["format"] == "raw" else rh2s(double_sha256(preimage))
+        pm += self["lockTime"].to_bytes(4, 'little')
+        pm += struct.pack(b"<i", sighash_type)
+        if not preimage:
+            pm = double_sha256(pm)
+        return pm if self["format"] == "raw" else rh2s(pm)
 
-    def sig_hash_segwit(self, n, amount, script_pub_key=None, sighash_type=SIGHASH_ALL):
+    def sig_hash_segwit(self, n, amount, script_pub_key=None, sighash_type=SIGHASH_ALL, preimage=False):
         # check n
         assert n >= 0
         tx_in_count = len(self["vIn"])
@@ -971,9 +973,9 @@ class Transaction(dict):
         assert type(script_code) == bytes
 
         # remove opcode separators
-        preimage = bytearray()
+        pm = bytearray()
         # 1. nVersion of the transaction (4-byte little endian)
-        preimage += struct.pack('<L', self["version"])
+        pm += struct.pack('<L', self["version"])
         # 2. hashPrevouts (32-byte hash)
         # 3. hashSequence (32-byte hash)
         # 4. outpoint (32-byte hash + 4-byte little endian)
@@ -1010,12 +1012,13 @@ class Transaction(dict):
                     ho += self["vOut"][o]["value"].to_bytes(8, 'little')
                     ho += int_to_var_int(len(script_pub_key)) + script_pub_key
         hash_outputs = double_sha256(ho) if ho else b'\x00' * 32
-        preimage += hash_prevouts + hash_sequence + outpoint
-        preimage += script_code + value + n_sequence + hash_outputs
-        preimage += struct.pack('<L', self["lockTime"])
-        preimage += struct.pack('<L', sighash_type)
-        sig_hash = double_sha256(preimage)
-        return sig_hash if self["format"] == "raw" else sig_hash.hex()
+        pm += hash_prevouts + hash_sequence + outpoint
+        pm += script_code + value + n_sequence + hash_outputs
+        pm += struct.pack('<L', self["lockTime"])
+        pm += struct.pack('<L', sighash_type)
+        if not preimage:
+            pm = double_sha256(pm)
+        return pm if self["format"] == "raw" else pm.hex()
 
     def __refresh__(self):
         if not self["vOut"] or not self["vIn"]:
