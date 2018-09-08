@@ -88,7 +88,6 @@ The ``pybtc`` package was initially written by `Aleksey Karpov <https://github.c
 Recent contributors:
 
 - `Aleksey Karpov <https://github.com/4tochka>`_
-- `Aleksey Karybkin <https://github.com/mboxk3team>`_
 
 It's *GPL-3.0* licensed and freely available.
 
