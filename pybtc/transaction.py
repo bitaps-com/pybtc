@@ -77,7 +77,7 @@ class Transaction(dict):
             self["vOut"][k]["value"] = unpack('<Q', stream.read(8))[0]
             self["amount"] += self["vOut"][k]["value"]
             self["vOut"][k]["scriptPubKey"] = stream.read(var_int_to_int(read_var_int(stream)))
-            s = parse_script(self["vOut"][k]["scriptPubKey"], sw)
+            s = parse_script(self["vOut"][k]["scriptPubKey"])
             self["vOut"][k]["nType"] = s["nType"]
             self["vOut"][k]["type"] = s["type"]
             if self["data"] is None:
