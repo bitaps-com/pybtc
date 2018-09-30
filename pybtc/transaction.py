@@ -356,7 +356,8 @@ class Transaction(dict):
 
     def add_input(self, tx_id=None, v_out=0, sequence=0xffffffff,
                   script_sig=b"", tx_in_witness=None, amount=None,
-                  script_pub_key=None, address=None, private_key=None, redeem_script=None):
+                  script_pub_key=None, address=None, private_key=None,
+                  redeem_script=None, sig_script_limit = True):
         if tx_id is None:
             tx_id = b"\x00" * 32
             v_out = 0xffffffff
@@ -370,7 +371,7 @@ class Transaction(dict):
 
         if isinstance(script_sig, str):
             script_sig = bytes.fromhex(script_sig)
-        if not isinstance(script_sig, bytes) or not len(script_sig) <= 520:
+        if not isinstance(script_sig, bytes) or (len(script_sig) > 520 and sig_script_limit):
             raise TypeError("script_sig invalid")
 
         if not isinstance(v_out, int) or not (v_out <= 0xffffffff and v_out >= 0):
