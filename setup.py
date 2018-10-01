@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 
 setup(name='pybtc',
-      version='2.0.7',
+      version='2.0.8',
       description='Python Bitcoin library',
       keywords='bitcoin',
       url='https://github.com/bitaps-com/pybtc',
