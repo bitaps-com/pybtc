@@ -20,9 +20,10 @@ class Transaction(dict):
     :param boolean testnet: address type for "decoded" transaction representation.
 
     """
-    def __init__(self, raw_tx=None, format="decoded", version=1, lock_time=0, testnet=False):
+    def __init__(self, raw_tx=None, format="decoded", version=1, lock_time=0, testnet=False, auto_commit=True):
         if format not in ("decoded", "raw"):
             raise ValueError("format error, raw or decoded allowed")
+        self.auto_commit = auto_commit
         self["format"] = format
         self["testnet"] = testnet
         self["segwit"] = False
@@ -468,7 +469,8 @@ class Transaction(dict):
             self["vIn"][k]["value"] = amount
         if private_key:
             self["vIn"][k].private_key = private_key
-        self.__refresh__()
+        if self.auto_commit:
+            self.commit()
         return self
 
     def add_output(self, amount, address=None, script_pub_key=None):
@@ -518,7 +520,8 @@ class Transaction(dict):
                                                              self["testnet"],
                                                              sh,
                                                              witness_version)
-        self.__refresh__()
+        if self.auto_commit:
+            self.commit()
         return self
 
     def del_output(self, n=None):
@@ -533,7 +536,8 @@ class Transaction(dict):
                 new_out[c] = self["vOut"][i]
                 c += 1
         self["vOut"] = new_out
-        self.__refresh__()
+        if self.auto_commit:
+            self.commit()
         return self
 
     def del_input(self, n):
@@ -548,7 +552,8 @@ class Transaction(dict):
                 new_in[c] = self["vIn"][i]
                 c += 1
         self["vIn"] = new_in
-        self.__refresh__()
+        if self.auto_commit:
+            self.commit()
         return self
 
     def sign_input(self, n, private_key=None, script_pub_key=None,
@@ -622,7 +627,8 @@ class Transaction(dict):
             self["vIn"][n]["scriptSig"] = script_sig.hex()
             self["vIn"][n]["scriptSigOpcodes"] = decode_script(script_sig)
             self["vIn"][n]["scriptSigAsm"] = decode_script(script_sig, 1)
-        self.__refresh__()
+        if self.auto_commit:
+            self.commit()
         return self
 
     def __sign_bare_multisig__(self, n, private_key, public_key, script_pub_key, sighash_type):
@@ -1022,7 +1028,7 @@ class Transaction(dict):
             pm = double_sha256(pm)
         return pm if self["format"] == "raw" else pm.hex()
 
-    def __refresh__(self):
+    def commit(self):
         if not self["vOut"] or not self["vIn"]:
             return
         if self["segwit"]:
