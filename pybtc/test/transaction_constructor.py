@@ -271,6 +271,7 @@ class TransactionConstructorTests(unittest.TestCase):
         self.assertEqual(delete_from_script(s, d), e)
 
     def test_new_tx_constructor(self):
+        print("new_tx_constructor")
         # private key cRiTUeUav1FMR4UbQh2gW9n8RfpNHLBHsEYXJYa4Rv6ZrCdTPGqv
         # address mkH3NMrEcijyVutDhvV5fArXJ3A2sxspX9
 
@@ -284,6 +285,7 @@ class TransactionConstructorTests(unittest.TestCase):
         tx.add_input("37d16ef9380e3ade5a722c199a8c98342691d54241458fa646c56f766d388a85", 1, address=a)
         tx.add_output(170470000, "mouKMbHPwWLUCmgqKnkHT7PR3KdF4CNREh")
         tx.sign_input(0, private_key="cRiTUeUav1FMR4UbQh2gW9n8RfpNHLBHsEYXJYa4Rv6ZrCdTPGqv")
+        print(tx["vIn"][0]["signatures"])
         self.assertEqual(result, tx.serialize())
 
         result = "01000000029d05abe190f4a75455aa5ec940a0d524607ecd336e6dcc69c4c22f7ee817964a000000006b4830450221008" \
@@ -301,6 +303,8 @@ class TransactionConstructorTests(unittest.TestCase):
         tx.add_output(250000000, "mouKMbHPwWLUCmgqKnkHT7PR3KdF4CNREh")
         tx.sign_input(0, private_key="cRiTUeUav1FMR4UbQh2gW9n8RfpNHLBHsEYXJYa4Rv6ZrCdTPGqv")
         tx.sign_input(1, private_key="cSimowS3sa1eD762ZtRJUmQ7f9EqpqJa8qieXs4hKjkao2nipoTq")
+        print(tx["vIn"][0]["signatures"])
+        print(tx["vIn"][1]["signatures"])
         self.assertEqual(result, tx.serialize())
 
         result = "01000000019c5287d981ac92491a4555a0d135748c06fbc36ffe80b2806ce719d39262cc23000000006a47304402201b" \
@@ -336,6 +340,8 @@ class TransactionConstructorTests(unittest.TestCase):
                       sighash_type=SIGHASH_SINGLE)
         tx.sign_input(0, private_key="cSimowS3sa1eD762ZtRJUmQ7f9EqpqJa8qieXs4hKjkao2nipoTq",
                       sighash_type=SIGHASH_ALL)
+        print(tx["vIn"][0]["signatures"])
+        print(tx["vIn"][1]["signatures"])
         self.assertEqual(result, tx.serialize())
 
         # sighash single with sig-hash one
@@ -355,8 +361,11 @@ class TransactionConstructorTests(unittest.TestCase):
         tx.add_output(100000000, "mouKMbHPwWLUCmgqKnkHT7PR3KdF4CNREh")
         tx.sign_input(1, private_key="cSimowS3sa1eD762ZtRJUmQ7f9EqpqJa8qieXs4hKjkao2nipoTq",
                       sighash_type=SIGHASH_SINGLE)
+        print(tx["vIn"][1]["signatures"])
+        print(tx["vIn"][1]["signatures"])
         tx.sign_input(0, private_key="cSimowS3sa1eD762ZtRJUmQ7f9EqpqJa8qieXs4hKjkao2nipoTq",
                       sighash_type=SIGHASH_SINGLE)
+        print(tx["vIn"][0]["signatures"])
         self.assertEqual(result, tx.serialize())
         t = "0100000000010ae86eef67d8c6a4fa42c8d1ba56095cfd580675f5e23d4c3eb4e0cd94f749e76e0d00000023220020836874e10" \
             "976a55b3797305458e5062f610ef36d965ae90a2a6e1cf2b82196d6ffffffff490f6350a3dea457086e34431c9376f810d2cc13" \
@@ -451,6 +460,7 @@ class TransactionConstructorTests(unittest.TestCase):
         tx.add_output(120000000, "mouKMbHPwWLUCmgqKnkHT7PR3KdF4CNREh")
         tx.sign_input(0, private_key="cQMtVcE77xqLAAJGPxoQX4ZxnvBxBitBMMQQr5RMBYh4K8kZDswn",
                       sighash_type=SIGHASH_ALL)
+        print(tx["vIn"][0]["signatures"])
         r = "01000000015fb8d47814abed4a40a72065834eb670a25e89a26518ac12cfb9df8b554eff6b00000000920048304502210" \
             "08e7edc6f3fec3d2eb029e68f9340ad0549e24cd6e50e99b33a8f64bae42e44bd02207189c4f1088466754766b76ad731" \
             "3d96b34989769268c4b8cf461f4a6022bf44014751210399179539f1ebedc809887a48fe802093a74435052ab7fb83d58" \
@@ -471,6 +481,7 @@ class TransactionConstructorTests(unittest.TestCase):
                      redeem_script=redeem)
         tx.add_output(120000000, "mouKMbHPwWLUCmgqKnkHT7PR3KdF4CNREh")
         tx.sign_input(0, private_key=[a1.private_key, a2.private_key])
+        print(tx["vIn"][0]["signatures"])
         r = "0100000001895d7b23de44566febd33de5e192e2e65701ef36895a3fbfd3742020c2ac43cf00000000db00483045022100" \
             "a52f86f21a4b189cd172b2c6267149f15d9c02c7ac7cf72eb31d3c5fa475465e02203293d8683376c1574125f7fd36b75d" \
             "770c5c2930d148221aee3123f9c9fd158c01483045022100c1e19c1da2776cea4d57fe0221f34ec3a38719260633cdce96" \
@@ -668,6 +679,7 @@ class TransactionConstructorTests(unittest.TestCase):
         a15 = Address("cRh1T62pjkUGh6NKEEsKJ87Korbp1rw2GNxdzwmcPk5dUzn36aRy", address_type="P2PKH", testnet=True)
         a = ScriptAddress.multisig(15, 15, [a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15],
                                    testnet=True, witness_version=None)
+        print("15 from 15")
         "2N5Z12YFKCzmk8jJKxRQG48ZeAo9fdMFXt6"
         redeem = "5f2103b4603330291721c0a8e9cae65124a7099ecf0df3b46921d0e30c4220597702cb2102b2ec7de7e811c05aaf8443" \
                  "e3810483d5dbcf671512d9999f9c9772b0ce9da47a2102c711ad61c9fbd3600716b981d101cf0a000ab3524525235c42" \
@@ -740,6 +752,7 @@ class TransactionConstructorTests(unittest.TestCase):
 
         tx = Transaction(raw_tx, testnet=1)
         tx.sign_input(0, private_key=a15.private_key, redeem_script=redeem, witness_version=None)
+        print(tx["vIn"][0]["signatures"])
         raw_tx = tx.serialize()
         self.assertEqual(tx.serialize(), result)
 

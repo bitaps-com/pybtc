@@ -635,6 +635,7 @@ class Transaction(dict):
         sighash = self.sig_hash(n, script_pub_key=script_pub_key, sighash_type=sighash_type)
         sighash = s2rh(sighash) if isinstance(sighash, str) else sighash
         sig = [sign_message(sighash, p, 0) + bytes([sighash_type]) for p in private_key]
+        self["vIn"][n]['signatures'] = [s if self["format"] == "raw" else s.hex() for s in sig]
         return b''.join(self.__get_bare_multisig_script_sig__(self["vIn"][n]["scriptSig"],
                                                               script_pub_key,
                                                               public_key, sig,
@@ -644,12 +645,14 @@ class Transaction(dict):
         sighash = self.sig_hash(n, script_pub_key=script_pub_key, sighash_type=sighash_type)
         sighash = s2rh(sighash) if isinstance(sighash, str) else sighash
         signature = sign_message(sighash, private_key[0], 0) + bytes([sighash_type])
+        self["vIn"][n]['signatures'] = [signature, ] if self["format"] == "raw" else [signature.hex(), ]
         return b''.join([bytes([len(signature)]), signature])
 
     def __sign_p2pkh__(self, n, private_key, public_key, script_pub_key, sighash_type):
         sighash = self.sig_hash(n, script_pub_key=script_pub_key, sighash_type=sighash_type)
         sighash = s2rh(sighash) if isinstance(sighash, str) else sighash
         signature = sign_message(sighash, private_key[0], 0) + bytes([sighash_type])
+        self["vIn"][n]['signatures'] = [signature, ] if self["format"] == "raw" else [signature.hex(), ]
         script_sig = b''.join([bytes([len(signature)]),
                                signature,
                                bytes([len(public_key[0])]),
@@ -680,6 +683,7 @@ class Transaction(dict):
         sighash = self.sig_hash(n, script_pub_key=redeem_script, sighash_type=sighash_type)
         sighash = s2rh(sighash) if isinstance(sighash, str) else sighash
         sig = [sign_message(sighash, p, 0) + bytes([sighash_type]) for p in private_key]
+        self["vIn"][n]['signatures'] = [s if self["format"] == "raw" else s.hex() for s in sig]
         return b''.join(self.__get_multisig_script_sig__(self["vIn"][n]["scriptSig"],
                                                          public_key, sig,
                                                          redeem_script,
@@ -704,6 +708,9 @@ class Transaction(dict):
             self["vIn"][n]['txInWitness'] = [signature, public_key[0]]
         else:
             self["vIn"][n]['txInWitness'] = [signature.hex(), public_key[0].hex()]
+
+        self["vIn"][n]['signatures'] = [signature,] if self["format"] == "raw" else [signature.hex(),]
+
         return op_push_data(redeem_script)
 
     def __sign_p2sh_p2wsh(self, n, private_key, public_key,
@@ -736,6 +743,7 @@ class Transaction(dict):
         else:
             self["vIn"][n]['txInWitness'] = [signature.hex(),
                                              public_key[0].hex()]
+        self["vIn"][n]['signatures'] = [signature,] if self["format"] == "raw" else [signature.hex(),]
         return b""
 
     def __sign_p2wsh(self, n, private_key, public_key, script_pub_key, redeem_script, sighash_type, amount):
@@ -765,6 +773,7 @@ class Transaction(dict):
         sighash = self.sig_hash_segwit(n, amount, script_pub_key=script_code, sighash_type=sighash_type)
         sighash = bytes.fromhex(sighash) if isinstance(sighash, str) else sighash
         sig = [sign_message(sighash, p, 0) + bytes([sighash_type]) for p in private_key]
+        self["vIn"][n]['signatures'] = [s if self["format"] == "raw" else s.hex() for s in sig]
         if "txInWitness" not in self["vIn"][n]:
             self["vIn"][n]["txInWitness"] = []
         witness = self.__get_multisig_script_sig__(self["vIn"][n]["txInWitness"],
@@ -785,6 +794,7 @@ class Transaction(dict):
         sighash = self.sig_hash_segwit(n, amount, script_pub_key=script_code, sighash_type=sighash_type)
         sighash = bytes.fromhex(sighash) if isinstance(sighash, str) else sighash
         sig = [sign_message(sighash, p, 0) + bytes([sighash_type]) for p in private_key]
+        self["vIn"][n]['signatures'] = [s if self["format"] == "raw" else s.hex() for s in sig]
         if "txInWitness" not in self["vIn"][n]:
             self["vIn"][n]["txInWitness"] = []
         witness = self.__get_multisig_script_sig__(self["vIn"][n]["txInWitness"],
