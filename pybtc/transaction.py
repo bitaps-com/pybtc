@@ -468,7 +468,7 @@ class Transaction(dict):
         if amount:
             self["vIn"][k]["value"] = amount
         if private_key:
-            self["vIn"][k].private_key = private_key
+            self["vIn"][k]["private_key"] = private_key
         if self.auto_commit:
             self.commit()
         return self
@@ -564,7 +564,7 @@ class Transaction(dict):
         # private key
         if not private_key:
             try:
-                private_key = self["vIn"][n].private_key.key
+                private_key = self["vIn"][n]["private_key"].key
             except:
                 raise RuntimeError("no private key")
         if isinstance(private_key, list):
