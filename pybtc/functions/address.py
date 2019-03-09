@@ -1,16 +1,10 @@
 import os
 import sys
-import time
-import random
-from secp256k1 import ffi
 parentPath = os.path.abspath("../..")
 if parentPath not in sys.path:
     sys.path.insert(0, parentPath)
 
-from pybtc.constants import *
-from .hash import *
 from pybtc.opcodes import *
-from .encode import *
 from .key import *
 from .hash import *
 

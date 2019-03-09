@@ -1,8 +1,5 @@
 import os
 import sys
-import time
-import random
-import struct
 from secp256k1 import ffi
 parentPath = os.path.abspath("../..")
 if parentPath not in sys.path:
@@ -10,11 +7,9 @@ if parentPath not in sys.path:
 
 from pybtc.opcodes import *
 from pybtc.constants import *
-from .hash import *
-from .encode import *
 from .tools import *
 from .hash import *
-
+from .address import hash_to_address
 
 def public_key_to_pubkey_script(key, hex=True):
     if isinstance(key, str):
@@ -130,6 +125,26 @@ def parse_script(script, segwit=True):
             last -= 1
         s += 1
     return {"nType": 7, "type": "NON_STANDARD", "reqSigs": req_sigs, "script": script}
+
+
+def script_to_address(script, testnet=False):
+    """
+    Decode script to address (base58/bech32 format).
+
+    :param script: script in bytes string or HEX encoded string format.
+    :param testnet: (optional) flag for testnet network, by default is False.
+    :return: address in base58/bech32 format or None.
+    """
+    d = parse_script(script)
+    if "addressHash" in d:
+        witness_version = 0 if d["nType"] in (5, 6) else None
+        script_hash = True if d["nType"] in (1, 6) else False
+        return hash_to_address(d["addressHash"], testnet=testnet,
+                               script_hash=script_hash, witness_version=witness_version)
+    return None
+
+
+
 
 
 def decode_script(script, asm=False):
