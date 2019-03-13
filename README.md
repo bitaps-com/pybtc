@@ -40,13 +40,8 @@ Workflow is pretty straightforward:
 1. Clone the GitHub
 2. Make a change
 3. Make sure all tests passed
-4. Add a record intp file into change.log.
-5. Commit changes to own aiohttp clone
+4. Add a record into file into change.log.
+5. Commit changes to own pybtc clone
 6. Make pull request from github page for your clone against master branch
 
-
-
-### Support a project
-
-You can support the future development of project and send a little BTC to *1Bitapsw1aT8hkLXFtXwZQfHgNwNJEyJJ1*
 
