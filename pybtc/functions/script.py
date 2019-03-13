@@ -59,9 +59,16 @@ def parse_script(script, segwit=True):
         return {"nType": 2, "type": "PUBKEY", "reqSigs": 1, "addressHash": hash160(script[1:-1])}
     if l == 35 and script[-1] == 172:
         return {"nType": 2, "type": "PUBKEY", "reqSigs": 1, "addressHash": hash160(script[1:-1])}
-    if script[0] == 106 and l > 1 and l <= 82:
-        if script[1] == l - 2:
-            return {"nType": 3, "type": "NULL_DATA", "reqSigs": 0, "data": script[2:]}
+    if script[0] == OPCODE["OP_RETURN"]:
+        if l == 1:
+            return {"nType": 3, "type": "NULL_DATA", "reqSigs": 0, "data": b""}
+        elif script[1] < OPCODE["OP_PUSHDATA1"]:
+            if script[1] == l - 2:
+                return {"nType": 3, "type": "NULL_DATA", "reqSigs": 0, "data": script[2:]}
+        elif script[1] == OPCODE["OP_PUSHDATA1"]:
+            if script[2] == l - 3 and script[2] <= 80:
+                return {"nType": 3, "type": "NULL_DATA", "reqSigs": 0, "data": script[3:]}
+        return {"nType": 8, "type": "NULL_DATA_NON_STANDARD", "reqSigs": 0, "script": script}
     if script[0] >= 81 and script[0] <= 96:
         if script[-1] == 174:
             if script[-2] >= 81 and script[-2] <= 96:

@@ -26,3 +26,30 @@ class ScriptFunctionsTests(unittest.TestCase):
                          "bc1qwqdg6squsna38e46795at95yu9atm8azzmyvckulcc7kytlcckxswvvzej")
 
 
+    def test_op_return_parse(self):
+        self.assertEqual(parse_script(OP_RETURN + b"\x00")["type"], "NULL_DATA")
+        self.assertEqual(parse_script(OP_RETURN + b"\x00")["data"], b"")
+        self.assertEqual(parse_script(OP_RETURN + b"\x2012345678901234567890123456789012")["type"], "NULL_DATA")
+        self.assertEqual(parse_script(OP_RETURN + b"\x2012345678901234567890123456789012")["data"],
+                         b"12345678901234567890123456789012")
+
+        self.assertEqual(parse_script(OP_RETURN + b"\x201234567890123456789012345678901211")["type"],
+                         "NULL_DATA_NON_STANDARD")
+
+        self.assertEqual(parse_script(OP_RETURN + OP_PUSHDATA1 + b"\x00")["type"], "NULL_DATA")
+        self.assertEqual(parse_script(OP_RETURN + OP_PUSHDATA1 + b"\x00")["data"], b"")
+        self.assertEqual(parse_script(OP_RETURN + OP_PUSHDATA1 + b"\x2012345678901234567890123456789012")["type"],
+                         "NULL_DATA")
+        self.assertEqual(parse_script(OP_RETURN + OP_PUSHDATA1 + b"\x2012345678901234567890123456789012")["data"],
+                         b"12345678901234567890123456789012")
+
+        self.assertEqual(parse_script(OP_RETURN + OP_PUSHDATA1 + b"\x201234567890123456789012345678901211")["type"],
+                         "NULL_DATA_NON_STANDARD")
+        self.assertEqual(parse_script(OP_RETURN + OP_PUSHDATA1 + b"\x5012345678901234567890123456789012345678901234567890123456789012345678901234567890")["type"],
+                         "NULL_DATA")
+        self.assertEqual(parse_script(OP_RETURN + OP_PUSHDATA1 + b"\x5012345678901234567890123456789012345678901234567890123456789012345678901234567890")["data"],
+                         b"12345678901234567890123456789012345678901234567890123456789012345678901234567890")
+
+        self.assertEqual(parse_script(
+            OP_RETURN + OP_PUSHDATA1 + b"\x51123456789012345678901234567890123456789012345678901234567890123456789012345678901")["type"],
+                         "NULL_DATA_NON_STANDARD")

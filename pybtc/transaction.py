@@ -84,7 +84,7 @@ class Transaction(dict):
             if self["data"] is None:
                 if s["nType"] == 3:
                     self["data"] = s["data"]
-            if s["nType"] not in (3, 4, 7):
+            if s["nType"] not in (3, 4, 7, 8):
                 self["vOut"][k]["addressHash"] = s["addressHash"]
                 self["vOut"][k]["reqSigs"] = s["reqSigs"]
 
@@ -500,7 +500,7 @@ class Transaction(dict):
             if self["data"] is None:
                 if s["nType"] == 3:
                     self["data"] = s["data"]
-            if s["nType"] not in (3, 4, 7):
+            if s["nType"] not in (3, 4, 7, 8):
                 self["vOut"][k]["addressHash"] = s["addressHash"]
                 self["vOut"][k]["reqSigs"] = s["reqSigs"]
         else:
@@ -508,7 +508,7 @@ class Transaction(dict):
             if self["data"] is None:
                 if s["nType"] == 3:
                     self["data"] = s["data"].hex()
-            if s["nType"] not in (3, 4, 7):
+            if s["nType"] not in (3, 4, 7, 8):
                 self["vOut"][k]["addressHash"] = s["addressHash"].hex()
                 self["vOut"][k]["reqSigs"] = s["reqSigs"]
             self["vOut"][k]["scriptPubKeyOpcodes"] = decode_script(script_pub_key)

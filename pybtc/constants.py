@@ -75,7 +75,8 @@ SCRIPT_TYPES = {"P2PKH":        0,
                 "MULTISIG":     4,
                 "P2WPKH":       5,
                 "P2WSH":        6,
-                "NON_STANDART": 7
+                "NON_STANDARD": 7,
+                "NULL_DATA_NON_STANDARD": 8
                 }
 
 
