@@ -434,7 +434,8 @@ class Transaction(dict):
             elif type(address) in (Address, ScriptAddress):
                 script = address_to_script(address.address)
             if script_pub_key:
-                assert script_pub_key == script
+                if  script_pub_key != script:
+                    raise Exception("address not match script")
             else:
                 script_pub_key = script
 
