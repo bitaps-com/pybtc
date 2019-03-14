@@ -475,8 +475,8 @@ class Transaction(dict):
         return self
 
     def add_output(self, amount, address=None, script_pub_key=None):
-        assert address is not None or script_pub_key is not None
-        assert not (address is None and script_pub_key is None)
+        if address is None and script_pub_key is None:
+            raise Exception("unable to add output, address or script required")
         assert type(amount) == int
         assert amount >= 0 and amount <= MAX_AMOUNT
         if script_pub_key:
