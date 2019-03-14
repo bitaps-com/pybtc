@@ -111,7 +111,7 @@ def address_to_hash(address, hex=True):
     """
     if address[0] in ADDRESS_PREFIX_LIST:
         h = decode_base58(address)[1:-4]
-    elif address[:2] in (MAINNET_SEGWIT_ADDRESS_PREFIX,
+    elif address.split("1")[0] in (MAINNET_SEGWIT_ADDRESS_PREFIX,
                          TESTNET_SEGWIT_ADDRESS_PREFIX):
         address = address.split("1")[1]
         h = rebase_5_to_8(rebase_32_to_5(address)[1:-6], False)
