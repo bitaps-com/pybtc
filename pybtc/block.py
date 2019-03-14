@@ -1,6 +1,10 @@
-from .transaction import Transaction
-from struct import unpack
-from .functions import *
+from struct import unpack, pack
+from io import BytesIO
+from pybtc.functions.block import bits_to_target, target_to_difficulty
+from pybtc.functions.hash import double_sha256
+from pybtc.functions.tools import var_int_to_int, read_var_int, var_int_len, rh2s
+from pybtc.transaction import Transaction
+
 
 class Block(dict):
     def __init__(self, raw_block=None, format="decoded", version=536870912, testnet=False):
@@ -11,7 +15,7 @@ class Block(dict):
         self["header"] = None
         self["hash"] = None
         self["version"] = version
-        self["versionHex"] = struct.pack(">L", version).hex()
+        self["versionHex"] = pack(">L", version).hex()
         self["previousBlockHash"] = None
         self["merkleRoot"] = None
         self["tx"] = dict()
@@ -32,7 +36,7 @@ class Block(dict):
         s = self.get_stream(raw_block)
         self["format"] = "raw"
         self["version"] = unpack("<L", s.read(4))[0]
-        self["versionHex"] = struct.pack(">L", self["version"]).hex()
+        self["versionHex"] = pack(">L", self["version"]).hex()
         self["previousBlockHash"] = s.read(32)
         self["merkleRoot"] = s.read(32)
         self["time"] = unpack("<L", s.read(4))[0]
@@ -82,11 +86,11 @@ class Block(dict):
 
     @staticmethod
     def get_stream(stream):
-        if type(stream) != io.BytesIO:
+        if type(stream) != BytesIO:
             if type(stream) == str:
                 stream = bytes.fromhex(stream)
             if type(stream) == bytes:
-                stream = io.BytesIO(stream)
+                stream = BytesIO(stream)
             else:
                 raise TypeError
         return stream

@@ -1,8 +1,23 @@
-
-from struct import unpack
 import json
-from .functions import *
-from .address import PrivateKey, Address, PublicKey, ScriptAddress
+from struct import unpack, pack
+from math import ceil
+from io import BytesIO
+from pybtc.constants import *
+from pybtc.opcodes import *
+from pybtc.functions.tools import (int_to_var_int,
+                                   read_var_int,
+                                   var_int_to_int,
+                                   rh2s,
+                                   s2rh,
+                                   bytes_from_hex,
+                                   get_stream)
+from pybtc.functions.script import op_push_data, decode_script, parse_script, sign_message
+from pybtc.functions.script import get_multisig_public_keys, read_opcode, is_valid_signature_encoding
+from pybtc.functions.script import public_key_recovery, delete_from_script
+from pybtc.functions.hash import hash160, sha256, double_sha256
+from pybtc.functions.address import  hash_to_address, address_net_type, address_to_script
+from pybtc.address import  PrivateKey, Address, ScriptAddress, PublicKey
+
 
 
 class Transaction(dict):
@@ -53,31 +68,34 @@ class Transaction(dict):
         sw = sw_len = 0
         stream = self.get_stream(raw_tx)
         start = stream.tell()
-
+        read = stream.read
+        tell = stream.tell
+        seek = stream.seek
         # start deserialization
-        self["version"] = unpack('<L', stream.read(4))[0]
+        self["version"] = unpack('<L', read(4))[0]
         n = read_var_int(stream)
+
         if n == b'\x00':
             # segwit format
             sw = 1
-            self["flag"] = stream.read(1)
+            self["flag"] = read(1)
             n = read_var_int(stream)
 
         # inputs
         ic = var_int_to_int(n)
         for k in range(ic):
             self["vIn"][k] = dict()
-            self["vIn"][k]["txId"] = stream.read(32)
-            self["vIn"][k]["vOut"] = unpack('<L', stream.read(4))[0]
-            self["vIn"][k]["scriptSig"] = stream.read(var_int_to_int(read_var_int(stream)))
-            self["vIn"][k]["sequence"] = unpack('<L', stream.read(4))[0]
+            self["vIn"][k]["txId"] = read(32)
+            self["vIn"][k]["vOut"] = unpack('<L', read(4))[0]
+            self["vIn"][k]["scriptSig"] = read(var_int_to_int(read_var_int(stream)))
+            self["vIn"][k]["sequence"] = unpack('<L', read(4))[0]
 
         # outputs
         for k in range(var_int_to_int(read_var_int(stream))):
             self["vOut"][k] = dict()
-            self["vOut"][k]["value"] = unpack('<Q', stream.read(8))[0]
+            self["vOut"][k]["value"] = unpack('<Q', read(8))[0]
             self["amount"] += self["vOut"][k]["value"]
-            self["vOut"][k]["scriptPubKey"] = stream.read(var_int_to_int(read_var_int(stream)))
+            self["vOut"][k]["scriptPubKey"] = read(var_int_to_int(read_var_int(stream)))
             s = parse_script(self["vOut"][k]["scriptPubKey"])
             self["vOut"][k]["nType"] = s["nType"]
             self["vOut"][k]["type"] = s["type"]
@@ -90,22 +108,22 @@ class Transaction(dict):
 
         # witness
         if sw:
-            sw = stream.tell() - start
+            sw = tell() - start
             for k in range(ic):
-                self["vIn"][k]["txInWitness"] = [stream.read(var_int_to_int(read_var_int(stream))) \
+                self["vIn"][k]["txInWitness"] = [read(var_int_to_int(read_var_int(stream))) \
                                                  for c in range(var_int_to_int(read_var_int(stream)))]
             sw_len = (stream.tell() - start) - sw + 2
 
-        self["lockTime"] = unpack('<L', stream.read(4))[0]
+        self["lockTime"] = unpack('<L', read(4))[0]
 
-        end = stream.tell()
-        stream.seek(start)
-        b = stream.read(end - start)
+        end = tell()
+        seek(start)
+        b = read(end - start)
         self["rawTx"] = b
         self["size"] = end - start
         self["bSize"] = end - start - sw_len
         self["weight"] = self["bSize"] * 3 + self["size"]
-        self["vSize"] = math.ceil(self["weight"] / 4)
+        self["vSize"] = ceil(self["weight"] / 4)
         if ic == 1 and \
                         self["vIn"][0]["txId"] == b'\x00' * 32 and \
                         self["vIn"][0]["vOut"] == 0xffffffff:
@@ -151,10 +169,11 @@ class Transaction(dict):
                 self["vIn"][i]["scriptSig"] = self["vIn"][i]["scriptSig"].hex()
             try:
                 t = list()
+                append = t.append
                 for w in self["vIn"][i]["txInWitness"]:
                     if type(w) == bytes:
                         w = w.hex()
-                    t.append(w)
+                    append(w)
                 self["vIn"][i]["txInWitness"] = t
 
             except:
@@ -221,25 +240,26 @@ class Transaction(dict):
         if type(self["hash"]) == str:
             self["hash"] = s2rh(self["hash"])
         if type(self["rawTx"]) == str:
-            self["rawTx"] = bytes.fromhex(self["rawTx"])
+            self["rawTx"] = bytes_from_hex(self["rawTx"])
 
         for i in self["vIn"]:
             if type(self["vIn"][i]["txId"]) == str:
                 self["vIn"][i]["txId"] = s2rh(self["vIn"][i]["txId"])
             if type(self["vIn"][i]["scriptSig"]) == str:
-                self["vIn"][i]["scriptSig"] = bytes.fromhex(self["vIn"][i]["scriptSig"])
+                self["vIn"][i]["scriptSig"] = bytes_from_hex(self["vIn"][i]["scriptSig"])
             try:
                 t = list()
+                append = t.append
                 for w in self["vIn"][i]["txInWitness"]:
                     if type(w) == str:
-                        w = bytes.fromhex(w)
-                    t.append(w)
+                        w = bytes_from_hex(w)
+                    append(w)
                 self["vIn"][i]["txInWitness"] = t
             except:
                 pass
             try:
                 if type(self["vIn"][i]["addressHash"]) == str:
-                    self["vIn"][i]["addressHash"] = bytes.fromhex(self["vIn"][i]["addressHash"])
+                    self["vIn"][i]["addressHash"] = bytes_from_hex(self["vIn"][i]["addressHash"])
                 if "address" in self["vIn"][i]:
                     del self["vIn"][i]["address"]
             except:
@@ -253,7 +273,7 @@ class Transaction(dict):
             if "scriptPubKeyAsm" in self["vIn"][i]:
                 del self["vIn"][i]["scriptPubKeyAsm"]
             if "scriptPubKey" in self["vIn"][i]:
-                self["vIn"][i]["scriptPubKey"] = bytes.fromhex(self["vIn"][i]["scriptPubKey"])
+                self["vIn"][i]["scriptPubKey"] = bytes_from_hex(self["vIn"][i]["scriptPubKey"])
             if "redeemScriptOpcodes" in self["vIn"][i]:
                 del self["vIn"][i]["redeemScriptOpcodes"]
             if "redeemScriptAsm" in self["vIn"][i]:
@@ -263,10 +283,10 @@ class Transaction(dict):
 
         for i in self["vOut"]:
             if type(self["vOut"][i]["scriptPubKey"]) == str:
-                self["vOut"][i]["scriptPubKey"] = bytes.fromhex(self["vOut"][i]["scriptPubKey"])
+                self["vOut"][i]["scriptPubKey"] = bytes_from_hex(self["vOut"][i]["scriptPubKey"])
             try:
                 if type(self["vOut"][i]["addressHash"]) == str:
-                    self["vOut"][i]["addressHash"] = bytes.fromhex(self["vOut"][i]["addressHash"])
+                    self["vOut"][i]["addressHash"] = bytes_from_hex(self["vOut"][i]["addressHash"])
                 if "address" in self["vOut"][i]:
                     del self["vOut"][i]["address"]
             except:
@@ -278,17 +298,17 @@ class Transaction(dict):
 
         if "data" in self:
             if type(self["data"]) == str:
-                self["data"] = bytes.fromhex(self["data"])
+                self["data"] = bytes_from_hex(self["data"])
         self["format"] = "raw"
         return self
 
     @staticmethod
     def get_stream(stream):
-        if type(stream) != io.BytesIO:
+        if type(stream) != BytesIO:
             if type(stream) == str:
-                stream = bytes.fromhex(stream)
+                stream = bytes_from_hex(stream)
             if type(stream) == bytes:
-                stream = io.BytesIO(stream)
+                stream = BytesIO(stream)
             else:
                 raise TypeError
         return stream
@@ -304,7 +324,7 @@ class Transaction(dict):
          """
         chunks = []
         append = chunks.append
-        append(struct.pack('<L', self["version"]))
+        append(pack('<L', self["version"]))
         if segwit and self["segwit"]:
             append(b"\x00\x01")
         append(int_to_var_int(len(self["vIn"])))
@@ -313,23 +333,23 @@ class Transaction(dict):
                 append(self["vIn"][i]['txId'])
             else:
                 append(s2rh(self["vIn"][i]['txId']))
-            append(struct.pack('<L', self["vIn"][i]['vOut']))
+            append(pack('<L', self["vIn"][i]['vOut']))
             if isinstance(self["vIn"][i]['scriptSig'], bytes):
                 append(int_to_var_int(len(self["vIn"][i]['scriptSig'])))
                 append(self["vIn"][i]['scriptSig'])
             else:
                 append(int_to_var_int(int(len(self["vIn"][i]['scriptSig']) / 2)))
-                append(bytes.fromhex(self["vIn"][i]['scriptSig']))
-            append(struct.pack('<L', self["vIn"][i]['sequence']))
+                append(bytes_from_hex(self["vIn"][i]['scriptSig']))
+            append(pack('<L', self["vIn"][i]['sequence']))
         append(int_to_var_int(len(self["vOut"])))
         for i in self["vOut"]:
-            append(struct.pack('<Q', self["vOut"][i]['value']))
+            append(pack('<Q', self["vOut"][i]['value']))
             if isinstance(self["vOut"][i]['scriptPubKey'], bytes):
                 append(int_to_var_int(len(self["vOut"][i]['scriptPubKey'])))
                 append(self["vOut"][i]['scriptPubKey'])
             else:
                 append(int_to_var_int(int(len(self["vOut"][i]['scriptPubKey']) / 2)))
-                append(bytes.fromhex(self["vOut"][i]['scriptPubKey']))
+                append(bytes_from_hex(self["vOut"][i]['scriptPubKey']))
         if segwit and self["segwit"]:
             for i in self["vIn"]:
                 append(int_to_var_int(len(self["vIn"][i]['txInWitness'])))
@@ -339,8 +359,8 @@ class Transaction(dict):
                         append(w)
                     else:
                         append(int_to_var_int(int(len(w) / 2)))
-                        append(bytes.fromhex(w))
-        append(struct.pack('<L', self['lockTime']))
+                        append(bytes_from_hex(w))
+        append(pack('<L', self['lockTime']))
         tx = b''.join(chunks)
         return tx if not hex else tx.hex()
 
@@ -371,7 +391,7 @@ class Transaction(dict):
             raise TypeError("tx_id invalid")
 
         if isinstance(script_sig, str):
-            script_sig = bytes.fromhex(script_sig)
+            script_sig = bytes_from_hex(script_sig)
         if not isinstance(script_sig, bytes) or (len(script_sig) > 520 and input_verify):
             raise TypeError("script_sig invalid")
 
@@ -394,9 +414,9 @@ class Transaction(dict):
             witness = []
             for w in tx_in_witness:
                 if isinstance(w, str):
-                    witness.append(bytes.fromhex(w) if self["format"] == "raw" else w)
+                    witness.append(bytes_from_hex(w) if self["format"] == "raw" else w)
                 else:
-                    witness.append(w if self["format"] == "raw" else bytes.fromhex(w))
+                    witness.append(w if self["format"] == "raw" else bytes_from_hex(w))
                 l += 1 + len(w)
                 if len(w) >= 0x4c:
                     l += 1
@@ -415,13 +435,13 @@ class Transaction(dict):
         # script_pub_key
         if script_pub_key:
             if isinstance(script_pub_key, str):
-                script_pub_key = bytes.fromhex(script_pub_key)
+                script_pub_key = bytes_from_hex(script_pub_key)
             if not isinstance(script_pub_key, bytes):
                 raise TypeError("script_pub_key tx invalid")
 
         if redeem_script:
             if isinstance(redeem_script, str):
-                redeem_script = bytes.fromhex(redeem_script)
+                redeem_script = bytes_from_hex(redeem_script)
             if not isinstance(redeem_script, bytes):
                 raise TypeError("redeem_script tx invalid")
 
@@ -485,7 +505,7 @@ class Transaction(dict):
             raise Exception("unable to add output, amount value error")
         if script_pub_key:
             if isinstance(script_pub_key, str):
-                script_pub_key = bytes.fromhex(script_pub_key)
+                script_pub_key = bytes_from_hex(script_pub_key)
             if not isinstance(script_pub_key, bytes):
                 raise TypeError("unable to add output, script_pub_key type error")
         else:
@@ -920,7 +940,7 @@ class Transaction(dict):
 
         script_code = delete_from_script(script_code, BYTE_OPCODE["OP_CODESEPARATOR"])
         pm = bytearray()
-        pm += b"%s%s" % (struct.pack('<L', self["version"]),
+        pm += b"%s%s" % (pack('<L', self["version"]),
                          b'\x01' if sighash_type & SIGHASH_ANYONECANPAY else int_to_var_int(len(self["vIn"])))
         for i in self["vIn"]:
             # skip all other inputs for SIGHASH_ANYONECANPAY case
@@ -934,15 +954,13 @@ class Transaction(dict):
                 tx_id = s2rh(tx_id)
 
             if n == i:
-                pm += b"%s%s%s%s%s" % (tx_id,
-                                       struct.pack('<L', self["vIn"][i]["vOut"]),
+                pm += b"%s%s%s%s%s" % (tx_id, pack('<L', self["vIn"][i]["vOut"]),
                                        int_to_var_int(len(script_code)),
-                                       script_code,
-                                       struct.pack('<L', sequence))
+                                       script_code, pack('<L', sequence))
             else:
                 pm += b'%s%s\x00%s' % (tx_id,
-                                       struct.pack('<L', self["vIn"][i]["vOut"]),
-                                       struct.pack('<L', sequence))
+                                       pack('<L', self["vIn"][i]["vOut"]),
+                                       pack('<L', sequence))
         if (sighash_type & 31) == SIGHASH_NONE:
             pm += b'\x00'
         else:
@@ -955,7 +973,7 @@ class Transaction(dict):
             for i in self["vOut"]:
                 script_pub_key = self["vOut"][i]["scriptPubKey"]
                 if isinstance(self["vOut"][i]["scriptPubKey"], str):
-                    script_pub_key = bytes.fromhex(script_pub_key)
+                    script_pub_key = bytes_from_hex(script_pub_key)
                 if i > n and (sighash_type & 31) == SIGHASH_SINGLE:
                     continue
                 if (sighash_type & 31) == SIGHASH_SINGLE and (n != i):
@@ -964,7 +982,7 @@ class Transaction(dict):
                     pm += b"%s%s%s" % (self["vOut"][i]["value"].to_bytes(8, 'little'),
                                        int_to_var_int(len(script_pub_key)),
                                        script_pub_key)
-        pm += b"%s%s" % (self["lockTime"].to_bytes(4, 'little'), struct.pack(b"<i", sighash_type))
+        pm += b"%s%s" % (self["lockTime"].to_bytes(4, 'little'), pack(b"<i", sighash_type))
         if not preimage:
             pm = double_sha256(pm)
         return pm if self["format"] == "raw" else rh2s(pm)
@@ -990,7 +1008,7 @@ class Transaction(dict):
         # remove opcode separators
         pm = bytearray()
         # 1. nVersion of the transaction (4-byte little endian)
-        pm += struct.pack('<L', self["version"])
+        pm += pack('<L', self["version"])
         # 2. hashPrevouts (32-byte hash)
         # 3. hashSequence (32-byte hash)
         # 4. outpoint (32-byte hash + 4-byte little endian)
@@ -1004,12 +1022,12 @@ class Transaction(dict):
             if type(tx_id) == str:
                 tx_id = s2rh(tx_id)
             if not (sighash_type & SIGHASH_ANYONECANPAY):
-                hp += b"%s%s" % (tx_id, struct.pack('<L', self["vIn"][i]["vOut"]))
+                hp += b"%s%s" % (tx_id, pack('<L', self["vIn"][i]["vOut"]))
                 if (sighash_type & 31) != SIGHASH_SINGLE and (sighash_type & 31) != SIGHASH_NONE:
-                    hs += struct.pack('<L', self["vIn"][i]["sequence"])
+                    hs += pack('<L', self["vIn"][i]["sequence"])
             if i == n:
-                outpoint = b"%s%s" % (tx_id, struct.pack('<L', self["vIn"][i]["vOut"]))
-                n_sequence = struct.pack('<L', self["vIn"][i]["sequence"])
+                outpoint = b"%s%s" % (tx_id, pack('<L', self["vIn"][i]["vOut"]))
+                n_sequence = pack('<L', self["vIn"][i]["sequence"])
         hash_prevouts = double_sha256(hp) if hp else b'\x00' * 32
         hash_sequence = double_sha256(hs) if hs else b'\x00' * 32
         value = amount.to_bytes(8, 'little')
@@ -1018,7 +1036,7 @@ class Transaction(dict):
         for o in self["vOut"]:
             script_pub_key = self["vOut"][o]["scriptPubKey"]
             if type(self["vOut"][o]["scriptPubKey"]) == str:
-                script_pub_key = bytes.fromhex(script_pub_key)
+                script_pub_key = bytes_from_hex(script_pub_key)
             if (sighash_type & 31) != SIGHASH_SINGLE and (sighash_type & 31) != SIGHASH_NONE:
                 ho += b"%s%s%s" % (self["vOut"][o]["value"].to_bytes(8, 'little'),
                                  int_to_var_int(len(script_pub_key)),
@@ -1031,8 +1049,8 @@ class Transaction(dict):
         hash_outputs = double_sha256(ho) if ho else b'\x00' * 32
         pm += b"%s%s%s%s%s%s%s%s%s" % (hash_prevouts, hash_sequence, outpoint,
                                        script_code, value, n_sequence, hash_outputs,
-                                       struct.pack('<L', self["lockTime"]),
-                                       struct.pack('<L', sighash_type))
+                                       pack('<L', self["lockTime"]),
+                                       pack('<L', sighash_type))
         if not preimage:
             pm = double_sha256(pm)
         return pm if self["format"] == "raw" else pm.hex()
@@ -1055,7 +1073,7 @@ class Transaction(dict):
         self["size"] = len(self["rawTx"])
         self["bSize"] = len(no_segwit_view)
         self["weight"] = self["bSize"] * 3 + self["size"]
-        self["vSize"] = math.ceil(self["weight"] / 4)
+        self["vSize"] = ceil(self["weight"] / 4)
 
         if self["format"] != "raw":
             self["txId"] = rh2s(self["txId"])

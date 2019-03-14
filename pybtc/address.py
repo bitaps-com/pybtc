@@ -1,5 +1,15 @@
-from .functions import *
-
+from pybtc.constants import *
+from pybtc.opcodes import *
+from pybtc.functions.tools import bytes_from_hex, int_to_var_int
+from pybtc.functions.script import op_push_data, decode_script
+from pybtc.functions.hash import hash160, sha256
+from pybtc.functions.address import  hash_to_address, public_key_to_p2sh_p2wpkh_script
+from pybtc.functions.key import (create_private_key,
+                                 private_key_to_wif,
+                                 is_wif_valid,
+                                 wif_to_private_key,
+                                 is_public_key_valid,
+                                 private_to_public_key)
 
 class PrivateKey():
     """
@@ -31,7 +41,7 @@ class PrivateKey():
         else:
             if isinstance(key, str):
                 try:
-                    key = bytes.fromhex(key)
+                    key = bytes_from_hex(key)
                 except:
                     pass
             if isinstance(key, bytes):
@@ -90,7 +100,7 @@ class PublicKey():
     def __init__(self, key, compressed=True, testnet=False):
         if isinstance(key, str):
             try:
-                key = bytes.fromhex(key)
+                key = bytes_from_hex(key)
             except:
                 if is_wif_valid(key):
                     key = PrivateKey(key)

@@ -1,14 +1,8 @@
-import os
-import sys
-import time
-parentPath = os.path.abspath("../..")
-if parentPath not in sys.path:
-    sys.path.insert(0, parentPath)
-
 from pybtc.constants import *
-from .hash import *
-from hashlib import pbkdf2_hmac
-
+import time
+import hashlib
+from pybtc.functions.hash import sha256
+from pybtc.functions.tools import int_from_bytes
 
 def generate_entropy(strength=256, hex=True):
     """
@@ -27,7 +21,7 @@ def generate_entropy(strength=256, hex=True):
     while i:
         h = hashlib.sha256(h).digest()
         i -= 1
-        if not i and int.from_bytes(h, byteorder="big") > ECDSA_SEC256K1_ORDER:
+        if not i and int_from_bytes(h, byteorder="big") > ECDSA_SEC256K1_ORDER:
             i += 1
     return h[:int(strength/8)] if not hex else h[:int(strength/8)].hex()
 
@@ -139,5 +133,5 @@ def mnemonic_to_seed(mnemonic, passphrase="", hex=True):
     if not isinstance(passphrase, str):
         raise TypeError("mnemonic should be string")
 
-    seed = pbkdf2_hmac('sha512', mnemonic.encode(), ("mnemonic"+passphrase).encode(), 2048)
+    seed = hashlib.pbkdf2_hmac('sha512', mnemonic.encode(), ("mnemonic"+passphrase).encode(), 2048)
     return seed if not hex else seed.hex()

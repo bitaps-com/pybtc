@@ -1,3 +1,5 @@
+from pybtc.functions.tools import s2rh, bytes_from_hex, int_from_bytes
+from pybtc.functions.hash import double_sha256
 
 def merkle_root(tx_hash_list, hex=True):
     """
@@ -12,13 +14,14 @@ def merkle_root(tx_hash_list, hex=True):
         return tx_hash_list[0]
     while True:
         new_hash_list = list()
+        append = new_hash_list.append
         while tx_hash_list:
             h1 = tx_hash_list.pop(0)
             try:
                 h2 = tx_hash_list.pop(0)
             except:
                 h2 = h1
-            new_hash_list.append(double_sha256(h1 + h2))
+            append(double_sha256(h1 + h2))
         if len(new_hash_list) > 1:
             tx_hash_list = new_hash_list
         else:
@@ -38,21 +41,23 @@ def merkle_branches(tx_hash_list, hex=True):
     if len(tx_hash_list) == 1:
         return []
     tx_hash_list.pop(0)
+    branches_append = branches.append
     while True:
-        branches.append(tx_hash_list.pop(0))
+        branches_append(tx_hash_list.pop(0))
         new_hash_list = list()
+        new_hash_list_append = new_hash_list.append
         while tx_hash_list:
             h1 = tx_hash_list.pop(0)
             try:
                 h2 = tx_hash_list.pop(0)
             except:
                 h2 = h1
-            new_hash_list.append(double_sha256(h1 + h2))
+            new_hash_list_append(double_sha256(h1 + h2))
         if len(new_hash_list) > 1:
             tx_hash_list = new_hash_list
         else:
             if new_hash_list:
-                branches.append(new_hash_list.pop(0))
+                branches_append(new_hash_list.pop(0))
             return branches if not hex else [h.hex() for h in branches]
 
 
@@ -65,10 +70,10 @@ def merkleroot_from_branches(merkle_branches, coinbase_hash, hex=True):
     :param hex:  (optional) If set to True return result in HEX format, by default is True.
     :return: merkle root in bytes or HEX encoded string corresponding hex flag.
     """
-    merkle_root = coinbase_hash if not isinstance(coinbase_hash, str) else bytes.fromhex(coinbase_hash)
+    merkle_root = coinbase_hash if not isinstance(coinbase_hash, str) else bytes_from_hex(coinbase_hash)
     for h in merkle_branches:
         if type(h) == str:
-            h = bytes.fromhex(h)
+            h = bytes_from_hex(h)
         merkle_root = double_sha256(merkle_root + h)
     return merkle_root if not hex else merkle_root.hex()
 
@@ -84,9 +89,9 @@ def bits_to_target(bits):
     :return: integer.
     """
     if type(bits) == str:
-        bits = bytes.fromhex(bits)
+        bits = bytes_from_hex(bits)
     if type(bits) == bytes:
-        return int.from_bytes(bits[1:], 'big') * (2 ** (8 * (bits[0] - 3)))
+        return int_from_bytes(bits[1:], 'big') * (2 ** (8 * (bits[0] - 3)))
     else:
         shift = bits >> 24
         target = (bits & 0xffffff) * (1 << (8 * (shift - 3)))

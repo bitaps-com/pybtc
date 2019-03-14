@@ -1,5 +1,11 @@
-import struct
-from .key import *
+from struct import pack
+from secp256k1 import ffi, lib
+from pybtc.functions.key import private_to_public_key, private_key_to_wif
+from pybtc.functions.hash import hmac_sha512, double_sha256, hash160
+from pybtc.functions.encode import (encode_base58,
+                                    decode_base58_with_checksum,
+                                    encode_base58_with_checksum)
+from pybtc.constants import *
 
 
 def create_master_xprivate_key(seed, testnet=False, base58=True, hex=False):
@@ -110,7 +116,7 @@ def derive_child_xprivate_key(xprivate_key, i):
         raise ValueError("path depth should be <= 255")
     pub = private_to_public_key(k[1:], hex=False)
     fingerprint = hash160(pub)[:4]
-    s = hmac_sha512(c, b"%s%s" % (k if i >= HARDENED_KEY else pub, struct.pack(">L", i)))
+    s = hmac_sha512(c, b"%s%s" % (k if i >= HARDENED_KEY else pub, pack(">L", i)))
     p_int = int.from_bytes(s[:32],byteorder='big')
     if p_int >= ECDSA_SEC256K1_ORDER:
         return None
@@ -121,7 +127,7 @@ def derive_child_xprivate_key(xprivate_key, i):
     return b"".join([xprivate_key[:4],
                      bytes([depth]),
                      fingerprint,
-                     struct.pack(">L", i),
+                     pack(">L", i),
                      s[32:],
                      b'\x00',
                      key])
@@ -136,24 +142,24 @@ def derive_child_xpublic_key(xpublic_key, i):
         raise ValueError("path depth should be <= 255")
     if i >= HARDENED_KEY:
         raise ValueError("derivation from extended public key impossible")
-    s = hmac_sha512(c, k + struct.pack(">L", i))
+    s = hmac_sha512(c, k + pack(">L", i))
     if int.from_bytes(s[:32], byteorder='big') >= ECDSA_SEC256K1_ORDER:
         return None
     pubkey_ptr = ffi.new('secp256k1_pubkey *')
-    if not secp256k1.secp256k1_ec_pubkey_parse(ECDSA_CONTEXT_VERIFY, pubkey_ptr, k, len(k)):
+    if not lib.secp256k1_ec_pubkey_parse(ECDSA_CONTEXT_VERIFY, pubkey_ptr, k, len(k)):
         raise RuntimeError("secp256k1 parse public key operation failed")
-    if not secp256k1.secp256k1_ec_pubkey_tweak_add(ECDSA_CONTEXT_ALL, pubkey_ptr, s[:32]):
+    if not lib.secp256k1_ec_pubkey_tweak_add(ECDSA_CONTEXT_ALL, pubkey_ptr, s[:32]):
         raise RuntimeError("secp256k1 parse tweak addition operation failed")
     pubkey = ffi.new('char [%d]' % 33)
     outlen = ffi.new('size_t *', 33)
-    if not secp256k1.secp256k1_ec_pubkey_serialize(ECDSA_CONTEXT_VERIFY, pubkey, outlen, pubkey_ptr, EC_COMPRESSED):
+    if not lib.secp256k1_ec_pubkey_serialize(ECDSA_CONTEXT_VERIFY, pubkey, outlen, pubkey_ptr, EC_COMPRESSED):
         raise RuntimeError("secp256k1 serialize public key operation failed")
     pk = bytes(ffi.buffer(pubkey, 33))
     print(len(pk))
     return b"".join([xpublic_key[:4],
                      bytes([depth]),
                      fingerprint,
-                     struct.pack(">L", i),
+                     pack(">L", i),
                      s[32:],
                      pk])
 

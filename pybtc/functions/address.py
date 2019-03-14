@@ -1,12 +1,17 @@
-import os
-import sys
-parentPath = os.path.abspath("../..")
-if parentPath not in sys.path:
-    sys.path.insert(0, parentPath)
-
 from pybtc.opcodes import *
-from .key import *
-from .hash import *
+from pybtc.constants import *
+
+from pybtc.functions.tools import bytes_from_hex
+from pybtc.functions.hash import double_sha256, hash160
+from pybtc.functions.encode import (encode_base58,
+                                    rebase_8_to_5,
+                                    bech32_polymod,
+                                    rebase_5_to_32,
+                                    decode_base58,
+                                    rebase_5_to_8,
+                                    rebase_32_to_5,
+                                    base32charset,
+                                    base32charset_upcase)
 
 
 def hash_to_address(address_hash, testnet=False, script_hash=False, witness_version=0):
@@ -23,7 +28,7 @@ def hash_to_address(address_hash, testnet=False, script_hash=False, witness_vers
     :return: address in base58 or bech32 format.
     """
     if isinstance(address_hash, str):
-        address_hash = bytes.fromhex(address_hash)
+        address_hash = bytes_from_hex(address_hash)
     if not isinstance(address_hash, bytes):
         raise TypeError("address hash must be HEX encoded string or bytes")
 

@@ -1,4 +1,4 @@
-from secp256k1 import lib as secp256k1
+from secp256k1 import lib
 import random
 import os
 
@@ -50,23 +50,23 @@ MAINNET_SEGWIT_ADDRESS_PREFIX = 'bc'
 TESTNET_SEGWIT_ADDRESS_PREFIX = 'tb'
 
 
-EC_COMPRESSED = secp256k1.SECP256K1_EC_COMPRESSED
-EC_UNCOMPRESSED = secp256k1.SECP256K1_EC_UNCOMPRESSED
+EC_COMPRESSED = lib.SECP256K1_EC_COMPRESSED
+EC_UNCOMPRESSED = lib.SECP256K1_EC_UNCOMPRESSED
 
-FLAG_SIGN = secp256k1.SECP256K1_CONTEXT_SIGN
-FLAG_VERIFY = secp256k1.SECP256K1_CONTEXT_VERIFY
+FLAG_SIGN = lib.SECP256K1_CONTEXT_SIGN
+FLAG_VERIFY = lib.SECP256K1_CONTEXT_VERIFY
 ALL_FLAGS = FLAG_SIGN | FLAG_VERIFY
-NO_FLAGS = secp256k1.SECP256K1_CONTEXT_NONE
+NO_FLAGS = lib.SECP256K1_CONTEXT_NONE
 
-HAS_RECOVERABLE = hasattr(secp256k1, 'secp256k1_ecdsa_sign_recoverable')
-HAS_SCHNORR = hasattr(secp256k1, 'secp256k1_schnorr_sign')
-HAS_ECDH = hasattr(secp256k1, 'secp256k1_ecdh')
+HAS_RECOVERABLE = hasattr(lib, 'secp256k1_ecdsa_sign_recoverable')
+HAS_SCHNORR = hasattr(lib, 'secp256k1_schnorr_sign')
+HAS_ECDH = hasattr(lib, 'secp256k1_ecdh')
 
-ECDSA_CONTEXT_SIGN = secp256k1.secp256k1_context_create(FLAG_SIGN)
-ECDSA_CONTEXT_VERIFY = secp256k1.secp256k1_context_create(FLAG_VERIFY)
-ECDSA_CONTEXT_ALL = secp256k1.secp256k1_context_create(ALL_FLAGS)
-secp256k1.secp256k1_context_randomize(ECDSA_CONTEXT_SIGN,
-                                      random.SystemRandom().randint(0, ECDSA_SEC256K1_ORDER).to_bytes(32, byteorder="big"))
+ECDSA_CONTEXT_SIGN = lib.secp256k1_context_create(FLAG_SIGN)
+ECDSA_CONTEXT_VERIFY = lib.secp256k1_context_create(FLAG_VERIFY)
+ECDSA_CONTEXT_ALL = lib.secp256k1_context_create(ALL_FLAGS)
+lib.secp256k1_context_randomize(ECDSA_CONTEXT_SIGN,
+                                random.SystemRandom().randint(0, ECDSA_SEC256K1_ORDER).to_bytes(32, byteorder="big"))
 
 SCRIPT_TYPES = {"P2PKH":        0,
                 "P2SH":         1,

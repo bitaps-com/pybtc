@@ -1,4 +1,5 @@
-from .hash import double_sha256
+from pybtc.functions.hash import double_sha256
+from pybtc.functions.tools import bytes_from_hex
 
 b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 base32charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
@@ -19,6 +20,7 @@ def rebasebits(data, frombits, tobits, pad=True):
     acc = 0
     bits = 0
     ret = bytearray()
+    append = ret.append
     maxv = (1 << tobits) - 1
     max_acc = (1 << (frombits + tobits - 1)) - 1
     for value in data:
@@ -28,10 +30,10 @@ def rebasebits(data, frombits, tobits, pad=True):
         bits += frombits
         while bits >= tobits:
             bits -= tobits
-            ret.append((acc >> bits) & maxv)
+            append((acc >> bits) & maxv)
     if pad:
         if bits:
-            ret.append((acc << (tobits - bits)) & maxv)
+            append((acc << (tobits - bits)) & maxv)
     elif bits >= frombits or ((acc << (tobits - bits)) & maxv):
         raise ValueError("invalid padding")
     return ret
@@ -46,12 +48,12 @@ def rebase_8_to_5(data, pad = True):
 
 
 def rebase_32_to_5(data):
-    if type(data) == bytes:
+    if isinstance(data, bytes):
         data = data.decode()
     b = bytearray()
+    append = b.append
     try:
-        for i in data:
-            b.append(int_base32_map[i])
+        [append(int_base32_map[i]) for i in data]
     except:
         raise Exception("Non base32 characters")
     return b
@@ -59,8 +61,8 @@ def rebase_32_to_5(data):
 
 def rebase_5_to_32(data, bytes = True):
     r = bytearray()
-    for i in data:
-        r.append(base32_int_map[i])
+    append = r.append
+    [append(base32_int_map[i]) for i in data]
     return r.decode() if not bytes else r
 
 
@@ -80,13 +82,14 @@ def encode_base58(b):
     """Encode bytes to a base58-encoded string"""
     # Convert big-endian bytes to integer
 
-    n= int('0x0' + b.hex(), 16)
+    n= int('0x0%s' % b.hex(), 16)
 
     # Divide that integer into bas58
     res = []
+    append = res.append
     while n > 0:
         n, r = divmod(n, 58)
-        res.append(b58_digits[r])
+        append(b58_digits[r])
     res = ''.join(res[::-1])
     # Encode leading zeros as base58 zeros
     czero = 0
@@ -114,8 +117,8 @@ def decode_base58(s):
     # Convert the integer to bytes
     h = '%x' % n
     if len(h) % 2:
-        h = '0' + h
-    res = bytes.fromhex(h)
+        h = '0%s' % h
+    res = bytes_from_hex(h)
     # Add padding back.
     pad = 0
     for c in s[:-1]:
@@ -123,7 +126,7 @@ def decode_base58(s):
             pad += 1
         else:
             break
-    return b'\x00' * pad + res
+    return b''.join((b'\x00' * pad, res))
 
 
 def encode_base58_with_checksum(b):
@@ -132,5 +135,6 @@ def encode_base58_with_checksum(b):
 
 def decode_base58_with_checksum(s):
     b = decode_base58(s)
-    assert double_sha256(b[:-4])[:4] == b[-4:]
+    if double_sha256(b[:-4])[:4] != b[-4:]:
+        raise Exception("invalid checksum")
     return b[:-4]

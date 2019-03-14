@@ -1,6 +1,11 @@
-import math
-import io
-import struct
+from math import ceil
+from io import BytesIO
+from struct import pack, unpack
+
+
+
+bytes_from_hex = bytes.fromhex
+int_from_bytes = int.from_bytes
 
 
 def rh2s(raw_hash):
@@ -20,11 +25,11 @@ def s2rh(hash_string):
     :param raw_hash: transaction hash in bytes string.
     :return:  bytes string.
     """
-    return bytes.fromhex(hash_string)[::-1]
+    return bytes_from_hex(hash_string)[::-1]
 
 
 def s2rh_step4(hash_string):
-    h = bytes.fromhex(hash_string)
+    h = bytes_from_hex(hash_string)
     return reverse_hash(h)
 
 
@@ -35,7 +40,7 @@ def reverse_hash(raw_hash):
     :param raw_hash: bytes string.
     :return:  bytes string.
     """
-    return struct.pack('>IIIIIIII', *struct.unpack('>IIIIIIII', raw_hash)[::-1])[::-1]
+    return pack('>IIIIIIII', * unpack('>IIIIIIII', raw_hash)[::-1])[::-1]
 
 
 def bytes_needed(n):
@@ -45,9 +50,7 @@ def bytes_needed(n):
     :param n: integer.
     :return: integer.
     """
-    if n == 0:
-        return 1
-    return math.ceil(n.bit_length()/8)
+    return ceil(n.bit_length()/8) if n != 0 else 1
 
 
 def int_to_bytes(i, byteorder='big'):
@@ -69,7 +72,7 @@ def bytes_to_int(i, byteorder='big'):
     :param byteorder: (optional) byte order 'big' or 'little', by default 'big'.
     :return: integer.
     """
-    return int.from_bytes(i, byteorder=byteorder, signed=False)
+    return int_from_bytes(i, byteorder=byteorder, signed=False)
 
 
 # variable integer
@@ -82,12 +85,12 @@ def int_to_var_int(i):
     :return: bytes.
     """
     if i < 0xfd:
-        return struct.pack('<B', i)
+        return pack('<B', i)
     if i <= 0xffff:
-        return b'\xfd%s' % struct.pack('<H', i)
+        return b'\xfd%s' % pack('<H', i)
     if i <= 0xffffffff:
-        return b'\xfe%s' % struct.pack('<L', i)
-    return b'\xff%s' % struct.pack('<Q', i)
+        return b'\xfe%s' % pack('<L', i)
+    return b'\xff%s' % pack('<Q', i)
 
 
 def var_int_to_int(data):
@@ -98,11 +101,11 @@ def var_int_to_int(data):
     :return: integer.
     """
     if data[0] == 0xfd:
-        return struct.unpack('<H', data[1:3])[0]
+        return unpack('<H', data[1:3])[0]
     elif data[0] == 0xfe:
-        return struct.unpack('<L', data[1:5])[0]
+        return unpack('<L', data[1:5])[0]
     elif data[0] == 0xff:
-        return struct.unpack('<Q', data[1:9])[0]
+        return unpack('<Q', data[1:9])[0]
     return data[0]
 
 
@@ -145,8 +148,9 @@ def read_var_int(stream):
     :param stream: io.BytesIO stream.
     :return: bytes.
     """
-    l = stream.read(1)
-    return b"".join((l, stream.read(get_var_int_len(l) - 1)))
+    read = stream.read
+    l = read(1)
+    return b"".join((l, read(get_var_int_len(l) - 1)))
 
 
 def read_var_list(stream, data_type):
@@ -157,8 +161,9 @@ def read_var_list(stream, data_type):
     :param data_type: list data type.
     :return: list of data_type.
     """
+    deserialize = data_type.deserialize
     count = var_int_to_int(read_var_int(stream))
-    return [data_type.deserialize(stream) for i in range(count)]
+    return [deserialize(stream) for i in range(count)]
 
 # compressed integer
 
@@ -179,8 +184,8 @@ def int_to_c_int(n, base_bytes=1):
     if l <= min_bits + 1:
         return n.to_bytes(base_bytes, byteorder="big")
     prefix = 0
-    payload_bytes = math.ceil((l)/8) - base_bytes
-    extra_bytes = int(math.ceil((l+payload_bytes)/8) - base_bytes)
+    payload_bytes = ceil((l)/8) - base_bytes
+    extra_bytes = int(ceil((l+payload_bytes)/8) - base_bytes)
     for i in range(extra_bytes):
         prefix += 2 ** i
     if l < base_bytes * 8:
@@ -189,7 +194,7 @@ def int_to_c_int(n, base_bytes=1):
     if prefix.bit_length() % 8:
         prefix = prefix << 8 - prefix.bit_length() % 8
     n ^= prefix
-    return n.to_bytes(math.ceil(n.bit_length()/8), byteorder="big")
+    return n.to_bytes(ceil(n.bit_length()/8), byteorder="big")
 
 
 def c_int_to_int(b, base_bytes=1):
@@ -212,7 +217,7 @@ def c_int_to_int(b, base_bytes=1):
             byte_length += 1
             v = v << 1
         break
-    n = int.from_bytes(b[:byte_length+base_bytes], byteorder="big")
+    n = int_from_bytes(b[:byte_length+base_bytes], byteorder="big")
     if byte_length:
         return n & ((1 << (byte_length+base_bytes) * 8 - byte_length) - 1)
     return n
@@ -232,8 +237,8 @@ def c_int_len(n, base_bytes=1):
     min_bits = base_bytes * 8 - 1
     if l <= min_bits + 1:
         return 1
-    payload_bytes = math.ceil((l)/8) - base_bytes
-    return int(math.ceil((l+payload_bytes)/8))
+    payload_bytes = ceil((l)/8) - base_bytes
+    return int(ceil((l+payload_bytes)/8))
 
 
 # generic big endian MPI format
@@ -268,7 +273,7 @@ def bn2mpi(v):
     if v < 0:
         neg = True
         v = -v
-    s = struct.pack(b">I", bn_bytes(v, have_ext))
+    s = pack(b">I", bn_bytes(v, have_ext))
     ext = bytearray()
     if have_ext:
         ext.append(0)
@@ -285,7 +290,7 @@ def mpi2bn(s):
     if len(s) < 4:
         return None
     s_size = bytes(s[:4])
-    v_len = struct.unpack(b">I", s_size)[0]
+    v_len = unpack(b">I", s_size)[0]
     if len(s) != (v_len + 4):
         return None
     if v_len == 0:
@@ -308,9 +313,7 @@ def mpi2bn(s):
 
 def mpi2vch(s):
     r = s[4:]           # strip size
-    # if r:
     r = r[::-1]         # reverse string, converting BE->LE
-    # else: r=b'\x00'
     return r
 
 
@@ -319,7 +322,7 @@ def bn2vch(v):
 
 
 def vch2mpi(s):
-    r = struct.pack(b">I", len(s))   # size
+    r = pack(b">I", len(s))   # size
     r += s[::-1]            # reverse string, converting LE->BE
     return r
 
@@ -335,11 +338,11 @@ def b2i(b): return vch2bn(b)
 
 
 def get_stream(stream):
-    if type(stream) != io.BytesIO:
-        if type(stream) == str:
-            stream = bytes.fromhex(stream)
-        if type(stream) == bytes:
-            stream = io.BytesIO(stream)
+    if not isinstance(stream, BytesIO):
+        if isinstance(stream, str):
+            stream = bytes_from_hex(stream)
+        if isinstance(stream, bytes):
+            stream = BytesIO(stream)
         else:
             raise TypeError
     return stream

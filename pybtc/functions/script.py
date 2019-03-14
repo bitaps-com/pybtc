@@ -1,19 +1,28 @@
-import os
-import sys
-from secp256k1 import ffi
-parentPath = os.path.abspath("../..")
-if parentPath not in sys.path:
-    sys.path.insert(0, parentPath)
+from struct import unpack
+
+from secp256k1 import ffi, lib
+secp256k1_ecdsa_signature_parse_der = lib.secp256k1_ecdsa_signature_parse_der
+secp256k1_ec_pubkey_parse = lib.secp256k1_ec_pubkey_parse
+secp256k1_ecdsa_verify = lib.secp256k1_ecdsa_verify
+secp256k1_ecdsa_sign = lib.secp256k1_ecdsa_sign
+secp256k1_ecdsa_signature_serialize_der = lib.secp256k1_ecdsa_signature_serialize_der
+secp256k1_ecdsa_signature_serialize_compact = lib.secp256k1_ecdsa_signature_serialize_compact
+secp256k1_ecdsa_recoverable_signature_parse_compact = lib.secp256k1_ecdsa_recoverable_signature_parse_compact
+secp256k1_ecdsa_recover = lib.secp256k1_ecdsa_recover
+secp256k1_ec_pubkey_serialize = lib.secp256k1_ec_pubkey_serialize
 
 from pybtc.opcodes import *
 from pybtc.constants import *
-from .tools import *
-from .hash import *
-from .address import hash_to_address
+
+from pybtc.functions.tools import bytes_from_hex, int_to_bytes, get_stream
+from pybtc.functions.hash import hash160, sha256
+from pybtc.functions.address import hash_to_address
+from pybtc.functions.key import is_wif_valid, wif_to_private_key
+
 
 def public_key_to_pubkey_script(key, hex=True):
     if isinstance(key, str):
-        key = bytes.fromhex(key)
+        key = bytes_from_hex(key)
     s = b"%s%s%s" % (bytes([len(key)]), key, OP_CHECKSIG)
     return s.hex() if hex else s
 
@@ -37,7 +46,7 @@ def parse_script(script, segwit=True):
         return {"nType": 7, "type": "NON_STANDARD", "reqSigs": 0, "script": b""}
     if isinstance(script, str):
         try:
-            script = bytes.fromhex(script)
+            script = bytes_from_hex(script)
         except:
             pass
         assert isinstance(script, bytes)
@@ -109,12 +118,12 @@ def parse_script(script, segwit=True):
                 break
         elif script[s] == OPCODE["OP_PUSHDATA2"]:
             try:
-                s += 2 + struct.unpack('<H', script[s: s + 2])[0]
+                s += 2 + unpack('<H', script[s: s + 2])[0]
             except:
                 break
         elif script[s] == OPCODE["OP_PUSHDATA4"]:
             try:
-                s += 4 + struct.unpack('<L', script[s: s + 4])[0]
+                s += 4 + unpack('<L', script[s: s + 4])[0]
             except:
                 break
         else:
@@ -165,7 +174,7 @@ def decode_script(script, asm=False):
 
     if isinstance(script, str):
         try:
-            script = bytes.fromhex(script)
+            script = bytes_from_hex(script)
         except:
             pass
     if not isinstance(script, bytes):
@@ -193,7 +202,7 @@ def decode_script(script, asm=False):
             s += 1 + script[s + 1] + 1
         elif script[s] == OPCODE["OP_PUSHDATA2"]:
 
-            ld = struct.unpack('<H', script[s + 1: s + 3])[0]
+            ld = unpack('<H', script[s + 1: s + 3])[0]
             if asm:
                 append(script[s + 1:s + 1 + ld].hex())
             else:
@@ -201,7 +210,7 @@ def decode_script(script, asm=False):
                 append('[%s]' % ld)
             s += 2 + 1 + ld
         elif script[s] == OPCODE["OP_PUSHDATA4"]:
-            ld = struct.unpack('<L', script[s + 1: s + 5])[0]
+            ld = unpack('<L', script[s + 1: s + 5])[0]
             if asm:
                 append(script[s + 1:s + 1 + ld].hex())
             else:
@@ -216,7 +225,7 @@ def decode_script(script, asm=False):
 
 def delete_from_script(script, sub_script):
     """
-    Decode OPCODE or subscript from script.
+    Decode OP_CODE or subscript from script.
 
     :param script: target script in bytes or HEX encoded string.
     :param sub_script:  sub_script which is necessary to remove from target script in bytes or HEX encoded string.
@@ -227,13 +236,13 @@ def delete_from_script(script, sub_script):
     s_hex = False
     if isinstance(script, str):
         try:
-            script = bytes.fromhex(script)
+            script = bytes_from_hex(script)
             s_hex = True
         except:
             pass
     if isinstance(sub_script, str):
         try:
-            sub_script = bytes.fromhex(sub_script)
+            sub_script = bytes_from_hex(sub_script)
         except:
             pass
 
@@ -247,40 +256,42 @@ def delete_from_script(script, sub_script):
     s = 0
     k = 0
     stack = []
+    stack_append = stack.append
     result = []
+    result_append = result.append
     while l - s > 0:
         if script[s] < 0x4c and script[s]:
-            stack.append(script[s] + 1)
+            stack_append(script[s] + 1)
             s += script[s] + 1
         elif script[s] == OPCODE["OP_PUSHDATA1"]:
-            stack.append(1 + script[s + 1])
+            stack_append(1 + script[s + 1])
             s += 1 + script[s + 1]
         elif script[s] == OPCODE["OP_PUSHDATA2"]:
-            stack.append(2 + struct.unpack('<H', script[s: s + 2]))
-            s += 2 + struct.unpack('<H', script[s: s + 2])
+            stack_append(2 + unpack('<H', script[s: s + 2])[0])
+            s += 2 + unpack('<H', script[s: s + 2])[0]
         elif script[s] == OPCODE["OP_PUSHDATA4"]:
-            stack.append(4 + struct.unpack('<L', script[s: s + 4]))
-            s += 4 + struct.unpack('<L', script[s: s + 4])
+            stack_append(4 + unpack('<L', script[s: s + 4])[0])
+            s += 4 + unpack('<L', script[s: s + 4])[0]
         else:
-            stack.append(1)
+            stack_append(1)
             s += 1
         if s - k >= ls:
             if script[k:s][:ls] == sub_script:
                 if s - k > ls:
-                    result.append(script[k + ls:s])
+                    result_append(script[k + ls:s])
                 t = 0
                 while t != s - k:
                     t += stack.pop(0)
                 k = s
             else:
                 t = stack.pop(0)
-                result.append(script[k:k + t])
+                result_append(script[k:k + t])
                 k += t
     if script[k:s][:ls] == sub_script:
         if s - k > ls:
-            result.append(script[k + ls:s])
+            result_append(script[k + ls:s])
     else:
-        result.append(script[k:k + ls])
+        result_append(script[k:k + ls])
 
     return b''.join(result) if not s_hex else b''.join(result).hex()
 
@@ -296,7 +307,7 @@ def script_to_hash(script, witness=False, hex=True):
     :return: script in bytes or HEX encoded string corresponding to the format of target script.
     """
     if isinstance(script, str):
-        s = bytes.fromhex(script)
+        s = bytes_from_hex(script)
     if witness:
         return sha256(script, hex)
     else:
@@ -327,17 +338,18 @@ def get_multisig_public_keys(script):
 
 
 def read_opcode(stream):
-    b = stream.read(1)
+    read = stream.read
+    b = read(1)
     if not b:
         return None, None
     if b[0] <= 0x4b:
-        return b, stream.read(b[0])
+        return b, read(b[0])
     elif b[0] == OP_PUSHDATA1:
-        return b, stream.read(stream.read(1)[0])
+        return b, read(read(1)[0])
     elif b[0] == OP_PUSHDATA2:
-        return b, stream.read(struct.unpack("<H", stream.read(2)[0]))
+        return b, read(unpack("<H", read(2)[0]))
     elif b[0] == OP_PUSHDATA4:
-        return b, stream.read(struct.unpack("<L", stream.read(4)[0]))
+        return b, read(unpack("<L", read(4)[0]))
     else:
         return b, None
 
@@ -375,11 +387,11 @@ def verify_signature(sig, pub_key, msg):
 
     raw_sig = ffi.new('secp256k1_ecdsa_signature *')
     raw_pubkey = ffi.new('secp256k1_pubkey *')
-    if not secp256k1.secp256k1_ecdsa_signature_parse_der(ECDSA_CONTEXT_VERIFY, raw_sig, sig, len(sig)):
+    if not secp256k1_ecdsa_signature_parse_der(ECDSA_CONTEXT_VERIFY, raw_sig, sig, len(sig)):
         raise TypeError("signature must be DER encoded")
-    if not secp256k1.secp256k1_ec_pubkey_parse(ECDSA_CONTEXT_VERIFY, raw_pubkey, pub_key, len(pub_key)):
+    if not secp256k1_ec_pubkey_parse(ECDSA_CONTEXT_VERIFY, raw_pubkey, pub_key, len(pub_key)):
         raise TypeError("public key format error")
-    result = secp256k1.secp256k1_ecdsa_verify(ECDSA_CONTEXT_VERIFY, raw_sig, msg, raw_pubkey)
+    result = secp256k1_ecdsa_verify(ECDSA_CONTEXT_VERIFY, raw_sig, msg, raw_pubkey)
     return True if result else False
 
 
@@ -396,7 +408,7 @@ def sign_message(msg, private_key, hex=True):
         msg = bytes(msg)
     if isinstance(msg, str):
         try:
-            msg = bytes.fromhex(msg)
+            msg = bytes_from_hex(msg)
         except:
             pass
     if not isinstance(msg, bytes):
@@ -406,7 +418,7 @@ def sign_message(msg, private_key, hex=True):
         private_key = bytes(private_key)
     if isinstance(private_key, str):
         try:
-            private_key = bytes.fromhex(private_key)
+            private_key = bytes_from_hex(private_key)
         except:
             if is_wif_valid(private_key):
                 private_key = wif_to_private_key(private_key, hex=False)
@@ -414,49 +426,46 @@ def sign_message(msg, private_key, hex=True):
         raise TypeError("private key must be a bytes, hex encoded string or in WIF format")
 
     raw_sig = ffi.new('secp256k1_ecdsa_signature *')
-    signed = secp256k1.secp256k1_ecdsa_sign(ECDSA_CONTEXT_SIGN, raw_sig, msg,
+    signed = secp256k1_ecdsa_sign(ECDSA_CONTEXT_SIGN, raw_sig, msg,
                                             private_key, ffi.NULL, ffi.NULL)
     if not signed:
         raise RuntimeError("secp256k1 error")
     len_sig = 74
     output = ffi.new('unsigned char[%d]' % len_sig)
     outputlen = ffi.new('size_t *', len_sig)
-    res = secp256k1.secp256k1_ecdsa_signature_serialize_der(ECDSA_CONTEXT_SIGN,
+    res = secp256k1_ecdsa_signature_serialize_der(ECDSA_CONTEXT_SIGN,
                                                             output, outputlen, raw_sig)
     if not res:
         raise RuntimeError("secp256k1 error")
     signature = bytes(ffi.buffer(output, outputlen[0]))
-    raw_sig = ffi.new('secp256k1_ecdsa_signature *')
     return signature.hex() if hex else signature
 
 
 def public_key_recovery(signature, messsage, rec_id, compressed=True, hex=True):
     if isinstance(signature, str):
-        signature = bytes.fromhex(signature)
+        signature = bytes_from_hex(signature)
     if isinstance(messsage, str):
-        messsage = bytes.fromhex(messsage)
+        messsage = bytes_from_hex(messsage)
     raw_sig = ffi.new('secp256k1_ecdsa_signature *')
-    r = secp256k1.secp256k1_ecdsa_signature_parse_der(ECDSA_CONTEXT_SIGN,
-                                                      raw_sig,
-                                                      signature,
-                                                      len(signature))
+    r = secp256k1_ecdsa_signature_parse_der(ECDSA_CONTEXT_SIGN, raw_sig,
+                                            signature, len(signature))
     if not r:
         raise RuntimeError("secp256k1 error")
     compact_sig = ffi.new('unsigned char[%d]' % 64)
-    r = secp256k1.secp256k1_ecdsa_signature_serialize_compact(ECDSA_CONTEXT_VERIFY,
+    r = secp256k1_ecdsa_signature_serialize_compact(ECDSA_CONTEXT_VERIFY,
                                                               compact_sig,
                                                               raw_sig)
     if not r:
         raise RuntimeError("secp256k1 error")
 
     recover_sig = ffi.new('secp256k1_ecdsa_recoverable_signature *')
-    t = secp256k1.secp256k1_ecdsa_recoverable_signature_parse_compact(
+    t = secp256k1_ecdsa_recoverable_signature_parse_compact(
         ECDSA_CONTEXT_ALL, recover_sig, compact_sig, rec_id)
     if not r:
         raise RuntimeError("secp256k1 error")
 
     pubkey_ptr = ffi.new('secp256k1_pubkey *')
-    t = secp256k1.secp256k1_ecdsa_recover(
+    t = secp256k1_ecdsa_recover(
         ECDSA_CONTEXT_ALL, pubkey_ptr, recover_sig, messsage)
     len_key = 33 if compressed else 65
     pubkey = ffi.new('char [%d]' % len_key)
@@ -464,7 +473,7 @@ def public_key_recovery(signature, messsage, rec_id, compressed=True, hex=True):
     compflag = EC_COMPRESSED if compressed else EC_UNCOMPRESSED
     if bytes(ffi.buffer(pubkey_ptr.data, 64)) == b"\x00" * 64:
         return None
-    r = secp256k1.secp256k1_ec_pubkey_serialize(ECDSA_CONTEXT_VERIFY, pubkey, outlen, pubkey_ptr, compflag)
+    r = secp256k1_ec_pubkey_serialize(ECDSA_CONTEXT_VERIFY, pubkey, outlen, pubkey_ptr, compflag)
     if not r:
         raise RuntimeError("secp256k1 error")
     pub = bytes(ffi.buffer(pubkey, len_key))
