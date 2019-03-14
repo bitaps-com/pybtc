@@ -22,7 +22,7 @@ def merkle_root(tx_hash_list, hex=True):
         if len(new_hash_list) > 1:
             tx_hash_list = new_hash_list
         else:
-            return new_hash_list[0] if not hex else hexlify(new_hash_list[0]).decode()
+            return new_hash_list[0] if not hex else new_hash_list[0].hex()
 
 
 def merkle_branches(tx_hash_list, hex=True):
@@ -53,7 +53,7 @@ def merkle_branches(tx_hash_list, hex=True):
         else:
             if new_hash_list:
                 branches.append(new_hash_list.pop(0))
-            return branches if not hex else [hexlify(h).decode() for h in branches]
+            return branches if not hex else [h.hex() for h in branches]
 
 
 def merkleroot_from_branches(merkle_branches, coinbase_hash, hex=True):
@@ -65,12 +65,12 @@ def merkleroot_from_branches(merkle_branches, coinbase_hash, hex=True):
     :param hex:  (optional) If set to True return result in HEX format, by default is True.
     :return: merkle root in bytes or HEX encoded string corresponding hex flag.
     """
-    merkle_root = coinbase_hash if not isinstance(coinbase_hash, str) else unhexlify(coinbase_hash)
+    merkle_root = coinbase_hash if not isinstance(coinbase_hash, str) else bytes.fromhex(coinbase_hash)
     for h in merkle_branches:
         if type(h) == str:
-            h = unhexlify(h)
+            h = bytes.fromhex(h)
         merkle_root = double_sha256(merkle_root + h)
-    return merkle_root if not hex else hexlify(merkle_root).decode()
+    return merkle_root if not hex else merkle_root.hex()
 
 
 #  Difficulty
@@ -84,7 +84,7 @@ def bits_to_target(bits):
     :return: integer.
     """
     if type(bits) == str:
-        bits = unhexlify(bits)
+        bits = bytes.fromhex(bits)
     if type(bits) == bytes:
         return int.from_bytes(bits[1:], 'big') * (2 ** (8 * (bits[0] - 3)))
     else:
