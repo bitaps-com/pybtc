@@ -113,6 +113,7 @@ class PublicKey():
             public_key = private_to_public_key(key.key,
                                         compressed=key.compressed,
                                         hex=False)
+
         #: public key in  bytes (bytes)
         self.key = public_key
         #: public key in HEX (string)
@@ -265,6 +266,6 @@ class ScriptAddress():
                 a = private_to_public_key(a)
             if len(a) != 33:
                 raise TypeError("invalid public key list element size")
-            script += int_to_var_int(len(a)) + a
-        script += bytes([0x50 + m]) + OP_CHECKMULTISIG
+            script += b"%s%s" % (int_to_var_int(len(a)), a)
+        script += b"%s%s" % (bytes([0x50 + m]),OP_CHECKMULTISIG)
         return cls(script, testnet=testnet, witness_version=witness_version)

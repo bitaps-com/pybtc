@@ -115,7 +115,7 @@ class Transaction(dict):
         if sw:
             self["segwit"] = True
             self["hash"] = double_sha256(b)
-            self["txId"] = double_sha256(b[:4] + b[6:sw] + b[-4:])
+            self["txId"] = double_sha256(b"%s%s%s" % (b[:4], b[6:sw],b[-4:]))
         else:
             self["segwit"] = False
             self["txId"] = double_sha256(b)
@@ -125,7 +125,7 @@ class Transaction(dict):
 
     def decode(self, testnet=None):
         """
-        change Transacion object representation to "decoded" human readable format
+        change Transaction object representation to "decoded" human readable format
 
         :param bool testnet: (optional) address type for "decoded" transaction representation, by default None.
                             if None used type from transaction property "format".
@@ -433,6 +433,8 @@ class Transaction(dict):
                 script = address_to_script(address)
             elif type(address) in (Address, ScriptAddress):
                 script = address_to_script(address.address)
+            else:
+                raise TypeError("address invalid")
             if script_pub_key:
                 if  script_pub_key != script:
                     raise Exception("address not match script")
@@ -478,12 +480,14 @@ class Transaction(dict):
         if address is None and script_pub_key is None:
             raise Exception("unable to add output, address or script required")
         if type(amount) != int:
-            raise Exception("unable to add output, amount type error")
-        assert amount >= 0 and amount <= MAX_AMOUNT
+            raise TypeError("unable to add output, amount type error")
+        if amount < 0 or amount > MAX_AMOUNT:
+            raise Exception("unable to add output, amount value error")
         if script_pub_key:
-            if type(script_pub_key) == str:
+            if isinstance(script_pub_key, str):
                 script_pub_key = bytes.fromhex(script_pub_key)
-            assert type(script_pub_key) == bytes
+            if not isinstance(script_pub_key, bytes):
+                raise TypeError("unable to add output, script_pub_key type error")
         else:
             if type(address) == Address:
                 address = address.address
@@ -891,59 +895,54 @@ class Transaction(dict):
         return r
 
     def sig_hash(self, n, script_pub_key=None, sighash_type=SIGHASH_ALL, preimage=False):
-        # check n
-        assert n >= 0
-        tx_in_count = len(self["vIn"])
-
-        if n >= tx_in_count:
-            if self["format"] == "raw":
-                return b'\x01' + b'\x00' * 31
-            else:
-                return rh2s(b'\x01' + b'\x00' * 31)
+        try:
+            self["vIn"][n]
+        except:
+            raise Exception("sig_hash error, input not exist")
 
         # check script_pub_key for input
         if script_pub_key is not None:
             script_code = script_pub_key
         else:
-            assert "scriptPubKey" in self["vIn"][n]
+            if  "scriptPubKey" not in self["vIn"][n]:
+                raise Exception("sig_hash error, scriptPubKey required")
             script_code = self["vIn"][n]["scriptPubKey"]
-        if type(script_code) == str:
+        if isinstance(script_code, str):
             script_code = bytes.fromhex(script_code)
-        assert type(script_code) == bytes
+        if not isinstance(script_code,bytes):
+            raise Exception("sig_hash error, script_code type error")
 
         # remove opcode separators
-        script_code = delete_from_script(script_code, BYTE_OPCODE["OP_CODESEPARATOR"])
-        pm = bytearray()
-
         if ((sighash_type & 31) == SIGHASH_SINGLE) and (n >= (len(self["vOut"]))):
             if self["format"] == "raw":
-                return b'\x01' + b'\x00' * 31
-            else:
-                return rh2s(b'\x01' + b'\x00' * 31)
+                return  b'\x01%s' % (b'\x00' * 31)
+            return rh2s(b'\x01%s' % (b'\x00' * 31))
 
-        pm += struct.pack('<L', self["version"])
-        pm += b'\x01' if sighash_type & SIGHASH_ANYONECANPAY else int_to_var_int(tx_in_count)
-
+        script_code = delete_from_script(script_code, BYTE_OPCODE["OP_CODESEPARATOR"])
+        pm = bytearray()
+        pm += b"%s%s" % (struct.pack('<L', self["version"]),
+                         b'\x01' if sighash_type & SIGHASH_ANYONECANPAY else int_to_var_int(len(self["vIn"])))
         for i in self["vIn"]:
             # skip all other inputs for SIGHASH_ANYONECANPAY case
             if (sighash_type & SIGHASH_ANYONECANPAY) and (n != i):
                 continue
             sequence = self["vIn"][i]["sequence"]
-            if (sighash_type & 31) == SIGHASH_SINGLE and (n != i):
-                sequence = 0
-            if (sighash_type & 31) == SIGHASH_NONE and (n != i):
+            if ((sighash_type & 31) == SIGHASH_SINGLE or (sighash_type & 31) == SIGHASH_NONE) and (n != i):
                 sequence = 0
             tx_id = self["vIn"][i]["txId"]
-            if type(tx_id) == str:
+            if isinstance(tx_id, str):
                 tx_id = s2rh(tx_id)
-            input = tx_id + struct.pack('<L', self["vIn"][i]["vOut"])
-            if n == i:
-                input += int_to_var_int(len(script_code)) + script_code
-                input += struct.pack('<L', sequence)
-            else:
-                input += b'\x00' + struct.pack('<L', sequence)
-            pm += input
 
+            if n == i:
+                pm += b"%s%s%s%s%s" % (tx_id,
+                                       struct.pack('<L', self["vIn"][i]["vOut"]),
+                                       int_to_var_int(len(script_code)),
+                                       script_code,
+                                       struct.pack('<L', sequence))
+            else:
+                pm += b'%s%s\x00%s' % (tx_id,
+                                       struct.pack('<L', self["vIn"][i]["vOut"]),
+                                       struct.pack('<L', sequence))
         if (sighash_type & 31) == SIGHASH_NONE:
             pm += b'\x00'
         else:
@@ -955,42 +954,38 @@ class Transaction(dict):
         if (sighash_type & 31) != SIGHASH_NONE:
             for i in self["vOut"]:
                 script_pub_key = self["vOut"][i]["scriptPubKey"]
-                if type(self["vOut"][i]["scriptPubKey"]) == str:
+                if isinstance(self["vOut"][i]["scriptPubKey"], str):
                     script_pub_key = bytes.fromhex(script_pub_key)
                 if i > n and (sighash_type & 31) == SIGHASH_SINGLE:
                     continue
                 if (sighash_type & 31) == SIGHASH_SINGLE and (n != i):
-                    pm += b'\xff' * 8 + b'\x00'
+                    pm += b"%s%s" % (b'\xff' * 8, b'\x00')
                 else:
-                    pm += self["vOut"][i]["value"].to_bytes(8, 'little')
-                    pm += int_to_var_int(len(script_pub_key)) + script_pub_key
-
-        pm += self["lockTime"].to_bytes(4, 'little')
-        pm += struct.pack(b"<i", sighash_type)
+                    pm += b"%s%s%s" % (self["vOut"][i]["value"].to_bytes(8, 'little'),
+                                       int_to_var_int(len(script_pub_key)),
+                                       script_pub_key)
+        pm += b"%s%s" % (self["lockTime"].to_bytes(4, 'little'), struct.pack(b"<i", sighash_type))
         if not preimage:
             pm = double_sha256(pm)
         return pm if self["format"] == "raw" else rh2s(pm)
 
     def sig_hash_segwit(self, n, amount, script_pub_key=None, sighash_type=SIGHASH_ALL, preimage=False):
-        # check n
-        assert n >= 0
-        tx_in_count = len(self["vIn"])
-
-        if n >= tx_in_count:
-            if self["format"] == "raw":
-                return b'\x01' + b'\x00' * 31
-            else:
-                return rh2s(b'\x01' + b'\x00' * 31)
+        try:
+            self["vIn"][n]
+        except:
+            raise Exception("sig_hash error, input not exist")
 
         # check script_pub_key for input
         if script_pub_key is not None:
             script_code = script_pub_key
         else:
-            assert "scriptPubKey" in self["vIn"][n]
+            if  "scriptPubKey" not in self["vIn"][n]:
+                raise Exception("sig_hash error, scriptPubKey required")
             script_code = self["vIn"][n]["scriptPubKey"]
-        if type(script_code) == str:
+        if isinstance(script_code, str):
             script_code = bytes.fromhex(script_code)
-        assert type(script_code) == bytes
+        if not isinstance(script_code,bytes):
+            raise Exception("sig_hash error, script_code type error")
 
         # remove opcode separators
         pm = bytearray()
@@ -1009,11 +1004,11 @@ class Transaction(dict):
             if type(tx_id) == str:
                 tx_id = s2rh(tx_id)
             if not (sighash_type & SIGHASH_ANYONECANPAY):
-                hp += tx_id + struct.pack('<L', self["vIn"][i]["vOut"])
+                hp += b"%s%s" % (tx_id, struct.pack('<L', self["vIn"][i]["vOut"]))
                 if (sighash_type & 31) != SIGHASH_SINGLE and (sighash_type & 31) != SIGHASH_NONE:
                     hs += struct.pack('<L', self["vIn"][i]["sequence"])
             if i == n:
-                outpoint = tx_id + struct.pack('<L', self["vIn"][i]["vOut"])
+                outpoint = b"%s%s" % (tx_id, struct.pack('<L', self["vIn"][i]["vOut"]))
                 n_sequence = struct.pack('<L', self["vIn"][i]["sequence"])
         hash_prevouts = double_sha256(hp) if hp else b'\x00' * 32
         hash_sequence = double_sha256(hs) if hs else b'\x00' * 32
@@ -1025,17 +1020,19 @@ class Transaction(dict):
             if type(self["vOut"][o]["scriptPubKey"]) == str:
                 script_pub_key = bytes.fromhex(script_pub_key)
             if (sighash_type & 31) != SIGHASH_SINGLE and (sighash_type & 31) != SIGHASH_NONE:
-                ho += self["vOut"][o]["value"].to_bytes(8, 'little')
-                ho += int_to_var_int(len(script_pub_key)) + script_pub_key
+                ho += b"%s%s%s" % (self["vOut"][o]["value"].to_bytes(8, 'little'),
+                                 int_to_var_int(len(script_pub_key)),
+                                 script_pub_key)
             elif (sighash_type & 31) == SIGHASH_SINGLE and n < len(self["vOut"]):
                 if o == n:
-                    ho += self["vOut"][o]["value"].to_bytes(8, 'little')
-                    ho += int_to_var_int(len(script_pub_key)) + script_pub_key
+                    ho += b"%s%s%s" % (self["vOut"][o]["value"].to_bytes(8, 'little'),
+                                       int_to_var_int(len(script_pub_key)),
+                                       script_pub_key)
         hash_outputs = double_sha256(ho) if ho else b'\x00' * 32
-        pm += hash_prevouts + hash_sequence + outpoint
-        pm += script_code + value + n_sequence + hash_outputs
-        pm += struct.pack('<L', self["lockTime"])
-        pm += struct.pack('<L', sighash_type)
+        pm += b"%s%s%s%s%s%s%s%s%s" % (hash_prevouts, hash_sequence, outpoint,
+                                       script_code, value, n_sequence, hash_outputs,
+                                       struct.pack('<L', self["lockTime"]),
+                                       struct.pack('<L', sighash_type))
         if not preimage:
             pm = double_sha256(pm)
         return pm if self["format"] == "raw" else pm.hex()

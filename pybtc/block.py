@@ -1,5 +1,5 @@
 from .transaction import Transaction
-from struct import pack, unpack
+from struct import unpack
 from .functions import *
 
 class Block(dict):

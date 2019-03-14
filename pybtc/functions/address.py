@@ -35,7 +35,7 @@ def hash_to_address(address_hash, testnet=False, script_hash=False, witness_vers
                 prefix = TESTNET_ADDRESS_BYTE_PREFIX
             else:
                 prefix = MAINNET_ADDRESS_BYTE_PREFIX
-            address_hash = prefix + address_hash
+            address_hash = b"%s%s" % (prefix, address_hash)
             address_hash += double_sha256(address_hash)[:4]
             return encode_base58(address_hash)
         else:
@@ -47,7 +47,7 @@ def hash_to_address(address_hash, testnet=False, script_hash=False, witness_vers
             prefix = TESTNET_SCRIPT_ADDRESS_BYTE_PREFIX
         else:
             prefix = MAINNET_SCRIPT_ADDRESS_BYTE_PREFIX
-        address_hash = prefix + address_hash
+        address_hash = b"%s%s" % (prefix, address_hash)
         address_hash += double_sha256(address_hash)[:4]
         return encode_base58(address_hash)
 
@@ -265,7 +265,7 @@ def is_address_valid(address, testnet=False):
         d = rebase_32_to_5(payload)
         address_hash = d[:-6]
         checksum = d[-6:]
-        checksum2 = bech32_polymod(stripped_prefix + address_hash + b"\x00" * 6)
+        checksum2 = bech32_polymod(b"%s%s%s" % (stripped_prefix, address_hash, b"\x00" * 6))
         checksum2 = rebase_8_to_5(checksum2.to_bytes(5, "big"))[2:]
         if checksum != checksum2:
             return False

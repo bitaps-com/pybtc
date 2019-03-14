@@ -13,7 +13,7 @@ from .address import hash_to_address
 
 def public_key_to_pubkey_script(key, hex=True):
     if isinstance(key, str):
-        key = bytes.from_hex(key)
+        key = bytes.fromhex(key)
     s = b"%s%s%s" % (bytes([len(key)]), key, OP_CHECKSIG)
     return s.hex() if hex else s
 
@@ -218,7 +218,7 @@ def delete_from_script(script, sub_script):
     """
     Decode OPCODE or subscript from script.
 
-    :param script: traget script in bytes or HEX encoded string.
+    :param script: target script in bytes or HEX encoded string.
     :param sub_script:  sub_script which is necessary to remove from target script in bytes or HEX encoded string.
     :return: script in bytes or HEX encoded string corresponding to the format of target script.
     """

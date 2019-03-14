@@ -1,11 +1,4 @@
-import os
-import hmac
-
-from secp256k1 import ffi
-from struct import pack, unpack
-from hashlib import pbkdf2_hmac
-from binascii import hexlify, unhexlify
-from .constants import *
+from struct import unpack
 from .functions import *
 
 
