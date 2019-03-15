@@ -18,7 +18,9 @@ Current version is 2.0
 
 To install pybtc, simply use pip
 
-    $ pip3 install pybtc
+    $ git clone https://github.com/bitaps-com/pybtc
+    $ cd pybtc
+    $ python3 setup.py install
     
 ### Dependencies
 

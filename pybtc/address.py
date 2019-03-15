@@ -150,7 +150,7 @@ class Address():
                        by default set to True. Recommended use only compressed public key.
     :param testnet: (optional) if set to True mean that this private key for testnet Bitcoin network.
 
-    In case instanse is created from WIF private key, ``PrivateKey`` or ``PublicKey`` compressed and testnet flags
+    In case instance is created from WIF private key, ``PrivateKey`` or ``PublicKey`` compressed and testnet flags
     already contain in initial key parameter and will be ignored.
     """
     def __init__(self, key=None,

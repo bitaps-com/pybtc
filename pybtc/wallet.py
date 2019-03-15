@@ -3,7 +3,7 @@ from .functions import *
 
 
 # Hierarchical Deterministic Wallets (HD Wallets)
-# BIP-44 supprt
+# BIP-44 support
 
 class Wallet():
     """
