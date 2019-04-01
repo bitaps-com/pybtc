@@ -75,8 +75,9 @@ def parse_script(script, segwit=True):
             if script[1] == l - 2:
                 return {"nType": 3, "type": "NULL_DATA", "reqSigs": 0, "data": script[2:]}
         elif script[1] == OPCODE["OP_PUSHDATA1"]:
-            if script[2] == l - 3 and script[2] <= 80:
-                return {"nType": 3, "type": "NULL_DATA", "reqSigs": 0, "data": script[3:]}
+            if l > 2:
+                if script[2] == l - 3 and script[2] <= 80:
+                    return {"nType": 3, "type": "NULL_DATA", "reqSigs": 0, "data": script[3:]}
         return {"nType": 8, "type": "NULL_DATA_NON_STANDARD", "reqSigs": 0, "script": script}
     if script[0] >= 81 and script[0] <= 96:
         if script[-1] == 174:
@@ -183,43 +184,48 @@ def decode_script(script, asm=False):
     s = 0
     result = []
     append = result.append
-    while l - s > 0:
-        if script[s] < 0x4c and script[s]:
-            if asm:
-                append(script[s + 1:s + 1 + script[s]].hex())
-            else:
-                append('[%s]' % script[s])
-            s += script[s] + 1
-            continue
+    try:
+        while l - s > 0:
+            if script[s] < 0x4c and script[s]:
+                if asm:
+                    append(script[s + 1:s + 1 + script[s]].hex())
+                else:
+                    append('[%s]' % script[s])
+                s += script[s] + 1
+                continue
 
-        if script[s] == OPCODE["OP_PUSHDATA1"]:
-            ld = script[s + 1]
-            if asm:
-                append(script[s + 1:s + 1 + ld].hex())
+            if script[s] == OPCODE["OP_PUSHDATA1"]:
+                if asm:
+                    ld = script[s + 1]
+                    append(script[s + 1:s + 1 + ld].hex())
+                else:
+                    append(RAW_OPCODE[script[s]])
+                    ld = script[s + 1]
+                    append('[%s]' % ld)
+                s += 1 + script[s + 1] + 1
+            elif script[s] == OPCODE["OP_PUSHDATA2"]:
+                if asm:
+                    ld = unpack('<H', script[s + 1: s + 3])[0]
+                    append(script[s + 1:s + 1 + ld].hex())
+                else:
+                    ld = unpack('<H', script[s + 1: s + 3])[0]
+                    append(RAW_OPCODE[script[s]])
+                    append('[%s]' % ld)
+                s += 2 + 1 + ld
+            elif script[s] == OPCODE["OP_PUSHDATA4"]:
+                if asm:
+                    ld = unpack('<L', script[s + 1: s + 5])[0]
+                    append(script[s + 1:s + 1 + ld].hex())
+                else:
+                    ld = unpack('<L', script[s + 1: s + 5])[0]
+                    append(RAW_OPCODE[script[s]])
+                    append('[%s]' % ld)
+                s += 5 + 1 + ld
             else:
                 append(RAW_OPCODE[script[s]])
-                append('[%s]' % ld)
-            s += 1 + script[s + 1] + 1
-        elif script[s] == OPCODE["OP_PUSHDATA2"]:
-
-            ld = unpack('<H', script[s + 1: s + 3])[0]
-            if asm:
-                append(script[s + 1:s + 1 + ld].hex())
-            else:
-                append(RAW_OPCODE[script[s]])
-                append('[%s]' % ld)
-            s += 2 + 1 + ld
-        elif script[s] == OPCODE["OP_PUSHDATA4"]:
-            ld = unpack('<L', script[s + 1: s + 5])[0]
-            if asm:
-                append(script[s + 1:s + 1 + ld].hex())
-            else:
-                append(RAW_OPCODE[script[s]])
-                append('[%s]' % ld)
-            s += 5 + 1 + ld
-        else:
-            append(RAW_OPCODE[script[s]])
-            s += 1
+                s += 1
+    except:
+        append("[SCRIPT_DECODE_FAILED]")
     return ' '.join(result)
 
 
