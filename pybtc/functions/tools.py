@@ -180,11 +180,10 @@ def int_to_c_int(n, base_bytes=1):
         return b'\x00' * base_bytes
     else:
         l = n.bit_length() + 1
-    min_bits = base_bytes * 8 - 1
-    if l <= min_bits + 1:
+    if l <= base_bytes * 8:
         return n.to_bytes(base_bytes, byteorder="big")
     prefix = 0
-    payload_bytes = ceil((l)/8) - base_bytes
+    payload_bytes = ceil((l)/8) - base_bytes + 1
     extra_bytes = int(ceil((l+payload_bytes)/8) - base_bytes)
     for i in range(extra_bytes):
         prefix += 2 ** i
@@ -232,12 +231,12 @@ def c_int_len(n, base_bytes=1):
     :return: integer.
     """
     if n == 0:
-        return 1
+        return base_bytes
     l = n.bit_length() + 1
     min_bits = base_bytes * 8 - 1
     if l <= min_bits + 1:
-        return 1
-    payload_bytes = ceil((l)/8) - base_bytes
+        return base_bytes
+    payload_bytes = ceil((l)/8) - base_bytes + 1
     return int(ceil((l+payload_bytes)/8))
 
 
