@@ -4,7 +4,7 @@ parentPath = os.path.abspath("..")
 if parentPath not in sys.path:
     sys.path.insert(0, parentPath)
 from pybtc import tools
-
+import math
 
 
 def print_bytes(b):
@@ -126,6 +126,20 @@ class IntegerFunctionsTests(unittest.TestCase):
         for i in range(341616807575530379006368233343265341697 - 10, 341616807575530379006368233343265341697 + 10):
             self.assertEqual(tools.c_int_to_int((tools.int_to_c_int(i))), i)
             self.assertEqual(tools.c_int_len(i), len(tools.int_to_c_int(i)))
+
+        number = 0
+        old_number = 0
+        for i in range(0, 1024, 8):
+            number += 2 ** i
+            for i in range(old_number, number, int(math.ceil(2 ** i / 20))):
+                b = 1
+                a = tools.int_to_c_int(i, b)
+                c = tools.c_int_to_int(a, b)
+                l = tools.c_int_len(i)
+                self.assertEqual(c, i)
+                self.assertEqual(l, len(a))
+            old_number = number
+
     def test_variable_integer(self):
         for i in range(0, 0xfd):
             self.assertEqual(tools.var_int_to_int((tools.int_to_var_int(i))), i)

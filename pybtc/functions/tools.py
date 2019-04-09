@@ -1,4 +1,4 @@
-from math import ceil
+from math import ceil, floor
 from io import BytesIO
 from struct import pack, unpack
 
@@ -167,11 +167,9 @@ def read_var_list(stream, data_type):
 
 # compressed integer
 
-
 def int_to_c_int(n, base_bytes=1):
     """
-    Convert integer to compresed integer
-
+    Convert integer to compressed integer
     :param n: integer.
     :param base_bytes: len of bytes base from which start compression.
     :return: bytes.
@@ -183,7 +181,15 @@ def int_to_c_int(n, base_bytes=1):
     if l <= base_bytes * 8:
         return n.to_bytes(base_bytes, byteorder="big")
     prefix = 0
-    payload_bytes = ceil((l)/8) - base_bytes + 1
+    payload_bytes = ceil((l)/8) - base_bytes
+    a=payload_bytes
+    while True:
+        add_bytes = floor((a) / 8)
+        a = add_bytes
+        if add_bytes>=1:
+            add_bytes+=floor((payload_bytes+add_bytes) / 8) - floor((payload_bytes) / 8)
+            payload_bytes+=add_bytes
+        if a==0: break
     extra_bytes = int(ceil((l+payload_bytes)/8) - base_bytes)
     for i in range(extra_bytes):
         prefix += 2 ** i
@@ -193,7 +199,31 @@ def int_to_c_int(n, base_bytes=1):
     if prefix.bit_length() % 8:
         prefix = prefix << 8 - prefix.bit_length() % 8
     n ^= prefix
-    return n.to_bytes(ceil(n.bit_length()/8), byteorder="big")
+    return n.to_bytes(ceil(n.bit_length() / 8), byteorder="big")
+
+
+def c_int_len(n, base_bytes=1):
+    """
+    Get length of compressed integer from integer value
+    :param n: bytes.
+    :param base_bytes: len of bytes base from which start compression.
+    :return: integer.
+    """
+    if n == 0:
+        return base_bytes
+    l = n.bit_length() + 1
+    if l <= base_bytes * 8:
+        return base_bytes
+    payload_bytes = ceil((l) / 8) - base_bytes
+    a = payload_bytes
+    while True:
+        add_bytes = floor((a) / 8)
+        a = add_bytes
+        if add_bytes >= 1:
+            add_bytes += floor((payload_bytes + add_bytes) / 8) - floor((payload_bytes) / 8)
+            payload_bytes += add_bytes
+        if a == 0: break
+    return int(ceil((l+payload_bytes)/8))
 
 
 def c_int_to_int(b, base_bytes=1):
@@ -220,24 +250,6 @@ def c_int_to_int(b, base_bytes=1):
     if byte_length:
         return n & ((1 << (byte_length+base_bytes) * 8 - byte_length) - 1)
     return n
-
-
-def c_int_len(n, base_bytes=1):
-    """
-    Get length of compressed integer from integer value
-
-    :param n: bytes.
-    :param base_bytes: len of bytes base from which start compression.
-    :return: integer.
-    """
-    if n == 0:
-        return base_bytes
-    l = n.bit_length() + 1
-    min_bits = base_bytes * 8 - 1
-    if l <= min_bits + 1:
-        return base_bytes
-    payload_bytes = ceil((l)/8) - base_bytes + 1
-    return int(ceil((l+payload_bytes)/8))
 
 
 # generic big endian MPI format
