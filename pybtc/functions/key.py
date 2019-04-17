@@ -1,13 +1,9 @@
-from secp256k1 import ffi, lib
-secp256k1_ec_pubkey_create = lib.secp256k1_ec_pubkey_create
-secp256k1_ec_pubkey_serialize = lib.secp256k1_ec_pubkey_serialize
-
 from pybtc.constants import *
 from pybtc.functions.encode import encode_base58, decode_base58
 from pybtc.functions.hash import double_sha256
 from .bip39_mnemonic import generate_entropy
-
 bytes_from_hex = bytes.fromhex
+from pybtc.crypto import __secp256k1_ec_pubkey_create__
 
 
 def create_private_key(compressed=True, testnet=False, wif=True, hex=False):
@@ -63,9 +59,9 @@ def wif_to_private_key(h, hex=True):
     :param hex:  (optional) if set to True return key in HEX format, by default is True.
     :return: Private key HEX encoded string or raw bytes string.
     """
-    if not is_wif_valid(h):
-        raise TypeError("invalid wif key")
     h = decode_base58(h)
+    if double_sha256(h[:-4])[:4] != h[-4:]:
+        raise TypeError("invalid wif key")
     return h[1:33].hex() if hex else h[1:33]
 
 
@@ -111,26 +107,25 @@ def private_to_public_key(private_key, compressed=True, hex=True):
         if isinstance(private_key, bytearray):
             private_key = bytes(private_key)
         elif isinstance(private_key, str):
-            if not is_wif_valid(private_key):
-                private_key = bytes_from_hex(private_key)
-            else:
+            try:
                 if private_key[0] in (MAINNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX,
                                       TESTNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX):
                     compressed = False
-                private_key = wif_to_private_key(private_key, hex=False)
+                h = decode_base58(private_key)
+                if double_sha256(h[:-4])[:4] != h[-4:]:
+                    raise Exception()
+                private_key = h[1:33]
+            except:
+                try:
+                    private_key = bytes_from_hex(private_key)
+                except:
+                    raise TypeError("private key HEX or WIF invalid")
         else:
             raise TypeError("private key must be a bytes or WIF or hex encoded string")
-    pubkey_ptr = ffi.new('secp256k1_pubkey *')
-    r = secp256k1_ec_pubkey_create(ECDSA_CONTEXT_ALL, pubkey_ptr, private_key)
-    if not r:
-        raise RuntimeError("secp256k1 error")
-    len_key = 33 if compressed else 65
-    pubkey = ffi.new('char [%d]' % len_key)
-    outlen = ffi.new('size_t *', len_key)
-    compflag = EC_COMPRESSED if compressed else EC_UNCOMPRESSED
-    r = secp256k1_ec_pubkey_serialize(ECDSA_CONTEXT_VERIFY, pubkey, outlen, pubkey_ptr, compflag)
-    pub = bytes(ffi.buffer(pubkey, len_key))
-    if not r:
+        if len(private_key) != 32:
+            raise TypeError("private key length invalid")
+    pub = __secp256k1_ec_pubkey_create__(private_key, bool(compressed))
+    if not pub:
         raise RuntimeError("secp256k1 error")
     return pub.hex() if hex else pub
 

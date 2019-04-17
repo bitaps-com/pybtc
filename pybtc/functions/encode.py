@@ -1,5 +1,5 @@
 from pybtc.functions.hash import double_sha256
-from pybtc.functions.tools import bytes_from_hex
+from pybtc.crypto import __decode_base58__, __encode_base58__
 
 b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 base32charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
@@ -79,54 +79,24 @@ def bech32_polymod(values):
 
 
 def encode_base58(b):
+
     """Encode bytes to a base58-encoded string"""
     # Convert big-endian bytes to integer
+    if not b:
+        return ''
+    if not isinstance(b, bytes):
+        raise ValueError("encode_base58 bytes required")
 
-    n= int('0x0%s' % b.hex(), 16)
-
-    # Divide that integer into bas58
-    res = []
-    append = res.append
-    while n > 0:
-        n, r = divmod(n, 58)
-        append(b58_digits[r])
-    res = ''.join(res[::-1])
-    # Encode leading zeros as base58 zeros
-    czero = 0
-    pad = 0
-    for c in b:
-        if c == czero:
-            pad += 1
-        else:
-            break
-    return b58_digits[0] * pad + res
+    return __encode_base58__(b)
 
 
 def decode_base58(s):
     """Decode a base58-encoding string, returning bytes"""
     if not s:
         return b''
-    # Convert the string to an integer
-    n = 0
-    for c in s:
-        n *= 58
-        if c not in b58_digits:
-            raise Exception('Character %r is not a valid base58 character' % c)
-        digit = b58_digits.index(c)
-        n += digit
-    # Convert the integer to bytes
-    h = '%x' % n
-    if len(h) % 2:
-        h = '0%s' % h
-    res = bytes_from_hex(h)
-    # Add padding back.
-    pad = 0
-    for c in s[:-1]:
-        if c == b58_digits[0]:
-            pad += 1
-        else:
-            break
-    return b''.join((b'\x00' * pad, res))
+    if not isinstance(s, str):
+        raise ValueError("decode_base58 string required")
+    return __decode_base58__(s)
 
 
 def encode_base58_with_checksum(b):
