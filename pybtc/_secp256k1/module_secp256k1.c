@@ -14,6 +14,94 @@ secp256k1_context *secp256k1_precomp_context_verify;
 static int context_exist = 0;
 
 
+
+
+
+
+
+static PyObject *secp256k1_secp256k1_ec_pubkey_tweak_add(PyObject *self, PyObject *args) {
+    Py_buffer pubkey;
+    Py_buffer tweak;
+    int flag;
+    if (!PyArg_ParseTuple(args,"y*y*i", &pubkey, &tweak, &flag)) { return NULL; }
+    secp256k1_pubkey data;
+    int t = secp256k1_ec_pubkey_parse(secp256k1_precomp_context_sign, &data, pubkey.buf, pubkey.len);
+    if (t==0) { return Py_BuildValue("b", -1); }
+
+    t = secp256k1_ec_pubkey_tweak_add(secp256k1_context_no_precomp, &data, tweak.buf);
+    if (t==0) { return Py_BuildValue("b", -2); }
+
+    size_t outl = 33;
+    if (flag == 1) {
+      outl = 33;
+      flag = SECP256K1_EC_COMPRESSED;
+    } else {
+      outl = 65;
+      flag = SECP256K1_EC_UNCOMPRESSED;
+    }
+    unsigned char pubkeyo[outl];
+    t = secp256k1_ec_pubkey_serialize(secp256k1_context_no_precomp, pubkeyo, &outl, &data, flag);
+    if (t != 1) { return Py_BuildValue("b", 0); }
+    return Py_BuildValue("y#", pubkeyo, outl);
+    return Py_BuildValue("b", 0);
+}
+
+
+
+
+static PyObject *secp256k1_secp256k1_ecdsa_add_points(PyObject *self, PyObject *args) {
+    Py_buffer a;
+    Py_buffer b;
+    int flag;
+    if (!PyArg_ParseTuple(args,"y*y*i", &a, &b, &flag)) { return NULL; }
+    secp256k1_pubkey data[2];
+    int t = secp256k1_ec_pubkey_parse(secp256k1_context_no_precomp, data, a.buf, a.len);
+    if (t==0) { return Py_BuildValue("b", -1); }
+
+    t = secp256k1_ec_pubkey_parse(secp256k1_context_no_precomp, data + 1, b.buf, b.len);
+    if (t==0) { return Py_BuildValue("b", -1); }
+    secp256k1_pubkey out;
+    const secp256k1_pubkey* d[2];
+    d[0] = &data[0];
+    d[1] = &data[1];
+
+    t = secp256k1_ec_pubkey_combine(secp256k1_precomp_context_sign, &out,
+                                    d, 2);
+
+    size_t outl;
+    if (flag == 1) {
+      outl = 33;
+      flag = SECP256K1_EC_COMPRESSED;
+    } else {
+      outl = 65;
+      flag = SECP256K1_EC_UNCOMPRESSED;
+    }
+    unsigned char pubkeyo[outl];
+    t = secp256k1_ec_pubkey_serialize(secp256k1_context_no_precomp, pubkeyo, &outl, &out, flag);
+    if (t != 1) { return Py_BuildValue("b", 0); }
+    return Py_BuildValue("y#", pubkeyo, outl);
+    return Py_BuildValue("b", 0);
+}
+
+static PyObject *secp256k1_secp256k1_ecdsa_signature_serialize_der(PyObject *self, PyObject *args) {
+    Py_buffer sig;
+    if (!PyArg_ParseTuple(args,"y*", &sig)) { return NULL; }
+    secp256k1_ecdsa_signature signature;
+    int t = secp256k1_ecdsa_signature_parse_compact(secp256k1_context_no_precomp,
+                                                              &signature,
+                                                              sig.buf);
+    if (t==0) { return Py_BuildValue("b", 0); }
+    unsigned char outputSer[72];
+    size_t outputLen = 72;
+    t = secp256k1_ecdsa_signature_serialize_der(secp256k1_context_no_precomp,
+                                            outputSer,
+                                            &outputLen,
+                                            &signature);
+    if (t==0) { return Py_BuildValue("b", 0); }
+    return Py_BuildValue("y#", &outputSer, outputLen);
+
+}
+
 static PyObject *secp256k1_secp256k1_nonce_rfc6979(PyObject *self, PyObject *args) {
   unsigned char nonce[32];
   Py_buffer msg32;
@@ -24,8 +112,6 @@ static PyObject *secp256k1_secp256k1_nonce_rfc6979(PyObject *self, PyObject *arg
   if (r == 0 ) { return Py_BuildValue("b", 0); }
   return Py_BuildValue("y#", &nonce, 32);
 }
-
-
 
 static PyObject *secp256k1_secp256k1_ecdsa_recover(PyObject *self, PyObject *args) {
     Py_buffer message;
@@ -77,7 +163,6 @@ static PyObject *secp256k1_secp256k1_ecdsa_recover(PyObject *self, PyObject *arg
     return Py_BuildValue("y#", pubkeyo, outl);
 }
 
-
 static PyObject *secp256k1_secp256k1_ecdsa_verify(PyObject *self, PyObject *args) {
     Py_buffer message;
     Py_buffer pub;
@@ -105,8 +190,6 @@ static PyObject *secp256k1_secp256k1_ecdsa_verify(PyObject *self, PyObject *args
     if (r != 1) { return Py_BuildValue("b", 0);}
     return Py_BuildValue("b", 1);
 }
-
-
 
 static PyObject *secp256k1_secp256k1_context_create(PyObject *self, PyObject *args) {
   if (context_exist == 0 ) {
@@ -199,6 +282,9 @@ static PyMethodDef module_methods[] = {
     {"secp256k1_ecdsa_verify", secp256k1_secp256k1_ecdsa_verify, METH_VARARGS, "Verify signature"},
     {"secp256k1_ecdsa_recover", secp256k1_secp256k1_ecdsa_recover, METH_VARARGS, "Recover public key from signature"},
     {"secp256k1_nonce_rfc6979", secp256k1_secp256k1_nonce_rfc6979, METH_VARARGS, "Create rfc6979 nonce"},
+    {"secp256k1_ecdsa_signature_serialize_der", secp256k1_secp256k1_ecdsa_signature_serialize_der, METH_VARARGS, "Serialize to DER"},
+    {"secp256k1_ecdsa_add_points", secp256k1_secp256k1_ecdsa_add_points, METH_VARARGS, "2 points addition"},
+    {"secp256k1_ec_pubkey_tweak_add", secp256k1_secp256k1_ec_pubkey_tweak_add, METH_VARARGS, "tweak addition "},
     {NULL, NULL, 0, NULL}
 };
 

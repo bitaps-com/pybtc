@@ -40,6 +40,16 @@ def __secp256k1_ecdsa_recover__(signature, message, rec_id, compressed = True):
 def __secp256k1_nonce_rfc6979__(msg32, key32, counter):
     return _secp256k1.secp256k1_nonce_rfc6979(msg32, key32, counter)
 
+def __secp256k1_ecdsa_signature_serialize_der__(raw_sig):
+    return _secp256k1.secp256k1_ecdsa_signature_serialize_der(raw_sig)
+
+def __secp256k1_ecdsa_add_points__(a, b, flag):
+    return _secp256k1.secp256k1_ecdsa_add_points(a, b, int(flag))
+
+def __secp256k1_ec_pubkey_tweak_add__(pubkey, tweak, compressed = True):
+    return _secp256k1.secp256k1_ec_pubkey_tweak_add(pubkey, tweak, int(compressed))
+
+
 
 if (__secp256k1_context_create__()):
     __secp256k1_context_randomize__()
