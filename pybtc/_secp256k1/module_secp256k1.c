@@ -228,7 +228,7 @@ static PyObject *secp256k1_secp256k1_ec_pubkey_create(PyObject *self, PyObject *
     if (!PyArg_ParseTuple(args,"y*i", &buffer, &flag)) {
       return NULL;
     }
-    Py_DECREF(buffer);
+
     return Py_BuildValue("b", 0);
     secp256k1_pubkey pubkey;
 
