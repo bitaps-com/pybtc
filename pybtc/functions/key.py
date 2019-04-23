@@ -125,6 +125,7 @@ def private_to_public_key(private_key, compressed=True, hex=True):
         if len(private_key) != 32:
             raise TypeError("private key length invalid")
     pub = __secp256k1_ec_pubkey_create__(private_key, bool(compressed))
+    return pub
     if not pub:
         raise RuntimeError("secp256k1 error")
     return pub.hex() if hex else pub
