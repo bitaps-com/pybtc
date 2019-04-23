@@ -31,6 +31,7 @@ static PyObject* crypto_encode_base58(PyObject *, PyObject* args) {
     if (!PyArg_ParseTuple(args,"y*", &buffer)) return NULL;
     std::string result = EncodeBase58((const unsigned char*)buffer.buf,
                                       (const unsigned char*)buffer.buf + buffer.len);
+    PyBuffer_Release(&buffer);
     const char * c = result.c_str();
     PyObject *return_value = Py_BuildValue("s", c);
     Py_DECREF(c);
@@ -42,6 +43,7 @@ static PyObject* crypto_double_sha256(PyObject *, PyObject* args) {
     if (!PyArg_ParseTuple(args,"y*", &buffer)) return NULL;
     unsigned char h[CSHA256::OUTPUT_SIZE];
     CSHA256().Write((const unsigned char*)buffer.buf, buffer.len).Finalize(h);
+    PyBuffer_Release(&buffer);
     uint8_t h2[CSHA256::OUTPUT_SIZE];
     CSHA256().Write(h, CSHA256::OUTPUT_SIZE).Finalize(h2);
     PyObject *return_value = Py_BuildValue("y#", h2, CSHA256::OUTPUT_SIZE);
