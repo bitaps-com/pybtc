@@ -6,16 +6,9 @@
 #include "secp256k1_recovery.h"
 
 
-
-
-
 secp256k1_context *secp256k1_precomp_context_sign;
 secp256k1_context *secp256k1_precomp_context_verify;
 static int context_exist = 0;
-
-
-
-
 
 
 
@@ -48,9 +41,6 @@ static PyObject *secp256k1_secp256k1_ec_pubkey_tweak_add(PyObject *self, PyObjec
     Py_DECREF(pubkeyo);
     return return_value;
 }
-
-
-
 
 static PyObject *secp256k1_secp256k1_ecdsa_add_points(PyObject *self, PyObject *args) {
     Py_buffer a;
@@ -264,7 +254,6 @@ static PyObject *secp256k1_secp256k1_ec_pubkey_create(PyObject *self, PyObject *
     Py_DECREF(pubkeyo);
     return return_value;
 }
-
 
 static PyObject *secp256k1_secp256k1_ecdsa_sign(PyObject *self, PyObject *args) {
     Py_buffer msg;
