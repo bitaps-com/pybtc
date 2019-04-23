@@ -42,8 +42,9 @@ static PyObject *secp256k1_secp256k1_ec_pubkey_tweak_add(PyObject *self, PyObjec
     unsigned char pubkeyo[outl];
     t = secp256k1_ec_pubkey_serialize(secp256k1_context_no_precomp, pubkeyo, &outl, &data, flag);
     if (t != 1) { return Py_BuildValue("b", 0); }
-    return Py_BuildValue("y#", pubkeyo, outl);
-    return Py_BuildValue("b", 0);
+    PyObject *return_value = Py_BuildValue("y#", pubkeyo, outl);
+    Py_DECREF(pubkeyo);
+    return return_value;
 }
 
 
@@ -79,8 +80,9 @@ static PyObject *secp256k1_secp256k1_ecdsa_add_points(PyObject *self, PyObject *
     unsigned char pubkeyo[outl];
     t = secp256k1_ec_pubkey_serialize(secp256k1_context_no_precomp, pubkeyo, &outl, &out, flag);
     if (t != 1) { return Py_BuildValue("b", 0); }
-    return Py_BuildValue("y#", pubkeyo, outl);
-    return Py_BuildValue("b", 0);
+    PyObject *return_value = Py_BuildValue("y#", pubkeyo, outl);
+    Py_DECREF(pubkeyo);
+    return return_value;
 }
 
 static PyObject *secp256k1_secp256k1_ecdsa_signature_serialize_der(PyObject *self, PyObject *args) {
@@ -98,8 +100,9 @@ static PyObject *secp256k1_secp256k1_ecdsa_signature_serialize_der(PyObject *sel
                                             &outputLen,
                                             &signature);
     if (t==0) { return Py_BuildValue("b", 0); }
-    return Py_BuildValue("y#", &outputSer, outputLen);
-
+    PyObject *return_value = Py_BuildValue("y#", &outputSer, outputLen);
+    Py_DECREF(outputSer);
+    return return_value;
 }
 
 static PyObject *secp256k1_secp256k1_nonce_rfc6979(PyObject *self, PyObject *args) {
@@ -110,7 +113,9 @@ static PyObject *secp256k1_secp256k1_nonce_rfc6979(PyObject *self, PyObject *arg
   if (!PyArg_ParseTuple(args,"y*y*b", &msg32, &key32, &counter)) {  return NULL; }
   int r = secp256k1_nonce_function_rfc6979(nonce, msg32.buf, key32.buf, NULL, NULL, counter);
   if (r == 0 ) { return Py_BuildValue("b", 0); }
-  return Py_BuildValue("y#", &nonce, 32);
+  PyObject *return_value = Py_BuildValue("y#", &nonce, 32);
+  Py_DECREF(nonce);
+  return return_value;
 }
 
 static PyObject *secp256k1_secp256k1_ecdsa_recover(PyObject *self, PyObject *args) {
@@ -160,7 +165,9 @@ static PyObject *secp256k1_secp256k1_ecdsa_recover(PyObject *self, PyObject *arg
     if (r != 1) {
       return Py_BuildValue("b", -3);
     }
-    return Py_BuildValue("y#", pubkeyo, outl);
+    PyObject *return_value = Py_BuildValue("y#", pubkeyo, outl);
+    Py_DECREF(pubkeyo);
+    return return_value;
 }
 
 static PyObject *secp256k1_secp256k1_ecdsa_verify(PyObject *self, PyObject *args) {
@@ -209,8 +216,9 @@ static PyObject *secp256k1_secp256k1_context_randomize(PyObject *self, PyObject 
     int r = 0;
     r += secp256k1_context_randomize(secp256k1_precomp_context_sign, buffer.buf);
     r += secp256k1_context_randomize(secp256k1_precomp_context_sign, buffer.buf);
-    if (r == 2) { r = 1; } else { r = 0;  }
-    return Py_BuildValue("b", r);
+    if (r == 2) { return Py_BuildValue("b", 1); }
+    else { return Py_BuildValue("b", 0); }
+
 }
 
 static PyObject *secp256k1_secp256k1_ec_pubkey_create(PyObject *self, PyObject *args) {
@@ -239,7 +247,9 @@ static PyObject *secp256k1_secp256k1_ec_pubkey_create(PyObject *self, PyObject *
     if (r != 1) {
       return Py_BuildValue("b", 0);
     }
-    return Py_BuildValue("y#", pubkeyo, outl);
+    PyObject *return_value =  Py_BuildValue("y#", pubkeyo, outl);
+    Py_DECREF(pubkeyo);
+    return return_value;
 }
 
 
@@ -261,7 +271,9 @@ static PyObject *secp256k1_secp256k1_ecdsa_sign(PyObject *self, PyObject *args) 
       return Py_BuildValue("b", 0);
     }
     if (der_encoding == 0) {
-        return Py_BuildValue("y#", &signature, 65);
+        PyObject *return_value =  Py_BuildValue("y#", &signature, 65);
+//        Py_DECREF(signature);
+        return return_value;
     } else {
         unsigned char outputSer[72];
         size_t outputLen = 72;
@@ -269,7 +281,9 @@ static PyObject *secp256k1_secp256k1_ecdsa_sign(PyObject *self, PyObject *args) 
                                                 outputSer,
                                                 &outputLen,
                                                 (const secp256k1_ecdsa_signature *)&signature);
-        return Py_BuildValue("y#", &outputSer, outputLen);
+        PyObject *return_value = Py_BuildValue("y#", &outputSer, outputLen);
+        Py_DECREF(outputSer);
+        return return_value;
     }
 }
 

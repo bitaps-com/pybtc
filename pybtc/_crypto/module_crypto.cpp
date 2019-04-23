@@ -21,7 +21,9 @@ static PyObject* crypto_decode_base58(PyObject *, PyObject* args) {
       *rp = *i;
       rp++;
     }
-    return Py_BuildValue("y#", r, result.size());
+    PyObject *return_value = Py_BuildValue("y#", r, result.size());
+    Py_DECREF(r);
+    return return_value;
 }
 
 static PyObject* crypto_encode_base58(PyObject *, PyObject* args) {
@@ -30,7 +32,9 @@ static PyObject* crypto_encode_base58(PyObject *, PyObject* args) {
     std::string result = EncodeBase58((const unsigned char*)buffer.buf,
                                       (const unsigned char*)buffer.buf + buffer.len);
     const char * c = result.c_str();
-    return Py_BuildValue("s", c);
+    PyObject *return_value = Py_BuildValue("s", c);
+    Py_DECREF(c);
+    return return_value;
 }
 
 static PyObject* crypto_double_sha256(PyObject *, PyObject* args) {
@@ -40,7 +44,9 @@ static PyObject* crypto_double_sha256(PyObject *, PyObject* args) {
     CSHA256().Write((const unsigned char*)buffer.buf, buffer.len).Finalize(h);
     uint8_t h2[CSHA256::OUTPUT_SIZE];
     CSHA256().Write(h, CSHA256::OUTPUT_SIZE).Finalize(h2);
-    return Py_BuildValue("y#", h2, CSHA256::OUTPUT_SIZE);
+    PyObject *return_value = Py_BuildValue("y#", h2, CSHA256::OUTPUT_SIZE);
+    Py_DECREF(h2);
+    return return_value;
 }
 
 

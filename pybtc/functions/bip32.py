@@ -35,7 +35,7 @@ def create_master_xprivate_key(seed, testnet=False, base58=True, hex=False):
         key = b"".join([key, double_sha256(key)[:4]])
         return encode_base58(key)
     else:
-        return key
+        return key if not hex else key.hex()
 
 
 def xprivate_to_xpublic_key(xprivate_key, base58=True, hex=False):
