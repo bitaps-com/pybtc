@@ -222,10 +222,11 @@ static PyObject *secp256k1_secp256k1_context_randomize(PyObject *self, PyObject 
 }
 
 static PyObject *secp256k1_secp256k1_ec_pubkey_create(PyObject *self, PyObject *args) {
-
-    return Py_BuildValue("b", 0);
-    Py_buffer buffer;
     int flag;
+    return Py_BuildValue("b", 0);
+
+    Py_buffer buffer;
+
     if (!PyArg_ParseTuple(args,"y*i", &buffer, &flag)) {
       return NULL;
     }
