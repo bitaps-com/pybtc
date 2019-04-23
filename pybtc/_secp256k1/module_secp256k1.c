@@ -228,7 +228,7 @@ static PyObject *secp256k1_secp256k1_ec_pubkey_create(PyObject *self, PyObject *
       return NULL;
     }
     secp256k1_pubkey pubkey;
-    return Py_BuildValue("b", 0);
+    return Py_BuildValue("y#", '123456789', 9);
     int r = 0;
     r = secp256k1_ec_pubkey_create(secp256k1_precomp_context_sign, &pubkey, buffer.buf);
     if (r != 1) {
