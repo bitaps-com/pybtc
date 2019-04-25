@@ -253,7 +253,7 @@ class Connector:
         bin_block_hash = bytes_from_hex(block["hash"])
         bin_prev_block_hash = block["previousblockhash"] if "previousblockhash" in block else None
         block_height = int(block["height"])
-        self.log.info("New block %s %s" % (block_height, block["hash"]))
+        self.log.debug("New block %s %s" % (block_height, block["hash"]))
         bt = tm()
         bpt = 0
         try:
