@@ -108,7 +108,7 @@ class Connector:
                 self.log.warning("Blockchain is synchronized")
             else:
                 d = self.node_last_block - self.last_block_height
-                self.log.warning("%s blocks before synchronization synchronized")
+                self.log.warning("%s blocks before synchronization synchronized" % d)
                 if d > self.deep_sync_limit:
                     self.log.warning("Deep synchronization mode")
                     self.deep_synchronization = True

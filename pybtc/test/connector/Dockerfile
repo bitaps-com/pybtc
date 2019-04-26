@@ -13,6 +13,7 @@ RUN pip3 install colorlog
 RUN pip3 install aiohttp
 RUN pip3 install pyzmq
 RUN pip3 install uvloop
+RUN pip3 install pybtc
 
 COPY ./ /
 WORKDIR /

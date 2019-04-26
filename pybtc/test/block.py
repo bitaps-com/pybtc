@@ -600,19 +600,27 @@ class BlockDeserializeTests(unittest.TestCase):
         f = open('./pybtc/test/raw_block.txt')
         fc = f.readline()
         qt = time.time()
-        bt = Block(fc[:-1], format="decoded")
+        bt = (
+            Block(fc[:-1], format="raw"),
+              )
         print("decoded block", time.time() - qt )
-
+        import pickle
+        qt = time.time()
+        k = pickle.dumps(bt)
+        print("decoded block dump", time.time() - qt)
+        qt = time.time()
+        p = pickle.loads(k)
+        print("decoded block load", time.time() - qt)
         import cProfile
 
-        cProfile.run("import pybtc;"
-                     "f = open('./pybtc/test/raw_block.txt');"
-                     "fc = f.readline();"
-                     "pybtc.Block(fc[:-1], format='decoded')")
-        cProfile.run("import pybtc;"
-                     "f = open('./pybtc/test/raw_block.txt');"
-                     "fc = f.readline();"
-                     "pybtc.Block(fc[:-1], format='raw')")
+        # cProfile.run("import pybtc;"
+        #              "f = open('./pybtc/test/raw_block.txt');"
+        #              "fc = f.readline();"
+        #              "pybtc.Block(fc[:-1], format='decoded')")
+        # cProfile.run("import pybtc;"
+        #              "f = open('./pybtc/test/raw_block.txt');"
+        #              "fc = f.readline();"
+        #              "pybtc.Block(fc[:-1], format='raw')")
         # print(">>>",block.bits)
         # print(">>>",block.hash)
         # print(">>>",block.timestamp)
