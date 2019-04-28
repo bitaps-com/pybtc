@@ -145,6 +145,8 @@ class Connector:
                         msg = await self.zmqSubSocket.recv_multipart()
                         topic = msg[0]
                         body = msg[1]
+                        if self.deep_synchronization:
+                            continue
                         if topic == b"hashblock":
                             self.last_zmq_msg = int(time.time())
                             hash = body.hex()
@@ -152,8 +154,6 @@ class Connector:
                             self.loop.create_task(self._get_block_by_hash(hash))
                         elif topic == b"rawtx":
                             self.last_zmq_msg = int(time.time())
-                            if self.deep_synchronization:
-                                continue
                             try:
                                 self.loop.create_task(self._new_transaction(Transaction(body, format="raw")))
                             except:
