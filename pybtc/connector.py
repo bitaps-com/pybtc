@@ -24,7 +24,7 @@ class Connector:
                  utxo_data=False,
                  utxo_cache_size=2000000,
                  skip_opreturn=True,
-                 postgress_pool=None):
+                 postgres_pool=None):
         self.loop = asyncio.get_event_loop()
 
         # settings
@@ -41,7 +41,7 @@ class Connector:
         self.deep_sync_limit = deep_sync_limit
         self.backlog = backlog
         self.mempool_tx = mempool_tx
-        self.postgress_pool = postgress_pool
+        self.postgress_pool = postgres_pool
         self.utxo_cache_size = utxo_cache_size
         self.utxo_data = utxo_data
         self.chain_tail = list(chain_tail) if chain_tail else []
@@ -111,6 +111,8 @@ class Connector:
 
             self.log.info("Node best block height %s" %self.node_last_block)
             self.log.info("Connector last block height %s" % self.last_block_height)
+            self.log.info(str(type(self.last_block_height)))
+            self.log.info(str(type(self.node_last_block)))
 
             if self.node_last_block < self.last_block_height:
                 self.log.error("Node is behind application blockchain state!")
