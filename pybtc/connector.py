@@ -500,14 +500,14 @@ class Connector:
     async def _new_transaction(self, tx, block_time = None, block_height = None, block_index = None):
         if not(tx["txId"] in self.tx_in_process or self.tx_cache.get(tx["txId"])):
             try:
+                stxo = None
                 self.tx_in_process.add(tx["txId"])
                 if not tx["coinbase"]:
                     if block_height is not None:
                         await self.wait_block_dependences(tx)
-                if self.utxo:
-                    stxo = await self.get_stxo(tx, block_height, block_index)
-                else:
-                    stxo = None
+                    if self.utxo:
+                        stxo = await self.get_stxo(tx, block_height, block_index)
+
 
                 if self.tx_handler and  not self.cache_loading:
                     await self.tx_handler(tx, stxo, block_time, block_height, block_index)
@@ -768,7 +768,8 @@ class UTXO():
             self.load_utxo_future = asyncio.Future()
             l = set(self.missed)
             async with self._db_pool.acquire() as conn:
-                rows = await conn.fetch("SELECT outpoint, utxo.data FROM connector_utxo "
+                rows = await conn.fetch("SELECT outpoint, connector_utxo.data "
+                                        "FROM connector_utxo "
                                         "WHERE outpoint = ANY($1);", l)
             for i in l:
                 try:
