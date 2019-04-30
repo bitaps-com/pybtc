@@ -111,8 +111,6 @@ class Connector:
 
             self.log.info("Node best block height %s" %self.node_last_block)
             self.log.info("Connector last block height %s" % self.last_block_height)
-            self.log.info(str(type(self.last_block_height)))
-            self.log.info(str(type(self.node_last_block)))
 
             if self.node_last_block < self.last_block_height:
                 self.log.error("Node is behind application blockchain state!")
@@ -559,7 +557,7 @@ class Connector:
         for i in tx["vIn"]:
             inp = tx["vIn"][i]
             outpoint = b"%s%s" % (inp["txId"], int_to_bytes(inp["vOut"]))
-            r = self.utxo.get(outpoint)
+            r = self.utxo.get(outpoint, block_height)
             stxo.add(r) if r else missed.add((outpoint, (block_height << 42) + (block_index << 21) + i))
 
         if missed:
