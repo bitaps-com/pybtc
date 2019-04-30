@@ -412,12 +412,12 @@ class Connector:
                 raise Exception("duplicated block")
         if "previousblockhash" not in block :
             return
-        lb = self.block_cache.get_last()
+        lb = self.block_cache.get_last_key()
         self.log.critical(str(lb))
         self.log.critical(str(block["previousblockhash"]))
         if lb is None and not self.last_block_height:
             return
-        if self.block_cache.get_last() != block["previousblockhash"]:
+        if self.block_cache.get_last_key() != block["previousblockhash"]:
             if self.block_cache.get(block["previousblockhash"]) is None and self.last_block_height:
                 self.log.critical("Connector error! Node out of sync "
                                   "no parent block in chain tail %s" % block["previousblockhash"])
@@ -872,11 +872,10 @@ class Cache():
         except:
             return None
 
-    def get_last(self):
+    def get_last_key(self):
         try:
             i = next(reversed(self._store))
-            data = self._store[i]
-            return data
+            return i
         except:
             return None
 
