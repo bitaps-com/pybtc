@@ -412,8 +412,10 @@ class Connector:
         if self.block_cache.get(block["hash"]) is not None:
                 self.log.error("duplicated block  %s" % block["hash"])
                 raise Exception("duplicated block")
-        if "previousblockhash" not in block:
+        if "previousblockhash" not in block :
             return
+        self.log.critical(str(self.block_cache.get_last()))
+        self.log.critical(str(block["previousblockhash"]))
         if self.block_cache.get_last() != block["previousblockhash"]:
             if self.block_cache.get(block["previousblockhash"]) is None and self.last_block_height:
                 self.log.critical("Connector error! Node out of sync "
