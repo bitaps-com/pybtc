@@ -165,8 +165,8 @@ class Connector:
                                                                 value BIGINT,
                                                                 PRIMARY KEY(name));
                                    """)
-                lb = await conn.execute("SELECT value FROM connector_utxo_state WHERE name='last_block';")
-                lc = await conn.execute("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
+                lb = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_block';")
+                lc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
                 if lb is None:
                     lb = 0
                     lc = 0
