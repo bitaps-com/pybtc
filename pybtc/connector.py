@@ -717,9 +717,9 @@ class UTXO():
                         await conn.execute("DELETE FROM connector_utxo WHERE "
                                            "outpoint = ANY($1);", r)
                         await conn.copy_records_to_table('connector_utxo',  columns=["outpoint", "data"], records=rs)
-                        await conn.execute("UPDATE connector_utxo_state SET value = %s "
+                        await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                            "WHERE name = 'last_block';", lb)
-                        await conn.execute("UPDATE connector_utxo_state SET value = %s "
+                        await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                            "WHERE name = 'last_cached_block';", block_height)
 
                 # remove from cache
