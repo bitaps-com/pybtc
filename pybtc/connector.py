@@ -304,7 +304,7 @@ class Connector:
             if not block:
                 q = time.time()
                 block = await self.rpc.getblock(hash)
-                self.blocks_download_time += time.time() + q
+                self.blocks_download_time += time.time() - q
             self.loop.create_task(self._new_block(block))
         except Exception:
             self.log.error("get block by hash %s FAILED" % hash)
