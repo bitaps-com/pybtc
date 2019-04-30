@@ -413,8 +413,6 @@ class Connector:
         if "previousblockhash" not in block :
             return
         lb = self.block_cache.get_last_key()
-        self.log.critical(str(lb))
-        self.log.critical(str(block["previousblockhash"]))
         if lb is None and not self.last_block_height:
             return
         if self.block_cache.get_last_key() != block["previousblockhash"]:
