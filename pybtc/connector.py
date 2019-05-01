@@ -326,10 +326,12 @@ class Connector:
             self.log.error(str(traceback.format_exc()))
 
     async def _new_block(self, block):
+        if self.deep_synchronization:
+            block["height"] = self.last_block_height + 1
         if not self.active or not self.active_block.done() or self.last_block_height >= block["height"]:
             return
         self.active_block = asyncio.Future()
-        block["height"] = self.last_block_height + 1
+
         self.log.debug("Block %s %s" % (block["height"], block["hash"]))
         bt = time.time()
         self.cache_loading = True if self.last_block_height < self.app_block_height_on_start else False
