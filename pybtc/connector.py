@@ -582,6 +582,7 @@ class Connector:
                     batch.append(["getblockhash", height])
                     if len(batch) >= self.batch_limit or height >= max_height:
                         break
+                    height += 1
                 result = await self.rpc.batch(batch)
                 self.log.warning(str(height))
 
