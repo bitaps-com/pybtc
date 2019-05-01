@@ -601,12 +601,13 @@ class Connector:
                     while True:
                         batch.append(["getblockhash", height])
                         if len(batch) >= self.batch_limit or height >= l:
+                            height += 1
                             break
                         height += 1
                     result = await self.rpc.batch(batch)
                     for r in result:
                         try:
-                            self.log.warning(">>"+str((lh, r["result"])))
+                            # self.log.warning(">>"+str((lh, r["result"])))
                             self.block_hashes.set(lh, r["result"])
                         except:
                             pass
