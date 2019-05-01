@@ -292,7 +292,7 @@ class Connector:
                         # clear preload caches
                         self.deep_synchronization = False
                 q = time.time()
-                if  self.deep_synchronization:
+                if 1==2 and self.deep_synchronization:
                     # self.log.critical(str(self.last_block_height + 1))
                     h = self.block_hashes.get(self.last_block_height + 1)
                     # self.log.critical(str(h))
