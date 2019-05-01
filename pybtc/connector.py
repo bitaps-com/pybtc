@@ -329,6 +329,7 @@ class Connector:
         if not self.active or not self.active_block.done() or self.last_block_height >= block["height"]:
             return
         self.active_block = asyncio.Future()
+        block["height"] = self.last_block_height + 1
         self.log.debug("Block %s %s" % (block["height"], block["hash"]))
         bt = time.time()
         self.cache_loading = True if self.last_block_height < self.app_block_height_on_start else False
@@ -844,9 +845,10 @@ def get_stream(stream):
     return stream
 
 
-def decode_block_tx(block):
+def decode_block_tx(block, height):
     s = get_stream(block)
     b = dict()
+    b["height"] = height
     b["version"] = unpack("<L", s.read(4))[0]
     b["versionHex"] = pack(">L", b["version"]).hex()
     b["previousBlockHash"] = rh2s(s.read(32))
