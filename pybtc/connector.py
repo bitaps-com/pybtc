@@ -1,5 +1,5 @@
 from pybtc.functions.tools import rh2s, s2rh
-from pybtc.functions.tools import var_int_to_int
+from pybtc.functions.tools import var_int_to_int, var_int_len
 from pybtc.functions.tools import read_var_int
 from pybtc.functions.hash import double_sha256
 from pybtc.transaction import Transaction
@@ -868,6 +868,12 @@ def decode_block_tx(block):
     b["rawTx"] = {i: Transaction(s, format="raw")
                   for i in range(var_int_to_int(read_var_int(s)))}
     b["tx"] = [rh2s(b["rawTx"][i]["txId"]) for i in b["rawTx"] ]
+    b["size"] = len(block)
+    for t in b["rawTx"].values():
+        b["amount"] += t["amount"]
+        b["strippedSize"] += t["bSize"]
+    b["strippedSize"] += var_int_len(len(b["tx"]))
+    b["weight"] = b["strippedSize"] * 3 + b["size"]
     return b
 
 
