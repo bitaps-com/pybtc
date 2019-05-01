@@ -63,8 +63,7 @@ class Connector:
 
         self.block_dependency_tx = 0 # counter of tx that have dependencies in block
         self.active = True
-        self.get_next_block_mutex = asyncio.Future()
-        self.get_next_block_mutex.set_result(True)
+        self.get_next_block_mutex = False
         self.active_block = asyncio.Future()
         self.active_block.set_result(True)
         self.last_zmq_msg = int(time.time())
@@ -272,10 +271,10 @@ class Connector:
 
     async def get_next_block(self):
         if self.active:
-            if not self.get_next_block_mutex.done():
-                await self.get_next_block_mutex
+            if self.get_next_block_mutex:
+                return
             try:
-                self.get_next_block_mutex = asyncio.Future()
+                self.get_next_block_mutex = True
 
                 if self.node_last_block <= self.last_block_height + self.backlog:
                     d = await self.rpc.getblockcount()
@@ -308,7 +307,7 @@ class Connector:
             except Exception as err:
                 self.log.error("get next block failed %s" % str(err))
             finally:
-                self.get_next_block_mutex.set_result(True)
+                self.get_next_block_mutex = False
 
     async def _get_block_by_hash(self, hash):
         self.log.debug("get block by hash %s" % hash)
