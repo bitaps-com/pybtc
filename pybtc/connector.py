@@ -295,6 +295,7 @@ class Connector:
                 if  self.deep_synchronization:
                     self.log.critical(str(self.last_block_height + 1))
                     h = self.block_hashes.get(self.last_block_height + 1)
+                    self.log.critical(str(h))
                     if h is None:
                         h = await self.rpc.getblockhash(self.last_block_height + 1)
                         self.loop.create_task(self.preload_block_hashes())
