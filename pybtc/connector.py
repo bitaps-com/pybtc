@@ -845,10 +845,9 @@ def get_stream(stream):
     return stream
 
 
-def decode_block_tx(block, height):
+def decode_block_tx(block):
     s = get_stream(block)
     b = dict()
-    b["height"] = height
     b["version"] = unpack("<L", s.read(4))[0]
     b["versionHex"] = pack(">L", b["version"]).hex()
     b["previousBlockHash"] = rh2s(s.read(32))
