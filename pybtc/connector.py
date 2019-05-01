@@ -607,12 +607,10 @@ class Connector:
                     result = await self.rpc.batch(batch)
                     for r in result:
                         try:
-                            # self.log.warning(">>"+str((lh, r["result"])))
                             self.block_hashes.set(lh, r["result"])
                         except:
                             pass
                         lh += 1
-                    self.log.warning(str(height))
 
                 except asyncio.CancelledError:
                     self.log.info("connector preload_block_hashes failed")
