@@ -314,8 +314,12 @@ class Connector:
         self.log.debug("get block by hash %s" % hash)
         try:
             if self.deep_synchronization:
+                q = time.time()
                 raw_block = await self.rpc.getblock(hash, 0)
+                self.blocks_download_time += time.time() - q
+                q = time.time()
                 block = decode_block_tx(raw_block)
+                self.blocks_decode_time += time.time() - q
             else:
                 q = time.time()
                 block = await self.rpc.getblock(hash)
