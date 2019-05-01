@@ -376,7 +376,7 @@ class Connector:
                            len(block["tx"]),
                            block["size"] / 1000000,
                            tm(bt),
-                           len(self.block_hashes_preload._store),
+                           len(self.block_hashes._store),
                            len(self.block_preload._store)))
             if self.node_last_block > self.last_block_height:
                 self.loop.create_task(self.get_next_block())
