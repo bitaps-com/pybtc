@@ -323,6 +323,7 @@ class Connector:
             self.loop.create_task(self._new_block(block))
         except Exception:
             self.log.error("get block by hash %s FAILED" % hash)
+            self.log.error(str(traceback.format_exc()))
 
     async def _new_block(self, block):
         if not self.active or not self.active_block.done() or self.last_block_height >= block["height"]:
