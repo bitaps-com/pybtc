@@ -852,13 +852,15 @@ def decode_block_tx(block):
     b["previousBlockHash"] = rh2s(s.read(32))
     b["merkleRoot"] = rh2s(s.read(32))
     b["time"] = unpack("<L", s.read(4))[0]
-    b["bits"] = rh2s(s.read(4))
-    b["target"] = rh2s(bits_to_target(unpack("<L", b["bits"])[0]))
+    b["bits"] = s.read(4)
+    b["target"] = bits_to_target(unpack("<L", b["bits"])[0])
     b["targetDifficulty"] = target_to_difficulty(b["target"])
     b["target"] = b["target"].to_bytes(32, byteorder="little")
     b["nonce"] = unpack("<L", s.read(4))[0]
     s.seek(-80, 1)
     b["header"] = s.read(80).hex()
+    b["bits"] = rh2s(b["bits"])
+    b["target"] = rh2s(b["target"])
     b["hash"] = double_sha256(b["header"], hex=1)
     b["rawTx"] = {i: Transaction(s, format="raw")
                   for i in range(var_int_to_int(read_var_int(s)))}
