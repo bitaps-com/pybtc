@@ -329,7 +329,10 @@ class Connector:
             self.log.error(str(traceback.format_exc()))
 
     async def _new_block(self, block):
+        if self.block_cache.get(block["hash"]) is not None:
+                return
         if self.deep_synchronization:
+
             block["height"] = self.last_block_height + 1
         if not self.active or not self.active_block.done() or self.last_block_height >= block["height"]:
             return
@@ -435,9 +438,6 @@ class Connector:
         self.log.debug("Transactions received: %s [%s] received tx rate tx/s ->> %s <<" % (tx_count, time.time() - q, rate))
 
     async def verify_block_position(self, block):
-        if self.block_cache.get(block["hash"]) is not None:
-                self.log.error("duplicated block  %s" % block["hash"])
-                raise Exception("duplicated block")
         if "previousblockhash" not in block :
             return
         lb = self.block_cache.get_last_key()
