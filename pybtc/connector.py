@@ -293,15 +293,15 @@ class Connector:
                         self.deep_synchronization = False
                 q = time.time()
                 if  self.deep_synchronization:
-                    self.log.critical(str(self.last_block_height + 1))
+                    # self.log.critical(str(self.last_block_height + 1))
                     h = self.block_hashes.get(self.last_block_height + 1)
-                    self.log.critical(str(h))
+                    # self.log.critical(str(h))
                     if h is None:
                         h = await self.rpc.getblockhash(self.last_block_height + 1)
                         self.loop.create_task(self.preload_block_hashes())
                 else:
                     h = await self.rpc.getblockhash(self.last_block_height + 1)
-                self.log.critical(str(h))
+                # self.log.critical(str(h))
                 self.blocks_download_time += time.time() - q
                 await self._get_block_by_hash(h)
             except Exception as err:
