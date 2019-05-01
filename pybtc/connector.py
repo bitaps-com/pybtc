@@ -309,7 +309,7 @@ class Connector:
     async def _get_block_by_hash(self, hash):
         self.log.debug("get block by hash %s" % hash)
         try:
-            block = self.block_hashes_preload.pop(hash)
+            block = self.block_hashes.pop(hash)
             if not block:
                 q = time.time()
                 block = await self.rpc.getblock(hash)
