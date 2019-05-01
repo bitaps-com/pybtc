@@ -63,7 +63,8 @@ class Connector:
 
         self.block_dependency_tx = 0 # counter of tx that have dependencies in block
         self.active = True
-        self.get_next_block_mutex = False
+        self.get_next_block_mutex = asyncio.Future()
+        self.get_next_block_mutex.set_result(True)
         self.active_block = asyncio.Future()
         self.active_block.set_result(True)
         self.last_zmq_msg = int(time.time())
@@ -271,10 +272,10 @@ class Connector:
 
     async def get_next_block(self):
         if self.active:
-            if self.get_next_block_mutex:
-                return
+            if not self.get_next_block_mutex.done():
+                await self.get_next_block_mutex
             try:
-                self.get_next_block_mutex = True
+                self.get_next_block_mutex = asyncio.Future()
 
                 if self.node_last_block <= self.last_block_height + self.backlog:
                     d = await self.rpc.getblockcount()
@@ -307,7 +308,7 @@ class Connector:
             except Exception as err:
                 self.log.error("get next block failed %s" % str(err))
             finally:
-                self.get_next_block_mutex = False
+                self.get_next_block_mutex.set_result(True)
 
     async def _get_block_by_hash(self, hash):
         self.log.debug("get block by hash %s" % hash)
@@ -332,7 +333,6 @@ class Connector:
         if self.block_cache.get(block["hash"]) is not None:
                 return
         if self.deep_synchronization:
-
             block["height"] = self.last_block_height + 1
         if not self.active or not self.active_block.done() or self.last_block_height >= block["height"]:
             return
@@ -438,6 +438,9 @@ class Connector:
         self.log.debug("Transactions received: %s [%s] received tx rate tx/s ->> %s <<" % (tx_count, time.time() - q, rate))
 
     async def verify_block_position(self, block):
+        if self.block_cache.get(block["hash"]) is not None:
+                self.log.error("duplicated block  %s" % block["hash"])
+                raise Exception("duplicated block")
         if "previousblockhash" not in block :
             return
         lb = self.block_cache.get_last_key()
