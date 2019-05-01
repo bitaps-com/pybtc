@@ -145,6 +145,7 @@ class Connector:
         # if self.preload:
         #     self.loop.create_task(self.preload_block())
         #     self.loop.create_task(self.preload_block_hashes())
+        await self.preload_block_hashes()
         self.loop.create_task(self.get_next_block())
 
     async def utxo_init(self):
@@ -572,27 +573,24 @@ class Connector:
 
 
     async def preload_block_hashes(self):
-        while True:
+        max_height = self.node_last_block - self.deep_synchronization
+        height = self.last_block_height + 1
+        while height < max_height:
             try:
-                start_height = self.last_block_height
-                height = start_height + 10
-                d = await self.rpc.getblockcount()
-                if d > height:
-                    while True:
-                        height += 1
-                        d = await self.rpc.getblockhash(height)
-                        ex = self.block_preload.get(d)
-                        if not ex:
-                            b = await self.rpc.getblock(d)
-                            self.block_hashes_preload.set(d, b)
-                        if start_height + 15000 < height:
-                            break
+                batch = list()
+                while True:
+                    batch.append(["getblockhash", height])
+                    if len(batch) >= self.batch_limit or height >= max_height:
+                        break
+                result = await self.rpc.batch(batch)
+                self.log.warning(str(height))
+
             except asyncio.CancelledError:
-                self.log.info("connector preload_block_hashes terminated")
+                self.log.info("connector preload_block_hashes failed")
                 break
             except:
                 pass
-            await asyncio.sleep(10)
+
 
     async def preload_block(self):
         while True:
