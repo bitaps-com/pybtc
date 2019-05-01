@@ -139,13 +139,14 @@ class Connector:
             self.block_cache.set(row, h)
             h -= 1
 
+        await self.preload_block_hashes()
         self.tasks.append(self.loop.create_task(self.zeromq_handler()))
         self.tasks.append(self.loop.create_task(self.watchdog()))
         self.connected.set_result(True)
         # if self.preload:
         #     self.loop.create_task(self.preload_block())
         #     self.loop.create_task(self.preload_block_hashes())
-        await self.preload_block_hashes()
+
         self.loop.create_task(self.get_next_block())
 
     async def utxo_init(self):
