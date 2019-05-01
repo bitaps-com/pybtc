@@ -606,6 +606,7 @@ class Connector:
                     result = await self.rpc.batch(batch)
                     for r in result:
                         try:
+                            self.log.warning(">>"+str((lh, r["result"])))
                             self.block_hashes.set(lh, r["result"])
                         except:
                             pass
