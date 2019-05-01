@@ -656,8 +656,6 @@ class UTXO():
         self._hit = 0
 
     def set(self, outpoint, pointer, amount, address):
-        if len(self.cached) > self._cache_size and not self.save_process:
-            self.loop.create_task(self.save_utxo())
         self.cached[outpoint] = (pointer, amount, address)
         if pointer:
             self.last_cached_block = pointer >> 42
