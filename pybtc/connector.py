@@ -664,7 +664,7 @@ class Connector:
                     except:
                         pass
 
-                    if self.block_preload.len() < 50000:
+                    if self.block_preload.len() < 40000:
                         continue
                     self.log.critical(str((processed_height, self.last_block_height)))
                     for i in range(processed_height, self.last_block_height):
