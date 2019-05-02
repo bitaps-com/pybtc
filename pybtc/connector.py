@@ -3,10 +3,10 @@ from pybtc.functions.tools import var_int_to_int, var_int_len
 from pybtc.functions.tools import read_var_int
 from pybtc.functions.hash import double_sha256
 from pybtc.transaction import Transaction
-from pybtc.block import Block
 from pybtc import int_to_c_int, c_int_to_int, c_int_len, int_to_bytes
 from pybtc.functions.block import bits_to_target, target_to_difficulty
 from struct import unpack, pack
+import sys
 import traceback
 import aiojsonrpc
 import zmq
@@ -78,11 +78,11 @@ class Connector:
 
         # cache and system
         self.preload = preload
-        self.block_preload = Cache(max_size=50000)
-        self.block_hashes = Cache(max_size=100000)
+        self.block_preload = Cache(max_size=200 * 1000000)
+        self.block_hashes = Cache(max_size=20 * 100000)
         self.block_hashes_preload_mutex = False
-        self.tx_cache = Cache(max_size=50000)
-        self.block_cache = Cache(max_size=10000)
+        self.tx_cache = Cache(max_size=100 * 1000000)
+        self.block_cache = Cache(max_size=20 * 1000000)
 
         self.block_txs_request = None
 
@@ -296,11 +296,13 @@ class Connector:
                         self.log.warning("Normal synchronization mode")
                         # clear preload caches
                         self.deep_synchronization = False
-                q = time.time()
+
                 if self.deep_synchronization:
                     raw_block = self.block_preload.pop(self.last_block_height + 1)
                     if raw_block:
+                        q = time.time()
                         block = decode_block_tx(raw_block)
+                        self.blocks_decode_time += time.time() - q
                     else:
                         h = self.block_hashes.pop(self.last_block_height + 1)
                         if h is None:
@@ -311,7 +313,7 @@ class Connector:
                 else:
                     h = await self.rpc.getblockhash(self.last_block_height + 1)
                     block = await self._get_block_by_hash(h)
-                self.blocks_download_time += time.time() - q
+
 
                 self.loop.create_task(self._new_block(block))
             except Exception as err:
@@ -620,8 +622,6 @@ class Connector:
             return
         try:
             self.block_hashes_preload_mutex = True
-
-            self.block_hashes = Cache(max_size=50000)
             max_height = self.node_last_block - self.deep_synchronization
             height = self.last_block_height + 1
             processed_height = self.last_block_height
@@ -666,8 +666,8 @@ class Connector:
                     for i in range(processed_height, self.last_block_height):
                         self.block_preload.remove(i)
                     processed_height = self.last_block_height
-                    if self.block_preload.len() < 40000 and \
-                       height < self.last_block_height + 40000:
+                    if self.block_preload._store_size < 190 * 1000000 and \
+                       height < self.last_block_height + self.batch_limit:
                         continue
                     # self.log.critical(str((processed_height, self.last_block_height)))
 
@@ -932,8 +932,9 @@ class DependsTransaction(Exception):
 
 
 class Cache():
-    def __init__(self, max_size=1000):
+    def __init__(self, max_size=1000000):
         self._store = OrderedDict()
+        self._store_size = 0
         self._max_size = max_size
         self.clear_tail = False
         self._requests = 0
@@ -942,12 +943,13 @@ class Cache():
     def set(self, key, value):
         self._check_limit()
         self._store[key] = value
+        self._store_size += sys.getsizeof(value) + sys.getsizeof(key)
 
     def _check_limit(self):
-        if len(self._store) >= self._max_size:
+        if self._store_size >= self._max_size:
             self.clear_tail = True
         if self.clear_tail:
-            if len(self._store) >= int(self._max_size * 0.75):
+            if self._store_size >= int(self._max_size * 0.75):
                 [self._store.popitem(last=False) for i in range(20)]
             else:
                 self.clear_tail = False
@@ -964,8 +966,8 @@ class Cache():
     def pop(self, key):
         self._requests += 1
         try:
-            data = self._store[key]
-            del self._store[key]
+            data = self._store.pop(key)
+            self._store_size -= sys.getsizeof(data) + sys.getsizeof(key)
             self._hit += 1
             return data
         except:
@@ -973,7 +975,8 @@ class Cache():
 
     def remove(self, key):
         try:
-            del self._store[key]
+            data = self._store.pop(key)
+            self._store_size -= sys.getsizeof(data) + sys.getsizeof(key)
         except:
             pass
 
@@ -982,6 +985,7 @@ class Cache():
             i = next(reversed(self._store))
             data = self._store[i]
             del self._store[i]
+            self._store_size -= sys.getsizeof(data) + sys.getsizeof(i)
             return data
         except:
             return None
