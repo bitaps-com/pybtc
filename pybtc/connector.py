@@ -393,10 +393,9 @@ class Connector:
                     self.log.info("Blocks downloaded  %s; decoded %s" % (self.blocks_download_time,
                                                                          self.blocks_decode_time))
                     if self.deep_synchronization:
-                        self.log.info("Synchronization:")
-                        self.log.info("Blocks not cached %s;" % self.non_cached_blocks)
-                        self.log.warning("Blocks cache count %s;" % self.block_preload.len())
-                        self.log.warning("Blocks cache size %s M;" % round(self.block_preload._store_size/1024/1024,2))
+                        self.log.info("Blocks not cached %s; cache count %s" % (self.non_cached_blocks,
+                                                                                self.block_preload.len()))
+                        self.log.info("Blocks cache size %s M;" % round(self.block_preload._store_size/1024/1024,2))
 
             # after block added handler
             if self.after_block_handler and not self.cache_loading:
