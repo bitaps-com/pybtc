@@ -643,7 +643,7 @@ class Connector:
 
                         for x,y in zip(headers, blocks):
                             try:
-                                self.block_preload.set(x, y)
+                                self.block_preload.set(x, y["result"])
                             except:
                                 pass
 
