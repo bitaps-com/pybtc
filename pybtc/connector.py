@@ -77,7 +77,7 @@ class Connector:
 
         # cache and system
         self.preload = preload
-        self.block_preload = Cache(max_size=500)
+        self.block_preload = Cache(max_size=5000)
         self.block_hashes = Cache(max_size=100000)
         self.block_hashes_preload_mutex = False
         self.tx_cache = Cache(max_size=50000)
@@ -611,13 +611,13 @@ class Connector:
         try:
             self.block_hashes_preload_mutex = True
 
-            self.block_hashes = Cache(max_size=500)
+            self.block_hashes = Cache(max_size=5000)
             max_height = self.node_last_block - self.deep_synchronization
             height = self.last_block_height + 1
             processed_height = self.last_block_height
 
             while height < max_height:
-                if self.last_block_height - height < 400:
+                if self.last_block_height - height < 4400:
                     try:
                         batch = list()
                         h_list = list()
@@ -652,8 +652,9 @@ class Connector:
                         break
                     except:
                         pass
-                    if self.block_preload.len() < 500:
+                    if self.block_preload.len() < 5000:
                         continue
+                self.log.critical(str(height))
                 await asyncio.sleep(10)
                 # remove unused items
                 [self.block_preload.remove(i) for i in range(processed_height,
