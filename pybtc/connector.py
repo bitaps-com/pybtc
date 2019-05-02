@@ -390,12 +390,14 @@ class Connector:
                     loading = "Loading ... " if self.cache_loading else ""
                     self.log.info(loading + "UTXO %s; hit rate: %s;" % (self.utxo.len(),
                                                                         self.utxo.hit_rate()))
-                    self.log.info("Blocks downloaded  %s; decoded %s" % (self.blocks_download_time,
-                                                                         self.blocks_decode_time))
+                    self.log.info("Blocks downloaded  %s; decoded %s" % (round(self.blocks_download_time, 4),
+                                                                         round(self.blocks_decode_time, 4)))
                     if self.deep_synchronization:
-                        self.log.info("Blocks not cached %s; cache count %s" % (self.non_cached_blocks,
-                                                                                self.block_preload.len()))
-                        self.log.info("Blocks cache size %s M;" % round(self.block_preload._store_size/1024/1024,2))
+                        self.log.info("Blocks not cached %s; "
+                                      "cache count %s; "
+                                      "cache size %s M;" % (self.non_cached_blocks,
+                                                            self.block_preload.len(),
+                                                            round(self.block_preload._store_size / 1024 / 1024, 2)))
 
             # after block added handler
             if self.after_block_handler and not self.cache_loading:
