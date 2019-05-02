@@ -389,6 +389,7 @@ class Connector:
                     self.log.info("Blocks decode time %s;" % self.blocks_decode_time)
                     self.log.info("Blocks non cached %s;" % self.non_cached_blocks)
                     self.log.warning("Blocks  cache %s;" % self.block_preload.len())
+                    self.log.warning("Blocks  cache size %s;" % self.block_preload._store_size )
                     self.log.warning("Blocks cache last %s;" % self.block_preload.get_last_key())
 
             # after block added handler
