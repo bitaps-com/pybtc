@@ -298,11 +298,11 @@ class Connector:
                         self.deep_synchronization = False
                 q = time.time()
                 if self.deep_synchronization:
-                    raw_block = self.block_preload.get(self.last_block_height + 1)
+                    raw_block = self.block_preload.pop(self.last_block_height + 1)
                     if raw_block:
                         block = decode_block_tx(raw_block)
                     else:
-                        h = self.block_hashes.get(self.last_block_height + 1)
+                        h = self.block_hashes.pop(self.last_block_height + 1)
                         if h is None:
                             h = await self.rpc.getblockhash(self.last_block_height + 1)
                             if not self.block_hashes_preload_mutex:
