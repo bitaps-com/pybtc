@@ -653,7 +653,7 @@ class Connector:
                                 batch.append(["getblock", r["result"], 0])
                                 h.append(lh)
                             except:
-                                pass
+                                self.log.critical(str(traceback.format_exc()))
                         self.log.critical(str(( len(batch), )))
                         if not batch:
                             self.log.critical(str((h_list, result)))
