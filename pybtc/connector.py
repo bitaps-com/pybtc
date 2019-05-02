@@ -622,6 +622,7 @@ class Connector:
             while height < max_height:
                 if self.last_block_height - height < 44000:
                     try:
+                        self.log.critical(str(height))
                         batch = list()
                         h_list = list()
                         while True:
@@ -657,7 +658,6 @@ class Connector:
                         pass
                     if self.block_preload.len() < 50000:
                         continue
-                self.log.critical(str(height))
                 await asyncio.sleep(10)
                 # remove unused items
                 [self.block_preload.remove(i) for i in range(processed_height,
