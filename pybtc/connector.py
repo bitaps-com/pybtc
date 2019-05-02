@@ -298,15 +298,22 @@ class Connector:
                         self.deep_synchronization = False
                 q = time.time()
                 if self.deep_synchronization:
-                    h = self.block_hashes.get(self.last_block_height + 1)
-                    if h is None:
-                        h = await self.rpc.getblockhash(self.last_block_height + 1)
-                        if not self.block_hashes_preload_mutex:
-                            self.loop.create_task(self.preload_block_hashes())
+                    raw_block = self.block_preload.get(self.last_block_height + 1)
+                    if raw_block:
+                        block = decode_block_tx(raw_block)
+                    else:
+                        h = self.block_hashes.get(self.last_block_height + 1)
+                        if h is None:
+                            h = await self.rpc.getblockhash(self.last_block_height + 1)
+                            if not self.block_hashes_preload_mutex:
+                                self.loop.create_task(self.preload_block_hashes())
+                        block = await self._get_block_by_hash(h)
                 else:
                     h = await self.rpc.getblockhash(self.last_block_height + 1)
+                    block = await self._get_block_by_hash(h)
                 self.blocks_download_time += time.time() - q
-                await self._get_block_by_hash(h)
+
+                self.loop.create_task(self._new_block(block))
             except Exception as err:
                 self.log.error("get next block failed %s" % str(err))
             finally:
@@ -317,10 +324,8 @@ class Connector:
         try:
             if self.deep_synchronization:
                 q = time.time()
-                raw_block = self.block_preload.get(hash)
-                if not raw_block:
-                    self.non_cached_blocks += 1
-                    raw_block = await self.rpc.getblock(hash, 0)
+                self.non_cached_blocks += 1
+                raw_block = await self.rpc.getblock(hash, 0)
                 self.blocks_download_time += time.time() - q
                 q = time.time()
                 block = decode_block_tx(raw_block)
@@ -329,7 +334,7 @@ class Connector:
                 q = time.time()
                 block = await self.rpc.getblock(hash)
                 self.blocks_download_time += time.time() - q
-            self.loop.create_task(self._new_block(block))
+            return block
         except Exception:
             self.log.error("get block by hash %s FAILED" % hash)
             self.log.error(str(traceback.format_exc()))
@@ -633,21 +638,21 @@ class Connector:
                                 break
                             height += 1
                         result = await self.rpc.batch(batch)
-                        headers = list()
+                        h = list()
                         batch = list()
                         for lh, r in zip(h_list, result):
                             try:
                                 self.block_hashes.set(lh, r["result"])
                                 batch.append(["getblock", r["result"], 0])
-                                headers.append(r["result"])
+                                h.append(lh)
                             except:
                                 pass
 
                         blocks = await self.rpc.batch(batch)
 
-                        for x,y in zip(headers, blocks):
+                        for x,y in zip(h,blocks):
                             try:
-                                self.block_preload.set(x, y["result"])
+                                self.block_preload.set(x, (y["result"]))
                             except:
                                 pass
 
@@ -656,13 +661,17 @@ class Connector:
                         break
                     except:
                         pass
-                    [self.block_preload.remove(i) for i in range(processed_height,
-                                                                 self.last_block_height)]
+
+                    if self.block_preload.len() < 50000:
+                        continue
+                    for i in range(processed_height, self.last_block_height):
+                        self.block_preload.remove(i)
+                    processed_height = self.last_block_height
                     if self.block_preload.len() < 50000:
                         continue
                 await asyncio.sleep(10)
                 # remove unused items
-                processed_height = self.last_block_height
+
 
         finally:
             self.block_hashes_preload_mutex = False
