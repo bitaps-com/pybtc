@@ -667,8 +667,7 @@ class Connector:
                     for i in range(processed_height, self.last_block_height):
                         self.block_preload.remove(i)
                     processed_height = self.last_block_height
-                    if self.block_preload._store_size < 190 * 1000000 and \
-                       height < self.last_block_height + self.batch_limit:
+                    if self.block_preload._store_size < 190 * 1000000:
                         continue
                     # self.log.critical(str((processed_height, self.last_block_height)))
 
