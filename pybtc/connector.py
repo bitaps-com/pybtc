@@ -632,8 +632,9 @@ class Connector:
                     try:
 
                         if height < self.last_block_height:
-                            height = self.last_block_height
-                        self.log.critical(str((height, processed_height, self.last_block_height,self.block_hashes.len() )))
+                            height = self.last_block_height + 1
+                        self.log.critical(str((height, processed_height, self.last_block_height,
+                                               self.block_hashes.len() )))
                         batch = list()
                         h_list = list()
                         while True:
