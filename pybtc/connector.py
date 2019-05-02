@@ -627,7 +627,7 @@ class Connector:
             while height < max_height:
                 if self.last_block_height - height < 44000:
                     try:
-                        self.log.critical(str(height))
+                        # self.log.critical(str(height))
                         batch = list()
                         h_list = list()
                         while True:
