@@ -656,12 +656,12 @@ class Connector:
                         break
                     except:
                         pass
+                    [self.block_preload.remove(i) for i in range(processed_height,
+                                                                 self.last_block_height)]
                     if self.block_preload.len() < 50000:
                         continue
                 await asyncio.sleep(10)
                 # remove unused items
-                [self.block_preload.remove(i) for i in range(processed_height,
-                                                             self.last_block_height)]
                 processed_height = self.last_block_height
 
         finally:
