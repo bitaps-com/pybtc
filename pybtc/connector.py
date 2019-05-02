@@ -669,7 +669,7 @@ class Connector:
                     processed_height = self.last_block_height
                     if self.block_preload._store_size < 190 * 1000000:
                         continue
-                    # self.log.critical(str((processed_height, self.last_block_height)))
+                    self.log.critical(str((processed_height, self.last_block_height)))
 
                 await asyncio.sleep(10)
                 # remove unused items
