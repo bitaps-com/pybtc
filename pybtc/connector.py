@@ -633,8 +633,8 @@ class Connector:
 
                         if height < self.last_block_height:
                             height = self.last_block_height + 1
-                        self.log.critical(str((height, processed_height, self.last_block_height,
-                                               self.block_hashes.len() )))
+                        # self.log.critical(str((height, processed_height, self.last_block_height,
+                        #                        self.block_hashes.len() )))
                         batch = list()
                         h_list = list()
                         while True:
@@ -653,10 +653,10 @@ class Connector:
                                 batch.append(["getblock", r["result"], 0])
                                 h.append(lh)
                             except:
-                                self.log.critical(str(traceback.format_exc()))
-                        self.log.critical(str(( len(batch), )))
-                        if not batch:
-                            self.log.critical(str((h_list, result)))
+                                pass
+                        # self.log.critical(str(( len(batch), )))
+                        # if not batch:
+                        #     self.log.critical(str((h_list, result)))
                         blocks = await self.rpc.batch(batch)
 
                         for x,y in zip(h,blocks):
