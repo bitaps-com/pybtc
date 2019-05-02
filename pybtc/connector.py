@@ -655,6 +655,8 @@ class Connector:
                             except:
                                 pass
                         self.log.critical(str(( len(batch), )))
+                        if not batch:
+                            self.log.critical(str((h_list, result)))
                         blocks = await self.rpc.batch(batch)
 
                         for x,y in zip(h,blocks):
