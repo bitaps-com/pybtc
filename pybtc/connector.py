@@ -72,6 +72,7 @@ class Connector:
         self.blocks_processed_count = 0
         self.blocks_decode_time = 0
         self.blocks_download_time = 0
+        self.non_cached_blocks = 0
         self.total_received_tx_time = 0
         self.start_time = time.time()
 
@@ -318,6 +319,7 @@ class Connector:
                 q = time.time()
                 raw_block = self.block_preload.get(hash)
                 if not raw_block:
+                    self.non_cached_blocks += 1
                     raw_block = await self.rpc.getblock(hash, 0)
                 self.blocks_download_time += time.time() - q
                 q = time.time()
@@ -370,7 +372,7 @@ class Connector:
             [self.tx_cache.pop(h) for h in tx_bin_list]
 
             tx_rate = round(self.total_received_tx / (time.time() - self.start_time), 4)
-            if block["height"] % 200 == 0:
+            if block["height"] % 1000 == 0:
                 self.log.info("Blocks %s; tx rate: %s;" % (block["height"], tx_rate))
                 if self.utxo_data:
                     loading = "Loading ... " if self.cache_loading else ""
@@ -378,6 +380,7 @@ class Connector:
                                                                         self.utxo.hit_rate()))
                     self.log.info("Blocks download time %s;" % self.blocks_download_time)
                     self.log.info("Blocks decode time %s;" % self.blocks_decode_time)
+                    self.log.info("Blocks non cached %s;" % self.non_cached_blocks)
 
             # after block added handler
             if self.after_block_handler and not self.cache_loading:
