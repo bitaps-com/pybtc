@@ -78,8 +78,8 @@ class Connector:
 
         # cache and system
         self.preload = preload
-        self.block_preload = Cache(max_size=200 * 1000000)
-        self.block_hashes = Cache(max_size=20 * 100000)
+        self.block_preload = Cache(max_size=500 * 1000000)
+        self.block_hashes = Cache(max_size=200 * 100000)
         self.block_hashes_preload_mutex = False
         self.tx_cache = Cache(max_size=100 * 1000000)
         self.block_cache = Cache(max_size=20 * 1000000)
@@ -628,9 +628,8 @@ class Connector:
             processed_height = self.last_block_height
 
             while height < max_height:
-                if height - self.last_block_height < self.batch_limit * 10:
+                if self.block_preload._store_size < 400 * 1000000:
                     try:
-
                         if height < self.last_block_height:
                             height = self.last_block_height + 1
                         # self.log.critical(str((height, processed_height, self.last_block_height,
@@ -670,13 +669,13 @@ class Connector:
                         break
                     except:
                         pass
-                    if processed_height < self.last_block_height:
-                        for i in range(processed_height, self.last_block_height):
-                            self.block_preload.remove(i)
-                        processed_height = self.last_block_height
-                    if self.block_preload._store_size < 190 * 1000000:
-                        continue
-                    self.log.critical(str((processed_height, self.last_block_height)))
+                if processed_height < self.last_block_height:
+                    for i in range(processed_height, self.last_block_height):
+                        self.block_preload.remove(i)
+                    processed_height = self.last_block_height
+                if self.block_preload._store_size < 400 * 1000000:
+                    continue
+                self.log.critical(str((processed_height, self.last_block_height)))
 
                 await asyncio.sleep(10)
                 # remove unused items
