@@ -957,7 +957,10 @@ class Cache():
             self.clear_tail = True
         if self.clear_tail:
             if self._store_size >= int(self._max_size * 0.75):
-                [self._store.popitem(last=False) for i in range(20)]
+                try:
+                    [self.pop_last() for i in range(20)]
+                except:
+                    pass
             else:
                 self.clear_tail = False
 
