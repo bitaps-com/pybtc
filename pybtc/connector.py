@@ -654,7 +654,7 @@ class Connector:
                                 h.append(lh)
                             except:
                                 pass
-
+                        self.log.critical(str(( len(batch), )))
                         blocks = await self.rpc.batch(batch)
 
                         for x,y in zip(h,blocks):
