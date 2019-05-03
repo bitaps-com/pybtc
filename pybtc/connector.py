@@ -377,7 +377,8 @@ class Connector:
             self.block_headers_cache.set(block["hash"], block["height"])
             self.last_block_height = block["height"]
             if self.utxo_data:
-                self.loop.create_task(self.utxo.save_utxo(block["height"]))
+                self.utxo.destroy_utxo(block["height"])
+                # self.loop.create_task(self.utxo.save_utxo(block["height"]))
 
             self.blocks_processed_count += 1
 
@@ -717,6 +718,7 @@ class UTXO():
         self.cached = OrderedDict()
         self.missed = set()
         self.destroyed = OrderedDict()
+        self.deleted = OrderedDict()
         self.log = log
         self.loaded = OrderedDict()
         self.maturity = 100
@@ -744,6 +746,26 @@ class UTXO():
 
     def remove(self, outpoint):
         del self.cached[outpoint]
+
+    def destroy_utxo(self, block_height):
+        block_height -= self.maturity
+        k = set()
+        for key in self.destroyed:
+            if key < block_height:
+                k.add(key)
+                n = set()
+                for outpoint in self.destroyed[key]:
+                    try:
+                        del self.cached[outpoint]
+                        self.destroyed_utxo += 1
+                    except:
+                        try:
+                            del self.loaded[outpoint]
+                            n.add(outpoint)
+                        except:
+                            pass
+                self.deleted[key] = n
+        [self.destroyed.pop(i) for i in k]
 
     async def save_utxo(self, block_height):
         return
