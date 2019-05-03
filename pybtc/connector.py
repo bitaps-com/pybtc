@@ -400,6 +400,9 @@ class Connector:
                                       "cache size %s M;" % (self.non_cached_blocks,
                                                             self.block_preload.len(),
                                                             round(self.block_preload._store_size / 1024 / 1024, 2)))
+                        self.log.info("cache saved utxo %s; "
+                                      "cache deleted utxo %s ;" % (self.utxo.saved_utxo,
+                                                                   self.utxo.deleted_utxo))
 
             # after block added handler
             if self.after_block_handler and not self.cache_loading:
@@ -722,6 +725,8 @@ class UTXO():
         self._requests = 0
         self._failed_requests = 0
         self._hit = 0
+        self.saved_utxo = 0
+        self.deleted_utxo = 0
 
     def set(self, outpoint, pointer, amount, address):
         self.cached[outpoint] = (pointer, amount, address)
@@ -742,13 +747,13 @@ class UTXO():
                 for key in iter(self.destroyed):
                     if key < block_height:
                         n = set()
-                        for i in self.destroyed[key]:
+                        for outpoint in self.destroyed[key]:
                             try:
-                                del self.cached[i]
+                                del self.cached[outpoint]
                             except:
                                 try:
-                                    del self.loaded[i]
-                                    n.add(i)
+                                    del self.loaded[outpoint]
+                                    n.add(outpoint)
                                 except:
                                     pass
                         self.destroyed[key] = n
@@ -766,7 +771,8 @@ class UTXO():
                         c -= 1
                         continue
                     break
-
+                if not lb:
+                    return
 
                 r = set()
                 db = set()
@@ -785,7 +791,8 @@ class UTXO():
                                            "WHERE name = 'last_block';", lb)
                         await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                            "WHERE name = 'last_cached_block';", block_height)
-
+                self.saved_utxo += len(rs)
+                self.deleted_utxo += len(r)
                 # remove from cache
                 for key in ln:
                     try:
