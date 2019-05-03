@@ -772,6 +772,7 @@ class UTXO():
                         continue
                     break
                 if not lb:
+                    await asyncio.sleep(0)
                     return
 
                 r = set()
