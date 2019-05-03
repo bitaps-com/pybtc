@@ -404,20 +404,18 @@ class Connector:
                         self.log.info("saved utxo block %s; "
                                       "saved utxo %s; "
                                       "deleted utxo %s; "
-                                      "loaded utxo %s; "
-                                      "destroyed utxo %s; "
-                                      "destroyed utxo blokc %s;" % (self.utxo.last_saved_block,
+                                      "loaded utxo %s; "% (self.utxo.last_saved_block,
                                                                   self.utxo.saved_utxo,
                                                                    self.utxo.deleted_utxo,
-                                                                   self.utxo.loaded_utxo,
-                                                           self.utxo.destroyed_utxo,
-                                                           self.utxo.destroyed_utxo_block
+                                                                   self.utxo.loaded_utxo
                                                            ))
                         self.log.info(
                                       "destroyed utxo %s; "
-                                      "destroyed utxo block %s;" % (
+                                      "destroyed utxo block %s; "
+                                      "outs total %s;" % (
                                                            self.utxo.destroyed_utxo,
-                                                           self.utxo.destroyed_utxo_block
+                                                           self.utxo.destroyed_utxo_block,
+                                                           self.utxo.outs_total
                                                            ))
 
             # after block added handler
@@ -748,9 +746,11 @@ class UTXO():
         self.loaded_utxo = 0
         self.destroyed_utxo = 0
         self.destroyed_utxo_block = 0
+        self.outs_total = 0
 
     def set(self, outpoint, pointer, amount, address):
         self.cached[outpoint] = (pointer, amount, address)
+        self.outs_total += 1
         if pointer:
             self.last_cached_block = pointer >> 42
 
