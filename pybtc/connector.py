@@ -751,11 +751,16 @@ class UTXO():
         c = len(self.cached) - self._cache_size
         if block_height > 0 and not self.save_process and c > 0:
             try:
+                lb = 0
+                for key in iter(self.cached):
+                    i = self.cached[key]
+                    if (c>0 or lb == i[0] >> 42) and (i[0] >> 42) < block_height:
+                        c -= 1
+                        continue
+                    break
                 self.save_process = True
-                k = []
-                for key in iter(self.destroyed):
-                    if key < block_height:
-                        k.append(key)
+                for key in self.destroyed:
+                    if key < lb:
                         n = set()
                         for outpoint in self.destroyed[key]:
                             try:
@@ -770,10 +775,11 @@ class UTXO():
                         self.destroyed[key] = n
                         self.log.critical(str(key))
 
-                ln, rs, lb = set(), set(), 0
+
+                ln, rs  = set(), set()
                 for key in iter(self.cached):
                     i = self.cached[key]
-                    if (c>0 or lb == i[0] >> 42) and (i[0] >> 42) < block_height:
+                    if  i[0] >> 42 <= lb:
                         rs.add((key,b"".join((int_to_c_int(i[0]),
                                               int_to_c_int(i[1]),
                                               i[2]))))
@@ -814,8 +820,9 @@ class UTXO():
                         self.cached.pop(key)
                     except:
                         pass
-
-                [self.destroyed.pop(key) for key in db]
+                for key in self.destroyed:
+                    if not self.destroyed[key]:
+                        self.destroyed.pop(key)
                 if lb:
                     self.last_saved_block = lb
             finally:
