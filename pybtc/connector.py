@@ -77,7 +77,7 @@ class Connector:
         self.start_time = time.time()
 
         # cache and system
-        self.block_preload_cache_limit = 500 * 1000000
+        self.block_preload_cache_limit = 1000 * 1000000
         self.block_hashes_cache_limit = 200 * 100000
         self.tx_cache_limit = 100 * 100000
         self.block_headers_cache_limit = 100 * 100000
