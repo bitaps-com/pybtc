@@ -129,7 +129,7 @@ class Connector:
                 self.log.warning("Blockchain is synchronized")
             else:
                 d = self.node_last_block - self.last_block_height
-                self.log.warning("%s blocks before synchronization synchronized" % d)
+                self.log.warning("%s blocks before synchronization" % d)
                 if d > self.deep_sync_limit:
                     self.log.warning("Deep synchronization mode")
                     self.deep_synchronization = True
@@ -550,6 +550,7 @@ class Connector:
 
 
     async def _new_transaction(self, tx, block_time = None, block_height = None, block_index = None):
+
         if not(tx["txId"] in self.tx_in_process or self.tx_cache.get(tx["txId"])):
             try:
                 stxo = None
@@ -559,7 +560,7 @@ class Connector:
                         await self.wait_block_dependences(tx)
                     if self.utxo:
                         stxo = await self.get_stxo(tx, block_height, block_index)
-
+                self.log.warning(" - %s " % rh2s(tx["txId"]))
 
                 if self.tx_handler and  not self.cache_loading:
                     await self.tx_handler(tx, stxo, block_time, block_height, block_index)
