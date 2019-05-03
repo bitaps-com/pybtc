@@ -768,6 +768,7 @@ class UTXO():
                                 except:
                                     pass
                         self.destroyed[key] = n
+                        self.log.critical(str(key))
 
                 ln, rs, lb = set(), set(), 0
                 for key in iter(self.cached):
