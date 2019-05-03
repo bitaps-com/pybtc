@@ -560,7 +560,7 @@ class Connector:
                         await self.wait_block_dependences(tx)
                     if self.utxo:
                         stxo = await self.get_stxo(tx, block_height, block_index)
-                self.log.warning(" - %s " % rh2s(tx["txId"]))
+                self.log.debug(" - %s " % rh2s(tx["txId"]))
 
                 if self.tx_handler and  not self.cache_loading:
                     await self.tx_handler(tx, stxo, block_time, block_height, block_index)
