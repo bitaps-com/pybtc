@@ -751,53 +751,57 @@ class UTXO():
         c = len(self.cached) - self._cache_size
         if block_height > 0 and not self.save_process and c > 0:
             try:
+                self.save_process = True
                 lb = 0
+                ln, rs = set(), set()
+                r = set()
+                db = set()
                 for key in iter(self.cached):
                     i = self.cached[key]
                     if (c>0 or lb == i[0] >> 42) and (i[0] >> 42) < block_height:
                         c -= 1
                         continue
                     break
-                self.save_process = True
-                for key in self.destroyed:
-                    if key < lb:
-                        n = set()
-                        for outpoint in self.destroyed[key]:
-                            try:
-                                del self.cached[outpoint]
-                                self.destroyed_utxo += 1
-                            except:
+                if lb:
+
+                    for key in self.destroyed:
+                        if key < lb:
+                            n = set()
+                            for outpoint in self.destroyed[key]:
                                 try:
-                                    del self.loaded[outpoint]
-                                    n.add(outpoint)
+                                    del self.cached[outpoint]
+                                    self.destroyed_utxo += 1
                                 except:
-                                    pass
-                        self.destroyed[key] = n
-                        self.log.critical(str(key))
+                                    try:
+                                        del self.loaded[outpoint]
+                                        n.add(outpoint)
+                                    except:
+                                        pass
+                            self.destroyed[key] = n
+                            self.log.critical(str(key))
 
 
-                ln, rs  = set(), set()
-                for key in iter(self.cached):
-                    i = self.cached[key]
-                    if  i[0] >> 42 <= lb:
-                        rs.add((key,b"".join((int_to_c_int(i[0]),
-                                              int_to_c_int(i[1]),
-                                              i[2]))))
-                        ln.add(key)
-                        lb = i[0] >> 42
-                        c -= 1
-                        continue
-                    break
-                # if not lb:
-                #     await asyncio.sleep(0)
-                #     return
 
-                r = set()
-                db = set()
-                for key in iter(self.destroyed):
-                    if key <= lb and key < block_height:
-                        db.add(key)
-                        [r.add(i) for i in self.destroyed[key]]
+                    for key in iter(self.cached):
+                        i = self.cached[key]
+                        if  i[0] >> 42 <= lb:
+                            rs.add((key,b"".join((int_to_c_int(i[0]),
+                                                  int_to_c_int(i[1]),
+                                                  i[2]))))
+                            ln.add(key)
+                            lb = i[0] >> 42
+                            c -= 1
+                            continue
+                        break
+                    # if not lb:
+                    #     await asyncio.sleep(0)
+                    #     return
+
+
+                    for key in iter(self.destroyed):
+                        if key <= lb and key < block_height:
+                            db.add(key)
+                            [r.add(i) for i in self.destroyed[key]]
 
                 # insert to db
                 async with self._db_pool.acquire() as conn:
@@ -814,16 +818,17 @@ class UTXO():
                                            "WHERE name = 'last_cached_block';", block_height)
                 self.saved_utxo += len(rs)
                 self.deleted_utxo += len(r)
-                # remove from cache
-                for key in ln:
-                    try:
-                        self.cached.pop(key)
-                    except:
-                        pass
-                for key in self.destroyed:
-                    if not self.destroyed[key]:
-                        self.destroyed.pop(key)
+
                 if lb:
+                    # remove from cache
+                    for key in ln:
+                        try:
+                            self.cached.pop(key)
+                        except:
+                            pass
+                    for key in self.destroyed:
+                        if not self.destroyed[key]:
+                            self.destroyed.pop(key)
                     self.last_saved_block = lb
             finally:
                 self.save_process = False
