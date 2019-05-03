@@ -748,8 +748,8 @@ class UTXO():
     async def save_utxo(self, block_height):
         # save to db tail from cache
         block_height -= self.maturity
-        if block_height > 0 and not self.save_process:
-            c = len(self.cached) - self._cache_size
+        c = len(self.cached) - self._cache_size
+        if block_height > 0 and not self.save_process and c > 0:
             try:
                 self.save_process = True
                 k = []
