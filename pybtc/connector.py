@@ -27,6 +27,8 @@ class Connector:
                  utxo_data=False,
                  utxo_cache_size=1000000,
                  skip_opreturn=True,
+                 block_preload_cache_limit= 1000 * 1000000,
+                 block_hashes_cache_limit= 200 * 1000000,
                  postgres_pool=None):
         self.loop = asyncio.get_event_loop()
 
@@ -77,8 +79,8 @@ class Connector:
         self.start_time = time.time()
 
         # cache and system
-        self.block_preload_cache_limit = 1000 * 1000000
-        self.block_hashes_cache_limit = 200 * 100000
+        self.block_preload_cache_limit = block_preload_cache_limit
+        self.block_hashes_cache_limit = block_hashes_cache_limit
         self.tx_cache_limit = 100 * 100000
         self.block_headers_cache_limit = 100 * 100000
         self.block_preload = Cache(max_size=self.block_preload_cache_limit)
