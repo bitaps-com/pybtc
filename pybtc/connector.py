@@ -783,6 +783,7 @@ class UTXO():
     async def save_utxo(self, block_height):
         # save to db tail from cache
         self.save_process = True
+        self.log.critical(str(block_height))
         c = len(self.cached) - self._cache_size
         try:
             lb = 0
