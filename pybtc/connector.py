@@ -746,6 +746,7 @@ class UTXO():
         del self.cached[outpoint]
 
     async def save_utxo(self, block_height):
+        return
         # save to db tail from cache
         block_height -= self.maturity
         c = len(self.cached) - self._cache_size
