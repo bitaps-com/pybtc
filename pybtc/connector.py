@@ -752,7 +752,7 @@ class UTXO():
             c = len(self.cached) - self._cache_size
             try:
                 self.save_process = True
-
+                self.log.critical(str([k for k  in iter(self.destroyed)]))
                 for key in iter(self.destroyed):
                     if key < block_height:
                         n = set()
@@ -774,8 +774,8 @@ class UTXO():
                     i = self.cached[key]
                     if (c>0 or lb == i[0] >> 42) and (i[0] >> 42) < block_height:
                         rs.add((key,b"".join((int_to_c_int(i[0]),
-                                             int_to_c_int(i[1]),
-                                             i[2]))))
+                                              int_to_c_int(i[1]),
+                                              i[2]))))
                         ln.add(key)
                         lb = i[0] >> 42
                         c -= 1
