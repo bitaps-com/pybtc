@@ -791,9 +791,10 @@ class UTXO():
                 i = self.cached[key]
                 if c>0 and (i[0] >> 42) <= block_height:
                     c -= 1
+                    lb = i[0] >> 42
                     continue
                 break
-            self.log.critical(str(lb))
+
             if lb:
                 d = set()
                 for key in range(self.last_saved_block + 1, lb + 1):
