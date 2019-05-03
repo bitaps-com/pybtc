@@ -400,9 +400,14 @@ class Connector:
                                       "cache size %s M;" % (self.non_cached_blocks,
                                                             self.block_preload.len(),
                                                             round(self.block_preload._store_size / 1024 / 1024, 2)))
-                        self.log.info("cache saved utxo %s; "
-                                      "cache deleted utxo %s ;" % (self.utxo.saved_utxo,
-                                                                   self.utxo.deleted_utxo))
+                        self.log.info("saved utxo block %s; "
+                                      "saved utxo %s; "
+                                      "deleted utxo %s; "
+                                      "loaded utxo %s;" % (self.utxo.last_saved_block,
+                                                                  self.utxo.saved_utxo,
+                                                                   self.utxo.deleted_utxo,
+                                                                   self.utxo.loaded_utxo
+                                                           ))
 
             # after block added handler
             if self.after_block_handler and not self.cache_loading:
@@ -727,6 +732,7 @@ class UTXO():
         self._hit = 0
         self.saved_utxo = 0
         self.deleted_utxo = 0
+        self.loaded_utxo = 0
 
     def set(self, outpoint, pointer, amount, address):
         self.cached[outpoint] = (pointer, amount, address)
@@ -805,7 +811,8 @@ class UTXO():
                         pass
 
                 [self.destroyed.pop(key) for key in db]
-                self.last_saved_block = lb
+                if lb:
+                    self.last_saved_block = lb
             finally:
                 self.save_process = False
 
@@ -861,6 +868,7 @@ class UTXO():
                 f += c_int_len(amount)
                 address = d[f:]
                 self.loaded[row["outpoint"]] = (pointer, amount, address)
+                self.loaded_utxo += 1
         finally:
             self.load_utxo_future.set_result(True)
 
