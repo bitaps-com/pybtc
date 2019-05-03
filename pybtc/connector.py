@@ -403,10 +403,12 @@ class Connector:
                         self.log.info("saved utxo block %s; "
                                       "saved utxo %s; "
                                       "deleted utxo %s; "
-                                      "loaded utxo %s;" % (self.utxo.last_saved_block,
+                                      "loaded utxo %s; "
+                                      "destroyed utxo %s;" % (self.utxo.last_saved_block,
                                                                   self.utxo.saved_utxo,
                                                                    self.utxo.deleted_utxo,
-                                                                   self.utxo.loaded_utxo
+                                                                   self.utxo.loaded_utxo,
+                                                           self.destroyed_utxo
                                                            ))
 
             # after block added handler
@@ -733,6 +735,7 @@ class UTXO():
         self.saved_utxo = 0
         self.deleted_utxo = 0
         self.loaded_utxo = 0
+        self.destroyed_utxo = 0
 
     def set(self, outpoint, pointer, amount, address):
         self.cached[outpoint] = (pointer, amount, address)
@@ -756,6 +759,7 @@ class UTXO():
                         for outpoint in self.destroyed[key]:
                             try:
                                 del self.cached[outpoint]
+                                self.destroyed_utxo += 1
                             except:
                                 try:
                                     del self.loaded[outpoint]
