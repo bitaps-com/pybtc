@@ -773,6 +773,7 @@ class UTXO():
                         self.destroyed_utxo += 1
                         n.add(outpoint)
                     except:
+                        self.destroyed_utxo += 1
                         pass
             self.deleted[key] = n
             self.destroyed.pop(key)
