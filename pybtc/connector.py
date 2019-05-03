@@ -408,7 +408,7 @@ class Connector:
                                                                   self.utxo.saved_utxo,
                                                                    self.utxo.deleted_utxo,
                                                                    self.utxo.loaded_utxo,
-                                                           self.destroyed_utxo
+                                                           self.utxo.destroyed_utxo
                                                            ))
 
             # after block added handler
