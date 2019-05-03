@@ -405,11 +405,13 @@ class Connector:
                                       "saved utxo %s; "
                                       "deleted utxo %s; "
                                       "loaded utxo %s; "
-                                      "destroyed utxo %s;" % (self.utxo.last_saved_block,
+                                      "destroyed utxo %s; "
+                                      "destroyed utxo blokc %s;" % (self.utxo.last_saved_block,
                                                                   self.utxo.saved_utxo,
                                                                    self.utxo.deleted_utxo,
                                                                    self.utxo.loaded_utxo,
-                                                           self.utxo.destroyed_utxo
+                                                           self.utxo.destroyed_utxo,
+                                                           self.utxo.destroyed_utxo_block
                                                            ))
 
             # after block added handler
@@ -738,6 +740,7 @@ class UTXO():
         self.deleted_utxo = 0
         self.loaded_utxo = 0
         self.destroyed_utxo = 0
+        self.destroyed_utxo_block = 0
 
     def set(self, outpoint, pointer, amount, address):
         self.cached[outpoint] = (pointer, amount, address)
@@ -749,6 +752,7 @@ class UTXO():
 
     def destroy_utxo(self, block_height):
         block_height -= self.maturity
+        self.destroyed_utxo_block = block_height
         k = set()
         for key in self.destroyed:
             if key < block_height:
