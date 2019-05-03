@@ -785,9 +785,11 @@ class UTXO():
                 # insert to db
                 async with self._db_pool.acquire() as conn:
                     async with conn.transaction():
-                        await conn.execute("DELETE FROM connector_utxo WHERE "
-                                           "outpoint = ANY($1);", r)
-                        await conn.copy_records_to_table('connector_utxo',  columns=["outpoint", "data"], records=rs)
+                        if r:
+                            await conn.execute("DELETE FROM connector_utxo WHERE "
+                                               "outpoint = ANY($1);", r)
+                        if rs:
+                            await conn.copy_records_to_table('connector_utxo',  columns=["outpoint", "data"], records=rs)
                         if lb:
                             await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                                "WHERE name = 'last_block';", lb)
