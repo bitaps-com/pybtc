@@ -793,7 +793,7 @@ class UTXO():
                     c -= 1
                     continue
                 break
-
+            self.log.critical(str(lb))
             if lb:
                 d = set()
                 for key in range(self.last_saved_block + 1, lb + 1):
