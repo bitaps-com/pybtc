@@ -771,9 +771,9 @@ class UTXO():
                         c -= 1
                         continue
                     break
-                if not lb:
-                    await asyncio.sleep(0)
-                    return
+                # if not lb:
+                #     await asyncio.sleep(0)
+                #     return
 
                 r = set()
                 db = set()
