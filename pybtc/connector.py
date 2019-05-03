@@ -770,6 +770,7 @@ class UTXO():
                 except:
                     try:
                         del self.loaded[outpoint]
+                        self.destroyed_utxo += 1
                         n.add(outpoint)
                     except:
                         pass
