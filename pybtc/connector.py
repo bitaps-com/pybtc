@@ -64,8 +64,7 @@ class Connector:
 
         self.block_dependency_tx = 0 # counter of tx that have dependencies in block
         self.active = True
-        self.get_next_block_mutex = asyncio.Future()
-        self.get_next_block_mutex.set_result(True)
+        self.get_next_block_mutex = False
         self.active_block = asyncio.Future()
         self.active_block.set_result(True)
         self.last_zmq_msg = int(time.time())
