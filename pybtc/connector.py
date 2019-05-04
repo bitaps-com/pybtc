@@ -706,9 +706,18 @@ class Connector:
                     except:
                         pass
                 if processed_height < self.last_block_height:
-                    for i in range(processed_height, self.last_block_height - 1):
-                        self.block_preload.remove(i)
-                    processed_height = self.last_block_height - 1
+                    for i in range(processed_height, self.last_block_height ):
+                        try:
+                            self.block_preload.remove(i)
+                        except:
+                            pass
+                    processed_height = self.last_block_height
+                if next(iter(self.block_preload._store)) <  processed_height + 1:
+                    for i in range(next(iter(self.block_preload._store)), self.last_block_height+1):
+                        try:
+                            self.block_preload.remove(i)
+                        except:
+                            pass
                 if self.block_preload._store_size < self.block_preload_cache_limit * 0.9:
                     continue
 
