@@ -260,7 +260,7 @@ class Connector:
         while True:
             try:
                 while True:
-                    await asyncio.sleep(10)
+                    await asyncio.sleep(20)
                     if int(time.time()) - self.last_zmq_msg > 300 and self.zmqContext:
                         self.log.error("ZerroMQ no messages about 5 minutes")
                         try:
@@ -278,11 +278,8 @@ class Connector:
 
     async def get_next_block(self):
         if self.active and self.active_block.done():
-            while True:
-                if not self.get_next_block_mutex.done():
-                    await self.get_next_block_mutex
-                    continue
-                break
+            if not self.get_next_block_mutex.done():
+                return
             try:
                 self.get_next_block_mutex = asyncio.Future()
 
