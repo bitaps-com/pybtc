@@ -432,6 +432,10 @@ class Connector:
         except Exception as err:
             if self.await_tx:
                 self.await_tx = set()
+            for i in self.await_tx_future:
+                if not self.await_tx_future.done():
+                    self.await_tx_future[i].cancel()
+            self.await_tx_future = dict()
             self.log.error(str(traceback.format_exc()))
             self.log.error("block error %s" % str(err))
         finally:
@@ -457,7 +461,7 @@ class Connector:
                                                             block["time"],
                                                             block["height"],
                                                             i))
-            await asyncio.wait_for(self.block_txs_request)
+            await asyncio.wait_for(self.block_txs_request, timeout=1500)
 
 
         elif tx_bin_list:
