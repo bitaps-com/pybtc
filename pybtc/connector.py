@@ -278,8 +278,11 @@ class Connector:
 
     async def get_next_block(self):
         if self.active:
-            if not self.get_next_block_mutex.done():
-                await self.get_next_block_mutex
+            while True:
+                if not self.get_next_block_mutex.done():
+                    await self.get_next_block_mutex
+                    continue
+                break
             try:
                 self.get_next_block_mutex = asyncio.Future()
 
