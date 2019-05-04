@@ -457,7 +457,11 @@ class Connector:
                                                             block["time"],
                                                             block["height"],
                                                             i))
-            await asyncio.wait_for(self.block_txs_request, timeout=self.block_timeout)
+            try:
+                await asyncio.wait_for(self.block_txs_request, timeout=self.block_timeout)
+            except:
+                self.log.critical(str(self.await_tx))
+                raise
 
         elif tx_bin_list:
             raise Exception("not emplemted")
