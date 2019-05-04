@@ -268,7 +268,8 @@ class Connector:
                         except:
                             pass
                     if not self.get_next_block_mutex:
-                       self.loop.create_task(self.get_next_block())
+                        self.get_next_block_mutex = True
+                        self.loop.create_task(self.get_next_block())
             except asyncio.CancelledError:
                 self.log.info("connector watchdog terminated")
                 break
@@ -279,7 +280,6 @@ class Connector:
     async def get_next_block(self):
         if self.active and self.active_block.done() and not self.get_next_block_mutex:
             try:
-                self.get_next_block_mutex = True
                 if self.node_last_block <= self.last_block_height + self.backlog:
                     d = await self.rpc.getblockcount()
                     if d == self.node_last_block:
@@ -446,7 +446,8 @@ class Connector:
                            tm(bt),
                            len(self.block_hashes._store),
                            len(self.block_preload._store)))
-            if self.node_last_block > self.last_block_height:
+            if self.node_last_block > self.last_block_height and not self.get_next_block_mutex:
+                self.get_next_block_mutex = True
                 self.loop.create_task(self.get_next_block())
 
     async def fetch_block_transactions(self, block, tx_bin_list):
