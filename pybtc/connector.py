@@ -447,7 +447,7 @@ class Connector:
                            tm(bt),
                            len(self.block_hashes._store),
                            len(self.block_preload._store)))
-            if self.node_last_block > self.last_block_height and not self.get_next_block_mutex:
+            if self.node_last_block > self.last_block_height:
                 self.get_next_block_mutex = True
                 self.loop.create_task(self.get_next_block())
 
