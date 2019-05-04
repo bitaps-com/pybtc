@@ -407,7 +407,7 @@ class Connector:
                         self.log.info(
                                       "cache first %s; "
                                       "cache last %s;" % (
-                                                            next(self.block_preload._store),
+                                                            next(iter(self.block_preload._store)),
                                                             next(reversed(self.block_preload._store))))
 
                         self.log.info("saved utxo block %s; "
