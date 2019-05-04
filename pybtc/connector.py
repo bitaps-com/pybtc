@@ -440,13 +440,13 @@ class Connector:
             self.log.error("block error %s" % str(err))
         finally:
             self.active_block.set_result(True)
-            self.log.debug("%s block [%s tx/ %s size] processing time %s cache [%s/%s]" %
-                          (block["height"],
-                           len(block["tx"]),
-                           block["size"] / 1000000,
-                           tm(bt),
-                           len(self.block_hashes._store),
-                           len(self.block_preload._store)))
+            # self.log.debug("%s block [%s tx/ %s size] processing time %s cache [%s/%s]" %
+            #               (block["height"],
+            #                len(block["tx"]),
+            #                block["size"] / 1000000,
+            #                tm(bt),
+            #                len(self.block_hashes._store),
+            #                len(self.block_preload._store)))
             if self.node_last_block > self.last_block_height:
                 self.get_next_block_mutex = True
                 self.loop.create_task(self.get_next_block())
