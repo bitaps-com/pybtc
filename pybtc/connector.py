@@ -577,13 +577,14 @@ class Connector:
 
 
     async def _new_transaction(self, tx, block_time = None, block_height = None, block_index = None):
-
+        self.log.debug("1 - %s " % rh2s(tx["txId"]))
         if not(tx["txId"] in self.tx_in_process or self.tx_cache.get(tx["txId"])):
             try:
                 stxo = None
                 self.tx_in_process.add(tx["txId"])
                 if not tx["coinbase"]:
                     if block_height is not None:
+                        self.log.debug("2 - %s " % rh2s(tx["txId"]))
                         await self.wait_block_dependences(tx)
                     if self.utxo:
                         stxo = await self.get_stxo(tx, block_height, block_index)
