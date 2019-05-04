@@ -577,7 +577,7 @@ class Connector:
 
 
     async def _new_transaction(self, tx, block_time = None, block_height = None, block_index = None):
-        self.log.debug("1 - %s %s " % (rh2s(tx["txId"]), block_height))
+        self.log.debug("1 - %s %s " % (rh2s(tx["txId"]), not(tx["txId"] in self.tx_in_process or self.tx_cache.get(tx["txId"]))))
         if not(tx["txId"] in self.tx_in_process or self.tx_cache.get(tx["txId"])):
             try:
                 stxo = None
