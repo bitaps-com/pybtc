@@ -277,7 +277,7 @@ class Connector:
                 self.log.error("watchdog error %s " % err)
 
     async def get_next_block(self):
-        if self.active:
+        if self.active and self.active_block.done():
             while True:
                 if not self.get_next_block_mutex.done():
                     await self.get_next_block_mutex
