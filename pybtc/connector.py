@@ -196,7 +196,7 @@ class Connector:
                                      (self.app_block_height_on_start - self.last_block_height,))
 
             else:
-                self.app_block_height_on_start = self.last_block_height
+                self.app_block_height_on_start = self.last_block_utxo_cached_height
 
 
     async def zeromq_handler(self):
@@ -349,6 +349,7 @@ class Connector:
     async def _new_block(self, block):
         if self.block_headers_cache.get(block["hash"]) is not None:
                 return
+
         if self.deep_synchronization:
             block["height"] = self.last_block_height + 1
         if not self.active or not self.active_block.done() or self.last_block_height >= block["height"]:
@@ -636,7 +637,7 @@ class Connector:
             await self.utxo.load_utxo()
             [stxo.add(self.utxo.get_loaded(o, block_height)) for o, s in missed]
 
-        if len(stxo) != len(tx["vIn"]):
+        if len(stxo) != len(tx["vIn"]) and not self.cache_loading:
             self.log.critical("utxo get failed " + rh2s(tx["txId"]))
             self.log.critical(str(stxo))
             raise Exception("utxo get failed ")
