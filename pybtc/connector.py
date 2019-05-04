@@ -155,7 +155,7 @@ class Connector:
         # if self.preload:
         #     self.loop.create_task(self.preload_block())
         #     self.loop.create_task(self.preload_block_hashes())
-
+        self.get_next_block_mutex = True
         self.loop.create_task(self.get_next_block())
 
     async def utxo_init(self):
@@ -278,7 +278,7 @@ class Connector:
                 self.log.error("watchdog error %s " % err)
 
     async def get_next_block(self):
-        if self.active and self.active_block.done() and not self.get_next_block_mutex:
+        if self.active and self.active_block.done() and self.get_next_block_mutex:
             try:
                 if self.node_last_block <= self.last_block_height + self.backlog:
                     d = await self.rpc.getblockcount()
