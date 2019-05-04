@@ -268,7 +268,8 @@ class Connector:
                             self.zmqContext = None
                         except:
                             pass
-                    self.loop.create_task(self.get_next_block())
+                    if not self.get_next_block_mutex:
+                       self.loop.create_task(self.get_next_block())
             except asyncio.CancelledError:
                 self.log.info("connector watchdog terminated")
                 break
@@ -277,8 +278,9 @@ class Connector:
                 self.log.error("watchdog error %s " % err)
 
     async def get_next_block(self):
-        if self.active and self.active_block.done():
+        if self.active and self.active_block.done() and not self.get_next_block_mutex:
             try:
+                self.get_next_block_mutex = True
                 if self.node_last_block <= self.last_block_height + self.backlog:
                     d = await self.rpc.getblockcount()
                     if d == self.node_last_block:
@@ -319,6 +321,8 @@ class Connector:
                 self.loop.create_task(self._new_block(block))
             except Exception as err:
                 self.log.error("get next block failed %s" % str(err))
+            finally:
+                self.get_next_block_mutex = False
 
     async def _get_block_by_hash(self, hash):
         self.log.debug("get block by hash %s" % hash)
