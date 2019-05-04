@@ -382,7 +382,6 @@ class Connector:
             self.last_block_height = block["height"]
             if self.utxo_data:
                 self.utxo.destroy_utxo(block["height"])
-                # self.loop.create_task(self.utxo.save_utxo(block["height"]))
 
             self.blocks_processed_count += 1
 
@@ -405,6 +404,12 @@ class Connector:
                                       "cache size %s M;" % (self.non_cached_blocks,
                                                             self.block_preload.len(),
                                                             round(self.block_preload._store_size / 1024 / 1024, 2)))
+                        self.log.info(
+                                      "cache first %s; "
+                                      "cache last %s;" % (
+                                                            next(self.block_preload._store),
+                                                            next(reversed(self.block_preload._store))))
+
                         self.log.info("saved utxo block %s; "
                                       "saved utxo %s; "
                                       "deleted utxo %s; "
