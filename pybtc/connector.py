@@ -433,7 +433,7 @@ class Connector:
             if self.await_tx:
                 self.await_tx = set()
             for i in self.await_tx_future:
-                if not self.await_tx_future.done():
+                if not self.await_tx_future[i].done():
                     self.await_tx_future[i].cancel()
             self.await_tx_future = dict()
             self.log.error(str(traceback.format_exc()))
