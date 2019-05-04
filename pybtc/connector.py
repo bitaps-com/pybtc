@@ -344,20 +344,21 @@ class Connector:
             self.log.error(str(traceback.format_exc()))
 
     async def _new_block(self, block):
-        if self.block_headers_cache.get(block["hash"]) is not None:
-                return
-
-        if self.deep_synchronization:
-            block["height"] = self.last_block_height + 1
-        if not self.active or not self.active_block.done() or self.last_block_height >= block["height"]:
-            return
-        self.active_block = asyncio.Future()
-
-        self.log.debug("Block %s %s" % (block["height"], block["hash"]))
-        bt = time.time()
-        self.cache_loading = True if self.last_block_height < self.app_block_height_on_start else False
-
         try:
+            if self.block_headers_cache.get(block["hash"]) is not None:
+                    return
+
+            if self.deep_synchronization:
+                block["height"] = self.last_block_height + 1
+            if not self.active or not self.active_block.done() or self.last_block_height >= block["height"]:
+                return
+            self.active_block = asyncio.Future()
+
+            self.log.debug("Block %s %s" % (block["height"], block["hash"]))
+            bt = time.time()
+            self.cache_loading = True if self.last_block_height < self.app_block_height_on_start else False
+
+
             if self.deep_synchronization:
                 tx_bin_list = [block["rawTx"][i]["txId"] for i in block["rawTx"]]
             else:
