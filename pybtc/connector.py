@@ -629,7 +629,7 @@ class Connector:
             else:
                 address = b"".join((bytes([out["nType"]]), out["addressHash"]))
             outpoint = b"".join((tx["txId"], int_to_bytes(i)))
-            # self.utxo.set(outpoint, pointer, out["value"], address)
+            self.utxo.set(outpoint, pointer, out["value"], address)
 
     async def get_stxo(self, tx, block_height, block_index):
         stxo, missed = set(), set()
