@@ -358,7 +358,7 @@ class Connector:
             self.active_block = asyncio.Future()
 
             self.log.debug("Block %s %s" % (block["height"], block["hash"]))
-            bt = time.time()
+
             self.cache_loading = True if self.last_block_height < self.app_block_height_on_start else False
 
 
@@ -379,11 +379,14 @@ class Connector:
             self.block_headers_cache.set(block["hash"], block["height"])
             self.last_block_height = block["height"]
             if self.utxo_data:
-                self.utxo.destroy_utxo(block["height"])
+                if not self.deep_synchronization:
+                    self.utxo.destroy_utxo(block["height"])
+                elif block["height"] % 100 == 0:
+                    self.utxo.destroy_utxo(block["height"])
 
             self.blocks_processed_count += 1
 
-            [self.tx_cache.pop(h) for h in tx_bin_list]
+            for h in tx_bin_list: self.tx_cache.pop(h)
 
             tx_rate = round(self.total_received_tx / (time.time() - self.start_time), 4)
             t = 10000 if not self.deep_synchronization else 10000
@@ -791,10 +794,10 @@ class UTXO():
                 except:
                     try:
                         del self.loaded[outpoint]
-                        # self.destroyed_utxo += 1
+                        self.destroyed_utxo += 1
                         n.add(outpoint)
                     except:
-                        # self.destroyed_utxo += 1
+                        self.destroyed_utxo += 1
                         pass
             self.deleted[key] = n
             self.destroyed.pop(key)
