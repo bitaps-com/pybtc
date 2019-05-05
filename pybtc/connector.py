@@ -628,7 +628,7 @@ class Connector:
                 address = out["scriptPubKey"]
             else:
                 address = b"%s%s" % (bytes([out["nType"]]), out["addressHash"])
-            # outpoint = b"%s%s" % (tx["txId"], int_to_bytes(i))
+            outpoint = b"".join((tx["txId"], int_to_bytes(i)))
             # self.utxo.set(outpoint, pointer, out["value"], address)
 
     async def get_stxo(self, tx, block_height, block_index):
