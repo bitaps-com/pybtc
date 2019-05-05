@@ -664,7 +664,7 @@ class Connector:
             processed_height = self.last_block_height
 
             while height < max_height:
-                if self.block_preload._store_size < self.block_preload_cache_limit * 0.9:
+                if self.block_preload._store_size < self.block_preload_cache_limit:
                     try:
                         if height < self.last_block_height:
                             height = self.last_block_height + 1
@@ -717,7 +717,7 @@ class Connector:
                 if self.block_preload._store_size < self.block_preload_cache_limit * 0.9:
                     continue
 
-                await asyncio.sleep(1)
+                await asyncio.sleep(10)
                 # remove unused items
 
         finally:
