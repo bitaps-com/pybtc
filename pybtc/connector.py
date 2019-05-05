@@ -783,6 +783,7 @@ class UTXO():
         del self.cached[outpoint]
 
     def destroy_utxo(self, block_height):
+        return
         block_height -= self.maturity
         for key in range(self.destroyed_utxo_block + 1, block_height + 1):
             if key not in self.destroyed: continue
