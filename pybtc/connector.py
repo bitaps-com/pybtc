@@ -869,16 +869,16 @@ class UTXO():
     def get(self, key, block_height):
         self._requests += 1
         try:
-            i = self.cached[key]
-            try:
-                self.destroyed[block_height].add(key)
-            except:
-                self.destroyed[block_height] = {key}
+            i = self.cached.peek(key)
+            # try:
+            #     self.destroyed[block_height].add(key)
+            # except:
+            #     self.destroyed[block_height] = {key}
             self._hit += 1
             return i
         except:
             self._failed_requests += 1
-            self.missed.add(key)
+            # self.missed.add(key)
             return None
 
     def get_loaded(self, key, block_height):
