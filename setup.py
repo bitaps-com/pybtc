@@ -140,6 +140,7 @@ setup(name='pybtc',
       package_data={
           'pybtc': ['bip39_word_list/*.txt', 'test/*.txt'],
       },
+      install_requires=['pylru'],
       cmdclass={
         'build_clib': build_clib,
         'build_ext': build_ext,

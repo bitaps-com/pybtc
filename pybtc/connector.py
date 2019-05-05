@@ -15,6 +15,7 @@ import asyncio
 import time
 import io
 from collections import OrderedDict
+import pylru
 
 class Connector:
     def __init__(self, node_rpc_url, node_zerromq_url, logger,
@@ -77,6 +78,7 @@ class Connector:
         self.non_cached_blocks = 0
         self.total_received_tx_time = 0
         self.start_time = time.time()
+        self.tmp = pylru.lrucache(1000000)
 
         # cache and system
         self.block_preload_cache_limit = block_preload_cache_limit
@@ -629,7 +631,8 @@ class Connector:
             else:
                 address = b"".join((bytes([out["nType"]]), out["addressHash"]))
             outpoint = b"".join((tx["txId"], int_to_bytes(i)))
-            self.utxo.set(outpoint, pointer, out["value"], address)
+            self.tmp[outpoint] = (pointer, out["value"], address)
+            # self.utxo.set(outpoint, pointer, out["value"], address)
 
     async def get_stxo(self, tx, block_height, block_index):
         stxo, missed = set(), set()
