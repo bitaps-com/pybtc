@@ -384,7 +384,7 @@ class Connector:
             [self.tx_cache.pop(h) for h in tx_bin_list]
 
             tx_rate = round(self.total_received_tx / (time.time() - self.start_time), 4)
-            t = 10000 if not self.deep_synchronization else 100000
+            t = 10000 if not self.deep_synchronization else 10000
             if (self.total_received_tx - self.total_received_tx_stat) > t:
                 self.total_received_tx_stat = self.total_received_tx
                 self.log.warning("Blocks %s; tx rate: %s;" % (block["height"], tx_rate))
@@ -594,8 +594,8 @@ class Connector:
                 if self.tx_handler and  not self.cache_loading:
                     await self.tx_handler(tx, stxo, block_time, block_height, block_index)
 
-                if self.utxo:
-                    self.put_utxo(tx, block_height, block_index)
+                # if self.utxo:
+                #     self.put_utxo(tx, block_height, block_index)
 
                 self.tx_cache.set(tx["txId"], True)
                 try:
