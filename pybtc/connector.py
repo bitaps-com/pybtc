@@ -590,8 +590,8 @@ class Connector:
                 if not tx["coinbase"]:
                     if block_height is not None:
                         await self.wait_block_dependences(tx)
-                    # if self.utxo:
-                    #     stxo = await self.get_stxo(tx, block_height, block_index)
+                    if self.utxo:
+                        stxo = await self.get_stxo(tx, block_height, block_index)
 
                 if self.tx_handler and  not self.cache_loading:
                     await self.tx_handler(tx, stxo, block_time, block_height, block_index)
