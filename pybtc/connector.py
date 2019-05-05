@@ -781,13 +781,12 @@ class UTXO():
 
     def destroy_utxo(self, block_height):
         block_height -= self.maturity
-
         for key in range(self.destroyed_utxo_block + 1, block_height + 1):
             if key not in self.destroyed: continue
             n = set()
             for outpoint in self.destroyed[key]:
                 try:
-                    del self.cached[outpoint]
+                    self.cached.popitem(outpoint)
                     self.destroyed_utxo += 1
                 except:
                     try:
