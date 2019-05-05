@@ -384,8 +384,8 @@ class Connector:
             [self.tx_cache.pop(h) for h in tx_bin_list]
 
             tx_rate = round(self.total_received_tx / (time.time() - self.start_time), 4)
-
-            if (self.total_received_tx - self.total_received_tx_stat) > 10000:
+            t = 10000 if not self.deep_synchronization else 100000
+            if (self.total_received_tx - self.total_received_tx_stat) > t:
                 self.total_received_tx_stat = self.total_received_tx
                 self.log.warning("Blocks %s; tx rate: %s;" % (block["height"], tx_rate))
                 if self.utxo_data:
@@ -422,7 +422,7 @@ class Connector:
                                                            self.utxo.destroyed_utxo_block,
                                                            self.utxo.outs_total
                                                            ))
-                        self.log.info("total tx fetch time %s;" % self.total_received_tx_time)
+                self.log.info("total tx fetch time %s;" % self.total_received_tx_time)
 
             # after block added handler
             if self.after_block_handler and not self.cache_loading:
@@ -581,18 +581,15 @@ class Connector:
 
 
     async def _new_transaction(self, tx, block_time = None, block_height = None, block_index = None):
-        # self.log.debug("1 - %s %s " % (rh2s(tx["txId"]), not(tx["txId"] in self.tx_in_process or self.tx_cache.get(tx["txId"]))))
         if not(tx["txId"] in self.tx_in_process or self.tx_cache.get(tx["txId"])):
             try:
                 stxo = None
                 self.tx_in_process.add(tx["txId"])
                 if not tx["coinbase"]:
                     if block_height is not None:
-                        # self.log.debug("2 - %s " % rh2s(tx["txId"]))
                         await self.wait_block_dependences(tx)
-                    if self.utxo:
-                        stxo = await self.get_stxo(tx, block_height, block_index)
-                # self.log.debug(" - %s " % rh2s(tx["txId"]))
+                    # if self.utxo:
+                    #     stxo = await self.get_stxo(tx, block_height, block_index)
 
                 if self.tx_handler and  not self.cache_loading:
                     await self.tx_handler(tx, stxo, block_time, block_height, block_index)
