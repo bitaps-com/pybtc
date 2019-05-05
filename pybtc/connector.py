@@ -665,7 +665,7 @@ class Connector:
 
             while height < max_height:
                 if self.block_preload._store_size < self.block_preload_cache_limit * 0.9 and \
-                   self.last_block_height >= next(iter(self.block_preload._store)):
+                   (not self.block_preload._store or self.last_block_height >= next(iter(self.block_preload._store))):
                     try:
                         if height < self.last_block_height:
                             height = self.last_block_height + 1
