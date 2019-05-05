@@ -631,8 +631,8 @@ class Connector:
             else:
                 address = b"".join((bytes([out["nType"]]), out["addressHash"]))
             outpoint = b"".join((tx["txId"], int_to_bytes(i)))
-            self.tmp[outpoint] = (pointer, out["value"], address)
-            # self.utxo.set(outpoint, pointer, out["value"], address)
+            # self.tmp[outpoint] = (pointer, out["value"], address)
+            self.utxo.set(outpoint, pointer, out["value"], address)
 
     async def get_stxo(self, tx, block_height, block_index):
         stxo, missed = set(), set()
@@ -743,7 +743,7 @@ class Connector:
 
 class UTXO():
     def __init__(self, db_pool, loop, log, cache_size):
-        self.cached = OrderedDict()
+        self.cached = pylru.lrucache(cache_size)
         self.missed = set()
         self.destroyed = OrderedDict()
         self.deleted = OrderedDict()
