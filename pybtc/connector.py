@@ -786,15 +786,15 @@ class UTXO():
             n = set()
             for outpoint in self.destroyed[key]:
                 try:
-                    self.cached.popitem(outpoint)
+                    self.cached.pop(outpoint)
                     self.destroyed_utxo += 1
                 except:
                     try:
                         del self.loaded[outpoint]
-                        self.destroyed_utxo += 1
+                        # self.destroyed_utxo += 1
                         n.add(outpoint)
                     except:
-                        self.destroyed_utxo += 1
+                        # self.destroyed_utxo += 1
                         pass
             self.deleted[key] = n
             self.destroyed.pop(key)
