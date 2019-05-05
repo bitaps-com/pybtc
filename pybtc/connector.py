@@ -594,8 +594,8 @@ class Connector:
                 if self.tx_handler and  not self.cache_loading:
                     await self.tx_handler(tx, stxo, block_time, block_height, block_index)
 
-                # if self.utxo:
-                #     self.put_utxo(tx, block_height, block_index)
+                if self.utxo:
+                    self.put_utxo(tx, block_height, block_index)
 
                 self.tx_cache.set(tx["txId"], True)
                 try:
@@ -629,7 +629,7 @@ class Connector:
             else:
                 address = b"%s%s" % (bytes([out["nType"]]), out["addressHash"])
             outpoint = b"%s%s" % (tx["txId"], int_to_bytes(i))
-            self.utxo.set(outpoint, pointer, out["value"], address)
+            # self.utxo.set(outpoint, pointer, out["value"], address)
 
     async def get_stxo(self, tx, block_height, block_index):
         stxo, missed = set(), set()
