@@ -749,7 +749,7 @@ class UTXO():
         self.cached = pylru.lrucache(cache_size)
         self.missed = set()
         self.destroyed = pylru.lrucache(200000)
-        self.deleted = OrderedDict()
+        self.deleted = pylru.lrucache(200000)
         self.log = log
         self.loaded = OrderedDict()
         self.maturity = 100
