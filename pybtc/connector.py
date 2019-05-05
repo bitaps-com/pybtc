@@ -627,7 +627,7 @@ class Connector:
             if "addressHash" not in out:
                 address = out["scriptPubKey"]
             else:
-                address = b"%s%s" % (bytes([out["nType"]]), out["addressHash"])
+                address = b"".join((bytes([out["nType"]]), out["addressHash"]))
             outpoint = b"".join((tx["txId"], int_to_bytes(i)))
             # self.utxo.set(outpoint, pointer, out["value"], address)
 
