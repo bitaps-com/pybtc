@@ -52,6 +52,7 @@ class Connector:
         self.chain_tail = list(chain_tail) if chain_tail else []
         self.rpc_timeout = rpc_timeout
         self.batch_limit = rpc_batch_limit
+        self.utxo_test = dict()
 
         # state and stats
         self.node_last_block = None
@@ -629,6 +630,7 @@ class Connector:
             else:
                 address = b"".join((bytes([out["nType"]]), out["addressHash"]))
             outpoint = b"".join((tx["txId"], int_to_bytes(i)))
+            self.utxo_test[outpoint] = (pointer, out["value"], address)
             # self.utxo.set(outpoint, pointer, out["value"], address)
 
     async def get_stxo(self, tx, block_height, block_index):
