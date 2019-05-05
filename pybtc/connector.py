@@ -82,7 +82,7 @@ class Connector:
         self.block_hashes_cache_limit = block_hashes_cache_limit
         self.tx_cache_limit = 100 * 100000
         self.block_headers_cache_limit = 100 * 100000
-        self.block_preload = Cache(max_size=self.block_preload_cache_limit)
+        self.block_preload = Cache(max_size=self.block_preload_cache_limit, clear_tail=False)
         self.block_hashes = Cache(max_size=self.block_hashes_cache_limit)
         self.block_hashes_preload_mutex = False
         self.tx_cache = Cache(max_size=self.tx_cache_limit)
@@ -664,7 +664,8 @@ class Connector:
             processed_height = self.last_block_height
 
             while height < max_height:
-                if self.block_preload._store_size < self.block_preload_cache_limit * 0.9:
+                if self.block_preload._store_size < self.block_preload_cache_limit * 0.9 and \
+                   self.last_block_height >= next(iter(self.block_preload._store)):
                     try:
                         if height < self.last_block_height:
                             height = self.last_block_height + 1
@@ -984,11 +985,12 @@ class DependsTransaction(Exception):
 
 
 class Cache():
-    def __init__(self, max_size=1000000):
+    def __init__(self, max_size=1000000, clear_tail=True):
         self._store = OrderedDict()
         self._store_size = 0
         self._max_size = max_size
         self.clear_tail = False
+        self.clear_tail_auto = clear_tail
         self._requests = 0
         self._hit = 0
 
@@ -1000,7 +1002,7 @@ class Cache():
     def _check_limit(self):
         if self._store_size >= self._max_size:
             self.clear_tail = True
-        if self.clear_tail:
+        if self.clear_tail and self.clear_tail_auto:
             if self._store_size >= int(self._max_size * 0.75):
                 try:
                     [self.pop_last() for i in range(20)]
