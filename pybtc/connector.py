@@ -748,7 +748,7 @@ class UTXO():
     def __init__(self, db_pool, loop, log, cache_size):
         self.cached = pylru.lrucache(cache_size)
         self.missed = set()
-        self.destroyed = OrderedDict()
+        self.destroyed = pylru.lrucache(200000)
         self.deleted = OrderedDict()
         self.log = log
         self.loaded = OrderedDict()
@@ -783,7 +783,6 @@ class UTXO():
         del self.cached[outpoint]
 
     def destroy_utxo(self, block_height):
-        return
         block_height -= self.maturity
         for key in range(self.destroyed_utxo_block + 1, block_height + 1):
             if key not in self.destroyed: continue
