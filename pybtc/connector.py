@@ -641,7 +641,7 @@ class Connector:
 
         for i in tx["vIn"]:
             inp = tx["vIn"][i]
-            outpoint = b"%s%s" % (inp["txId"], int_to_bytes(inp["vOut"]))
+            outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
             r = self.utxo.get(outpoint, block_height)
             stxo.add(r) if r else missed.add((outpoint, (block_height << 42) + (block_index << 21) + i))
 
