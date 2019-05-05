@@ -73,6 +73,7 @@ class Connector:
         self.blocks_processed_count = 0
         self.blocks_decode_time = 0
         self.blocks_download_time = 0
+        self.tx_processing_time = 0
         self.non_cached_blocks = 0
         self.total_received_tx_time = 0
         self.start_time = time.time()
@@ -421,6 +422,7 @@ class Connector:
                                                            self.utxo.destroyed_utxo_block,
                                                            self.utxo.outs_total
                                                            ))
+                        self.log.info("total tx fetch time %s;" % self.total_received_tx_time)
 
             # after block added handler
             if self.after_block_handler and not self.cache_loading:
