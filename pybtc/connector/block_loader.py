@@ -147,6 +147,7 @@ class Worker:
         self.reader = await self.get_pipe_reader(self.in_reader)
         while True:
             msg_type, msg = await self.pipe_get_msg(self.reader)
+            self.log.critical(str(len(msg)))
             if msg_type ==  b'pipe_read_error':
                 return
 
