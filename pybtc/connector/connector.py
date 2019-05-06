@@ -657,7 +657,6 @@ class Connector:
 
 
     async def preload_blocks(self):
-        return
         if self.block_hashes_preload_mutex:
             return
         try:
