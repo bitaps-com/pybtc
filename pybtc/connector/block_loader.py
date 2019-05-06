@@ -53,6 +53,7 @@ class BlockLoader:
                 if not self.worker_busy[i]:
                     self.worker_busy[i] = True
                     try:
+                        self.log.warning("<<<<<")
                         self.pipe_sent_msg(self.worker[i].writer, b'get', batch)
                     finally:
                         self.worker_busy[i] = False
