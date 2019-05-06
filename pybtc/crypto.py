@@ -12,6 +12,9 @@ def __encode_base58__(h):
 def __double_sha256__(h):
     return _crypto.__double_sha256__(h)
 
+def __sha256__(h):
+    return _crypto.__sha256__(h)
+
 
 def __secp256k1_context_randomize__(seed = None):
     if seed is None:

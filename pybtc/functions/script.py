@@ -38,8 +38,7 @@ def parse_script(script, segwit=True):
         try:
             script = bytes_from_hex(script)
         except:
-            pass
-        assert isinstance(script, bytes)
+            raise ValueError("hex encoded string required")
     l = len(script)
     if segwit:
         if l == 22 and script[0] == 0:

@@ -7,7 +7,7 @@ from pybtc.transaction import Transaction
 
 
 class Block(dict):
-    def __init__(self, raw_block=None, format="decoded", version=536870912, testnet=False):
+    def __init__(self, raw_block=None, format="decoded", version=536870912, testnet=False, keep_raw_tx=False):
         if format not in ("decoded", "raw"):
             raise ValueError("tx_format error, raw or decoded allowed")
         self["format"] = format
@@ -52,7 +52,7 @@ class Block(dict):
         block_target = int.from_bytes(self["hash"], byteorder="little")
         self["difficulty"] = target_to_difficulty(block_target)
         tx_count = var_int_to_int(read_var_int(s))
-        self["tx"] = {i: Transaction(s, format="raw")
+        self["tx"] = {i: Transaction(s, format="raw", keep_raw_tx=keep_raw_tx)
                       for i in range(tx_count)}
         for t in self["tx"].values():
             self["amount"] += t["amount"]

@@ -148,9 +148,16 @@ def read_var_int(stream):
     :param stream: io.BytesIO stream.
     :return: bytes.
     """
-    read = stream.read
-    l = read(1)
-    return b"".join((l, read(get_var_int_len(l) - 1)))
+    l = stream.read(1)
+    if l[0] == 253:
+        s = 3
+    elif l[0] == 254:
+        s = 5
+    elif l[0] == 255:
+        s = 9
+    else:
+        return l
+    return b"".join((l, stream.read(s - 1)))
 
 
 def read_var_list(stream, data_type):

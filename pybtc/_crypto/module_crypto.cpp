@@ -51,11 +51,23 @@ static PyObject* crypto_double_sha256(PyObject *, PyObject* args) {
     return return_value;
 }
 
+static PyObject* crypto_sha256(PyObject *, PyObject* args) {
+    Py_buffer buffer;
+    if (!PyArg_ParseTuple(args,"y*", &buffer)) return NULL;
+    unsigned char h[CSHA256::OUTPUT_SIZE];
+    CSHA256().Write((const unsigned char*)buffer.buf, buffer.len).Finalize(h);
+    PyBuffer_Release(&buffer);
+    PyObject *return_value = Py_BuildValue("y#", h, CSHA256::OUTPUT_SIZE);
+    Py_DECREF(h);
+    return return_value;
+}
+
 
 static PyMethodDef module_methods[] = {
     { "__decode_base58__", (PyCFunction)crypto_decode_base58, METH_VARARGS, nullptr },
     { "__encode_base58__", (PyCFunction)crypto_encode_base58, METH_VARARGS, nullptr },
     { "__double_sha256__", (PyCFunction)crypto_double_sha256, METH_VARARGS, nullptr },
+    { "__sha256__", (PyCFunction)crypto_sha256, METH_VARARGS, nullptr },
     { nullptr, nullptr, 0, nullptr }
 };
 
