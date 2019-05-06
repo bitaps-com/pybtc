@@ -357,7 +357,7 @@ class Connector:
                 return
             self.active_block = asyncio.Future()
 
-            self.log.debug("Block %s %s" % (block["height"], block["hash"]))
+            # self.log.debug("Block %s %s" % (block["height"], block["hash"]))
 
             self.cache_loading = True if self.last_block_height < self.app_block_height_on_start else False
 
@@ -497,6 +497,7 @@ class Connector:
         self.log.debug("Transactions received: %s [%s] received tx rate tx/s ->> %s <<" % (tx_count, time.time() - q, rate))
 
     async def verify_block_position(self, block):
+        return
         if "previousblockhash" not in block :
             return
         if self.block_headers_cache.len() == 0:
@@ -783,6 +784,7 @@ class UTXO():
         del self.cached[outpoint]
 
     def destroy_utxo(self, block_height):
+        return
         block_height -= self.maturity
         for key in range(self.destroyed_utxo_block + 1, block_height + 1):
             if key not in self.destroyed: continue
@@ -873,6 +875,7 @@ class UTXO():
         self._requests += 1
         try:
             i = self.cached.pop(key)
+            self.destroyed_utxo += 1
             # try:
             #     self.destroyed[block_height].add(key)
             # except:
@@ -955,8 +958,8 @@ def decode_block_tx(block):
     b["strippedSize"] = 80
     b["version"] = unpack("<L", s.read(4))[0]
     b["versionHex"] = pack(">L", b["version"]).hex()
-    b["previousBlockHash"] = rh2s(s.read(32))
-    b["merkleRoot"] = rh2s(s.read(32))
+    b["previousBlockHash"] = s.read(32)
+    b["merkleRoot"] = s.read(32)
     b["time"] = unpack("<L", s.read(4))[0]
     b["bits"] = s.read(4)
     b["target"] = bits_to_target(unpack("<L", b["bits"])[0])
@@ -965,14 +968,14 @@ def decode_block_tx(block):
     b["nonce"] = unpack("<L", s.read(4))[0]
     s.seek(-80, 1)
     b["header"] = s.read(80).hex()
-    b["bits"] = rh2s(b["bits"])
-    b["target"] = rh2s(b["target"])
-    b["hash"] = double_sha256(b["header"], hex=0)
-    b["hash"] = rh2s(b["hash"])
+    b["bits"] = b["bits"]
+    b["target"] = b["target"]
+    # b["hash"] = double_sha256(b["header"], hex=0)
+    # b["hash"] = b["hash"]
 
     b["rawTx"] = {i: Transaction(s, format="raw")
                   for i in range(var_int_to_int(read_var_int(s)))}
-    b["tx"] = [rh2s(b["rawTx"][i]["txId"]) for i in b["rawTx"] ]
+    # b["tx"] = [rh2s(b["rawTx"][i]["txId"]) for i in b["rawTx"] ]
     b["size"] = len(block)
     for t in b["rawTx"].values():
         b["amount"] += t["amount"]
