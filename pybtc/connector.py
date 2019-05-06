@@ -74,6 +74,7 @@ class Connector:
         self.blocks_processed_count = 0
         self.blocks_decode_time = 0
         self.blocks_download_time = 0
+        self.blocks_processing_time = 0
         self.tx_processing_time = 0
         self.non_cached_blocks = 0
         self.total_received_tx_time = 0
@@ -346,6 +347,7 @@ class Connector:
             self.log.error(str(traceback.format_exc()))
 
     async def _new_block(self, block):
+        tq = time.time()
         try:
             if self.block_headers_cache.get(block["hash"]) is not None:
                     return
@@ -427,6 +429,8 @@ class Connector:
                                                            self.utxo.outs_total
                                                            ))
                 self.log.info("total tx fetch time %s;" % self.total_received_tx_time)
+                self.log.info("total blocks processing time %s;" % self.blocks_processing_time)
+                self.log.info("total time %s;" % (time.time() - self.start_time ,))
 
             # after block added handler
             if self.after_block_handler and not self.cache_loading:
@@ -445,6 +449,7 @@ class Connector:
             self.log.error(str(traceback.format_exc()))
             self.log.error("block error %s" % str(err))
         finally:
+
             self.active_block.set_result(True)
             # self.log.debug("%s block [%s tx/ %s size] processing time %s cache [%s/%s]" %
             #               (block["height"],
@@ -456,6 +461,7 @@ class Connector:
             if self.node_last_block > self.last_block_height:
                 self.get_next_block_mutex = True
                 self.loop.create_task(self.get_next_block())
+            self.blocks_processing_time += time.time() - tq
 
     async def fetch_block_transactions(self, block, tx_bin_list):
         q = time.time()
