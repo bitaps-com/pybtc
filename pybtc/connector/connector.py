@@ -710,7 +710,7 @@ class Connector:
                         except:
                             pass
                     processed_height = self.last_block_height
-                if next(iter(self.block_preload._store)) <  processed_height + 1:
+                if self.block_preload._store and next(iter(self.block_preload._store)) <  processed_height + 1:
                     for i in range(next(iter(self.block_preload._store)), self.last_block_height+1):
                         try:
                             self.block_preload.remove(i)
