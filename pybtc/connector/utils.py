@@ -26,6 +26,7 @@ def decode_block_tx(block):
     s = get_stream(block)
     b = dict()
     b["amount"] = 0
+    b["size"] = len(block)
     b["strippedSize"] = 80
     b["version"] = unpack("<L", s.read(4))[0]
     b["versionHex"] = pack(">L", b["version"]).hex()

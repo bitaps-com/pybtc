@@ -156,13 +156,12 @@ class Worker:
 
 
 
-    async def message_loop(self, worker):
+    async def message_loop(self):
+        self.reader = await self.get_pipe_reader(self.in_reader)
         while True:
-            msg_type, msg = await self.pipe_get_msg(worker.reader)
+            msg_type, msg = await self.pipe_get_msg(self.reader)
             if msg_type ==  b'pipe_read_error':
-                if not worker.is_alive():
-                    return
-                continue
+                return
 
             if msg_type == b'result':
                 msg
