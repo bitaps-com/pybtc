@@ -872,11 +872,11 @@ class UTXO():
     def get(self, key, block_height):
         self._requests += 1
         try:
-            i = self.cached.peek(key)
-            try:
-                self.destroyed[block_height].add(key)
-            except:
-                self.destroyed[block_height] = {key}
+            i = self.cached.pop(key)
+            # try:
+            #     self.destroyed[block_height].add(key)
+            # except:
+            #     self.destroyed[block_height] = {key}
             self._hit += 1
             return i
         except:
