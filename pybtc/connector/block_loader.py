@@ -147,7 +147,9 @@ class Worker:
         try:
             self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
             self.reader = await self.get_pipe_reader(self.in_reader)
+            self.log.critical("reader")
             while True:
+                self.log.critical("get pos")
                 msg_type, msg = await self.pipe_get_msg(self.reader)
                 self.log.critical(str(len(msg)))
                 if msg_type ==  b'pipe_read_error':
