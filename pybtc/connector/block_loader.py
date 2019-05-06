@@ -178,7 +178,9 @@ class Worker:
     async def pipe_get_msg(self, reader):
         while True:
             try:
+                self.log.critical("---1")
                 msg = await reader.readexactly(1)
+                self.log.critical("---2")
                 if msg == b'M':
                     msg = await reader.readexactly(1)
                     if msg == b'E':
