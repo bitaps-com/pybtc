@@ -17,7 +17,7 @@ from pybtc.functions.script import public_key_recovery, delete_from_script
 from pybtc.functions.hash import hash160, sha256, double_sha256
 from pybtc.functions.address import  hash_to_address, address_net_type, address_to_script
 from pybtc.address import  PrivateKey, Address, ScriptAddress, PublicKey
-
+from collections import deque
 
 
 class Transaction(dict):
@@ -65,7 +65,7 @@ class Transaction(dict):
         if raw_tx is None:
             return
 
-        self["rawTx"] = []
+        self["rawTx"] = deque()
         rtx = self["rawTx"].append
         self["amount"] = 0
         sw = sw_len = 0
@@ -73,7 +73,6 @@ class Transaction(dict):
         start = stream.tell()
         read = stream.read
         tell = stream.tell
-        seek = stream.seek
         # start deserialization
         t = read(4)
         rtx(t)

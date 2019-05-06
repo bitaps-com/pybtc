@@ -1,21 +1,18 @@
 from pybtc.functions.tools import rh2s, s2rh
-from pybtc.functions.tools import var_int_to_int, var_int_len
-from pybtc.functions.tools import read_var_int
-from pybtc.functions.hash import double_sha256
+from pybtc.connector.block_loader import BlockLoader
+from pybtc.connector.utxo import UTXO
+from pybtc.connector.utils import decode_block_tx
+from pybtc.connector.utils import Cache
 from pybtc.transaction import Transaction
-from pybtc import int_to_c_int, c_int_to_int, c_int_len, int_to_bytes
-from pybtc.functions.block import bits_to_target, target_to_difficulty
-from struct import unpack, pack
-import sys
+from pybtc import int_to_bytes
+
 import traceback
 import aiojsonrpc
 import zmq
 import zmq.asyncio
 import asyncio
 import time
-import io
-from collections import OrderedDict
-from lru import LRU
+
 
 class Connector:
     def __init__(self, node_rpc_url, node_zerromq_url, logger,
@@ -36,6 +33,8 @@ class Connector:
         # settings
         self.log = logger
         self.rpc_url = node_rpc_url
+        self.rpc_timeout = rpc_timeout
+        self.rpc_batch_limit = rpc_batch_limit
         self.zmq_url = node_zerromq_url
         self.orphan_handler = orphan_handler
         self.block_timeout = block_timeout
@@ -51,8 +50,7 @@ class Connector:
         self.utxo_cache_size = utxo_cache_size
         self.utxo_data = utxo_data
         self.chain_tail = list(chain_tail) if chain_tail else []
-        self.rpc_timeout = rpc_timeout
-        self.batch_limit = rpc_batch_limit
+
 
         # state and stats
         self.node_last_block = None
@@ -151,13 +149,11 @@ class Connector:
         for row in reversed(self.chain_tail):
             self.block_headers_cache.set(row, h)
             h -= 1
+        self.block_loader = BlockLoader(self)
 
         self.tasks.append(self.loop.create_task(self.zeromq_handler()))
         self.tasks.append(self.loop.create_task(self.watchdog()))
         self.connected.set_result(True)
-        # if self.preload:
-        #     self.loop.create_task(self.preload_block())
-        #     self.loop.create_task(self.preload_block_hashes())
         self.get_next_block_mutex = True
         self.loop.create_task(self.get_next_block())
 
@@ -303,12 +299,8 @@ class Connector:
                         self.deep_synchronization = False
 
                 if self.deep_synchronization:
-                    raw_block = self.block_preload.pop(self.last_block_height + 1)
-                    if raw_block:
-                        q = time.time()
-                        block = decode_block_tx(raw_block)
-                        self.blocks_decode_time += time.time() - q
-                    else:
+                    block = self.block_preload.pop(self.last_block_height + 1)
+                    if not block:
                         h = self.block_hashes.pop(self.last_block_height + 1)
                         if h is None:
                             h = await self.rpc.getblockhash(self.last_block_height + 1)
@@ -559,7 +551,7 @@ class Connector:
                     batch = list()
                     while self.missed_tx:
                         batch.append(["getrawtransaction", self.missed_tx.pop()])
-                        if len(batch) >= self.batch_limit:
+                        if len(batch) >= self.rpc_batch_limit:
                             break
                     result = await self.rpc.batch(batch)
                     for r in result:
@@ -665,6 +657,7 @@ class Connector:
 
 
     async def preload_blocks(self):
+        return
         if self.block_hashes_preload_mutex:
             return
         try:
@@ -683,7 +676,7 @@ class Connector:
                         while True:
                             batch.append(["getblockhash", height])
                             h_list.append(height)
-                            if len(batch) >= self.batch_limit or height >= max_height:
+                            if len(batch) >= self.rpc_batch_limit or height >= max_height:
                                 height += 1
                                 break
                             height += 1
@@ -698,19 +691,19 @@ class Connector:
                             except:
                                 pass
 
-                        blocks = await self.rpc.batch(batch)
+                        blocks = await self.block_loader.load_blocks(batch)
 
                         for x,y in zip(h,blocks):
                             try:
-                                self.block_preload.set(x, (y["result"]))
+                                self.block_preload.set(x, y)
                             except:
                                 pass
-
                     except asyncio.CancelledError:
                         self.log.info("connector preload_block_hashes failed")
                         break
                     except:
                         pass
+
                 if processed_height < self.last_block_height:
                     for i in range(processed_height, self.last_block_height ):
                         try:
@@ -749,334 +742,5 @@ class Connector:
         self.log.warning('Node connector terminated')
 
 
-class UTXO():
-    def __init__(self, db_pool, loop, log, cache_size):
-        self.cached = LRU(cache_size)
-        self.missed = set()
-        self.destroyed = LRU(200000)
-        self.deleted = LRU(200000)
-        self.log = log
-        self.loaded = OrderedDict()
-        self.maturity = 100
-        self._cache_size = cache_size
-        self._db_pool = db_pool
-        self.loop = loop
-        self.clear_tail = False
-        self.last_saved_block = 0
-        self.last_cached_block = 0
-        self.save_process = False
-        self.load_utxo_future = asyncio.Future()
-        self.load_utxo_future.set_result(True)
-        self._requests = 0
-        self._failed_requests = 0
-        self._hit = 0
-        self.saved_utxo = 0
-        self.deleted_utxo = 0
-        self.deleted_utxo_saved = 0
-        self.loaded_utxo = 0
-        self.destroyed_utxo = 0
-        self.destroyed_utxo_block = 0
-        self.outs_total = 0
 
-    def set(self, outpoint, pointer, amount, address):
-        self.cached[outpoint] = (pointer, amount, address)
-        self.outs_total += 1
-        if pointer:
-            self.last_cached_block = pointer >> 42
-
-    def remove(self, outpoint):
-        del self.cached[outpoint]
-
-    def destroy_utxo(self, block_height):
-        return
-        block_height -= self.maturity
-        for key in range(self.destroyed_utxo_block + 1, block_height + 1):
-            if key not in self.destroyed: continue
-            n = set()
-            for outpoint in self.destroyed[key]:
-                try:
-                    self.cached.pop(outpoint)
-                    self.destroyed_utxo += 1
-                except:
-                    try:
-                        del self.loaded[outpoint]
-                        self.destroyed_utxo += 1
-                        n.add(outpoint)
-                    except:
-                        self.destroyed_utxo += 1
-                        pass
-            self.deleted[key] = n
-            self.destroyed.pop(key)
-
-        self.destroyed_utxo_block = block_height
-        if len(self.cached) - self._cache_size > 0 and not self.save_process:
-            self.loop.create_task(self.save_utxo(block_height))
-
-    async def save_utxo(self, block_height):
-        # save to db tail from cache
-        self.save_process = True
-        await asyncio.sleep(2)
-        c = len(self.cached) - self._cache_size
-        try:
-            lb = 0
-            for key in iter(self.cached):
-                i = self.cached[key]
-                if c>0 and (i[0] >> 42) <= block_height:
-                    c -= 1
-                    lb = i[0] >> 42
-                    continue
-                break
-
-            if lb:
-                d = set()
-                for key in range(self.last_saved_block + 1, lb + 1):
-                    try:
-                        [d.add(i) for i in self.deleted[key]]
-                    except:
-                        pass
-
-                a = set()
-                for key in iter(self.cached):
-                    i = self.cached[key]
-                    if (i[0] >> 42) > lb: break
-                    a.add((key,b"".join((int_to_c_int(i[0]),
-                                          int_to_c_int(i[1]),
-                                          i[2]))))
-
-                # insert to db
-                async with self._db_pool.acquire() as conn:
-                    async with conn.transaction():
-                        if d:
-                            await conn.execute("DELETE FROM connector_utxo WHERE "
-                                               "outpoint = ANY($1);", d)
-                        if a:
-                            await conn.copy_records_to_table('connector_utxo',
-                                                             columns=["outpoint", "data"], records=a)
-                        await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-                                           "WHERE name = 'last_block';", lb)
-                        await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-                                           "WHERE name = 'last_cached_block';", block_height)
-                self.saved_utxo += len(a)
-                self.deleted_utxo += len(d)
-
-                # remove from cache
-                for key in a:
-                    try:
-                        self.cached.pop(key[0])
-                    except:
-                        pass
-
-                for key in range(self.last_saved_block + 1, lb + 1):
-                    try:
-                        self.deleted.pop(key)
-                    except:
-                        pass
-                self.last_saved_block = lb
-        finally:
-            self.save_process = False
-
-    def get(self, key, block_height):
-        self._requests += 1
-        try:
-            i = self.cached.get(key)
-            del self.cached[key]
-            self.destroyed_utxo += 1
-            # try:
-            #     self.destroyed[block_height].add(key)
-            # except:
-            #     self.destroyed[block_height] = {key}
-            self._hit += 1
-            return i
-        except:
-            self._failed_requests += 1
-            self.missed.add(key)
-            return None
-
-    def get_loaded(self, key, block_height):
-        try:
-            i = self.loaded[key]
-            try:
-                self.destroyed[block_height].add(key)
-            except:
-                self.destroyed[block_height] = {key}
-            return i
-        except:
-            return None
-
-    async def load_utxo(self):
-        while True:
-            if not self.load_utxo_future.done():
-                await self.load_utxo_future
-                continue
-            break
-        try:
-            self.load_utxo_future = asyncio.Future()
-            l = set(self.missed)
-            async with self._db_pool.acquire() as conn:
-                rows = await conn.fetch("SELECT outpoint, connector_utxo.data "
-                                        "FROM connector_utxo "
-                                        "WHERE outpoint = ANY($1);", l)
-            for i in l:
-                try:
-                    self.missed.remove(i)
-                except:
-                    pass
-            for row in rows:
-                d = row["data"]
-                pointer = c_int_to_int(d)
-                f = c_int_len(pointer)
-                amount = c_int_to_int(d[f:])
-                f += c_int_len(amount)
-                address = d[f:]
-                self.loaded[row["outpoint"]] = (pointer, amount, address)
-                self.loaded_utxo += 1
-        finally:
-            self.load_utxo_future.set_result(True)
-
-
-    def len(self):
-        return len(self.cached)
-
-    def hit_rate(self):
-        if self._requests:
-            return self._hit / self._requests
-        else:
-            return 0
-
-
-
-def get_stream(stream):
-    if not isinstance(stream, io.BytesIO):
-        if isinstance(stream, str):
-            stream = bytes.fromhex(stream)
-        if isinstance(stream, bytes):
-            stream = io.BytesIO(stream)
-        else:
-            raise TypeError("object should be bytes or HEX encoded string")
-    return stream
-
-
-def decode_block_tx(block):
-    s = get_stream(block)
-    b = dict()
-    b["amount"] = 0
-    b["strippedSize"] = 80
-    b["version"] = unpack("<L", s.read(4))[0]
-    b["versionHex"] = pack(">L", b["version"]).hex()
-    b["previousBlockHash"] = rh2s(s.read(32))
-    b["merkleRoot"] = rh2s(s.read(32))
-    b["time"] = unpack("<L", s.read(4))[0]
-    b["bits"] = s.read(4)
-    b["target"] = bits_to_target(unpack("<L", b["bits"])[0])
-    b["targetDifficulty"] = target_to_difficulty(b["target"])
-    b["target"] = b["target"].to_bytes(32, byteorder="little")
-    b["nonce"] = unpack("<L", s.read(4))[0]
-    s.seek(-80, 1)
-    b["header"] = s.read(80).hex()
-    b["bits"] = rh2s(b["bits"])
-    b["target"] = rh2s(b["target"])
-    b["hash"] = double_sha256(b["header"], hex=0)
-    b["hash"] = rh2s(b["hash"])
-
-    b["rawTx"] = {i: Transaction(s, format="raw")
-                  for i in range(var_int_to_int(read_var_int(s)))}
-    b["tx"] = [rh2s(b["rawTx"][i]["txId"]) for i in b["rawTx"] ]
-    b["size"] = len(block)
-    for t in b["rawTx"].values():
-        b["amount"] += t["amount"]
-        b["strippedSize"] += t["bSize"]
-    b["strippedSize"] += var_int_len(len(b["tx"]))
-    b["weight"] = b["strippedSize"] * 3 + b["size"]
-    return b
-
-
-class DependsTransaction(Exception):
-    def __init__(self, raw_tx_hash):
-        self.raw_tx_hash = raw_tx_hash
-
-
-class Cache():
-    def __init__(self, max_size=1000000, clear_tail=True):
-        self._store = OrderedDict()
-        self._store_size = 0
-        self._max_size = max_size
-        self.clear_tail = False
-        self.clear_tail_auto = clear_tail
-        self._requests = 0
-        self._hit = 0
-
-    def set(self, key, value):
-        self._check_limit()
-        self._store[key] = value
-        self._store_size += sys.getsizeof(value) + sys.getsizeof(key)
-
-    def _check_limit(self):
-        if self._store_size >= self._max_size:
-            self.clear_tail = True
-        if self.clear_tail and self.clear_tail_auto:
-            if self._store_size >= int(self._max_size * 0.75):
-                try:
-                    [self.pop_last() for i in range(20)]
-                except:
-                    pass
-            else:
-                self.clear_tail = False
-
-    def get(self, key):
-        self._requests += 1
-        try:
-            i = self._store[key]
-            self._hit += 1
-            return i
-        except:
-            return None
-
-    def pop(self, key):
-        self._requests += 1
-        try:
-            data = self._store.pop(key)
-            self._store_size -= sys.getsizeof(data) + sys.getsizeof(key)
-            self._hit += 1
-            return data
-        except:
-            return None
-
-    def remove(self, key):
-        try:
-            data = self._store.pop(key)
-            self._store_size -= sys.getsizeof(data) + sys.getsizeof(key)
-        except:
-            pass
-
-    def pop_last(self):
-        try:
-            i = next(reversed(self._store))
-            data = self._store[i]
-            del self._store[i]
-            self._store_size -= sys.getsizeof(data) + sys.getsizeof(i)
-            return data
-        except:
-            return None
-
-    def get_last_key(self):
-        try:
-            i = next(reversed(self._store))
-            return i
-        except:
-            return None
-
-    def len(self):
-        return len(self._store)
-
-    def hitrate(self):
-        if self._requests:
-            return self._hit / self._requests
-        else:
-            return 0
-
-
-def tm(p=None):
-    if p is not None:
-        return round(time.time() - p, 4)
-    return time.time()
 

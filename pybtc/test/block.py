@@ -613,10 +613,10 @@ class BlockDeserializeTests(unittest.TestCase):
         print("decoded block load", time.time() - qt)
         import cProfile
 
-        cProfile.run("import pybtc;"
-                     "f = open('./pybtc/test/raw_block.txt');"
-                     "fc = f.readline();"
-                     "pybtc.Block(fc[:-1], format='raw', keep_raw_tx=False)")
+        # cProfile.run("import pybtc;"
+        #              "f = open('./pybtc/test/raw_block.txt');"
+        #              "fc = f.readline();"
+        #              "pybtc.Block(fc[:-1], format='raw', keep_raw_tx=False)")
         # cProfile.run("import pybtc;"
         #              "f = open('./pybtc/test/raw_block.txt');"
         #              "fc = f.readline();"

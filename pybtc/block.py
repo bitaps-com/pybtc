@@ -52,11 +52,11 @@ class Block(dict):
         block_target = int.from_bytes(self["hash"], byteorder="little")
         self["difficulty"] = target_to_difficulty(block_target)
         tx_count = var_int_to_int(read_var_int(s))
-        self["tx"] = {i: Transaction(s, format="raw", keep_raw_tx=keep_raw_tx)
-                      for i in range(tx_count)}
-        for t in self["tx"].values():
-            self["amount"] += t["amount"]
-            self["strippedSize"] += t["bSize"]
+        self["tx"] = dict()
+        for i in range(tx_count):
+            self["tx"][i] = Transaction(s, format="raw", keep_raw_tx=keep_raw_tx)
+            self["amount"] += self["tx"][i]["amount"]
+            self["strippedSize"] += self["tx"][i]["bSize"]
         self["strippedSize"] += var_int_len(tx_count)
         self["weight"] = self["strippedSize"] * 3 + self["size"]
         if format == "decoded":
