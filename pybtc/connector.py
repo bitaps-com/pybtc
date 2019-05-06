@@ -873,6 +873,7 @@ class UTXO():
         self._requests += 1
         try:
             i = self.cached.get(key)
+            del self.cached[key]
             self.destroyed_utxo += 1
             # try:
             #     self.destroyed[block_height].add(key)
