@@ -9,7 +9,7 @@ import sys
 
 class BlockLoader:
     def __init__(self, parent, workers=4):
-        self.worker = list()
+        self.worker = dict()
         self.log = parent.log
         self.loop = parent.loop
         self.loop.set_default_executor(ThreadPoolExecutor(workers * 2))
