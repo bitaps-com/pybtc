@@ -689,7 +689,7 @@ class Connector:
                                 h.append(lh)
                             except:
                                 pass
-
+                        self.log.critical(">>>")
                         blocks = await self.block_loader.load_blocks(batch)
 
                         for x,y in zip(h,blocks):
