@@ -7,7 +7,7 @@ import logging
 import signal
 import sys
 import aiojsonrpc
-
+import traceback
 class BlockLoader:
     def __init__(self, parent, workers=4):
         self.worker = dict()
@@ -56,6 +56,8 @@ class BlockLoader:
                         self.log.warning("<<<<<")
                         self.pipe_sent_msg(self.worker[i].writer, b'get', batch)
                         self.log.warning("ok<")
+                    except:
+                        self.log.warning(str(traceback.format_exc()))
                     finally:
                         self.worker_busy[i] = False
                     return None
