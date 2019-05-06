@@ -970,7 +970,7 @@ def decode_block_tx(block):
     b["header"] = s.read(80).hex()
     b["bits"] = b["bits"]
     b["target"] = b["target"]
-    # b["hash"] = double_sha256(b["header"], hex=0)
+    b["hash"] = double_sha256(b["header"], hex=0)
     # b["hash"] = b["hash"]
 
     b["rawTx"] = {i: Transaction(s, format="raw")
