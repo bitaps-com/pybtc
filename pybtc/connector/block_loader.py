@@ -143,17 +143,21 @@ class Worker:
         self.loop.run_forever()
 
     async def message_loop(self):
-        self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
-        self.reader = await self.get_pipe_reader(self.in_reader)
-        while True:
-            msg_type, msg = await self.pipe_get_msg(self.reader)
-            self.log.critical(str(len(msg)))
-            if msg_type ==  b'pipe_read_error':
-                return
-
-            if msg_type == b'get':
+        self.log.critical("xxx")
+        try:
+            self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
+            self.reader = await self.get_pipe_reader(self.in_reader)
+            while True:
+                msg_type, msg = await self.pipe_get_msg(self.reader)
                 self.log.critical(str(len(msg)))
-                continue
+                if msg_type ==  b'pipe_read_error':
+                    return
+
+                if msg_type == b'get':
+                    self.log.critical(str(len(msg)))
+                    continue
+        except:
+            self.log.critical("exc")
 
 
 
