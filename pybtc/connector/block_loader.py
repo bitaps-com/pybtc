@@ -8,6 +8,7 @@ import signal
 import sys
 import aiojsonrpc
 import traceback
+import pickle
 class BlockLoader:
     def __init__(self, parent, workers=4):
         self.worker = dict()
@@ -54,7 +55,7 @@ class BlockLoader:
                     self.worker_busy[i] = True
                     try:
                         self.log.warning("<<<<<")
-                        self.pipe_sent_msg(self.worker[i].writer, b'get', batch)
+                        self.pipe_sent_msg(self.worker[i].writer, b'get', pickle.dumps(batch))
                         self.log.warning("ok<")
                     except:
                         self.log.warning(str(traceback.format_exc()))
@@ -92,7 +93,7 @@ class BlockLoader:
 
     def pipe_sent_msg(self, writer, msg_type, msg):
         msg_type = msg_type[:20].ljust(20)
-        msg = msg_type + msg.encode()
+        msg = msg_type + msg
         msg = b''.join((b'ME', len(msg).to_bytes(4, byteorder='little'), msg))
         writer.write(msg)
         writer.flush()
