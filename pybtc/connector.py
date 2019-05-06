@@ -980,7 +980,7 @@ def decode_block_tx(block):
     for t in b["rawTx"].values():
         b["amount"] += t["amount"]
         b["strippedSize"] += t["bSize"]
-    b["strippedSize"] += var_int_len(len(b["tx"]))
+    b["strippedSize"] += var_int_len(len(b["rawTx"]))
     b["weight"] = b["strippedSize"] * 3 + b["size"]
     return b
 
