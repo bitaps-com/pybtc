@@ -93,7 +93,7 @@ class BlockLoader:
     def pipe_sent_msg(self, writer, msg_type, msg):
         msg_type = msg_type[:20].ljust(20)
         msg = msg_type + msg
-        msg = b''.join((b'ME', len(msg).to_bytes(4, byteorder='little'), msg))
+        msg = b''.join((b'ME', len(msg).to_bytes(4, byteorder='little'), msg.encode()))
         writer.write(msg)
         writer.flush()
 
