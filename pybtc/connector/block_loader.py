@@ -139,10 +139,10 @@ class Worker:
         self.in_reader = in_reader
         signal.signal(signal.SIGTERM, self.terminate)
         self.loop.create_task(self.message_loop())
-        self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
         self.loop.run_forever()
 
     async def message_loop(self):
+        self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
         self.reader = await self.get_pipe_reader(self.in_reader)
         while True:
             msg_type, msg = await self.pipe_get_msg(self.reader)
