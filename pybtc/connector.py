@@ -464,6 +464,7 @@ class Connector:
             self.await_tx = set(tx_bin_list)
             self.await_tx_future = {i: asyncio.Future() for i in tx_bin_list}
             self.block_txs_request = asyncio.Future()
+            tx_count = len(block["rawTx"])
             for i in block["rawTx"]:
                 self.loop.create_task(self._new_transaction(block["rawTx"][i],
                                                             block["time"],
@@ -490,7 +491,7 @@ class Connector:
                     await self.rpc.close()
                     self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
                     raise RuntimeError("block transaction request timeout")
-        tx_count = len(block["tx"])
+            tx_count = len(block["tx"])
         self.total_received_tx += tx_count
         self.total_received_tx_time += time.time() - q
         rate = round(self.total_received_tx/self.total_received_tx_time)
