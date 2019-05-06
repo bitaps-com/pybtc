@@ -15,7 +15,7 @@ import asyncio
 import time
 import io
 from collections import OrderedDict
-import pylru
+from lru import LRU
 
 class Connector:
     def __init__(self, node_rpc_url, node_zerromq_url, logger,
@@ -78,7 +78,6 @@ class Connector:
         self.non_cached_blocks = 0
         self.total_received_tx_time = 0
         self.start_time = time.time()
-        self.tmp = pylru.lrucache(1000000)
 
         # cache and system
         self.block_preload_cache_limit = block_preload_cache_limit
@@ -357,7 +356,7 @@ class Connector:
                 return
             self.active_block = asyncio.Future()
 
-            # self.log.debug("Block %s %s" % (block["height"], block["hash"]))
+            self.log.debug("Block %s %s" % (block["height"], block["hash"]))
 
             self.cache_loading = True if self.last_block_height < self.app_block_height_on_start else False
 
@@ -464,7 +463,6 @@ class Connector:
             self.await_tx = set(tx_bin_list)
             self.await_tx_future = {i: asyncio.Future() for i in tx_bin_list}
             self.block_txs_request = asyncio.Future()
-            tx_count = len(block["rawTx"])
             for i in block["rawTx"]:
                 self.loop.create_task(self._new_transaction(block["rawTx"][i],
                                                             block["time"],
@@ -491,14 +489,13 @@ class Connector:
                     await self.rpc.close()
                     self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
                     raise RuntimeError("block transaction request timeout")
-            tx_count = len(block["tx"])
+        tx_count = len(block["tx"])
         self.total_received_tx += tx_count
         self.total_received_tx_time += time.time() - q
         rate = round(self.total_received_tx/self.total_received_tx_time)
         self.log.debug("Transactions received: %s [%s] received tx rate tx/s ->> %s <<" % (tx_count, time.time() - q, rate))
 
     async def verify_block_position(self, block):
-        return
         if "previousblockhash" not in block :
             return
         if self.block_headers_cache.len() == 0:
@@ -748,10 +745,10 @@ class Connector:
 
 class UTXO():
     def __init__(self, db_pool, loop, log, cache_size):
-        self.cached = pylru.lrucache(cache_size)
+        self.cached = LRU(cache_size)
         self.missed = set()
-        self.destroyed = pylru.lrucache(200000)
-        self.deleted = pylru.lrucache(200000)
+        self.destroyed = LRU(200000)
+        self.deleted = LRU(200000)
         self.log = log
         self.loaded = OrderedDict()
         self.maturity = 100
@@ -959,8 +956,8 @@ def decode_block_tx(block):
     b["strippedSize"] = 80
     b["version"] = unpack("<L", s.read(4))[0]
     b["versionHex"] = pack(">L", b["version"]).hex()
-    b["previousBlockHash"] = s.read(32)
-    b["merkleRoot"] = s.read(32)
+    b["previousBlockHash"] = rh2s(s.read(32))
+    b["merkleRoot"] = rh2s(s.read(32))
     b["time"] = unpack("<L", s.read(4))[0]
     b["bits"] = s.read(4)
     b["target"] = bits_to_target(unpack("<L", b["bits"])[0])
@@ -969,19 +966,19 @@ def decode_block_tx(block):
     b["nonce"] = unpack("<L", s.read(4))[0]
     s.seek(-80, 1)
     b["header"] = s.read(80).hex()
-    b["bits"] = b["bits"]
-    b["target"] = b["target"]
+    b["bits"] = rh2s(b["bits"])
+    b["target"] = rh2s(b["target"])
     b["hash"] = double_sha256(b["header"], hex=0)
-    # b["hash"] = b["hash"]
+    b["hash"] = rh2s(b["hash"])
 
     b["rawTx"] = {i: Transaction(s, format="raw")
                   for i in range(var_int_to_int(read_var_int(s)))}
-    # b["tx"] = [rh2s(b["rawTx"][i]["txId"]) for i in b["rawTx"] ]
+    b["tx"] = [rh2s(b["rawTx"][i]["txId"]) for i in b["rawTx"] ]
     b["size"] = len(block)
     for t in b["rawTx"].values():
         b["amount"] += t["amount"]
         b["strippedSize"] += t["bSize"]
-    b["strippedSize"] += var_int_len(len(b["rawTx"]))
+    b["strippedSize"] += var_int_len(len(b["tx"]))
     b["weight"] = b["strippedSize"] * 3 + b["size"]
     return b
 
