@@ -393,11 +393,12 @@ class Connector:
                                       "cache size %s M;" % (self.non_cached_blocks,
                                                             self.block_preload.len(),
                                                             round(self.block_preload._store_size / 1024 / 1024, 2)))
-                        self.log.info(
-                                      "cache first %s; "
-                                      "cache last %s;" % (
-                                                            next(iter(self.block_preload._store)),
-                                                            next(reversed(self.block_preload._store))))
+                        if self.block_preload._store:
+                            self.log.info(
+                                          "cache first %s; "
+                                          "cache last %s;" % (
+                                                                next(iter(self.block_preload._store)),
+                                                                next(reversed(self.block_preload._store))))
 
                         self.log.info("saved utxo block %s; "
                                       "saved utxo %s; "
