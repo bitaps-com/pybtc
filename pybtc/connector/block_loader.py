@@ -13,7 +13,7 @@ from pybtc.connector.utils import decode_block_tx
 import pickle
 
 class BlockLoader:
-    def __init__(self, parent, workers=4):
+    def __init__(self, parent, workers=6):
         self.worker_limit = workers
         self.worker = dict()
         self.worker_tasks = list()
