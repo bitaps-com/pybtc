@@ -594,8 +594,8 @@ class Connector:
                 if self.tx_handler and  not self.cache_loading:
                     await self.tx_handler(tx, stxo, block_time, block_height, block_index)
 
-                if self.utxo:
-                    self.put_utxo(tx, block_height, block_index)
+                # if self.utxo:
+                #     self.put_utxo(tx, block_height, block_index)
 
                 self.tx_cache.set(tx["txId"], True)
                 try:
