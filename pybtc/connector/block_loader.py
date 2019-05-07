@@ -74,7 +74,8 @@ class BlockLoader:
                     self.log.error("Loading task  error %s " % err)
             else:
                 await  asyncio.sleep(1)
-        [p.terminate() for p in self.worker_tasks]
+        [self.worker_tasks[p].terminate() for p in self.worker_tasks]
+        for p in self.worker_busy: self.worker_busy[p] = False
 
 
 
@@ -154,9 +155,10 @@ class BlockLoader:
                 blocks = pickle.loads(msg)
                 for i in blocks:
                     self.parent.block_preload.set(i, blocks[i])
+                self.worker_busy[index] = False
 
 
-    # def disconnect(self,ip):
+                # def disconnect(self,ip):
     #     """ Disconnect peer """
     #     p = self.out_connection_pool[self.outgoing_connection[ip]["pool"]]
     #     pipe_sent_msg(p.writer, b'disconnect', ip.encode())
