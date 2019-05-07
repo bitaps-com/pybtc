@@ -13,7 +13,9 @@ import pickle
 
 class BlockLoader:
     def __init__(self, parent, workers=4):
+        self.worker_limit = workers
         self.worker = dict()
+        self.worker_tasks = list()
         self.worker_busy = dict()
         self.parent = parent
         self.loading_task = None
@@ -24,7 +26,7 @@ class BlockLoader:
         self.rpc_batch_limit = parent.rpc_batch_limit
         self.loop.set_default_executor(ThreadPoolExecutor(workers * 2))
         self.watchdog_task = self.loop.create_task(self.watchdog())
-        [self.loop.create_task(self.start_worker(i)) for i in range(workers)]
+
 
     async def watchdog(self):
         while True:
@@ -46,6 +48,7 @@ class BlockLoader:
 
 
     async def loading(self):
+        self.worker_tasks = [self.loop.create_task(self.start_worker(i)) for i in range(self.worker_limit)]
         target_height = self.parent.node_last_block - self.parent.self.deep_sync_limit
         height = self.parent.last_block_height + 1
         while height < target_height:
@@ -57,6 +60,7 @@ class BlockLoader:
                     for i in self.worker_busy:
                         if not self.worker_busy[i]:
                             self.worker_busy[i] = True
+                            self.log.info(">>>")
                             self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(height))
                             height += self.rpc_batch_limit
                             new_requests += 1
