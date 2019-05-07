@@ -49,7 +49,7 @@ class UTXO():
             n = set()
             for outpoint in self.destroyed[key]:
                 try:
-                    self.cached.pop(outpoint)
+                    del self.cached[outpoint]
                     self.destroyed_utxo += 1
                 except:
                     try:
@@ -60,7 +60,7 @@ class UTXO():
                         self.destroyed_utxo += 1
                         pass
             self.deleted[key] = n
-            self.destroyed.pop(key)
+            del self.destroyed[key]
 
         self.destroyed_utxo_block = block_height
         if len(self.cached) - self._cache_size > 0 and not self.save_process:
