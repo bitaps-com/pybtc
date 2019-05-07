@@ -2,7 +2,7 @@ from pybtc import int_to_c_int, c_int_to_int, c_int_len
 import asyncio
 from collections import OrderedDict
 from lru import LRU
-from pylru import lrucache as LRU
+# from pylru import lrucache as LRU
 
 
 class UTXO():
