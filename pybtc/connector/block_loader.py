@@ -99,7 +99,7 @@ class BlockLoader:
         self.worker[index] =  worker
         self.worker_busy[index] =  False
         # start message loop
-        self.loop.create_task(self.message_loop(self.worker[index]))
+        self.loop.create_task(self.message_loop(index))
         # wait if process crash
         await self.loop.run_in_executor(None, worker.join)
         del self.worker[index]
@@ -142,17 +142,18 @@ class BlockLoader:
 
 
 
-    async def message_loop(self, worker):
+    async def message_loop(self, index):
         while True:
-            msg_type, msg = await self.pipe_get_msg(worker.reader)
+            msg_type, msg = await self.pipe_get_msg(self.worker[index].reader)
             if msg_type ==  b'pipe_read_error':
-                if not worker.is_alive():
+                if not self.worker[index].is_alive():
                     return
                 continue
 
             if msg_type == b'result':
-                self.log.critical(str(len(msg)))
-                continue
+                blocks = pickle.loads(msg)
+                for i in blocks:
+                    self.parent.block_preload.set(i, blocks[i])
 
 
     # def disconnect(self,ip):
@@ -208,7 +209,7 @@ class Worker:
         blocks = dict()
         for x, y in zip(h, result):
             if y["result"] is not None:
-                blocks[x] = decode_block_tx(y["result"])
+                blocks[x] = pickle.dumps(decode_block_tx(y["result"]))
         self.pipe_sent_msg(b'result', pickle.dumps(blocks))
 
     async def message_loop(self):
