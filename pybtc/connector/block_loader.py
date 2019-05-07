@@ -48,22 +48,19 @@ class BlockLoader:
 
 
     async def loading(self):
-        self.log.info("loading")
         self.worker_tasks = [self.loop.create_task(self.start_worker(i)) for i in range(self.worker_limit)]
         target_height = self.parent.node_last_block - self.parent.deep_sync_limit
         height = self.parent.last_block_height + 1
         self.log.info(str(height))
         while height < target_height:
-            self.log.info("height")
             new_requests = 0
             if self.parent.block_preload._store_size < self.parent.block_preload_cache_limit:
                 try:
-                    if height <= self.parent.last_block_height:
-                        height = self.parent.last_block_height + 1
                     for i in self.worker_busy:
                         if not self.worker_busy[i]:
                             self.worker_busy[i] = True
-                            self.log.info(">>>")
+                            if height <= self.parent.last_block_height:
+                                height = self.parent.last_block_height + 1
                             self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(height))
                             height += self.rpc_batch_limit
                             new_requests += 1
