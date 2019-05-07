@@ -594,8 +594,20 @@ class Connector:
                 if self.tx_handler and  not self.cache_loading:
                     await self.tx_handler(tx, stxo, block_time, block_height, block_index)
 
-                # if self.utxo:
-                #     self.put_utxo(tx, block_height, block_index)
+                if self.utxo:
+                    # self.put_utxo(tx, block_height, block_index)
+
+                    for i in tx["vOut"]:
+                        out = tx["vOut"][i]
+                        if out["nType"] in (3, 8):
+                            continue
+                        pointer = (block_height << 42) + (block_index << 21) + i
+                        try:
+                            address = out["scriptPubKey"]
+                        except:
+                            address = b"".join((bytes([out["nType"]]), out["addressHash"]))
+                        outpoint = b"".join((tx["txId"], int_to_bytes(i)))
+                        self.utxo.set(outpoint, pointer, out["value"], address)
 
                 self.tx_cache.set(tx["txId"], True)
                 try:
