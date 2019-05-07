@@ -369,11 +369,8 @@ class Connector:
             self.block_headers_cache.set(block["hash"], block["height"])
             self.last_block_height = block["height"]
             if self.utxo_data:
-                # if not self.deep_synchronization:
-                #     self.utxo.destroy_utxo(block["height"])
-                # elif block["height"] % 1000 == 0:
-                #     self.utxo.destroy_utxo(block["height"])
-                pass
+                self.utxo.destroy_utxo(block["height"])
+
 
             self.blocks_processed_count += 1
 
