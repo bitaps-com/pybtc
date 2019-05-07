@@ -50,7 +50,7 @@ class BlockLoader:
     async def loading(self):
         self.log.info("loading")
         self.worker_tasks = [self.loop.create_task(self.start_worker(i)) for i in range(self.worker_limit)]
-        target_height = self.parent.node_last_block - self.parent.self.deep_sync_limit
+        target_height = self.parent.node_last_block - self.parent.deep_sync_limit
         height = self.parent.last_block_height + 1
         self.log.info(str(height))
         while height < target_height:
