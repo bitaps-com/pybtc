@@ -377,11 +377,11 @@ class Connector:
 
             self.block_headers_cache.set(block["hash"], block["height"])
             self.last_block_height = block["height"]
-            # if self.utxo_data:
-            #     if not self.deep_synchronization:
-            #         self.utxo.destroy_utxo(block["height"])
-            #     elif block["height"] % 100 == 0:
-            #         self.utxo.destroy_utxo(block["height"])
+            if self.utxo_data:
+                if not self.deep_synchronization:
+                    self.utxo.destroy_utxo(block["height"])
+                elif block["height"] % 200 == 0:
+                    self.utxo.destroy_utxo(block["height"])
 
             self.blocks_processed_count += 1
 
@@ -805,7 +805,6 @@ class UTXO():
         del self.cached[outpoint]
 
     def destroy_utxo(self, block_height):
-        return
         block_height -= self.maturity
         for key in range(self.destroyed_utxo_block + 1, block_height + 1):
             if key not in self.destroyed: continue
