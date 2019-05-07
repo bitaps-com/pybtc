@@ -301,7 +301,9 @@ class Connector:
                 if self.deep_synchronization:
                     raw_block = self.block_preload.pop(self.last_block_height + 1)
                     if raw_block:
+                        q = time.time()
                         block = pickle.loads(raw_block)
+                        self.blocks_decode_time += time.time() - q
 
                 if not block:
                     h = await self.rpc.getblockhash(self.last_block_height + 1)
@@ -586,8 +588,8 @@ class Connector:
                 if not tx["coinbase"]:
                     if block_height is not None:
                         await self.wait_block_dependences(tx)
-                    if self.utxo:
-                        stxo = await self.get_stxo(tx, block_height, block_index)
+                    # if self.utxo:
+                    #     stxo = await self.get_stxo(tx, block_height, block_index)
 
                 if self.tx_handler and  not self.cache_loading:
                     await self.tx_handler(tx, stxo, block_time, block_height, block_index)
