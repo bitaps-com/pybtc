@@ -12,7 +12,7 @@ import zmq
 import zmq.asyncio
 import asyncio
 import time
-
+import pickle
 
 class Connector:
     def __init__(self, node_rpc_url, node_zerromq_url, logger,
@@ -282,7 +282,7 @@ class Connector:
                 if self.node_last_block <= self.last_block_height + self.backlog:
                     d = await self.rpc.getblockcount()
                     if d == self.node_last_block:
-                        self.log.info("blockchain is synchronized with backlog %s" % self.backlog)
+                        self.log.info("Blockchain is synchronized with backlog %s" % self.backlog)
                         return
                     else:
                         self.node_last_block = d
@@ -297,20 +297,15 @@ class Connector:
                         self.log.warning("Normal synchronization mode")
                         # clear preload caches
                         self.deep_synchronization = False
-
+                block = None
                 if self.deep_synchronization:
-                    block = self.block_preload.pop(self.last_block_height + 1)
-                    if not block:
-                        h = self.block_hashes.pop(self.last_block_height + 1)
-                        if h is None:
-                            h = await self.rpc.getblockhash(self.last_block_height + 1)
-                            if not self.block_hashes_preload_mutex:
-                                self.loop.create_task(self.preload_blocks())
-                        block = await self._get_block_by_hash(h)
-                else:
+                    raw_block = self.block_preload.pop(self.last_block_height + 1)
+                    if raw_block:
+                        block = pickle.loads(raw_block)
+
+                if not block:
                     h = await self.rpc.getblockhash(self.last_block_height + 1)
                     block = await self._get_block_by_hash(h)
-
 
                 self.loop.create_task(self._new_block(block))
             except Exception as err:
@@ -655,75 +650,6 @@ class Connector:
             raise Exception("utxo get failed ")
         return stxo
 
-
-    async def preload_blocks(self):
-        if self.block_hashes_preload_mutex:
-            return
-        try:
-            self.block_hashes_preload_mutex = True
-            max_height = self.node_last_block - self.deep_synchronization
-            height = self.last_block_height + 1
-            processed_height = self.last_block_height
-
-            while height < max_height:
-                if self.block_preload._store_size < self.block_preload_cache_limit:
-                    try:
-                        if height < self.last_block_height:
-                            height = self.last_block_height + 1
-                        batch = list()
-                        h_list = list()
-                        while True:
-                            batch.append(["getblockhash", height])
-                            h_list.append(height)
-                            if len(batch) >= self.rpc_batch_limit or height >= max_height:
-                                height += 1
-                                break
-                            height += 1
-                        result = await self.rpc.batch(batch)
-                        h = list()
-                        batch = list()
-                        for lh, r in zip(h_list, result):
-                            try:
-                                self.block_hashes.set(lh, r["result"])
-                                batch.append(["getblock", r["result"], 0])
-                                h.append(lh)
-                            except:
-                                pass
-                        self.log.critical(">>>")
-                        blocks = await self.block_loader.load_blocks(batch)
-
-                        for x,y in zip(h,blocks):
-                            try:
-                                self.block_preload.set(x, y)
-                            except:
-                                pass
-                    except asyncio.CancelledError:
-                        self.log.info("connector preload_block_hashes failed")
-                        break
-                    except:
-                        pass
-
-                if processed_height < self.last_block_height:
-                    for i in range(processed_height, self.last_block_height ):
-                        try:
-                            self.block_preload.remove(i)
-                        except:
-                            pass
-                    processed_height = self.last_block_height
-                if self.block_preload._store and next(iter(self.block_preload._store)) <  processed_height + 1:
-                    for i in range(next(iter(self.block_preload._store)), self.last_block_height+1):
-                        try:
-                            self.block_preload.remove(i)
-                        except:
-                            pass
-                if self.block_preload._store_size < self.block_preload_cache_limit * 0.9:
-                    continue
-
-                await asyncio.sleep(10)
-                # remove unused items
-
-        finally:
-            self.block_hashes_preload_mutex = False
 
 
     async def stop(self):

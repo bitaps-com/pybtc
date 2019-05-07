@@ -1,6 +1,7 @@
 import asyncio
 import os
 from multiprocessing import Process
+from pybtc.functions.tools import int_to_bytes, bytes_to_int
 from concurrent.futures import ThreadPoolExecutor
 from setproctitle import setproctitle
 import logging
@@ -9,17 +10,67 @@ import sys
 import aiojsonrpc
 import traceback
 import pickle
+
 class BlockLoader:
     def __init__(self, parent, workers=4):
         self.worker = dict()
         self.worker_busy = dict()
+        self.parent = parent
+        self.loading_task = None
         self.log = parent.log
         self.loop = parent.loop
         self.rpc_url = parent.rpc_url
         self.rpc_timeout = parent.rpc_timeout
         self.rpc_batch_limit = parent.rpc_batch_limit
         self.loop.set_default_executor(ThreadPoolExecutor(workers * 2))
+        self.watchdog_task = self.loop.create_task(self.watchdog())
         [self.loop.create_task(self.start_worker(i)) for i in range(workers)]
+
+    async def watchdog(self):
+        while True:
+            try:
+                if self.loading_task is None or self.loading_task.done():
+                    if self.parent.deep_synchronization:
+                        self.loading_task = self.loop.create_task(self.loading())
+                else:
+                    pass
+                    # clear tail
+
+            except asyncio.CancelledError:
+                self.log.info("connector watchdog terminated")
+                break
+            except Exception as err:
+                self.log.error(str(traceback.format_exc()))
+                self.log.error("watchdog error %s " % err)
+            await asyncio.sleep(60)
+
+
+    async def loading(self):
+        target_height = self.parent.node_last_block - self.parent.self.deep_sync_limit
+        height = self.parent.last_block_height + 1
+        while height < target_height:
+            new_requests = 0
+            if self.parent.block_preload._store_size < self.parent.block_preload_cache_limit:
+                try:
+                    if height <= self.parent.last_block_height:
+                        height = self.parent.last_block_height + 1
+                    for i in self.worker_busy:
+                        if not self.worker_busy[i]:
+                            self.worker_busy[i] = True
+                            self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(height))
+                            height += self.rpc_batch_limit
+                            new_requests += 1
+                    if not new_requests:
+                        await asyncio.sleep(1)
+                except asyncio.CancelledError:
+                    self.log.info("Loading task terminated")
+                    break
+                except Exception as err:
+                    self.log.error("Loading task  error %s " % err)
+            else:
+                await  asyncio.sleep(1)
+
+
 
     async def start_worker(self,index):
         self.log.warning('Start block loader worker %s' % index)
@@ -48,21 +99,6 @@ class BlockLoader:
         del self.worker[index]
         self.log.warning('Block loader worker %s is stopped' % index)
 
-    async def load_blocks(self, batch):
-        while True:
-            for i in self.worker_busy:
-                if not self.worker_busy[i]:
-                    self.worker_busy[i] = True
-                    try:
-                        self.log.warning("<<<<<")
-                        self.pipe_sent_msg(self.worker[i].writer, b'get', pickle.dumps(batch))
-                        self.log.warning("ok<")
-                    except:
-                        self.log.warning(str(traceback.format_exc()))
-                    finally:
-                        self.worker_busy[i] = False
-                    return None
-            await asyncio.sleep(1)
 
 
     async def get_pipe_reader(self, fd_reader):
@@ -147,20 +183,16 @@ class Worker:
         self.loop.run_forever()
 
     async def message_loop(self):
-        self.log.critical("xxx")
         try:
             self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
             self.reader = await self.get_pipe_reader(self.in_reader)
-            self.log.critical("reader")
             while True:
-                self.log.critical("get pos")
                 msg_type, msg = await self.pipe_get_msg(self.reader)
-                self.log.critical(str(len(msg)))
                 if msg_type ==  b'pipe_read_error':
                     return
 
                 if msg_type == b'get':
-                    self.log.critical(str(len(msg)))
+                    self.log.critical(str(bytes_to_int(msg)))
                     continue
         except:
             self.log.critical("exc")
@@ -208,4 +240,58 @@ class Worker:
 
 
 
+"""
 
+                        batch = list()
+                        h_list = list()
+                        while True:
+                            batch.append(["getblockhash", height])
+                            h_list.append(height)
+                            if len(batch) >= self.rpc_batch_limit or height >= max_height:
+                                height += 1
+                                break
+                            height += 1
+                        result = await self.rpc.batch(batch)
+                        h = list()
+                        batch = list()
+                        for lh, r in zip(h_list, result):
+                            try:
+                                self.block_hashes.set(lh, r["result"])
+                                batch.append(["getblock", r["result"], 0])
+                                h.append(lh)
+                            except:
+                                pass
+                        self.log.critical(">>>")
+                        blocks = await self.block_loader.load_blocks(batch)
+
+                        for x,y in zip(h,blocks):
+                            try:
+                                self.block_preload.set(x, y)
+                            except:
+                                pass
+                    except asyncio.CancelledError:
+                        self.log.info("connector preload_block_hashes failed")
+                        break
+                    except:
+                        pass
+
+                if processed_height < self.last_block_height:
+                    for i in range(processed_height, self.last_block_height ):
+                        try:
+                            self.block_preload.remove(i)
+                        except:
+                            pass
+                    processed_height = self.last_block_height
+                if self.block_preload._store and next(iter(self.block_preload._store)) <  processed_height + 1:
+                    for i in range(next(iter(self.block_preload._store)), self.last_block_height+1):
+                        try:
+                            self.block_preload.remove(i)
+                        except:
+                            pass
+                if self.block_preload._store_size < self.block_preload_cache_limit * 0.9:
+                    continue
+
+                await asyncio.sleep(10)
+                # remove unused items
+
+"""
