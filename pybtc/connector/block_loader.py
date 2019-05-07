@@ -19,6 +19,7 @@ class BlockLoader:
         self.worker_tasks = list()
         self.worker_busy = dict()
         self.parent = parent
+        self.last_cleared_block = 0
         self.loading_task = None
         self.log = parent.log
         self.loop = parent.loop
@@ -30,14 +31,20 @@ class BlockLoader:
 
 
     async def watchdog(self):
+        self.last_cleared_block = self.parent.last_block_height
         while True:
             try:
                 if self.loading_task is None or self.loading_task.done():
                     if self.parent.deep_synchronization:
                         self.loading_task = self.loop.create_task(self.loading())
                 else:
-                    pass
-                    # clear tail
+                    # clear unused cache
+                    if self.parent.block_preload._store:
+                        if next(iter(self.parent.block_preload._store)) <= self.parent.last_block_height:
+                            for i in range(next(iter(self.parent.block_preload._store)),
+                                           self.parent.last_block_height + 1):
+                                try: self.parent.block_preload.remove(i)
+                                except: pass
 
             except asyncio.CancelledError:
                 self.log.info("connector watchdog terminated")
