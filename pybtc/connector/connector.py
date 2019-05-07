@@ -588,15 +588,30 @@ class Connector:
                 if not tx["coinbase"]:
                     if block_height is not None:
                         await self.wait_block_dependences(tx)
-                    # if self.utxo:
-                    #     stxo = await self.get_stxo(tx, block_height, block_index)
+                    if self.utxo:
+                        #     stxo = await self.get_stxo(tx, block_height, block_index)
+                        stxo, missed = set(), set()
+                        for i in tx["vIn"]:
+                            inp = tx["vIn"][i]
+                            outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
+                            r = self.utxo.get(outpoint, block_height)
+                            stxo.add(r) if r else missed.add((outpoint,
+                                                              (block_height << 42) + (block_index << 21) + i))
+
+                        if missed:
+                            await self.utxo.load_utxo()
+                            [stxo.add(self.utxo.get_loaded(o, block_height)) for o, s in missed]
+
+                        if len(stxo) != len(tx["vIn"]) and not self.cache_loading:
+                            self.log.critical("utxo get failed " + rh2s(tx["txId"]))
+                            self.log.critical(str(stxo))
+                            raise Exception("utxo get failed ")
+                        return stxo
 
                 if self.tx_handler and  not self.cache_loading:
                     await self.tx_handler(tx, stxo, block_time, block_height, block_index)
 
                 if self.utxo:
-                    # self.put_utxo(tx, block_height, block_index)
-
                     for i in tx["vOut"]:
                         out = tx["vOut"][i]
                         if out["nType"] in (3, 8):
@@ -630,19 +645,6 @@ class Connector:
             finally:
                 self.tx_in_process.remove(tx["txId"])
 
-    def put_utxo(self, tx, block_height, block_index):
-        for i in tx["vOut"]:
-            out = tx["vOut"][i]
-            if self.skip_opreturn and out["nType"] in (3, 8):
-                continue
-            pointer = (block_height << 42) + (block_index << 21) + i
-            if "addressHash" not in out:
-                address = out["scriptPubKey"]
-            else:
-                address = b"".join((bytes([out["nType"]]), out["addressHash"]))
-            outpoint = b"".join((tx["txId"], int_to_bytes(i)))
-            # self.tmp[outpoint] = (pointer, out["value"], address)
-            self.utxo.set(outpoint, pointer, out["value"], address)
 
     async def get_stxo(self, tx, block_height, block_index):
         stxo, missed = set(), set()
