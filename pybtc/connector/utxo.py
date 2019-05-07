@@ -130,16 +130,16 @@ class UTXO():
             self.save_process = False
 
     def get(self, key, block_height):
-        self._requests += 1
+        # self._requests += 1
         try:
             i = self.cached[key]
-            del self.cached[key]
-            self.destroyed_utxo += 1
-            try:
-                self.destroyed[block_height].add(key)
-            except:
-                self.destroyed[block_height] = {key}
-            self._hit += 1
+            # del self.cached[key]
+            # self.destroyed_utxo += 1
+            # try:
+            #     self.destroyed[block_height].add(key)
+            # except:
+            #     self.destroyed[block_height] = {key}
+            # self._hit += 1
             return i
         except:
             self._failed_requests += 1
