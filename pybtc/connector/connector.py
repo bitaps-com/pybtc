@@ -606,7 +606,6 @@ class Connector:
                             self.log.critical("utxo get failed " + rh2s(tx["txId"]))
                             self.log.critical(str(stxo))
                             raise Exception("utxo get failed ")
-                        return stxo
 
                 if self.tx_handler and  not self.cache_loading:
                     await self.tx_handler(tx, stxo, block_time, block_height, block_index)
