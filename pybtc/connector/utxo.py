@@ -133,10 +133,11 @@ class UTXO():
         self._requests += 1
         try:
             i = self.cached[key]
-            try:
-                self.destroyed[block_height].add(key)
-            except:
-                self.destroyed[block_height] = {key}
+            self.destroyed[key] = block_height
+            # try:
+            #     self.destroyed[block_height].add(key)
+            # except:
+            #     self.destroyed[block_height] = {key}
             self._hit += 1
             return i
         except:
