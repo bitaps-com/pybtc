@@ -43,6 +43,20 @@ class UTXO():
         del self.cached[outpoint]
 
     def destroy_utxo(self, block_height):
+        for outpoint in self.destroyed:
+            try:
+                del self.cached[outpoint]
+                self.destroyed_utxo += 1
+            except:
+                try:
+                    del self.loaded[outpoint]
+                    self.destroyed_utxo += 1
+                except:
+                    self.destroyed_utxo += 1
+                    pass
+
+        return
+
         block_height -= self.maturity
         for key in range(self.destroyed_utxo_block + 1, block_height + 1):
             if key not in self.destroyed: continue
