@@ -1,6 +1,6 @@
 from pybtc import int_to_c_int, c_int_to_int, c_int_len
 import asyncio
-from collections import OrderedDict
+from collections import OrderedDict, deque
 from lru import LRU
 
 
@@ -8,7 +8,7 @@ class UTXO():
     def __init__(self, db_pool, loop, log, cache_size):
         self.cached = LRU(cache_size)
         self.missed = set()
-        self.destroyed = LRU(200000)
+        self.destroyed = deque()
         self.deleted = LRU(200000)
         self.log = log
         self.loaded = OrderedDict()
@@ -43,7 +43,8 @@ class UTXO():
         del self.cached[outpoint]
 
     def destroy_utxo(self, block_height):
-        for outpoint in self.destroyed:
+        while self.destroyed:
+            outpoint = self.destroyed.pop()
             try:
                 del self.cached[outpoint]
                 self.destroyed_utxo += 1
@@ -147,7 +148,7 @@ class UTXO():
         self._requests += 1
         try:
             i = self.cached[key]
-            self.destroyed[key] = block_height
+            self.destroyed.append(key)
             # try:
             #     self.destroyed[block_height].add(key)
             # except:
