@@ -219,6 +219,7 @@ class Worker:
                     h.append(lh)
             result = await self.rpc.batch(batch)
             blocks = dict()
+            self.log.critical(str(len(result)))
             for x, y in zip(h, result):
                 if y["result"] is not None:
                     block = decode_block_tx(y["result"])
