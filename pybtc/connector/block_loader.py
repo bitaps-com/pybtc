@@ -11,7 +11,7 @@ import aiojsonrpc
 import traceback
 from pybtc.connector.utils import decode_block_tx
 import pickle
-
+from lru import LRU
 class BlockLoader:
     def __init__(self, parent, workers=8):
         self.worker_limit = workers
