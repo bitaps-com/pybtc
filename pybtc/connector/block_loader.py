@@ -248,7 +248,7 @@ class Worker:
                     for i in blocks[x]["rawTx"][y]["vOut"]:
                         try:
                             pointer = (x << 42) + (y << 21) + i
-                            blocks[x]["rawTx"][y]["vOut"]["__spent__"] = self.destroyed_coins[pointer]
+                            blocks[x]["rawTx"][y]["vOut"][i]["__spent__"] = self.destroyed_coins[pointer]
                         except: pass
                 blocks[x] = pickle.dumps(blocks[x])
             # self.log.critical(str(len(blocks)))
