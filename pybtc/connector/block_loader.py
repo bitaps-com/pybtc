@@ -222,30 +222,33 @@ class Worker:
             if y["result"] is not None:
                 block = decode_block_tx(y["result"])
                 for z in block["tx"]:
-                    tx = block["tx"][z]
-                    for i in tx["vIn"]:
-                        inp = tx["vIn"][i]
+                    for i in block["tx"][z]["vIn"]:
+                        inp = block["tx"][z]["vIn"][i]
                         outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                         try:
                            r = self.coins[outpoint]
-                           tx["vIn"][i]["coin"] = (outpoint, r[0], r[1], r[2])
-                           self.destroyed_coins[outpoint] = True
+                           block["tx"][z]["vIn"][i]["__coin__"] = (outpoint, r[0], r[1], r[2])
+                           self.destroyed_coins[r[0]] = True
                         except:
                             pass
-                    for i in tx["vOut"]:
-                        out = tx["vOut"][i]
+                    for i in block["tx"][z]["vOut"]:
+                        o = b"".join((block["tx"][z]["txId"], int_to_bytes(i)))
                         pointer = (x << 42) + (z << 21) + i
                         try:
-                            address = out["scriptPubKey"]
+                            address = block["tx"][z]["vOut"][i]["scriptPubKey"]
                         except:
-                            address = b"".join((bytes([out["nType"]]), out["addressHash"]))
-                        o = b"".join((tx["txId"], int_to_bytes(i)))
-                        self.coins[o] = (pointer, out["value"], address)
-                        try:
-                            out["_spent_"] = self.destroyed_coins[o]
-                        except: pass
+                            address = b"".join((bytes([block["tx"][z]["vOut"][i]["nType"]]),
+                                                       block["tx"][z]["vOut"][i]["addressHash"]))
+                        self.coins[o] = (pointer, block["tx"][z]["vOut"][i], address)
+        for x in blocks:
+            for y in blocks[x]["tx"]:
+                for i in blocks[x]["tx"][y]["vOut"]:
+                    try:
+                        pointer = (x << 42) + (y << 21) + i
+                        blocks[x]["tx"][y]["vOut"]["__spent__"] = self.destroyed_coins[pointer]
+                    except: pass
+            blocks[x] = pickle.dumps(blocks[x])
 
-                blocks[x] = pickle.dumps(block)
         self.pipe_sent_msg(b'result', pickle.dumps(blocks))
 
     async def message_loop(self):
