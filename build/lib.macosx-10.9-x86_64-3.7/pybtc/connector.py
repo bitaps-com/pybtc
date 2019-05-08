@@ -380,7 +380,7 @@ class Connector:
             if self.utxo_data:
                 if not self.deep_synchronization:
                     self.utxo.destroy_utxo(block["height"])
-                elif block["height"] % 200 == 0:
+                elif block["height"] % 500 == 0:
                     self.utxo.destroy_utxo(block["height"])
 
             self.blocks_processed_count += 1
