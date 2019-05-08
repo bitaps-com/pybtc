@@ -219,7 +219,7 @@ class Worker:
                     h.append(lh)
             result = await self.rpc.batch(batch)
             blocks = dict()
-            self.log.critical(str(len(result)))
+
             for x, y in zip(h, result):
                 if y["result"] is not None:
                     block = decode_block_tx(y["result"])
@@ -242,6 +242,7 @@ class Worker:
                                 address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
                                                            block["rawTx"][z]["vOut"][i]["addressHash"]))
                             self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i], address)
+                    blocks[x] = blocks
             for x in blocks:
                 for y in blocks[x]["rawTx"]:
                     for i in blocks[x]["rawTx"][y]["vOut"]:
@@ -250,7 +251,7 @@ class Worker:
                             blocks[x]["rawTx"][y]["vOut"]["__spent__"] = self.destroyed_coins[pointer]
                         except: pass
                 blocks[x] = pickle.dumps(blocks[x])
-            self.log.critical(str(len(blocks)))
+            # self.log.critical(str(len(blocks)))
             self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except:
             self.log.critical(str(traceback.format_exc()))
