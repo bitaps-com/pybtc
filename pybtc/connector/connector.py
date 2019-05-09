@@ -5,7 +5,7 @@ from pybtc.connector.utils import decode_block_tx
 from pybtc.connector.utils import Cache
 from pybtc.transaction import Transaction
 from pybtc import int_to_bytes
-
+from collections import OrderedDict, deque
 import traceback
 import aiojsonrpc
 import zmq
@@ -589,7 +589,7 @@ class Connector:
                     if block_height is not None:
                         await self.wait_block_dependences(tx)
                     if self.utxo:
-                        stxo, missed = list(), set()
+                        stxo, missed = deque(), deque()
                         for i in tx["vIn"]:
                             inp = tx["vIn"][i]
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
