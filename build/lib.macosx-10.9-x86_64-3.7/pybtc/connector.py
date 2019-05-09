@@ -77,6 +77,7 @@ class Connector:
         self.tx_processing_time = 0
         self.non_cached_blocks = 0
         self.total_received_tx_time = 0
+        self.tt = 0
         self.start_time = time.time()
 
         # cache and system
@@ -427,6 +428,7 @@ class Connector:
                                                            self.utxo.outs_total
                                                            ))
                 self.log.info("total tx fetch time %s;" % self.total_received_tx_time)
+                self.log.info("tt fetch time %s;" % self.tt)
 
             # after block added handler
             if self.after_block_handler and not self.cache_loading:
@@ -619,6 +621,7 @@ class Connector:
                     for i in tx["vOut"]:
                         try:
                             tx["vOut"][i]["_s_"]
+                            self.tt += 1
                         except:
                             out = tx["vOut"][i]
                             # if self.skip_opreturn and out["nType"] in (3, 8):
