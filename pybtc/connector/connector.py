@@ -589,7 +589,7 @@ class Connector:
                     if block_height is not None:
                         await self.wait_block_dependences(tx)
                     if self.utxo:
-                        stxo, missed = set(), set()
+                        stxo, missed = list(), set()
                         for i in tx["vIn"]:
                             inp = tx["vIn"][i]
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
@@ -598,7 +598,7 @@ class Connector:
                                 self.yy += 1
                             except Exception as err:
                                 r = self.utxo.get(outpoint, block_height)
-                                stxo.add(r) if r else missed.add((outpoint, (block_height << 42) + (block_index << 21) + i))
+                                stxo.append(r) if r else missed.add((outpoint, (block_height << 42) + (block_index << 21) + i))
 
                         if missed:
                             await self.utxo.load_utxo()

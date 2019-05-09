@@ -163,6 +163,7 @@ class BlockLoader:
             if msg_type == b'result':
                 self.worker_busy[index] = False
                 blocks = pickle.loads(msg)
+
                 for i in blocks:
                     self.parent.block_preload.set(i, blocks[i])
 
