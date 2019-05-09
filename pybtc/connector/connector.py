@@ -590,11 +590,11 @@ class Connector:
                     if self.utxo:
                         stxo, missed = set(), set()
                         for i in tx["vIn"]:
+                            inp = tx["vIn"][i]
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                             try:
                                 stxo.add(outpoint, tx["vIn"][i]["_c_"])
                             except:
-                                inp = tx["vIn"][i]
                                 r = self.utxo.get(outpoint, block_height)
                                 stxo.add(r) if r else missed.add((outpoint, (block_height << 42) + (block_index << 21) + i))
 
