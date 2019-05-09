@@ -227,12 +227,10 @@ class Worker:
                         for i in block["rawTx"][z]["vIn"]:
                             inp = block["rawTx"][z]["vIn"][i]
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                            try:
-                               r = self.coins[outpoint]
-                               block["rawTx"][z]["vIn"][i]["__coin__"] = r
-                               self.destroyed_coins[r[0]] = True
-                            except:
-                                pass
+                            r = self.coins[outpoint]
+                            if r:
+                                block["rawTx"][z]["vIn"][i]["_c_"] = r
+                                self.destroyed_coins[outpoint] = True
                         for i in block["rawTx"][z]["vOut"]:
                             o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
                             pointer = (x << 42) + (z << 21) + i
@@ -246,10 +244,9 @@ class Worker:
             for x in blocks:
                 for y in blocks[x]["rawTx"]:
                     for i in blocks[x]["rawTx"][y]["vOut"]:
-                        try:
+                        if self.destroyed_coins[pointer]:
                             pointer = (x << 42) + (y << 21) + i
-                            blocks[x]["rawTx"][y]["vOut"][i]["__spent__"] = self.destroyed_coins[pointer]
-                        except: pass
+                            blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = 1
                 blocks[x] = pickle.dumps(blocks[x])
             # self.log.critical(str(len(blocks)))
             self.pipe_sent_msg(b'result', pickle.dumps(blocks))
