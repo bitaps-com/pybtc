@@ -304,7 +304,7 @@ class Connector:
                     raw_block = self.block_preload.pop(self.last_block_height + 1)
                     if raw_block:
                         q = time.time()
-                        block = raw_block
+                        block = loads(raw_block)
                         block["hash"]
                         self.blocks_decode_time += time.time() - q
 
