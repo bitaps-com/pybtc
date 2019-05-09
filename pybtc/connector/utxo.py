@@ -144,7 +144,7 @@ class UTXO():
         finally:
             self.save_process = False
 
-    def get(self, key, block_height):
+    def get(self, key):
         self._requests += 1
         try:
             i = self.cached[key]
