@@ -597,7 +597,7 @@ class Connector:
                                 stxo.add((outpoint, inp["_c_"][0], inp["_c_"][1], inp["_c_"][2]))
                                 self.yy += 1
                             except Exception as err:
-                                r = self.utxo.get(outpoint, block_height)
+                                r = self.utxo.get(outpoint)
                                 stxo.add(r) if r else missed.add((outpoint, (block_height << 42) + (block_index << 21) + i))
 
                         if missed:
@@ -721,7 +721,7 @@ class Connector:
         for i in tx["vIn"]:
             inp = tx["vIn"][i]
             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-            r = self.utxo.get(outpoint, block_height)
+            r = self.utxo.get(outpoint)
             stxo.add(r) if r else missed.add((outpoint, (block_height << 42) + (block_index << 21) + i))
 
         if missed:
