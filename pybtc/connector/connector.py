@@ -593,6 +593,7 @@ class Connector:
                         stxo, missed = set(), set()
                         for i in tx["vIn"]:
                             inp = tx["vIn"][i]
+                            self.log.critical(">>> " + str(inp["_c_"]))
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                             try:
                                 stxo.add(outpoint, tx["vIn"][i]["_c_"])

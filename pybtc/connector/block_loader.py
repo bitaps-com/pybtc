@@ -253,12 +253,6 @@ class Worker:
                             blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = self.destroyed_coins[pointer]
                         except: pass
 
-                    for i in blocks[x]["rawTx"][y]["vIn"]:
-                        try:
-                            self.log.critical(str(blocks[x]["rawTx"][y]["vIn"][i]["_c_"]))
-                        except Exception as err:
-                            self.log.critical(str(err))
-
                 blocks[x] = pickle.dumps(blocks[x])
 
             self.pipe_sent_msg(b'result', pickle.dumps(blocks))
