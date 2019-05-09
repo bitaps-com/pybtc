@@ -34,7 +34,7 @@ class UTXO():
         self.outs_total = 0
 
     def set(self, outpoint, pointer, amount, address):
-        self.cached[outpoint] = pickle.dumps(pointer, amount, address)
+        self.cached[outpoint] = pickle.dumps((pointer, amount, address))
         self.outs_total += 1
         if pointer:
             self.last_cached_block = pointer >> 42
