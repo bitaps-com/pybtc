@@ -77,6 +77,7 @@ class Connector:
         self.non_cached_blocks = 0
         self.total_received_tx_time = 0
         self.tt = 0
+        self.yy = 0
         self.start_time = time.time()
 
         # cache and system
@@ -420,6 +421,7 @@ class Connector:
                 self.log.info("total tx fetch time %s;" % self.total_received_tx_time)
                 self.log.info("total blocks processing time %s;" % self.blocks_processing_time)
                 self.log.info("total time %s;" % (time.time() - self.start_time ,))
+                self.log.info("yy fetch time >>%s;" % self.yy)
                 self.log.info("tt fetch time >>%s;" % self.tt)
 
             # after block added handler
@@ -594,6 +596,7 @@ class Connector:
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                             try:
                                 stxo.add(outpoint, tx["vIn"][i]["_c_"])
+                                self.yy += 1
                             except:
                                 r = self.utxo.get(outpoint, block_height)
                                 stxo.add(r) if r else missed.add((outpoint, (block_height << 42) + (block_index << 21) + i))
