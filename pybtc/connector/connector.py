@@ -5,7 +5,7 @@ from pybtc.connector.utils import decode_block_tx
 from pybtc.connector.utils import Cache
 from pybtc.transaction import Transaction
 from pybtc import int_to_bytes
-from collections import OrderedDict, deque
+
 import traceback
 import aiojsonrpc
 import zmq
@@ -589,20 +589,20 @@ class Connector:
                     if block_height is not None:
                         await self.wait_block_dependences(tx)
                     if self.utxo:
-                        stxo, missed = deque(), deque()
+                        stxo, missed = set(), set()
                         for i in tx["vIn"]:
                             inp = tx["vIn"][i]
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                             try:
-                                stxo.append((outpoint, inp["_c_"][0], inp["_c_"][1], inp["_c_"][2]))
+                                stxo.add((outpoint, inp["_c_"][0], inp["_c_"][1], inp["_c_"][2]))
                                 self.yy += 1
                             except Exception as err:
                                 r = self.utxo.get(outpoint, block_height)
-                                stxo.append(r) if r else missed.add((outpoint, (block_height << 42) + (block_index << 21) + i))
+                                stxo.add(r) if r else missed.add((outpoint, (block_height << 42) + (block_index << 21) + i))
 
                         if missed:
                             await self.utxo.load_utxo()
-                            [stxo.append(self.utxo.get_loaded(o, block_height)) for o, s in missed]
+                            [stxo.add(self.utxo.get_loaded(o, block_height)) for o, s in missed]
 
                         if len(stxo)  != len(tx["vIn"]) and not self.cache_loading:
                             self.log.critical("utxo get failed " + rh2s(tx["txId"]))
