@@ -233,7 +233,6 @@ class Worker:
                                block["rawTx"][z]["vIn"][i]["_c_"] = r
                                t += 1
                                self.destroyed_coins[r[0]] = True
-                               self.log.critical(str(block["rawTx"][z]["vIn"][i]["_c_"]))
                             except:
                                 pass
                         for i in block["rawTx"][z]["vOut"]:
@@ -253,9 +252,15 @@ class Worker:
                             pointer = (x << 42) + (y << 21) + i
                             blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = self.destroyed_coins[pointer]
                         except: pass
+
+                    for i in blocks[x]["rawTx"][z]["vIn"]:
+                        try:
+                            self.log.critical(str(blocks[x]["rawTx"][z]["vIn"][i]["_c_"]))
+                        except:
+                            pass
+
                 blocks[x] = pickle.dumps(blocks[x])
-            # self.log.critical(str(len(blocks)))
-            # self.log.critical(str(t))
+
             self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except:
             self.log.critical(str(traceback.format_exc()))
