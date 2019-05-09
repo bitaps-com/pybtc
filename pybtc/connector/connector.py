@@ -593,12 +593,10 @@ class Connector:
                         stxo, missed = set(), set()
                         for i in tx["vIn"]:
                             inp = tx["vIn"][i]
-                            self.log.critical(">>> " + str(inp))
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                             try:
-                                stxo.add(outpoint, tx["vIn"][i]["_c_"])
+                                stxo.add((outpoint, inp["_c_"][0], inp["_c_"][1], inp["_c_"][2]))
                                 self.yy += 1
-                                self.log.critical(">>> " + str(tx["vIn"][i]["_c_"]))
                             except Exception as err:
                                 r = self.utxo.get(outpoint, block_height)
                                 stxo.add(r) if r else missed.add((outpoint, (block_height << 42) + (block_index << 21) + i))
