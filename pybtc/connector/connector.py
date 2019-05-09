@@ -602,7 +602,7 @@ class Connector:
 
                         if missed:
                             await self.utxo.load_utxo()
-                            [stxo.add(self.utxo.get_loaded(o, block_height)) for o, s in missed]
+                            [stxo.append(self.utxo.get_loaded(o, block_height)) for o, s in missed]
 
                         if len(stxo)  != len(tx["vIn"]) and not self.cache_loading:
                             self.log.critical("utxo get failed " + rh2s(tx["txId"]))
