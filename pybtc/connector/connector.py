@@ -12,7 +12,7 @@ import zmq
 import zmq.asyncio
 import asyncio
 import time
-import pickle
+import msgpack
 
 class Connector:
     def __init__(self, node_rpc_url, node_zerromq_url, logger,
@@ -304,7 +304,7 @@ class Connector:
                     raw_block = self.block_preload.pop(self.last_block_height + 1)
                     if raw_block:
                         q = time.time()
-                        block = pickle.loads(raw_block)
+                        block = msgpack.loads(raw_block)
                         self.blocks_decode_time += time.time() - q
 
                 if not block:
