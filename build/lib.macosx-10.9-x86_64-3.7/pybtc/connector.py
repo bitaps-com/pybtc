@@ -428,7 +428,7 @@ class Connector:
                                                            self.utxo.outs_total
                                                            ))
                 self.log.info("total tx fetch time %s;" % self.total_received_tx_time)
-                self.log.info("tt fetch time %s;" % self.tt)
+                self.log.info("tt fetch time >>%s;" % self.tt)
 
             # after block added handler
             if self.after_block_handler and not self.cache_loading:
