@@ -427,7 +427,7 @@ class Connector:
                                                            self.utxo.destroyed_utxo_block,
                                                            self.utxo.outs_total
                                                            ))
-                self.log.info("total tx fetch time %s;" % self.total_received_tx_time)
+                # self.log.info("total tx fetch time %s;" % self.total_received_tx_time)
                 self.log.info("tt fetch time >>%s;" % self.tt)
 
             # after block added handler
