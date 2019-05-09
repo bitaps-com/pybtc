@@ -244,12 +244,12 @@ class Worker:
                     #         self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i], address)
                     blocks[x] = block
             for x in blocks:
-                # for y in blocks[x]["rawTx"]:
-                #     for i in blocks[x]["rawTx"][y]["vOut"]:
-                #         try:
-                #             pointer = (x << 42) + (y << 21) + i
-                #             blocks[x]["rawTx"][y]["vOut"][i]["__spent__"] = self.destroyed_coins[pointer]
-                #         except: pass
+                for y in blocks[x]["rawTx"]:
+                    for i in blocks[x]["rawTx"][y]["vOut"]:
+                        try:
+                            pointer = (x << 42) + (y << 21) + i
+                            blocks[x]["rawTx"][y]["vOut"][i]["__spent__"] = self.destroyed_coins[pointer]
+                        except: pass
                 blocks[x] = pickle.dumps(blocks[x])
             # self.log.critical(str(len(blocks)))
             self.pipe_sent_msg(b'result', pickle.dumps(blocks))
