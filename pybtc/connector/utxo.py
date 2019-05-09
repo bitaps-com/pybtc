@@ -2,7 +2,7 @@ from pybtc import int_to_c_int, c_int_to_int, c_int_len
 import asyncio
 from collections import OrderedDict, deque
 from lru import LRU
-
+import pickle
 
 class UTXO():
     def __init__(self, db_pool, loop, log, cache_size):
@@ -34,7 +34,7 @@ class UTXO():
         self.outs_total = 0
 
     def set(self, outpoint, pointer, amount, address):
-        self.cached[outpoint] = (pointer, amount, address)
+        self.cached[outpoint] = pickle.dumps(pointer, amount, address)
         self.outs_total += 1
         if pointer:
             self.last_cached_block = pointer >> 42
@@ -147,7 +147,7 @@ class UTXO():
     def get(self, key, block_height):
         self._requests += 1
         try:
-            i = self.cached[key]
+            i = pickle.loads(self.cached[key])
             self.destroyed.append(key)
             # try:
             #     self.destroyed[block_height].add(key)
