@@ -604,9 +604,9 @@ class BlockDeserializeTests(unittest.TestCase):
             Block(fc[:-1], format="raw", keep_raw_tx=False),
               )
 
-        import _pickle as pickle
+        import ujson as pickle
         qt = time.time()
-        k = pickle.dumps(bt)
+        k = pickle.dumps(bt[0]["tx"][0])
         print("decoded block dump", time.time() - qt)
         qt = time.time()
         p = pickle.loads(k)
