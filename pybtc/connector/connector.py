@@ -584,7 +584,6 @@ class Connector:
             try:
                 stxo = None
                 self.tx_in_process.add(tx["txId"])
-                с = 0
                 if not tx["coinbase"]:
                     if block_height is not None:
                         await self.wait_block_dependences(tx)
@@ -595,7 +594,6 @@ class Connector:
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                             try:
                                 stxo.add(outpoint, tx["vIn"][i]["_c_"])
-                                с += 1
                             except:
                                 r = self.utxo.get(outpoint, block_height)
                                 stxo.add(r) if r else missed.add((outpoint, (block_height << 42) + (block_index << 21) + i))
@@ -604,29 +602,29 @@ class Connector:
                             await self.utxo.load_utxo()
                             [stxo.add(self.utxo.get_loaded(o, block_height)) for o, s in missed]
 
-                        if len(stxo) + с != len(tx["vIn"]) and not self.cache_loading:
+                        if len(stxo)  != len(tx["vIn"]) and not self.cache_loading:
                             self.log.critical("utxo get failed " + rh2s(tx["txId"]))
                             self.log.critical(str(stxo))
-                            raise Exception("utxo get failed ")
+                            raise Exception("utxo get failed " + str(""))
 
                 if self.tx_handler and  not self.cache_loading:
                     await self.tx_handler(tx, stxo, block_time, block_height, block_index)
 
                 if self.utxo:
                     for i in tx["vOut"]:
+                        # try:
+                        #     tx["vOut"][i]["_s_"]
+                        #     self.tt += 1
+                        # except:
+                        out = tx["vOut"][i]
+                        # if self.skip_opreturn and out["nType"] in (3, 8):
+                        #     continue
+                        pointer = (block_height << 42) + (block_index << 21) + i
                         try:
-                            tx["vOut"][i]["_s_"]
-                            self.tt += 1
+                            address = out["scriptPubKey"]
                         except:
-                            out = tx["vOut"][i]
-                            # if self.skip_opreturn and out["nType"] in (3, 8):
-                            #     continue
-                            pointer = (block_height << 42) + (block_index << 21) + i
-                            try:
-                                address = out["scriptPubKey"]
-                            except:
-                                address = b"".join((bytes([out["nType"]]), out["addressHash"]))
-                            self.utxo.set(b"".join((tx["txId"], int_to_bytes(i))), pointer, out["value"], address)
+                            address = b"".join((bytes([out["nType"]]), out["addressHash"]))
+                        self.utxo.set(b"".join((tx["txId"], int_to_bytes(i))), pointer, out["value"], address)
 
                 self.tx_cache.set(tx["txId"], True)
                 try:
