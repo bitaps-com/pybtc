@@ -256,7 +256,7 @@ class Worker:
                             blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = self.destroyed_coins[pointer]
                         except: pass
 
-                blocks[x] = msgpack.dumps(blocks[x])
+                # blocks[x] = msgpack.dumps(blocks[x])
 
             self.pipe_sent_msg(b'result', msgpack.dumps(blocks))
         except:
