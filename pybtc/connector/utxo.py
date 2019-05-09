@@ -34,7 +34,7 @@ class UTXO():
         self.outs_total = 0
 
     def set(self, outpoint, pointer, amount, address):
-        self.cached[outpoint] = (pointer, amount, address)
+        self.cached[outpoint] = [pointer, amount, address]
         self.outs_total += 1
         if pointer:
             self.last_cached_block = pointer >> 42
@@ -42,7 +42,7 @@ class UTXO():
     def remove(self, outpoint):
         del self.cached[outpoint]
 
-    def destroy_utxo(self, block_height):
+    def destroy_utxo(self):
         while self.destroyed:
             outpoint = self.destroyed.pop()
             try:
