@@ -201,6 +201,7 @@ class Worker:
 
     async def load_blocks(self, height):
         try:
+            t = 0
             batch = list()
             h_list = list()
             while True:
@@ -230,6 +231,7 @@ class Worker:
                             try:
                                r = self.coins[outpoint]
                                block["rawTx"][z]["vIn"][i]["_c_"] = r
+                               t += 1
                                self.destroyed_coins[r[0]] = True
                                # self.log.critical(str(r[0]))
                             except:
@@ -253,6 +255,7 @@ class Worker:
                         except: pass
                 blocks[x] = pickle.dumps(blocks[x])
             # self.log.critical(str(len(blocks)))
+            self.log.critical(str(t))
             self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except:
             self.log.critical(str(traceback.format_exc()))
