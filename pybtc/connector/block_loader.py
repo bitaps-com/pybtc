@@ -11,7 +11,7 @@ import aiojsonrpc
 import traceback
 from pybtc.connector.utils import decode_block_tx
 
-import _pickle as pickle
+import marshal as pickle
 from lru import LRU
 
 
