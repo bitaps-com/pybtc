@@ -255,7 +255,7 @@ class Worker:
                         except: pass
                 blocks[x] = pickle.dumps(blocks[x])
             # self.log.critical(str(len(blocks)))
-            self.log.critical(str(t))
+            # self.log.critical(str(t))
             self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except:
             self.log.critical(str(traceback.format_exc()))

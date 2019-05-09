@@ -597,7 +597,8 @@ class Connector:
                             try:
                                 stxo.add(outpoint, tx["vIn"][i]["_c_"])
                                 self.yy += 1
-                            except:
+                            except Exception as err:
+                                self.log.critical(">>> " + str(err))
                                 r = self.utxo.get(outpoint, block_height)
                                 stxo.add(r) if r else missed.add((outpoint, (block_height << 42) + (block_index << 21) + i))
 
