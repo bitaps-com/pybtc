@@ -244,7 +244,7 @@ class Worker:
                             except:
                                 address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
                                                            block["rawTx"][z]["vOut"][i]["addressHash"]))
-                            self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i], address)
+                            self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
                     blocks[x] = block
             for x in blocks:
                 for y in blocks[x]["rawTx"]:
