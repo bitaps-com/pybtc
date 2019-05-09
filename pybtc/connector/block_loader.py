@@ -10,7 +10,8 @@ import sys
 import aiojsonrpc
 import traceback
 from pybtc.connector.utils import decode_block_tx
-import pickle
+# import pickle
+import msgpack as pickle
 from lru import LRU
 
 

@@ -619,6 +619,17 @@ class BlockDeserializeTests(unittest.TestCase):
         p = pickle.loads(k)
         print("decoded block load", time.time() - qt)
         print(p[0]["hash"])
+
+        qt = time.time()
+        k = pickle.dumps(bt, protocol = pickle.HIGHEST_PROTOCOL)
+        print("decoded block dump", time.time() - qt)
+        qt = time.time()
+        p = pickle.loads(k)
+        print("decoded block load", time.time() - qt)
+        print(p[0]["hash"])
+
+
+
         import cProfile
 
         # cProfile.run("import pybtc;"
