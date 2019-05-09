@@ -12,7 +12,7 @@ import zmq
 import zmq.asyncio
 import asyncio
 import time
-from msgpack import loads, dumps
+from _pickle import loads, dumps
 
 class Connector:
     def __init__(self, node_rpc_url, node_zerromq_url, logger,

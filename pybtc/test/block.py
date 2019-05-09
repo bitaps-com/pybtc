@@ -603,25 +603,10 @@ class BlockDeserializeTests(unittest.TestCase):
         bt = (
             Block(fc[:-1], format="raw", keep_raw_tx=False),
               )
-        print("decoded block", time.time() - qt )
-        import msgpack
-        qt = time.time()
-        k = msgpack.dumps(bt)
-        print("decoded block dump", time.time() - qt)
-        qt = time.time()
-        p = msgpack.loads(k)
-        print("decoded block load", time.time() - qt)
-        import pickle
+
+        import _pickle as pickle
         qt = time.time()
         k = pickle.dumps(bt)
-        print("decoded block dump", time.time() - qt)
-        qt = time.time()
-        p = pickle.loads(k)
-        print("decoded block load", time.time() - qt)
-        print(p[0]["hash"])
-
-        qt = time.time()
-        k = pickle.dumps(bt, protocol = pickle.HIGHEST_PROTOCOL)
         print("decoded block dump", time.time() - qt)
         qt = time.time()
         p = pickle.loads(k)
