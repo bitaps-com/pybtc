@@ -12,6 +12,8 @@ import traceback
 from pybtc.connector.utils import decode_block_tx
 import pickle
 from lru import LRU
+
+
 class BlockLoader:
     def __init__(self, parent, workers=8):
         self.worker_limit = workers
@@ -52,7 +54,7 @@ class BlockLoader:
             except Exception as err:
                 self.log.error(str(traceback.format_exc()))
                 self.log.error("watchdog error %s " % err)
-            await asyncio.sleep(60)
+            await asyncio.sleep(10)
 
 
     async def loading(self):
@@ -159,10 +161,10 @@ class BlockLoader:
                 continue
 
             if msg_type == b'result':
+                self.worker_busy[index] = False
                 blocks = pickle.loads(msg)
                 for i in blocks:
                     self.parent.block_preload.set(i, blocks[i])
-                self.worker_busy[index] = False
 
 
                 # def disconnect(self,ip):

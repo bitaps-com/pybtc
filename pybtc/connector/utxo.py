@@ -43,18 +43,23 @@ class UTXO():
         del self.cached[outpoint]
 
     def destroy_utxo(self, block_height):
+        block_height -= self.maturity
         while self.destroyed:
-            outpoint = self.destroyed.pop()
-            try:
-                del self.cached[outpoint]
-                self.destroyed_utxo += 1
-            except:
+            r = self.destroyed.pop()
+            if r[1] > block_height:
+                self.destroyed.appendleft(r)
+                break
+            else:
                 try:
-                    del self.loaded[outpoint]
+                    del self.cached[r[0]]
                     self.destroyed_utxo += 1
                 except:
-                    self.destroyed_utxo += 1
-                    pass
+                    try:
+                        del self.loaded[r[0]]
+                        self.destroyed_utxo += 1
+                    except:
+                        self.destroyed_utxo += 1
+                        pass
 
         return
 
@@ -148,7 +153,7 @@ class UTXO():
         self._requests += 1
         try:
             i = self.cached[key]
-            self.destroyed.append(key)
+            self.destroyed.append((key, block_height))
             # try:
             #     self.destroyed[block_height].add(key)
             # except:

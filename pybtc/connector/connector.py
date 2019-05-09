@@ -441,8 +441,6 @@ class Connector:
             self.log.error(str(traceback.format_exc()))
             self.log.error("block error %s" % str(err))
         finally:
-
-            self.active_block.set_result(True)
             # self.log.debug("%s block [%s tx/ %s size] processing time %s cache [%s/%s]" %
             #               (block["height"],
             #                len(block["tx"]),
@@ -454,6 +452,7 @@ class Connector:
                 self.get_next_block_mutex = True
                 self.loop.create_task(self.get_next_block())
             self.blocks_processing_time += time.time() - tq
+            self.active_block.set_result(True)
 
     async def fetch_block_transactions(self, block, tx_bin_list):
         q = time.time()
