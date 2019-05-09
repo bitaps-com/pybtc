@@ -231,7 +231,7 @@ class Worker:
                                r = self.coins[outpoint]
                                block["rawTx"][z]["vIn"][i]["_c_"] = r
                                self.destroyed_coins[r[0]] = True
-                               self.log.critical(str(r[0]))
+                               # self.log.critical(str(r[0]))
                             except:
                                 pass
                         for i in block["rawTx"][z]["vOut"]:
@@ -242,7 +242,7 @@ class Worker:
                             except:
                                 address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
                                                            block["rawTx"][z]["vOut"][i]["addressHash"]))
-                            self.coins[o] = (o, block["rawTx"][z]["vOut"][i], address)
+                            self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i], address)
                     blocks[x] = block
             for x in blocks:
                 for y in blocks[x]["rawTx"]:
