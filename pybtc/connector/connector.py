@@ -617,16 +617,16 @@ class Connector:
                     for i in tx["vOut"]:
                         if "_s_" in tx["vOut"][i]:
                             self.tt += 1
-                        # else:else
-                        out = tx["vOut"][i]
-                        # if self.skip_opreturn and out["nType"] in (3, 8):
-                        #     continue
-                        pointer = (block_height << 42) + (block_index << 21) + i
-                        try:
-                            address = out["scriptPubKey"]
-                        except:
-                            address = b"".join((bytes([out["nType"]]), out["addressHash"]))
-                        self.utxo.set(b"".join((tx["txId"], int_to_bytes(i))), pointer, out["value"], address)
+                        else:
+                            out = tx["vOut"][i]
+                            # if self.skip_opreturn and out["nType"] in (3, 8):
+                            #     continue
+                            pointer = (block_height << 42) + (block_index << 21) + i
+                            try:
+                                address = out["scriptPubKey"]
+                            except:
+                                address = b"".join((bytes([out["nType"]]), out["addressHash"]))
+                            self.utxo.set(b"".join((tx["txId"], int_to_bytes(i))), pointer, out["value"], address)
 
                 self.tx_cache.set(tx["txId"], True)
                 try:
