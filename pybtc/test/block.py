@@ -618,6 +618,7 @@ class BlockDeserializeTests(unittest.TestCase):
         qt = time.time()
         p = pickle.loads(k)
         print("decoded block load", time.time() - qt)
+        print(p[0]["hash"])
         import cProfile
 
         # cProfile.run("import pybtc;"

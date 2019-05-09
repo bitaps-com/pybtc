@@ -305,6 +305,7 @@ class Connector:
                     if raw_block:
                         q = time.time()
                         block = msgpack.loads(raw_block)
+                        block["hash"]
                         self.blocks_decode_time += time.time() - q
 
                 if not block:
