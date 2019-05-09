@@ -229,7 +229,7 @@ class Worker:
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                             try:
                                r = self.coins[outpoint]
-                               block["rawTx"][z]["vIn"][i]["__coin__"] = (outpoint, r[0], r[1], r[2])
+                               block["rawTx"][z]["vIn"][i]["__coin__"] = r
                                self.destroyed_coins[r[0]] = True
                             except:
                                 pass
