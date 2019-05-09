@@ -10,7 +10,7 @@ import sys
 import aiojsonrpc
 import traceback
 from pybtc.connector.utils import decode_block_tx
-import msgpack
+from pickle import loads, dumps
 from lru import LRU
 
 
@@ -162,7 +162,7 @@ class BlockLoader:
 
             if msg_type == b'result':
                 self.worker_busy[index] = False
-                blocks = msgpack.loads(msg)
+                blocks = loads(msg)
 
                 for i in blocks:
                     self.parent.block_preload.set(i, blocks[i])
@@ -258,7 +258,7 @@ class Worker:
 
                 # blocks[x] = msgpack.dumps(blocks[x])
 
-            self.pipe_sent_msg(b'result', msgpack.dumps(blocks))
+            self.pipe_sent_msg(b'result', dumps(blocks))
         except:
             self.log.critical(str(traceback.format_exc()))
 
