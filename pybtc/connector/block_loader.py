@@ -231,6 +231,7 @@ class Worker:
                                r = self.coins[outpoint]
                                block["rawTx"][z]["vIn"][i]["_c_"] = r
                                self.destroyed_coins[r[0]] = True
+                               self.log.critical(str(r[0]))
                             except:
                                 pass
                         for i in block["rawTx"][z]["vOut"]:
