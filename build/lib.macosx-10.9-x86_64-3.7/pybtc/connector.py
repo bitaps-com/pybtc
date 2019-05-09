@@ -597,7 +597,7 @@ class Connector:
                         for i in tx["vIn"]:
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                             try:
-                                stxo.add(outpoint, tx["vIn"][i]["__coin__"])
+                                stxo.add(outpoint, tx["vIn"][i]["_c_"])
                             except:
                                 inp = tx["vIn"][i]
                                 r = self.utxo.get(outpoint, block_height)
@@ -618,7 +618,7 @@ class Connector:
                 if self.utxo:
                     for i in tx["vOut"]:
                         try:
-                            tx["vOut"][i]["__spent__"]
+                            tx["vOut"][i]["_s_"]
                         except:
                             out = tx["vOut"][i]
                             # if self.skip_opreturn and out["nType"] in (3, 8):
