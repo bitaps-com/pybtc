@@ -72,6 +72,8 @@ class BlockLoader:
                             self.worker_busy[i] = True
                             if height <= self.parent.last_block_height:
                                 height = self.parent.last_block_height + 1
+                            self.pipe_sent_msg(self.worker[i].writer, b'rpc_batch_limit',
+                                               int_to_bytes(self.rpc_batch_limit))
                             self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(height))
                             height += self.rpc_batch_limit
                             new_requests += 1
@@ -163,6 +165,10 @@ class BlockLoader:
 
             if msg_type == b'result':
                 self.worker_busy[index] = False
+                if len(msg) < 80000000:
+                    self.rpc_batch_limit += 10
+                elif len(msg) > 100000000 and self.rpc_batch_limit > 10:
+                    self.rpc_batch_limit -= 10
                 blocks = pickle.loads(msg)
 
                 for i in blocks:
@@ -275,7 +281,9 @@ class Worker:
                 msg_type, msg = await self.pipe_get_msg(self.reader)
                 if msg_type ==  b'pipe_read_error':
                     return
-
+                if msg_type == b'rpc_batch_limit':
+                    self.rpc_batch_limit = bytes_to_int(msg)
+                    continue
                 if msg_type == b'get':
                     self.loop.create_task(self.load_blocks(bytes_to_int(msg)))
                     continue
