@@ -210,11 +210,11 @@ class Worker:
             t = 0
             batch = list()
             h_list = list()
-            rpc_batch_limit = 50
+            # rpc_batch_limit = 50
             while True:
                 batch.append(["getblockhash", height])
                 h_list.append(height)
-                if len(batch) >= rpc_batch_limit:
+                if len(batch) >= self.rpc_batch_limit:
                     height += 1
                     break
                 height += 1
