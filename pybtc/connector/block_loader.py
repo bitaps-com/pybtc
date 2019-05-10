@@ -165,10 +165,10 @@ class BlockLoader:
 
             if msg_type == b'result':
                 self.worker_busy[index] = False
-                if len(msg) < 80000000 and self.rpc_batch_limit < 300:
-                    self.rpc_batch_limit += 10
-                elif len(msg) > 100000000 and self.rpc_batch_limit > 10:
-                    self.rpc_batch_limit -= 10
+                # if len(msg) < 80000000 and self.rpc_batch_limit < 300:
+                #     self.rpc_batch_limit += 10
+                # elif len(msg) > 100000000 and self.rpc_batch_limit > 10:
+                #     self.rpc_batch_limit -= 10
                 blocks = pickle.loads(msg)
 
                 for i in blocks:
