@@ -26,7 +26,7 @@ class Connector:
                  utxo_data=False,
                  utxo_cache_size=1000000,
                  skip_opreturn=True,
-                 block_preload_cache_limit= 1000 * 1000000,
+                 block_preload_cache_limit= 2000 * 1000000,
                  block_hashes_cache_limit= 200 * 1000000,
                  postgres_pool=None):
         self.loop = asyncio.get_event_loop()
