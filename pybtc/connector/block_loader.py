@@ -22,6 +22,7 @@ class BlockLoader:
         self.worker_tasks = list()
         self.worker_busy = dict()
         self.parent = parent
+        self.last_batch_size = 0
         self.last_cleared_block = 0
         self.loading_task = None
         self.log = parent.log
@@ -67,6 +68,10 @@ class BlockLoader:
             new_requests = 0
             if self.parent.block_preload._store_size < self.parent.block_preload_cache_limit:
                 try:
+                    if self.last_batch_size < 50000:
+                        self.rpc_batch_limit += 10
+                    elif self.last_batch_size >  70000 and self.rpc_batch_limit > 10:
+                        self.rpc_batch_limit -= 10
                     for i in self.worker_busy:
                         if not self.worker_busy[i]:
                             self.worker_busy[i] = True
@@ -166,7 +171,8 @@ class BlockLoader:
             if msg_type == b'result':
                 self.worker_busy[index] = False
                 blocks = pickle.loads(msg)
-
+                if blocks:
+                    self.last_batch_size = len(msg)
                 for i in blocks:
                     self.parent.block_preload.set(i, blocks[i])
                 if blocks:
