@@ -72,6 +72,8 @@ class BlockLoader:
                             self.worker_busy[i] = True
                             if height <= self.parent.last_block_height:
                                 height = self.parent.last_block_height + 1
+                            self.pipe_sent_msg(self.worker[i].writer, b'rpc_batch_limit',
+                                               int_to_bytes(self.rpc_batch_limit))
                             self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(height))
                             height += self.rpc_batch_limit
                             new_requests += 1
@@ -210,7 +212,6 @@ class Worker:
             t = 0
             batch = list()
             h_list = list()
-            # rpc_batch_limit = 50
             while True:
                 batch.append(["getblockhash", height])
                 h_list.append(height)
@@ -278,6 +279,10 @@ class Worker:
 
                 if msg_type == b'get':
                     self.loop.create_task(self.load_blocks(bytes_to_int(msg)))
+                    continue
+
+                if msg_type == b'rpc_batch_limit':
+                    self.rpc_batch_limit = bytes_to_int(msg)
                     continue
         except:
             self.log.critical("exc")
