@@ -13,6 +13,7 @@ import zmq.asyncio
 import asyncio
 import time
 from _pickle import loads, dumps
+from collections import OrderedDict, deque
 
 class Connector:
     def __init__(self, node_rpc_url, node_zerromq_url, logger,
@@ -76,6 +77,7 @@ class Connector:
         self.tx_processing_time = 0
         self.non_cached_blocks = 0
         self.total_received_tx_time = 0
+        self.checkpoints = deque()
         self.tt = 0
         self.yy = 0
         self.start_time = time.time()
