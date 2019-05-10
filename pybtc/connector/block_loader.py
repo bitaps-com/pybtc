@@ -68,9 +68,9 @@ class BlockLoader:
             new_requests = 0
             if self.parent.block_preload._store_size < self.parent.block_preload_cache_limit:
                 try:
-                    if self.last_batch_size < 50000:
+                    if self.last_batch_size < 50000000:
                         self.rpc_batch_limit += 10
-                    elif self.last_batch_size >  70000 and self.rpc_batch_limit > 10:
+                    elif self.last_batch_size >  70000000 and self.rpc_batch_limit > 10:
                         self.rpc_batch_limit -= 10
                     for i in self.worker_busy:
                         if not self.worker_busy[i]:
