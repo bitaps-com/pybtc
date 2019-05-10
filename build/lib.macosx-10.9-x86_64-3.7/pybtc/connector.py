@@ -14,7 +14,7 @@ import zmq.asyncio
 import asyncio
 import time
 import io
-from collections import OrderedDict
+from collections import OrderedDict, deque
 from lru import LRU
 
 class Connector:
@@ -61,6 +61,7 @@ class Connector:
         self.app_block_height_on_start = int(last_block_height) if int(last_block_height) else 0
         self.last_block_height = 0
         self.last_block_utxo_cached_height = 0
+        self.checkpoints = deque()
         self.deep_synchronization = False
 
         self.block_dependency_tx = 0 # counter of tx that have dependencies in block

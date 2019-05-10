@@ -177,6 +177,7 @@ def decode_script(script, asm=False):
         while l - s > 0:
             if script[s] < 0x4c and script[s]:
                 if asm:
+                    append("OP_PUSHBYTES[%s]" % script[s] )
                     append(script[s + 1:s + 1 + script[s]].hex())
                 else:
                     append('[%s]' % script[s])
@@ -186,7 +187,8 @@ def decode_script(script, asm=False):
             if script[s] == OPCODE["OP_PUSHDATA1"]:
                 if asm:
                     ld = script[s + 1]
-                    append(script[s + 1:s + 1 + ld].hex())
+                    append("OP_PUSHDATA1[%s]" % ld)
+                    append(script[s + 2:s + 2 + ld].hex())
                 else:
                     append(RAW_OPCODE[script[s]])
                     ld = script[s + 1]
@@ -194,8 +196,10 @@ def decode_script(script, asm=False):
                 s += 1 + script[s + 1] + 1
             elif script[s] == OPCODE["OP_PUSHDATA2"]:
                 if asm:
+
                     ld = unpack('<H', script[s + 1: s + 3])[0]
-                    append(script[s + 1:s + 1 + ld].hex())
+                    append("OP_PUSHDATA2[%s]" % ld)
+                    append(script[s + 3:s + 3 + ld].hex())
                 else:
                     ld = unpack('<H', script[s + 1: s + 3])[0]
                     append(RAW_OPCODE[script[s]])
@@ -204,7 +208,8 @@ def decode_script(script, asm=False):
             elif script[s] == OPCODE["OP_PUSHDATA4"]:
                 if asm:
                     ld = unpack('<L', script[s + 1: s + 5])[0]
-                    append(script[s + 1:s + 1 + ld].hex())
+                    append("OP_PUSHDATA4[%s]" % ld)
+                    append(script[s + 5:s + 5 + ld].hex())
                 else:
                     ld = unpack('<L', script[s + 1: s + 5])[0]
                     append(RAW_OPCODE[script[s]])

@@ -167,6 +167,8 @@ class BlockLoader:
 
                 for i in blocks:
                     self.parent.block_preload.set(i, blocks[i])
+                if blocks:
+                    self.parent.checkpoints.append(i)
 
 
                 # def disconnect(self,ip):
@@ -197,8 +199,8 @@ class Worker:
         self.loop.set_default_executor(ThreadPoolExecutor(20))
         self.out_writer = out_writer
         self.in_reader = in_reader
-        self.coins = LRU(rpc_batch_limit * 10000)
-        self.destroyed_coins = LRU(rpc_batch_limit * 10000)
+        self.coins = LRU(1000000)
+        self.destroyed_coins = LRU(1000000)
         signal.signal(signal.SIGTERM, self.terminate)
         self.loop.create_task(self.message_loop())
         self.loop.run_forever()
@@ -208,10 +210,11 @@ class Worker:
             t = 0
             batch = list()
             h_list = list()
+            rpc_batch_limit = 50
             while True:
                 batch.append(["getblockhash", height])
                 h_list.append(height)
-                if len(batch) >= self.rpc_batch_limit:
+                if len(batch) >= rpc_batch_limit:
                     height += 1
                     break
                 height += 1
@@ -261,6 +264,7 @@ class Worker:
 
             self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except:
+            self.pipe_sent_msg(b'result', pickle.dumps([]))
             self.log.critical(str(traceback.format_exc()))
 
     async def message_loop(self):
