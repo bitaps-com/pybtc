@@ -253,16 +253,32 @@ lru_subscript(LRU *self, register PyObject *key)
     assert(PyObject_TypeCheck(node, &NodeType));
 
     /* We don't need to move the node when it's already self->first. */
-    if (node != self->first) {
-        lru_remove_node(self, node);
-        lru_add_node_at_head(self, node);
-    }
+
 
     self->hits++;
     Py_INCREF(node->value);
     Py_DECREF(node);
     return node->value;
 }
+
+static PyObject *
+LRU_pop(LRU *self)
+{
+
+    if (self->last) {
+        PyObject *tuple = PyTuple_New(2);
+        Py_INCREF(self->last->key);
+        PyTuple_SET_ITEM(tuple, 0, self->last->key);
+        Py_INCREF(self->last->value);
+        PyTuple_SET_ITEM(tuple, 1, self->last->value);
+        Node* n = self->last;
+        lru_remove_node(self, n);
+        PUT_NODE(self->dict, n->key, NULL);
+        return tuple;
+    }
+    else Py_RETURN_NONE;
+}
+
 
 static PyObject *
 LRU_get(LRU *self, PyObject *args)
