@@ -12,7 +12,7 @@ import traceback
 from pybtc.connector.utils import decode_block_tx
 
 import _pickle as pickle
-from lru import LRU
+from _lru import LRU
 
 
 class BlockLoader:
