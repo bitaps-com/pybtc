@@ -43,7 +43,7 @@ class UTXO():
     def remove(self, outpoint):
         del self.cached[outpoint]
 
-    def destroy_utxo(self):
+    async def destroy_utxo(self):
         while self.destroyed:
             outpoint = self.destroyed.pop()
             try:
