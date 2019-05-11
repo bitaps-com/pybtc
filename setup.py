@@ -140,7 +140,6 @@ setup(name='pybtc',
       package_data={
           'pybtc': ['bip39_word_list/*.txt', 'test/*.txt'],
       },
-      install_requires=['lru-dict', 'msgpack'],
       cmdclass={
         'build_clib': build_clib,
         'build_ext': build_ext,
@@ -149,11 +148,9 @@ setup(name='pybtc',
         'bdist_wheel': bdist_wheel
       },
       distclass=Distribution,
-      ext_modules=[
-          Extension("_secp256k1",
-                             ["pybtc/_secp256k1/module_secp256k1.c"],
-                              include_dirs=["libsecp256k1/include/",
-                                            "libsecp256k1/src/"]),
+      ext_modules=[Extension("lru", ["pybtc/lru/lru.c"]),
+                   Extension("_secp256k1", ["pybtc/_secp256k1/module_secp256k1.c"],
+                             include_dirs=["libsecp256k1/include/", "libsecp256k1/src/"]),
                    Extension("_crypto",
                              ["pybtc/_crypto/module_crypto.cpp",
                               "pybtc/_crypto/crypto/aes.cpp",

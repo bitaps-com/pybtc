@@ -1,25 +1,28 @@
 from pybtc import int_to_c_int, c_int_to_int, c_int_len
 import asyncio
 from collections import OrderedDict, deque
-from lru import LRU
-
+from collections import OrderedDict, deque as LRU
+from pybtc import LRU
 
 class UTXO():
-    def __init__(self, db_pool, loop, log, cache_size):
-        self.cached = LRU()
+    def __init__(self, db_pool, loop, log, cache_size, block_txo_max = 500000):
+        self.cached = LRU(cache_size)
         self.missed = set()
         self.destroyed = deque()
         self.deleted = LRU(200000)
         self.log = log
         self.loaded = OrderedDict()
         self.maturity = 100
-        self._cache_size = cache_size
+        self.block_txo_max = block_txo_max
+        self._cache_hard_limit = cache_size - block_txo_max
+        self._cache_soft_limit = cache_size - block_txo_max * 2
         self._db_pool = db_pool
         self.loop = loop
         self.clear_tail = False
         self.last_saved_block = 0
         self.last_cached_block = 0
-        self.save_process = False
+        self.save_future = asyncio.Future()
+        self.save_future.set_result(True)
         self.load_utxo_future = asyncio.Future()
         self.load_utxo_future.set_result(True)
         self._requests = 0
@@ -35,9 +38,7 @@ class UTXO():
 
     def set(self, outpoint, pointer, amount, address):
         self.cached[outpoint] = (pointer, amount, address)
-        self.outs_total += 1
-        if pointer:
-            self.last_cached_block = pointer >> 42
+
 
     def remove(self, outpoint):
         del self.cached[outpoint]
@@ -56,73 +57,79 @@ class UTXO():
                     self.destroyed_utxo += 1
                     pass
 
-        # if len(self.cached) - self._cache_size > 0 and not self.save_process:
+        # if len(self.cached) > self._cache_hard_limit:
+        #     await self.save_utxo()
+        # elif len(self.cached) > self._cache_soft_limit and self.save_future.done():
         #     self.loop.create_task(self.save_utxo())
 
 
 
-    async def save_utxo(self, block_height):
+    async def save_utxo(self):
         # save to db tail from cache
-        self.save_process = True
-        await asyncio.sleep(2)
-        c = len(self.cached) - self._cache_size
-        try:
-            lb = 0
-            for key in iter(self.cached):
-                i = self.cached[key]
-                if c>0 and (i[0] >> 42) <= block_height:
-                    c -= 1
-                    lb = i[0] >> 42
-                    continue
-                break
-
-            if lb:
-                d = set()
-                for key in range(self.last_saved_block + 1, lb + 1):
-                    try:
-                        [d.add(i) for i in self.deleted[key]]
-                    except:
-                        pass
-
-                a = set()
+        if not self.save_future.done():
+            await self.save_future.done()
+            return
+        self.save_future = asyncio.Future()
+        while True:
+            c = len(self.cached) - self._cache_soft_limit - self.block_txo_max
+            if c <= 0: break
+            try:
+                lb = 0
                 for key in iter(self.cached):
                     i = self.cached[key]
-                    if (i[0] >> 42) > lb: break
-                    a.add((key,b"".join((int_to_c_int(i[0]),
-                                          int_to_c_int(i[1]),
-                                          i[2]))))
+                    if c>0 and (i[0] >> 42) <= block_height:
+                        c -= 1
+                        lb = i[0] >> 42
+                        continue
+                    break
 
-                # insert to db
-                async with self._db_pool.acquire() as conn:
-                    async with conn.transaction():
-                        if d:
-                            await conn.execute("DELETE FROM connector_utxo WHERE "
-                                               "outpoint = ANY($1);", d)
-                        if a:
-                            await conn.copy_records_to_table('connector_utxo',
-                                                             columns=["outpoint", "data"], records=a)
-                        await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-                                           "WHERE name = 'last_block';", lb)
-                        await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-                                           "WHERE name = 'last_cached_block';", block_height)
-                self.saved_utxo += len(a)
-                self.deleted_utxo += len(d)
+                if lb:
+                    d = set()
+                    for key in range(self.last_saved_block + 1, lb + 1):
+                        try:
+                            [d.add(i) for i in self.deleted[key]]
+                        except:
+                            pass
 
-                # remove from cache
-                for key in a:
-                    try:
-                        self.cached.pop(key[0])
-                    except:
-                        pass
+                    a = set()
+                    for key in iter(self.cached):
+                        i = self.cached[key]
+                        if (i[0] >> 42) > lb: break
+                        a.add((key,b"".join((int_to_c_int(i[0]),
+                                              int_to_c_int(i[1]),
+                                              i[2]))))
 
-                for key in range(self.last_saved_block + 1, lb + 1):
-                    try:
-                        self.deleted.pop(key)
-                    except:
-                        pass
-                self.last_saved_block = lb
-        finally:
-            self.save_process = False
+                    # insert to db
+                    async with self._db_pool.acquire() as conn:
+                        async with conn.transaction():
+                            if d:
+                                await conn.execute("DELETE FROM connector_utxo WHERE "
+                                                   "outpoint = ANY($1);", d)
+                            if a:
+                                await conn.copy_records_to_table('connector_utxo',
+                                                                 columns=["outpoint", "data"], records=a)
+                            await conn.execute("UPDATE connector_utxo_state SET value = $1 "
+                                               "WHERE name = 'last_block';", lb)
+                            await conn.execute("UPDATE connector_utxo_state SET value = $1 "
+                                               "WHERE name = 'last_cached_block';", block_height)
+                    self.saved_utxo += len(a)
+                    self.deleted_utxo += len(d)
+
+                    # remove from cache
+                    for key in a:
+                        try:
+                            self.cached.pop(key[0])
+                        except:
+                            pass
+
+                    for key in range(self.last_saved_block + 1, lb + 1):
+                        try:
+                            self.deleted.pop(key)
+                        except:
+                            pass
+                    self.last_saved_block = lb
+            finally:
+                self.save_future = False
 
     def get(self, key):
         self._requests += 1
