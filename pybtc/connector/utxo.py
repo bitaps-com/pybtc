@@ -57,10 +57,10 @@ class UTXO():
                     self.destroyed_utxo += 1
                     pass
 
-        # if len(self.cached) > self._cache_hard_limit:
-        #     await self.save_utxo()
-        # elif len(self.cached) > self._cache_soft_limit and self.save_future.done():
-        #     self.loop.create_task(self.save_utxo())
+        if len(self.cached) > self._cache_hard_limit:
+            await self.save_utxo()
+        elif len(self.cached) > self._cache_soft_limit and self.save_future.done():
+            self.loop.create_task(self.save_utxo())
 
 
 
@@ -73,6 +73,7 @@ class UTXO():
         while True:
             c = len(self.cached) - self._cache_soft_limit - self.block_txo_max
             if c <= 0: break
+            self.log.critical("str>>>>")
             try:
                 lb = 0
                 for key in iter(self.cached):

@@ -250,11 +250,6 @@ lru_subscript(LRU *self, register PyObject *key)
         return NULL;
     }
 
-    assert(PyObject_TypeCheck(node, &NodeType));
-
-    /* We don't need to move the node when it's already self->first. */
-
-
     self->hits++;
     Py_INCREF(node->value);
     Py_DECREF(node);
@@ -562,6 +557,8 @@ static PyMethodDef LRU_methods[] = {
                     PyDoc_STR("L.peek_first_item() -> returns the MRU item (key,value) without changing key order")},
     {"peek_last_item", (PyCFunction)LRU_peek_last_item, METH_NOARGS,
                     PyDoc_STR("L.peek_last_item() -> returns the LRU item (key,value) without changing key order")},
+    {"pop", (PyCFunction)LRU_pop, METH_NOARGS,
+                    PyDoc_STR("L.pop() -> returns the LRU item (key,value) without changing key order")},
     {"update", (PyCFunction)LRU_update, METH_VARARGS | METH_KEYWORDS,
                     PyDoc_STR("L.update() -> update value for key in LRU")},
     {"set_callback", (PyCFunction)LRU_set_callback, METH_VARARGS,
@@ -633,7 +630,7 @@ PyDoc_STRVAR(lru_doc,
 
 static PyTypeObject LRUType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "lru.LRU",               /* tp_name */
+    "_lru.LRU",               /* tp_name */
     sizeof(LRU),             /* tp_basicsize */
     0,                       /* tp_itemsize */
     (destructor)LRU_dealloc, /* tp_dealloc */
@@ -675,7 +672,7 @@ static PyTypeObject LRUType = {
 #if PY_MAJOR_VERSION >= 3
   static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
-    "lru",            /* m_name */
+    "_lru",            /* m_name */
     lru_doc,          /* m_doc */
     -1,               /* m_size */
     NULL,             /* m_methods */
@@ -702,7 +699,7 @@ moduleinit(void)
     #if PY_MAJOR_VERSION >= 3
         m = PyModule_Create(&moduledef);
     #else
-        m = Py_InitModule3("lru", NULL, lru_doc);
+        m = Py_InitModule3("_lru", NULL, lru_doc);
     #endif
 
     if (m == NULL)
@@ -723,7 +720,7 @@ moduleinit(void)
     }
 #else
     PyMODINIT_FUNC
-    PyInit_lru(void)
+    PyInit__lru(void)
     {
         return moduleinit();
     }

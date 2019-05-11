@@ -178,7 +178,9 @@ class BlockLoader:
                 for i in blocks:
                     self.parent.block_preload.set(i, blocks[i])
                 if blocks:
-                    self.parent.checkpoints.append(i)
+                    last_tx = blocks[i]["tx"][len(blocks[i]["tx"]) - 1]
+                    pointer = (i << 42) + ((len(blocks[i]["tx"]) - 1) << 21) + (en(last_tx["vOut"]) - 1)
+                    self.parent.checkpoints.append(pointer)
 
 
                 # def disconnect(self,ip):
