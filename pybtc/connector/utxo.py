@@ -6,7 +6,7 @@ from lru import LRU
 
 class UTXO():
     def __init__(self, db_pool, loop, log, cache_size):
-        self.cached = LRU(cache_size)
+        self.cached = LRU()
         self.missed = set()
         self.destroyed = deque()
         self.deleted = LRU(200000)
@@ -56,30 +56,10 @@ class UTXO():
                     self.destroyed_utxo += 1
                     pass
 
-        return
+        # if len(self.cached) - self._cache_size > 0 and not self.save_process:
+        #     self.loop.create_task(self.save_utxo())
 
-        block_height -= self.maturity
-        for key in range(self.destroyed_utxo_block + 1, block_height + 1):
-            if key not in self.destroyed: continue
-            n = set()
-            for outpoint in self.destroyed[key]:
-                try:
-                    del self.cached[outpoint]
-                    self.destroyed_utxo += 1
-                except:
-                    try:
-                        del self.loaded[outpoint]
-                        self.destroyed_utxo += 1
-                        n.add(outpoint)
-                    except:
-                        self.destroyed_utxo += 1
-                        pass
-            self.deleted[key] = n
-            del self.destroyed[key]
 
-        self.destroyed_utxo_block = block_height
-        if len(self.cached) - self._cache_size > 0 and not self.save_process:
-            self.loop.create_task(self.save_utxo(block_height))
 
     async def save_utxo(self, block_height):
         # save to db tail from cache
