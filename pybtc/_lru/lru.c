@@ -558,7 +558,7 @@ static PyMethodDef LRU_methods[] = {
                     PyDoc_STR("L.pop() -> returns the LRU item (key,value) without changing key order")},
     {"update", (PyCFunction)LRU_update, METH_VARARGS | METH_KEYWORDS,
                     PyDoc_STR("L.update() -> update value for key in LRU")},
-    {"put", (PyCFunction)LRU_append, METH_VARARGS | METH_KEYWORDS,
+    {"put", (PyCFunction)LRU_put, METH_VARARGS | METH_KEYWORDS,
                     PyDoc_STR("L.append() -> append value for key in LRU")},
     {"append", (PyCFunction)LRU_append, METH_VARARGS | METH_KEYWORDS,
                     PyDoc_STR("L.append() -> append value for key in LRU")},

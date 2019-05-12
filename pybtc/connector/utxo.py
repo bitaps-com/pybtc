@@ -57,8 +57,6 @@ class UTXO():
 
     async def save_utxo(self):
         # save to db tail from cache
-        self.log.critical("save utxo>>>>")
-        return
         if  self.save_process or not self.cached:
             return
         self.save_process = True
