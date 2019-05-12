@@ -269,6 +269,40 @@ static int lru_put(LRU *self, PyObject *key, PyObject *value)
     return res;
 }
 
+static int lru_append(LRU *self, PyObject *key, PyObject *value)
+{
+    int res = 0;
+    Node *node = GET_NODE(self->dict, key);
+    PyErr_Clear();  /* GET_NODE sets an exception on miss. Shut it up. */
+
+    if (value) {
+        if (node) {
+            Py_INCREF(value);
+            Py_DECREF(node->value);
+            node->value = value;
+            res = 0;
+        } else {
+            node = PyObject_NEW(Node, &NodeType);
+            node->key = key;
+            node->value = value;
+            node->next = node->prev = NULL;
+
+            Py_INCREF(key);
+            Py_INCREF(value);
+
+            res = PUT_NODE(self->dict, key, node);
+            if (res == 0) {
+                if (self->size > 0 && lru_length(self) > self->size) lru_delete_last(self);
+                lru_add_node_at_tail(self, node);
+            }
+        }
+    } else {
+        if (PUT_NODE(self->dict, key, NULL) == 0)  lru_remove_node(self, node);
+    }
+
+    Py_XDECREF(node);
+    return res;
+}
 
 
 static int lru_ass_sub(LRU *self, PyObject *key, PyObject *value)
@@ -337,7 +371,7 @@ static PyObject *get_key(Node *node)
     return node->key;
 }
 
-static PyObject *LRU_put(LRU *self, PyObject *args, PyObject *kwargs)
+static PyObject *LRU_append(LRU *self, PyObject *args, PyObject *kwargs)
 {
 	PyObject *key, *value;
 	PyObject *arg = NULL;
@@ -346,13 +380,13 @@ static PyObject *LRU_put(LRU *self, PyObject *args, PyObject *kwargs)
 	if ((PyArg_ParseTuple(args, "|O", &arg))) {
 		if (arg && PyDict_Check(arg)) {
 			while (PyDict_Next(arg, &pos, &key, &value))
-				lru_put(self, key, value);
+				lru_append(self, key, value);
 		}
 	}
 
 	if (kwargs != NULL && PyDict_Check(kwargs)) {
 		while (PyDict_Next(kwargs, &pos, &key, &value))
-			lru_put(self, key, value);
+			lru_append(self, key, value);
 	}
 
 	Py_RETURN_NONE;
@@ -503,8 +537,8 @@ static PyMethodDef LRU_methods[] = {
                     PyDoc_STR("L.pop() -> returns the LRU item (key,value) without changing key order")},
     {"update", (PyCFunction)LRU_update, METH_VARARGS | METH_KEYWORDS,
                     PyDoc_STR("L.update() -> update value for key in LRU")},
-    {"put", (PyCFunction)LRU_put, METH_VARARGS | METH_KEYWORDS,
-                    PyDoc_STR("L.update() -> update value for key in LRU")},
+    {"append", (PyCFunction)LRU_append, METH_VARARGS | METH_KEYWORDS,
+                    PyDoc_STR("L.append() -> append value for key in LRU")},
 
     {NULL,	NULL},
 };
