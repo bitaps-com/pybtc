@@ -246,6 +246,37 @@ static PyObject *LRU_get(LRU *self, PyObject *args)
 }
 
 
+static PyObject *LRU_delete(LRU *self, PyObject *args)
+{
+    PyObject *key;
+    PyObject *instead = NULL;
+    PyObject *tuple = PyTuple_New(2);
+
+    if (!PyArg_ParseTuple(args, "O|O", &key, &instead)) return NULL;
+
+    Node *node = GET_NODE(self->dict, key);
+    PyErr_Clear();  /* GET_NODE sets an exception on miss. Shut it up. */
+    if (!node) {
+       if (!instead) { Py_RETURN_NONE; }
+       Py_INCREF(instead);
+       return instead;
+
+    } else {
+    Py_INCREF(node->key);
+    PyTuple_SET_ITEM(tuple, 0, node->key);
+    Py_INCREF(node->value);
+    PyTuple_SET_ITEM(tuple, 1, node->value);
+        lru_remove_node(self, node);
+        PUT_NODE(self->dict, node->key, NULL);
+    return tuple;
+    }
+
+
+
+}
+
+
+
 
 static int lru_append(LRU *self, PyObject *key, PyObject *value)
 {
@@ -543,6 +574,8 @@ static PyMethodDef LRU_methods[] = {
     {"has_key",	(PyCFunction)LRU_contains, METH_VARARGS,
                     PyDoc_STR("L.has_key(key) -> Check if key is there in L")},
     {"get",	(PyCFunction)LRU_get, METH_VARARGS,
+                    PyDoc_STR("L.get(key, instead) -> If L has key return its value, otherwise instead")},
+    {"delete",	(PyCFunction)LRU_delete, METH_VARARGS,
                     PyDoc_STR("L.get(key, instead) -> If L has key return its value, otherwise instead")},
     {"set_size", (PyCFunction)LRU_set_size, METH_VARARGS,
                     PyDoc_STR("L.set_size() -> set size of LRU")},
