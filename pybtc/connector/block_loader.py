@@ -178,9 +178,7 @@ class BlockLoader:
                 for i in blocks:
                     self.parent.block_preload.set(i, blocks[i])
                 if blocks:
-                    last_tx = blocks[i]["rawTx"][len(blocks[i]["rawTx"]) - 1]
-                    pointer = (i << 42) + ((len(blocks[i]["rawTx"]) - 1) << 21) + (en(last_tx["vOut"]) - 1)
-                    self.parent.checkpoints.append(pointer)
+                    self.parent.checkpoints.append(i)
 
 
                 # def disconnect(self,ip):
@@ -263,6 +261,8 @@ class Worker:
                                                            block["rawTx"][z]["vOut"][i]["addressHash"]))
                             self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
                     blocks[x] = block
+            if blocks:
+                blocks[x]["checkpoint"] = x
             for x in blocks:
                 for y in blocks[x]["rawTx"]:
                     for i in blocks[x]["rawTx"][y]["vOut"]:

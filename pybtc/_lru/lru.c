@@ -62,8 +62,7 @@ typedef struct _Node {
     struct _Node * next;
 } Node;
 
-static void
-node_dealloc(Node* self)
+static void node_dealloc(Node* self)
 {
     Py_DECREF(self->key);
     Py_DECREF(self->value);
@@ -72,11 +71,7 @@ node_dealloc(Node* self)
     PyObject_Del((PyObject*)self);
 }
 
-static PyObject*
-node_repr(Node* self)
-{
-    return PyObject_Repr(self->value);
-}
+static PyObject*node_repr(Node* self) { return PyObject_Repr(self->value);}
 
 static PyTypeObject NodeType = {
     PyVarObject_HEAD_INIT(NULL, 0)
@@ -125,37 +120,10 @@ typedef struct {
     Node * first;
     Node * last;
     Py_ssize_t size;
-    Py_ssize_t hits;
-    Py_ssize_t misses;
-    PyObject *callback;
 } LRU;
 
 
-static PyObject *
-set_callback(LRU *self, PyObject *args)
-{
-    PyObject *result = NULL;
-    PyObject *temp;
-
-    if (PyArg_ParseTuple(args, "O:set_callback", &temp)) {
-        if (temp == Py_None) {
-            Py_XDECREF(self->callback);
-            self->callback = NULL;
-        } else if (!PyCallable_Check(temp)) {
-            PyErr_SetString(PyExc_TypeError, "parameter must be callable");
-            return NULL;
-        } else {
-            Py_XINCREF(temp);         /* Add a reference to new callback */
-            Py_XDECREF(self->callback);  /* Dispose of previous callback */
-            self->callback = temp;       /* Remember new callback */
-        }
-        Py_RETURN_NONE;
-    }
-    return result;
-}
-
-static void
-lru_remove_node(LRU *self, Node* node)
+static void lru_remove_node(LRU *self, Node* node)
 {
     if (self->first == node) {
         self->first = node->next;
@@ -172,8 +140,7 @@ lru_remove_node(LRU *self, Node* node)
     node->next = node->prev = NULL;
 }
 
-static void
-lru_add_node_at_head(LRU *self, Node* node)
+static void lru_add_node_at_head(LRU *self, Node* node)
 {
     node->prev = NULL;
     if (!self->first) {
@@ -188,36 +155,32 @@ lru_add_node_at_head(LRU *self, Node* node)
     }
 }
 
-static void
-lru_delete_last(LRU *self)
+static void lru_add_node_at_tail(LRU *self, Node* node)
 {
-    PyObject *arglist;
-    PyObject *result;
-    Node* n = self->last;
-
-    if (!self->last)
-        return;
-
-    if (self->callback) {
-
-        arglist = Py_BuildValue("OO", n->key, n->value);
-        result = PyObject_CallObject(self->callback, arglist);
-        Py_XDECREF(result);
-        Py_DECREF(arglist);
+    node->next = NULL;
+    if (!self->first) {
+        self->first = self->last = node;
+        node->prev = NULL;
+    } else {
+        node->prev = self->last;
+        if (node->prev) {
+            node->prev->next = node;
+        }
+        self->last = node;
     }
+}
 
+static void lru_delete_last(LRU *self)
+{
+    Node* n = self->last;
+    if (!self->last)  return;
     lru_remove_node(self, n);
     PUT_NODE(self->dict, n->key, NULL);
 }
 
-static Py_ssize_t
-lru_length(LRU *self)
-{
-    return PyDict_Size(self->dict);
-}
+static Py_ssize_t lru_length(LRU *self) { return PyDict_Size(self->dict); }
 
-static PyObject *
-LRU_contains_key(LRU *self, PyObject *key)
+static PyObject *LRU_contains_key(LRU *self, PyObject *key)
 {
     if (PyDict_Contains(self->dict, key)) {
         Py_RETURN_TRUE;
@@ -226,38 +189,27 @@ LRU_contains_key(LRU *self, PyObject *key)
     }
 }
 
-static PyObject *
-LRU_contains(LRU *self, PyObject *args)
+static PyObject *LRU_contains(LRU *self, PyObject *args)
 {
     PyObject *key;
-    if (!PyArg_ParseTuple(args, "O", &key))
-        return NULL;
+    if (!PyArg_ParseTuple(args, "O", &key)) return NULL;
+
     return LRU_contains_key(self, key);
 }
 
-static int
-LRU_seq_contains(LRU *self, PyObject *key)
-{
-    return PyDict_Contains(self->dict, key);
-}
+static int LRU_seq_contains(LRU *self, PyObject *key) { return PyDict_Contains(self->dict, key); }
 
-static PyObject *
-lru_subscript(LRU *self, register PyObject *key)
+static PyObject *lru_subscript(LRU *self, register PyObject *key)
 {
     Node *node = GET_NODE(self->dict, key);
-    if (!node) {
-        self->misses++;
-        return NULL;
-    }
+    if (!node) return NULL;
 
-    self->hits++;
     Py_INCREF(node->value);
     Py_DECREF(node);
     return node->value;
 }
 
-static PyObject *
-LRU_pop(LRU *self)
+static PyObject *LRU_pop(LRU *self)
 {
 
     if (self->last) {
@@ -275,31 +227,51 @@ LRU_pop(LRU *self)
 }
 
 
-static PyObject *
-LRU_get(LRU *self, PyObject *args)
+static PyObject *LRU_get(LRU *self, PyObject *args)
 {
     PyObject *key;
     PyObject *instead = NULL;
     PyObject *result;
 
-    if (!PyArg_ParseTuple(args, "O|O", &key, &instead))
-        return NULL;
+    if (!PyArg_ParseTuple(args, "O|O", &key, &instead)) return NULL;
 
     result = lru_subscript(self, key);
     PyErr_Clear();  /* GET_NODE sets an exception on miss. Shut it up. */
-    if (result)
-        return result;
+    if (result) return result;
 
-    if (!instead) {
-        Py_RETURN_NONE;
-    }
+    if (!instead) { Py_RETURN_NONE; }
 
     Py_INCREF(instead);
     return instead;
 }
 
-static int
-lru_ass_sub(LRU *self, PyObject *key, PyObject *value)
+
+static int lru_put(LRU *self, PyObject *key, PyObject *value)
+{
+    int res = 0;
+
+    Node *node = PyObject_NEW(Node, &NodeType);
+    node->key = key;
+    node->value = value;
+    node->next = node->prev = NULL;
+
+    Py_INCREF(key);
+    Py_INCREF(value);
+
+    res = PUT_NODE(self->dict, key, node);
+    if (res == 0) {
+        if (self->size > 0 && lru_length(self) > self->size) lru_delete_last(self);
+        lru_add_node_at_head(self, node);
+    }
+
+
+    Py_XDECREF(node);
+    return res;
+}
+
+
+
+static int lru_ass_sub(LRU *self, PyObject *key, PyObject *value)
 {
     int res = 0;
     Node *node = GET_NODE(self->dict, key);
@@ -310,10 +282,6 @@ lru_ass_sub(LRU *self, PyObject *key, PyObject *value)
             Py_INCREF(value);
             Py_DECREF(node->value);
             node->value = value;
-
-            lru_remove_node(self, node);
-            lru_add_node_at_head(self, node);
-
             res = 0;
         } else {
             node = PyObject_NEW(Node, &NodeType);
@@ -326,19 +294,12 @@ lru_ass_sub(LRU *self, PyObject *key, PyObject *value)
 
             res = PUT_NODE(self->dict, key, node);
             if (res == 0) {
-                if (lru_length(self) > self->size) {
-                    lru_delete_last(self);
-                }
-
+                if (self->size > 0 && lru_length(self) > self->size) lru_delete_last(self);
                 lru_add_node_at_head(self, node);
             }
         }
     } else {
-        res = PUT_NODE(self->dict, key, NULL);
-        if (res == 0) {
-            assert(node && PyObject_TypeCheck(node, &NodeType));
-            lru_remove_node(self, node);
-        }
+        if (PUT_NODE(self->dict, key, NULL) == 0)  lru_remove_node(self, node);
     }
 
     Py_XDECREF(node);
@@ -351,8 +312,7 @@ static PyMappingMethods LRU_as_mapping = {
     (objobjargproc)lru_ass_sub, /*mp_ass_subscript*/
 };
 
-static PyObject *
-collect(LRU *self, PyObject * (*getterfunc)(Node *))
+static PyObject *collect(LRU *self, PyObject * (*getterfunc)(Node *))
 {
     register PyObject *v;
     Node *curr;
@@ -371,15 +331,34 @@ collect(LRU *self, PyObject * (*getterfunc)(Node *))
     return v;
 }
 
-static PyObject *
-get_key(Node *node)
+static PyObject *get_key(Node *node)
 {
     Py_INCREF(node->key);
     return node->key;
 }
 
-static PyObject *
-LRU_update(LRU *self, PyObject *args, PyObject *kwargs)
+static PyObject *LRU_put(LRU *self, PyObject *args, PyObject *kwargs)
+{
+	PyObject *key, *value;
+	PyObject *arg = NULL;
+	Py_ssize_t pos = 0;
+
+	if ((PyArg_ParseTuple(args, "|O", &arg))) {
+		if (arg && PyDict_Check(arg)) {
+			while (PyDict_Next(arg, &pos, &key, &value))
+				lru_put(self, key, value);
+		}
+	}
+
+	if (kwargs != NULL && PyDict_Check(kwargs)) {
+		while (PyDict_Next(kwargs, &pos, &key, &value))
+			lru_put(self, key, value);
+	}
+
+	Py_RETURN_NONE;
+}
+
+static PyObject *LRU_update(LRU *self, PyObject *args, PyObject *kwargs)
 {
 	PyObject *key, *value;
 	PyObject *arg = NULL;
@@ -400,8 +379,7 @@ LRU_update(LRU *self, PyObject *args, PyObject *kwargs)
 	Py_RETURN_NONE;
 }
 
-static PyObject *
-LRU_peek_first_item(LRU *self)
+static PyObject *LRU_peek_first_item(LRU *self)
 {
     if (self->first) {
         PyObject *tuple = PyTuple_New(2);
@@ -414,8 +392,7 @@ LRU_peek_first_item(LRU *self)
     else Py_RETURN_NONE;
 }
 
-static PyObject *
-LRU_peek_last_item(LRU *self)
+static PyObject *LRU_peek_last_item(LRU *self)
 {
     if (self->last) {
         PyObject *tuple = PyTuple_New(2);
@@ -428,32 +405,18 @@ LRU_peek_last_item(LRU *self)
     else Py_RETURN_NONE;
 }
 
-static PyObject *
-LRU_keys(LRU *self) {
-    return collect(self, get_key);
-}
+static PyObject *LRU_keys(LRU *self) { return collect(self, get_key); }
 
-static PyObject *
-get_value(Node *node)
+static PyObject *get_value(Node *node)
 {
     Py_INCREF(node->value);
     return node->value;
 }
 
-static PyObject *
-LRU_values(LRU *self)
-{
-    return collect(self, get_value);
-}
+static PyObject *LRU_values(LRU *self) { return collect(self, get_value); }
 
-static PyObject *
-LRU_set_callback(LRU *self, PyObject *args)
-{
-    return set_callback(self, args);
-}
 
-static PyObject *
-get_item(Node *node)
+static PyObject *get_item(Node *node)
 {
     PyObject *tuple = PyTuple_New(2);
     Py_INCREF(node->key);
@@ -463,32 +426,24 @@ get_item(Node *node)
     return tuple;
 }
 
-static PyObject *
-LRU_items(LRU *self)
-{
-    return collect(self, get_item);
-}
+static PyObject *LRU_items(LRU *self) { return collect(self, get_item); }
 
-static PyObject *
-LRU_set_size(LRU *self, PyObject *args, PyObject *kwds)
+static PyObject *LRU_set_size(LRU *self, PyObject *args, PyObject *kwds)
 {
     Py_ssize_t newSize;
-    if (!PyArg_ParseTuple(args, "n", &newSize)) {
-        return NULL;
-    }
+    if (!PyArg_ParseTuple(args, "n", &newSize))  return NULL;
+
     if (newSize <= 0) {
         PyErr_SetString(PyExc_ValueError, "Size should be a positive number");
         return NULL;
     }
-    while (lru_length(self) > newSize) {
-        lru_delete_last(self);
-    }
+    while (lru_length(self) > newSize)  lru_delete_last(self);
+
     self->size = newSize;
     Py_RETURN_NONE;
 }
 
-static PyObject *
-LRU_clear(LRU *self)
+static PyObject *LRU_clear(LRU *self)
 {
     Node *c = self->first;
 
@@ -499,23 +454,12 @@ LRU_clear(LRU *self)
     }
     PyDict_Clear(self->dict);
 
-    self->hits = 0;
-    self->misses = 0;
     Py_RETURN_NONE;
 }
 
 
-static PyObject *
-LRU_get_size(LRU *self)
-{
-    return Py_BuildValue("i", self->size);
-}
+static PyObject *LRU_get_size(LRU *self) { return Py_BuildValue("i", self->size); }
 
-static PyObject *
-LRU_get_stats(LRU *self)
-{
-    return Py_BuildValue("nn", self->hits, self->misses);
-}
 
 
 /* Hack to implement "key in lru" */
@@ -551,8 +495,6 @@ static PyMethodDef LRU_methods[] = {
                     PyDoc_STR("L.get_size() -> get size of LRU")},
     {"clear", (PyCFunction)LRU_clear, METH_NOARGS,
                     PyDoc_STR("L.clear() -> clear LRU")},
-    {"get_stats", (PyCFunction)LRU_get_stats, METH_NOARGS,
-                    PyDoc_STR("L.get_stats() -> returns a tuple with cache hits and misses")},
     {"peek_first_item", (PyCFunction)LRU_peek_first_item, METH_NOARGS,
                     PyDoc_STR("L.peek_first_item() -> returns the MRU item (key,value) without changing key order")},
     {"peek_last_item", (PyCFunction)LRU_peek_last_item, METH_NOARGS,
@@ -561,44 +503,28 @@ static PyMethodDef LRU_methods[] = {
                     PyDoc_STR("L.pop() -> returns the LRU item (key,value) without changing key order")},
     {"update", (PyCFunction)LRU_update, METH_VARARGS | METH_KEYWORDS,
                     PyDoc_STR("L.update() -> update value for key in LRU")},
-    {"set_callback", (PyCFunction)LRU_set_callback, METH_VARARGS,
-                    PyDoc_STR("L.set_callback(callback) -> set a callback to call when an item is evicted.")},
+    {"put", (PyCFunction)LRU_put, METH_VARARGS | METH_KEYWORDS,
+                    PyDoc_STR("L.update() -> update value for key in LRU")},
+
     {NULL,	NULL},
 };
 
-static PyObject*
-LRU_repr(LRU* self)
-{
-    return PyObject_Repr(self->dict);
-}
+static PyObject*LRU_repr(LRU* self) { return PyObject_Repr(self->dict); }
 
 static int
 LRU_init(LRU *self, PyObject *args, PyObject *kwds)
 {
-    static char *kwlist[] = {"size", "callback", NULL};
-    PyObject *callback = NULL;
-    self->callback = NULL;
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "n|O", kwlist, &self->size, &callback)) {
-        return -1;
-    }
+    static char *kwlist[] = {"size", NULL};
 
-    if (callback && callback != Py_None) {
-        if (!PyCallable_Check(callback)) {
-            PyErr_SetString(PyExc_TypeError, "parameter must be callable");
-            return -1;
-        }
-        Py_XINCREF(callback);
-        self->callback = callback;
-    }
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "n|O", kwlist, &self->size)) { return -1; }
 
-    if ((Py_ssize_t)self->size <= 0) {
+
+    if ((Py_ssize_t)self->size < 0) {
         PyErr_SetString(PyExc_ValueError, "Size should be a positive number");
         return -1;
     }
     self->dict = PyDict_New();
     self->first = self->last = NULL;
-    self->hits = 0;
-    self->misses = 0;
     return 0;
 }
 
@@ -608,17 +534,15 @@ LRU_dealloc(LRU *self)
     if (self->dict) {
         LRU_clear(self);
         Py_DECREF(self->dict);
-        Py_XDECREF(self->callback);
     }
     PyObject_Del((PyObject*)self);
 }
 
 PyDoc_STRVAR(lru_doc,
-"LRU(size, callback=None) -> new LRU dict that can store up to size elements\n"
+"LRU(size) -> new LRU dict that can store up to size elements\n"
 "An LRU dict behaves like a standard dict, except that it stores only fixed\n"
 "set of elements. Once the size overflows, it evicts least recently used\n"
-"items.  If a callback is set it will call the callback with the evicted key\n"
-" and item.\n\n"
+"items. \n\n"
 "Eg:\n"
 ">>> l = LRU(3)\n"
 ">>> for i in range(5):\n"
@@ -669,8 +593,8 @@ static PyTypeObject LRUType = {
     0,                       /* tp_new */
 };
 
-#if PY_MAJOR_VERSION >= 3
-  static struct PyModuleDef moduledef = {
+
+static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
     "_lru",            /* m_name */
     lru_doc,          /* m_doc */
@@ -681,47 +605,20 @@ static PyTypeObject LRUType = {
     NULL,             /* m_clear */
     NULL,             /* m_free */
   };
-#endif
 
-static PyObject *
-moduleinit(void)
-{
+
+static PyObject *moduleinit(void) {
     PyObject *m;
-
     NodeType.tp_new = PyType_GenericNew;
-    if (PyType_Ready(&NodeType) < 0)
-        return NULL;
-
+    if (PyType_Ready(&NodeType) < 0) return NULL;
     LRUType.tp_new = PyType_GenericNew;
-    if (PyType_Ready(&LRUType) < 0)
-        return NULL;
-
-    #if PY_MAJOR_VERSION >= 3
-        m = PyModule_Create(&moduledef);
-    #else
-        m = Py_InitModule3("_lru", NULL, lru_doc);
-    #endif
-
-    if (m == NULL)
-        return NULL;
-
+    if (PyType_Ready(&LRUType) < 0) return NULL;
+    m = PyModule_Create(&moduledef);
+    if (m == NULL) return NULL;
     Py_INCREF(&NodeType);
     Py_INCREF(&LRUType);
     PyModule_AddObject(m, "LRU", (PyObject *) &LRUType);
-
     return m;
 }
 
-#if PY_MAJOR_VERSION < 3
-    PyMODINIT_FUNC
-    initlru(void)
-    {
-        moduleinit();
-    }
-#else
-    PyMODINIT_FUNC
-    PyInit__lru(void)
-    {
-        return moduleinit();
-    }
-#endif
+PyMODINIT_FUNC PyInit__lru(void) { return moduleinit(); }

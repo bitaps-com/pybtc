@@ -375,6 +375,8 @@ class Connector:
             self.last_block_height = block["height"]
             if self.utxo_data:
                 self.utxo.destroy_utxo()
+                try: self.checkpoints.append(block["checkpoint"])
+                except: pass
 
 
             self.blocks_processed_count += 1

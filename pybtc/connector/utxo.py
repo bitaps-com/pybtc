@@ -37,7 +37,7 @@ class UTXO():
         self.outs_total = 0
 
     def set(self, outpoint, pointer, amount, address):
-        self.cached[outpoint] = (pointer, amount, address)
+        self.cached.put({outpoint: (pointer, amount, address)})
 
 
     def remove(self, outpoint):
@@ -56,12 +56,6 @@ class UTXO():
                 except:
                     self.destroyed_utxo += 1
                     pass
-
-        if len(self.cached) > self._cache_hard_limit:
-            await self.save_utxo()
-        elif len(self.cached) > self._cache_soft_limit and self.save_future.done():
-            self.loop.create_task(self.save_utxo())
-
 
 
     async def save_utxo(self):
