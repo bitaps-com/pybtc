@@ -374,7 +374,7 @@ class Connector:
             self.block_headers_cache.set(block["hash"], block["height"])
             self.last_block_height = block["height"]
             if self.utxo_data:
-                self.utxo.destroy_utxo()
+                await self.utxo.destroy_utxo()
                 try: self.checkpoints.append(block["checkpoint"])
                 except: pass
 
