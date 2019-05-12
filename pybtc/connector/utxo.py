@@ -64,7 +64,7 @@ class UTXO():
             lb = 0
             block_changed = False
             utxo = set()
-            self.log.critical(">>" + str(len(self.cached)))
+            # self.log.critical(">>" + str(len(self.cached)))
             while self.cached:
                 i = self.cached.pop()
                 if lb != i[1][0] >> 42:
@@ -134,7 +134,7 @@ class UTXO():
             #         pass
             self.last_saved_block = lb
         finally:
-            self.save_future = False
+            self.save_process = False
 
     def get(self, key):
         self._requests += 1
