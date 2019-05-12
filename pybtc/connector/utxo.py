@@ -111,7 +111,7 @@ class UTXO():
                     if d:
                         await conn.execute("DELETE FROM connector_utxo WHERE "
                                            "outpoint = ANY($1);", d)
-                    if a:
+                    if utxo:
                         await conn.copy_records_to_table('connector_utxo',
                                                          columns=["outpoint", "data"], records=utxo)
                     await conn.execute("UPDATE connector_utxo_state SET value = $1 "
