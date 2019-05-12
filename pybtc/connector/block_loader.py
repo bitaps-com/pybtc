@@ -245,7 +245,7 @@ class Worker:
                             inp = block["rawTx"][z]["vIn"][i]
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                             try:
-                               r = self.coins.delete(outpoint)
+                               r = self.coins[outpoint]
                                block["rawTx"][z]["vIn"][i]["_c_"] = r
                                t += 1
                                self.destroyed_coins[r[0]] = True
