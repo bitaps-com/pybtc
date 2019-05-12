@@ -37,7 +37,7 @@ class UTXO():
         self.outs_total = 0
 
     def set(self, outpoint, pointer, amount, address):
-        self.cached.put({outpoint: (pointer, amount, address)})
+        self.cached[outpoint] = (pointer, amount, address)
 
 
     def remove(self, outpoint):
