@@ -69,7 +69,7 @@ class UTXO():
                 if lb != i[1][0] >> 42:
                     block_changed = True
                     lb = i[1][0] >> 42
-                if self.cached <= self.size_limit:
+                if len(self.cached) <= self.size_limit:
                     if block_changed:
                         break
                 utxo.add((i[0],b"".join((int_to_c_int(i[1][0]),

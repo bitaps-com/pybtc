@@ -255,7 +255,6 @@ static PyObject *LRU_delete(LRU *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "O|O", &key, &instead)) return NULL;
 
     Node *node = GET_NODE(self->dict, key);
-    PyErr_Clear();  /* GET_NODE sets an exception on miss. Shut it up. */
     if (!node) {
        if (!instead) { Py_RETURN_NONE; }
        Py_INCREF(instead);
