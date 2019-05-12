@@ -177,7 +177,7 @@ class UTXO():
                 rows = await conn.fetch("SELECT outpoint, connector_utxo.data "
                                         "FROM connector_utxo "
                                         "WHERE outpoint = ANY($1);", l)
-            self.log.critical("-"+str(len(rows)))
+            self.log.critical("-"+str(len(self.missed)))
             for i in l:
                 try:
                     self.missed.remove(i)
