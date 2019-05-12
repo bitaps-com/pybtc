@@ -138,8 +138,8 @@ class UTXO():
     def get(self, key):
         self._requests += 1
         try:
-            i = self.cached[key]
-            self.destroyed.append(key)
+            i = self.cached.delete(key)
+            # self.destroyed.append(key)
             # try:
             #     self.destroyed[block_height].add(key)
             # except:
