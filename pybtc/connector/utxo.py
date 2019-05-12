@@ -64,6 +64,7 @@ class UTXO():
             lb = 0
             block_changed = False
             utxo = set()
+            self.log.critical(">>" + str(len(self.cached)))
             while self.cached:
                 i = self.cached.pop()
                 if lb != i[1][0] >> 42:
@@ -77,7 +78,7 @@ class UTXO():
                                          i[1][2]))))
                 if block_changed:
                     self.cached.append({i[0]: i[1]})
-
+            self.log.critical(">" + str(len(self.cached)))
             #
             #     block_height
             # for key in iter(self.cached):
