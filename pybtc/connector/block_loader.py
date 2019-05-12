@@ -16,7 +16,7 @@ from _lru import LRU
 
 
 class BlockLoader:
-    def __init__(self, parent, workers=8):
+    def __init__(self, parent, workers=4):
         self.worker_limit = workers
         self.worker = dict()
         self.worker_tasks = list()
