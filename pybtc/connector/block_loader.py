@@ -245,7 +245,7 @@ class Worker:
                             inp = block["rawTx"][z]["vIn"][i]
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                             try:
-                               r = self.coins(outpoint)
+                               r = self.coins.delete(outpoint)
                                self.log.critical(str(r))
                                block["rawTx"][z]["vIn"][i]["_c_"] = r[1]
                                t += 1
