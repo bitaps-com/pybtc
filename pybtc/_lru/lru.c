@@ -246,28 +246,6 @@ static PyObject *LRU_get(LRU *self, PyObject *args)
 }
 
 
-static int lru_put(LRU *self, PyObject *key, PyObject *value)
-{
-    int res = 0;
-
-    Node *node = PyObject_NEW(Node, &NodeType);
-    node->key = key;
-    node->value = value;
-    node->next = node->prev = NULL;
-
-    Py_INCREF(key);
-    Py_INCREF(value);
-
-    res = PUT_NODE(self->dict, key, node);
-    if (res == 0) {
-        if (self->size > 0 && lru_length(self) > self->size) lru_delete_last(self);
-        lru_add_node_at_head(self, node);
-    }
-
-
-    Py_XDECREF(node);
-    return res;
-}
 
 static int lru_append(LRU *self, PyObject *key, PyObject *value)
 {
@@ -334,6 +312,28 @@ static int lru_ass_sub(LRU *self, PyObject *key, PyObject *value)
         }
     } else {
         if (PUT_NODE(self->dict, key, NULL) == 0)  lru_remove_node(self, node);
+    }
+
+    Py_XDECREF(node);
+    return res;
+}
+
+static int lru_put(LRU *self, PyObject *key, PyObject *value)
+{
+    int res = 0;
+
+    Node *node = PyObject_NEW(Node, &NodeType);
+    node->key = key;
+    node->value = value;
+    node->next = node->prev = NULL;
+
+    Py_INCREF(key);
+    Py_INCREF(value);
+
+    res = PUT_NODE(self->dict, key, node);
+    if (res == 0) {
+        if (self->size > 0 && lru_length(self) > self->size) lru_delete_last(self);
+        lru_add_node_at_head(self, node);
     }
 
     Py_XDECREF(node);
@@ -413,6 +413,27 @@ static PyObject *LRU_update(LRU *self, PyObject *args, PyObject *kwargs)
 	Py_RETURN_NONE;
 }
 
+static PyObject *LRU_put(LRU *self, PyObject *args, PyObject *kwargs)
+{
+	PyObject *key, *value;
+	PyObject *arg = NULL;
+	Py_ssize_t pos = 0;
+
+	if ((PyArg_ParseTuple(args, "|O", &arg))) {
+		if (arg && PyDict_Check(arg)) {
+			while (PyDict_Next(arg, &pos, &key, &value))
+				lru_put(self, key, value);
+		}
+	}
+
+	if (kwargs != NULL && PyDict_Check(kwargs)) {
+		while (PyDict_Next(kwargs, &pos, &key, &value))
+			lru_put(self, key, value);
+	}
+
+	Py_RETURN_NONE;
+}
+
 static PyObject *LRU_peek_first_item(LRU *self)
 {
     if (self->first) {
@@ -467,7 +488,7 @@ static PyObject *LRU_set_size(LRU *self, PyObject *args, PyObject *kwds)
     Py_ssize_t newSize;
     if (!PyArg_ParseTuple(args, "n", &newSize))  return NULL;
 
-    if (newSize <= 0) {
+    if (newSize < 0) {
         PyErr_SetString(PyExc_ValueError, "Size should be a positive number");
         return NULL;
     }
@@ -537,6 +558,8 @@ static PyMethodDef LRU_methods[] = {
                     PyDoc_STR("L.pop() -> returns the LRU item (key,value) without changing key order")},
     {"update", (PyCFunction)LRU_update, METH_VARARGS | METH_KEYWORDS,
                     PyDoc_STR("L.update() -> update value for key in LRU")},
+    {"put", (PyCFunction)LRU_append, METH_VARARGS | METH_KEYWORDS,
+                    PyDoc_STR("L.append() -> append value for key in LRU")},
     {"append", (PyCFunction)LRU_append, METH_VARARGS | METH_KEYWORDS,
                     PyDoc_STR("L.append() -> append value for key in LRU")},
 
@@ -545,12 +568,11 @@ static PyMethodDef LRU_methods[] = {
 
 static PyObject*LRU_repr(LRU* self) { return PyObject_Repr(self->dict); }
 
-static int
-LRU_init(LRU *self, PyObject *args, PyObject *kwds)
+static int LRU_init(LRU *self, PyObject *args, PyObject *kwds)
 {
     static char *kwlist[] = {"size", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "n|O", kwlist, &self->size)) { return -1; }
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|n", kwlist, &self->size)) self->size = 0;
 
 
     if ((Py_ssize_t)self->size < 0) {
