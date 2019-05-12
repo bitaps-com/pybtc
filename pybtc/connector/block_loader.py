@@ -246,7 +246,6 @@ class Worker:
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                             try:
                                r = self.coins.delete(outpoint)
-                               self.log.critical(str(r))
                                block["rawTx"][z]["vIn"][i]["_c_"] = r[1]
                                t += 1
                                self.destroyed_coins[r[0]] = True
@@ -269,7 +268,8 @@ class Worker:
                     for i in blocks[x]["rawTx"][y]["vOut"]:
                         try:
                             pointer = (x << 42) + (y << 21) + i
-                            blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = self.destroyed_coins.delete(pointer)[1]
+                            r = self.destroyed_coins.delete(pointer)
+                            blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r[1]
                         except: pass
 
                 blocks[x] = pickle.dumps(blocks[x])
