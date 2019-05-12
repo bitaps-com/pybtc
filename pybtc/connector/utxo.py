@@ -5,17 +5,15 @@ from collections import OrderedDict, deque as LRU
 from pybtc import LRU
 
 class UTXO():
-    def __init__(self, db_pool, loop, log, cache_size, block_txo_max = 500000):
-        self.cached = LRU(cache_size)
+    def __init__(self, db_pool, loop, log, cache_size):
+        self.cached = LRU()
         self.missed = set()
         self.destroyed = deque()
-        self.deleted = LRU(200000)
+        self.deleted = LRU()
         self.log = log
         self.loaded = OrderedDict()
         self.maturity = 100
-        self.block_txo_max = block_txo_max
-        self._cache_hard_limit = cache_size - block_txo_max
-        self._cache_soft_limit = cache_size - block_txo_max * 2
+        self.size_limit = cache_size
         self._db_pool = db_pool
         self.loop = loop
         self.clear_tail = False
@@ -60,6 +58,8 @@ class UTXO():
 
     async def save_utxo(self):
         # save to db tail from cache
+        self.log.critical("save utxo>>>>")
+        return
         if not self.save_future.done():
             await self.save_future.done()
             return
