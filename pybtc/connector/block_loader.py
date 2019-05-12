@@ -248,7 +248,7 @@ class Worker:
                                r = self.coins.delete(outpoint)
                                block["rawTx"][z]["vIn"][i]["_c_"] = r[1]
                                t += 1
-                               self.destroyed_coins[r[0]] = True
+                               self.destroyed_coins[r[1][0]] = True
                             except:
                                 pass
                         for i in block["rawTx"][z]["vOut"]:
