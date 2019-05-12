@@ -76,8 +76,8 @@ class UTXO():
                 utxo.add((i[0],b"".join((int_to_c_int(i[1][0]),
                                          int_to_c_int(i[1][1]),
                                          i[1][2]))))
-                if block_changed:
-                    self.cached.append({i[0]: i[1]})
+            if block_changed:
+                self.cached.append({i[0]: i[1]})
             self.log.critical(">" + str(len(self.cached)))
             #
             #     block_height
