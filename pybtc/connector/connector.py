@@ -377,7 +377,7 @@ class Connector:
                 await self.utxo.destroy_utxo()
                 try: self.checkpoints.append(block["checkpoint"])
                 except: pass
-                if len(self.utxo.cached) > self.utxo.size_limit:
+                if len(self.utxo.cached) > self.utxo.size_limit and not self.utxo.save_process:
                     self.loop.create_task(self.utxo.save_utxo())
 
 

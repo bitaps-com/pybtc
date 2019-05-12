@@ -78,7 +78,7 @@ class UTXO():
                                          i[1][2]))))
             if block_changed:
                 self.cached.append({i[0]: i[1]})
-            self.log.critical(">" + str(len(self.cached)))
+            # self.log.critical(">" + str(len(self.cached)))
             #
             #     block_height
             # for key in iter(self.cached):
@@ -170,12 +170,14 @@ class UTXO():
                 continue
             break
         try:
+
             self.load_utxo_future = asyncio.Future()
             l = set(self.missed)
             async with self._db_pool.acquire() as conn:
                 rows = await conn.fetch("SELECT outpoint, connector_utxo.data "
                                         "FROM connector_utxo "
                                         "WHERE outpoint = ANY($1);", l)
+            self.log.critical("-"+str(len(rows)))
             for i in l:
                 try:
                     self.missed.remove(i)
