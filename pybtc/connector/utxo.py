@@ -48,7 +48,7 @@ class UTXO():
 
         self.save_process = True
         try:
-            self.log.critical("cached " + str(len(self.cached)) )
+            # self.log.critical("cached " + str(len(self.cached)) )
             checkpoint = self.checkpoints.popleft()
             lb = 0
             block_changed = False
@@ -84,8 +84,8 @@ class UTXO():
                     self.cached.append({i: self.pending_saved[i]})
                 self.log.critical("checkpoint not found " + str(self.checkpoints))
                 return
-            self.log.critical("checkpoints " + str(self.checkpoints) + " > " + str(checkpoint))
-            self.log.critical("found checkpoint " + str(lb) + "  len " + str(len(utxo)) + " cached " + str(len(self.cached)) )
+            # self.log.critical("checkpoints " + str(self.checkpoints) + " > " + str(checkpoint))
+            # self.log.critical("found checkpoint " + str(lb) + "  len " + str(len(utxo)) + " cached " + str(len(self.cached)) )
 
             # self.log.critical(">" + str(len(self.cached)))
             #
@@ -115,7 +115,7 @@ class UTXO():
             #                               i[2]))))
 
             # insert to db
-            self.log.critical("start  " + str(len(utxo)))
+            # self.log.critical("start  " + str(len(utxo)))
             d = set()
             async with self._db_pool.acquire() as conn:
                 async with conn.transaction():
@@ -129,7 +129,7 @@ class UTXO():
                                        "WHERE name = 'last_block';", lb)
             self.saved_utxo += len(utxo)
             self.deleted_utxo += len(d)
-            self.log.critical("saved  " + str(len(utxo)))
+            self.log.warning("saved utxo -> " + str(len(utxo)))
             # # remove from cache
             # for key in a:
             #     try:
