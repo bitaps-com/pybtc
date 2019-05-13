@@ -182,14 +182,12 @@ class UTXO():
                 continue
             break
         try:
-            self.log.critical("load utxo " + str(len(self.missed)))
             self.load_utxo_future = asyncio.Future()
             l = set(self.missed)
             async with self._db_pool.acquire() as conn:
                 rows = await conn.fetch("SELECT outpoint, connector_utxo.data "
                                         "FROM connector_utxo "
                                         "WHERE outpoint = ANY($1);", l)
-            self.log.critical("loaded "+str(len(rows)))
             for i in l:
                 try:
                     self.missed.remove(i)
