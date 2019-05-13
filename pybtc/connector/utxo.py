@@ -48,6 +48,7 @@ class UTXO():
 
         self.save_process = True
         try:
+            self.log.critical("cached " + str(len(self.cached)) )
             checkpoint = self.checkpoints.pop()
             lb = 0
             block_changed = False
