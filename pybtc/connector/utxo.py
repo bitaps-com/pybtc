@@ -80,7 +80,7 @@ class UTXO():
                     self.cached.append({i[0]: (pointer, amount, address)})
                     self.log.critical("checkpoint not found")
                     return
-            self.log.critical("found checkpoint " + str(lb) + "  len" + str(len(utxo)))
+            self.log.critical("found checkpoint " + str(lb) + "  len " + str(len(utxo)) + " cached " + str(len(self.cached)) )
 
             # self.log.critical(">" + str(len(self.cached)))
             #
