@@ -377,10 +377,16 @@ class Connector:
                 if len(self.utxo.cached) > self.utxo.size_limit and \
                    not self.utxo.save_process and \
                    self.utxo.checkpoints:
-                    self.utxo.deleted_last_block = block["height"]
-                    self.utxo.pending_deleted = self.utxo.pending_deleted.union(self.utxo.deleted)
-                    self.utxo.deleted = set()
-                    self.loop.create_task(self.utxo.save_utxo())
+                    n = list()
+                    for i in self.utxo.checkpoints:
+                        if i >= block["height"]:
+                            n.append(i)
+                    self.utxo.checkpoints = n
+                    if n:
+                        self.utxo.deleted_last_block = block["height"]
+                        self.utxo.pending_deleted = self.utxo.pending_deleted.union(self.utxo.deleted)
+                        self.utxo.deleted = set()
+                        self.loop.create_task(self.utxo.save_utxo())
 
 
             self.blocks_processed_count += 1

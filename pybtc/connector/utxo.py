@@ -51,7 +51,8 @@ class UTXO():
         self.save_process = True
         try:
             # self.log.critical("cached " + str(len(self.cached)) )
-            # self.checkpoints = sorted(self.checkpoints)
+            i = self.cached.peek_last_item()
+            self.checkpoints = sorted(self.checkpoints)
             checkpoint = self.checkpoints.pop(0)
             lb = 0
             block_changed = False
