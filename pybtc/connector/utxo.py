@@ -49,13 +49,13 @@ class UTXO():
         self.save_process = True
         try:
             self.log.critical("cached " + str(len(self.cached)) )
-            checkpoint = self.checkpoints.pop()
+            checkpoint = self.checkpoints.popleft()
             lb = 0
             block_changed = False
             checkpoint_found = False
             utxo = set()
             while self.cached:
-                i = self.cached.pop()
+                i = self.cached.popleft()
                 if lb != i[1][0] >> 42:
                     block_changed = True
                     lb = i[1][0] >> 42
@@ -81,7 +81,7 @@ class UTXO():
                     self.cached.append({i: self.pending_saved[i]})
                 self.log.critical("checkpoint not found " + str(self.checkpoints))
                 return
-            self.log.critical("checkpoints " + str(self.checkpoints))
+            self.log.critical("checkpoints " + str(self.checkpoints) + " > " + str(checkpoint))
             self.log.critical("found checkpoint " + str(lb) + "  len " + str(len(utxo)) + " cached " + str(len(self.cached)) )
 
             # self.log.critical(">" + str(len(self.cached)))
