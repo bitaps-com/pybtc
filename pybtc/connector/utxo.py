@@ -8,7 +8,7 @@ class UTXO():
         self.cached = LRU()
         self.missed = set()
         self.deleted = LRU()
-        self.checkpoints = deque()
+        self.checkpoints = list()
         self.log = log
         self.loaded = LRU()
         self.pending_saved = OrderedDict()
@@ -49,7 +49,8 @@ class UTXO():
         self.save_process = True
         try:
             # self.log.critical("cached " + str(len(self.cached)) )
-            checkpoint = self.checkpoints.popleft()
+            self.checkpoints = sorted(self.checkpoints)
+            checkpoint = self.checkpoints.pop(0)
             lb = 0
             block_changed = False
             checkpoint_found = False
@@ -62,11 +63,11 @@ class UTXO():
                 if lb - 1 == checkpoint:
                     if len(self.cached) > self.size_limit:
                         if self.checkpoints:
-                            checkpoint = self.checkpoints.popleft()
+                            checkpoint = self.checkpoints.pop(0)
                     else:
                         checkpoint_found = True
                 while self.checkpoints and checkpoint < lb - 1:
-                    checkpoint = self.checkpoints.popleft()
+                    checkpoint = self.checkpoints.pop(0)
 
 
 
