@@ -80,7 +80,7 @@ class UTXO():
                     self.cached.append({i[0]: (pointer, amount, address)})
                     self.log.critical("checkpoint not found")
                     return
-            self.log.critical("found checkpoint " + str(lb))
+            self.log.critical("found checkpoint " + str(lb) + "  len" + str(len(utxo)))
 
             # self.log.critical(">" + str(len(self.cached)))
             #
@@ -110,6 +110,7 @@ class UTXO():
             #                               i[2]))))
 
             # insert to db
+            self.log.critical("start  " + str(len(utxo)))
             d = set()
             async with self._db_pool.acquire() as conn:
                 async with conn.transaction():
