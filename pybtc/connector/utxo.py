@@ -65,8 +65,9 @@ class UTXO():
                             checkpoint = self.checkpoints.popleft()
                     else:
                         checkpoint_found = True
-                elif checkpoint < lb - 1 and self.checkpoints:
+                while self.checkpoints and checkpoint < lb - 1:
                     checkpoint = self.checkpoints.popleft()
+
 
 
                 if len(self.cached) <= self.size_limit:
@@ -186,14 +187,14 @@ class UTXO():
                 continue
             break
         try:
-
+            self.log.critical("load utxo " + str(self.missed))
             self.load_utxo_future = asyncio.Future()
             l = set(self.missed)
             async with self._db_pool.acquire() as conn:
                 rows = await conn.fetch("SELECT outpoint, connector_utxo.data "
                                         "FROM connector_utxo "
                                         "WHERE outpoint = ANY($1);", l)
-            self.log.critical("-"+str(len(self.missed)))
+            self.log.critical("loaded "+str(len(self.missed)))
             for i in l:
                 try:
                     self.missed.remove(i)
