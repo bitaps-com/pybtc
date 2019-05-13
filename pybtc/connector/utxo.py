@@ -10,7 +10,7 @@ class UTXO():
         self.deleted = LRU()
         self.checkpoints = deque()
         self.log = log
-        self.loaded = OrderedDict()
+        self.loaded = LRU()
         self.pending_saved = OrderedDict()
         self.maturity = 100
         self.size_limit = cache_size
@@ -169,14 +169,9 @@ class UTXO():
                 self.missed.add(key)
                 return None
 
-    def get_loaded(self, key, block_height):
+    def get_loaded(self, key):
         try:
-            i = self.loaded[key]
-            try:
-                self.destroyed[block_height].add(key)
-            except:
-                self.destroyed[block_height] = {key}
-            return i
+            return self.loaded.delete(key)
         except:
             return None
 
