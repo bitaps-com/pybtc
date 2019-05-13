@@ -65,6 +65,8 @@ class UTXO():
                             checkpoint = self.checkpoints.popleft()
                     else:
                         checkpoint_found = True
+                elif checkpoint < lb - 1 and self.checkpoints:
+                    checkpoint = self.checkpoints.popleft()
 
 
                 if len(self.cached) <= self.size_limit:
@@ -76,6 +78,7 @@ class UTXO():
                 self.pending_saved[i[0]] = i[1]
             if block_changed:
                 self.cached.append({i[0]: i[1]})
+                lb -= 1
             if not checkpoint_found:
                 for i in reversed(self.pending_saved):
                     self.cached.append({i: self.pending_saved[i]})
