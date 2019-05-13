@@ -81,6 +81,7 @@ class UTXO():
                     self.cached.append({i: self.pending_saved[i]})
                 self.log.critical("checkpoint not found " + str(self.checkpoints))
                 return
+            self.log.critical("checkpoints " + str(self.checkpoints))
             self.log.critical("found checkpoint " + str(lb) + "  len " + str(len(utxo)) + " cached " + str(len(self.cached)) )
 
             # self.log.critical(">" + str(len(self.cached)))
