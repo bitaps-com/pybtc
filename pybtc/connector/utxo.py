@@ -148,6 +148,7 @@ class UTXO():
             self.log.critical("implement rollback  ")
             self.log.critical(str(traceback.format_exc()))
         finally:
+            self.pending_saved = OrderedDict()
             self.save_process = False
 
     def get(self, key):
