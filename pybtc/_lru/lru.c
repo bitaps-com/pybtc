@@ -221,7 +221,7 @@ static PyObject *LRU_pop(LRU *self)
         Node* n = self->last;
         lru_remove_node(self, n);
         PUT_NODE(self->dict, n->key, NULL);
-        Py_DECREF(node);
+        Py_DECREF(n);
         return tuple;
     }
     else Py_RETURN_NONE;
