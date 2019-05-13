@@ -178,7 +178,7 @@ class BlockLoader:
                 for i in blocks:
                     self.parent.block_preload.set(i, blocks[i])
                 if blocks:
-                    self.parent.checkpoints.append(i)
+                    self.parent.utxo.checkpoints.append(i)
 
 
                 # def disconnect(self,ip):
