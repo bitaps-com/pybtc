@@ -77,7 +77,6 @@ class Connector:
         self.tx_processing_time = 0
         self.non_cached_blocks = 0
         self.total_received_tx_time = 0
-        self.checkpoints = deque()
         self.tt = 0
         self.yy = 0
         self.start_time = time.time()
@@ -374,10 +373,11 @@ class Connector:
             self.block_headers_cache.set(block["hash"], block["height"])
             self.last_block_height = block["height"]
             if self.utxo_data:
-                await self.utxo.destroy_utxo()
-                try: self.checkpoints.append(block["checkpoint"])
+                try: self.utxo.checkpoints.append(block["checkpoint"])
                 except: pass
-                if len(self.utxo.cached) > self.utxo.size_limit and not self.utxo.save_process:
+                if len(self.utxo.cached) > self.utxo.size_limit and \
+                   not self.utxo.save_process and \
+                   self.utxo.checkpoints:
                     self.loop.create_task(self.utxo.save_utxo())
 
 

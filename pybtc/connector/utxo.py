@@ -8,8 +8,8 @@ class UTXO():
     def __init__(self, db_pool, loop, log, cache_size):
         self.cached = LRU()
         self.missed = set()
-        self.destroyed = deque()
         self.deleted = LRU()
+        self.checkpoints = deque()
         self.log = log
         self.loaded = OrderedDict()
         self.maturity = 100
@@ -40,44 +40,48 @@ class UTXO():
     def remove(self, outpoint):
         del self.cached[outpoint]
 
-    async def destroy_utxo(self):
-        while self.destroyed:
-            outpoint = self.destroyed.pop()
-            try:
-                del self.cached[outpoint]
-                self.destroyed_utxo += 1
-            except:
-                try:
-                    del self.loaded[outpoint]
-                    self.destroyed_utxo += 1
-                except:
-                    self.destroyed_utxo += 1
-                    pass
-
 
     async def save_utxo(self):
         # save to db tail from cache
-        if  self.save_process or not self.cached:
-            return
+        if  self.save_process or not self.cached: return
+        if  not self.checkpoints: return
+
         self.save_process = True
         try:
+            checkpoint = self.checkpoints.pop()
             lb = 0
             block_changed = False
+            checkpoint_found = False
             utxo = set()
-            # self.log.critical(">>" + str(len(self.cached)))
             while self.cached:
                 i = self.cached.pop()
                 if lb != i[1][0] >> 42:
                     block_changed = True
                     lb = i[1][0] >> 42
+                if lb - 1 == checkpoint:
+                    checkpoint_found = True
+
                 if len(self.cached) <= self.size_limit:
-                    if block_changed:
+                    if block_changed and checkpoint_found:
                         break
                 utxo.add((i[0],b"".join((int_to_c_int(i[1][0]),
                                          int_to_c_int(i[1][1]),
                                          i[1][2]))))
             if block_changed:
                 self.cached.append({i[0]: i[1]})
+            if not checkpoint_found:
+                for i in reversed(utxo):
+                    d = i[1]
+                    pointer = c_int_to_int(d)
+                    f = c_int_len(pointer)
+                    amount = c_int_to_int(d[f:])
+                    f += c_int_len(amount)
+                    address = d[f:]
+                    self.cached.append({i[0]: (pointer, amount, address)})
+                    self.log.critical("checkpoint not found")
+                    return
+            self.log.critical("found checkpoint " + str(lb))
+
             # self.log.critical(">" + str(len(self.cached)))
             #
             #     block_height
@@ -119,7 +123,7 @@ class UTXO():
                                        "WHERE name = 'last_block';", lb)
             self.saved_utxo += len(utxo)
             self.deleted_utxo += len(d)
-
+            self.log.critical("saved  " + str(len(utxo)))
             # # remove from cache
             # for key in a:
             #     try:
@@ -140,11 +144,6 @@ class UTXO():
         self._requests += 1
         try:
             i = self.cached.delete(key)
-            # self.destroyed.append(key)
-            # try:
-            #     self.destroyed[block_height].add(key)
-            # except:
-            #     self.destroyed[block_height] = {key}
             self._hit += 1
             return i
         except:
