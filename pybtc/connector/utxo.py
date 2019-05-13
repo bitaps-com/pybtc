@@ -83,6 +83,7 @@ class UTXO():
                 for i in reversed(self.pending_saved):
                     self.cached.append({i: self.pending_saved[i]})
                 self.log.critical("checkpoint not found " +str(lb) +" > "+ str(self.checkpoints))
+                await asyncio.sleep(1)
                 return
             # self.log.critical("checkpoints " + str(self.checkpoints) + " > " + str(checkpoint))
             # self.log.critical("found checkpoint " + str(lb) + "  len " + str(len(utxo)) + " cached " + str(len(self.cached)) )
