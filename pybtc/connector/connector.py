@@ -382,7 +382,7 @@ class Connector:
                         if i >= block["height"]:
                             n.append(i)
                     self.utxo.checkpoints = n
-                    if n and n[0] >= block["height"]:
+                    if n and n[0] <= block["height"]:
                         self.utxo.deleted_last_block = block["height"]
                         self.utxo.pending_deleted = self.utxo.pending_deleted.union(self.utxo.deleted)
                         self.utxo.deleted = set()
