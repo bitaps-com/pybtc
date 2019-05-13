@@ -137,6 +137,8 @@ class UTXO():
             #     except:
             #         pass
             self.last_saved_block = lb
+        except:
+            self.log.critical("implement rollback  ")
         finally:
             self.save_process = False
 
