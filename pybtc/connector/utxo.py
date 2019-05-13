@@ -1,7 +1,6 @@
 from pybtc import int_to_c_int, c_int_to_int, c_int_len
 import asyncio
 from collections import OrderedDict, deque
-from collections import OrderedDict, deque as LRU
 from pybtc import LRU
 
 class UTXO():
@@ -12,6 +11,7 @@ class UTXO():
         self.checkpoints = deque()
         self.log = log
         self.loaded = OrderedDict()
+        self.pending_saved = OrderedDict()
         self.maturity = 100
         self.size_limit = cache_size
         self._db_pool = db_pool
@@ -68,19 +68,14 @@ class UTXO():
                 utxo.add((i[0],b"".join((int_to_c_int(i[1][0]),
                                          int_to_c_int(i[1][1]),
                                          i[1][2]))))
+                self.pending_saved[i[0]] = i[1]
             if block_changed:
                 self.cached.append({i[0]: i[1]})
             if not checkpoint_found:
-                for i in reversed(utxo):
-                    d = i[1]
-                    pointer = c_int_to_int(d)
-                    f = c_int_len(pointer)
-                    amount = c_int_to_int(d[f:])
-                    f += c_int_len(amount)
-                    address = d[f:]
-                    self.cached.append({i[0]: (pointer, amount, address)})
-                    self.log.critical("checkpoint not found")
-                    return
+                for i in reversed(self.pending_saved):
+                    self.cached.append({i: self.pending_saved[i]})
+                self.log.critical("checkpoint not found")
+                return
             self.log.critical("found checkpoint " + str(lb) + "  len " + str(len(utxo)) + " cached " + str(len(self.cached)) )
 
             # self.log.critical(">" + str(len(self.cached)))
@@ -151,9 +146,14 @@ class UTXO():
             self._hit += 1
             return i
         except:
-            self._failed_requests += 1
-            self.missed.add(key)
-            return None
+            try:
+                i = self.pending_saved[key]
+                self._hit += 1
+                return i
+            except:
+                self._failed_requests += 1
+                self.missed.add(key)
+                return None
 
     def get_loaded(self, key, block_height):
         try:
