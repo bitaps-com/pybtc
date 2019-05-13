@@ -177,7 +177,7 @@ class BlockLoader:
                     self.last_batch_size = len(msg)
                 for i in blocks:
                     self.parent.block_preload.set(i, blocks[i])
-                if blocks:
+                if blocks and index == len(self.worker_busy) - 1:
                     self.parent.utxo.checkpoints.append(i)
 
 
