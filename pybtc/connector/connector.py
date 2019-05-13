@@ -12,8 +12,7 @@ import zmq
 import zmq.asyncio
 import asyncio
 import time
-from _pickle import loads, dumps
-from collections import OrderedDict, deque
+from _pickle import loads
 
 class Connector:
     def __init__(self, node_rpc_url, node_zerromq_url, logger,
