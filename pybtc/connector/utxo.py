@@ -7,7 +7,8 @@ class UTXO():
     def __init__(self, db_pool, loop, log, cache_size):
         self.cached = LRU()
         self.missed = set()
-        self.deleted = LRU()
+        self.deleted = set()
+        self.pending_deleted = set()
         self.checkpoints = list()
         self.log = log
         self.loaded = LRU()
@@ -27,6 +28,7 @@ class UTXO():
         self._hit = 0
         self.saved_utxo = 0
         self.deleted_utxo = 0
+        self.deleted_last_block = 0
         self.deleted_utxo_saved = 0
         self.loaded_utxo = 0
         self.destroyed_utxo = 0
@@ -85,7 +87,7 @@ class UTXO():
                 for i in reversed(self.pending_saved):
                     self.cached.append({i: self.pending_saved[i]})
                 self.log.critical("checkpoint not found " +str(lb) +" > "+ str(self.checkpoints))
-                await asyncio.sleep(1)
+                await asyncio.sleep(5)
                 return
             # self.log.critical("checkpoints " + str(self.checkpoints) + " > " + str(checkpoint))
             # self.log.critical("found checkpoint " + str(lb) + "  len " + str(len(utxo)) + " cached " + str(len(self.cached)) )
@@ -119,20 +121,24 @@ class UTXO():
 
             # insert to db
             # self.log.critical("start  " + str(len(utxo)))
-            d = set()
+
+
             async with self._db_pool.acquire() as conn:
                 async with conn.transaction():
-                    if d:
+                    if self.pending_deleted:
                         await conn.execute("DELETE FROM connector_utxo WHERE "
-                                           "outpoint = ANY($1);", d)
+                                           "outpoint = ANY($1);", self.pending_deleted)
                     if utxo:
                         await conn.copy_records_to_table('connector_utxo',
                                                          columns=["outpoint", "data"], records=utxo)
                     await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                        "WHERE name = 'last_block';", lb)
+                    await conn.execute("UPDATE connector_utxo_state SET value = $1 "
+                                       "WHERE name = 'last_cached_block';", self.deleted_last_block)
             self.saved_utxo += len(utxo)
-            self.deleted_utxo += len(d)
-            self.log.warning("saved utxo -> " + str(len(utxo)))
+            self.deleted_utxo += len(self.pending_deleted)
+            self.pending_deleted = set()
+
             # # remove from cache
             # for key in a:
             #     try:
@@ -172,6 +178,7 @@ class UTXO():
 
     def get_loaded(self, key):
         try:
+            self.deleted.add(key)
             return self.loaded.delete(key)
         except:
             return None
