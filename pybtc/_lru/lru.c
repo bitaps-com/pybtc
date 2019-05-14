@@ -175,8 +175,10 @@ static void lru_delete_last(LRU *self)
     Node* n = self->last;
     if (!self->last)  return;
     lru_remove_node(self, n);
-    PUT_NODE(self->dict, n->key, NULL);
+    PyDict_DelItem(self->dict, n->key);
+//    PUT_NODE(self->dict, n->key, NULL);
 }
+
 
 static Py_ssize_t lru_length(LRU *self) { return PyDict_Size(self->dict); }
 
@@ -220,8 +222,8 @@ static PyObject *LRU_pop(LRU *self)
         PyTuple_SET_ITEM(tuple, 1, self->last->value);
         Node* n = self->last;
         lru_remove_node(self, n);
-        PUT_NODE(self->dict, n->key, NULL);
-        Py_DECREF(n);
+        PyDict_DelItem(self->dict, n->key);
+//        PUT_NODE(self->dict, n->key, NULL);
         return tuple;
     }
     else Py_RETURN_NONE;
@@ -249,28 +251,39 @@ static PyObject *LRU_get(LRU *self, PyObject *args)
 
 static PyObject *LRU_delete(LRU *self, PyObject *args)
 {
+
     PyObject *key;
     PyObject *instead = NULL;
+    if (!PyArg_ParseTuple(args, "O|O", &key, &instead)) return NULL;
+    Node *node = GET_NODE(self->dict, key);
+
+    if (!node) {
+       if (!instead) {
+       Py_XDECREF(node);
+       Py_RETURN_NONE; }
+
+       Py_INCREF(instead);
+       Py_XDECREF(node);
+       return instead;
+    }
+
+
+
+
     PyObject *tuple = PyTuple_New(2);
 
-    if (!PyArg_ParseTuple(args, "O|O", &key, &instead)) return NULL;
-
-    Node *node = GET_NODE(self->dict, key);
-    if (!node) {
-       if (!instead) { Py_RETURN_NONE; }
-       Py_INCREF(instead);
-       return instead;
-
-    } else {
     Py_INCREF(node->key);
     PyTuple_SET_ITEM(tuple, 0, node->key);
     Py_INCREF(node->value);
     PyTuple_SET_ITEM(tuple, 1, node->value);
-    PUT_NODE(self->dict, node->key, NULL);
+//    lru_delete_last(self);
     lru_remove_node(self, node);
-    Py_DECREF(node);
+    PyDict_DelItem(self->dict, node->key);
+//    PUT_NODE(self->dict, node->key, NULL);
+    Py_XDECREF(node);
     return tuple;
-    }
+//    Py_RETURN_NONE;
+
 
 
 
@@ -307,6 +320,7 @@ static int lru_append(LRU *self, PyObject *key, PyObject *value)
             }
         }
     } else {
+
         if (PUT_NODE(self->dict, key, NULL) == 0)  lru_remove_node(self, node);
     }
 
