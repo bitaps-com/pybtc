@@ -12,7 +12,7 @@ import traceback
 from pybtc.connector.utils import decode_block_tx
 
 import _pickle as pickle
-from _lru import LRU
+from pybtc.cache_strategies  import PLE
 
 
 class BlockLoader:
@@ -209,8 +209,8 @@ class Worker:
         self.loop.set_default_executor(ThreadPoolExecutor(20))
         self.out_writer = out_writer
         self.in_reader = in_reader
-        self.coins = LRU(100000)
-        self.destroyed_coins = LRU(100000)
+        self.coins = PLE(100000)
+        self.destroyed_coins = PLE(100000)
         signal.signal(signal.SIGTERM, self.terminate)
         self.loop.create_task(self.message_loop())
         self.loop.run_forever()

@@ -1,17 +1,17 @@
 from pybtc import int_to_c_int, c_int_to_int, c_int_len
 import asyncio
 from collections import OrderedDict, deque
-from pybtc import LRU
+from pybtc.cache_strategies  import PLE
 
 class UTXO():
     def __init__(self, db_pool, loop, log, cache_size):
-        self.cached = LRU()
+        self.cached = PLE()
         self.missed = set()
         self.deleted = set()
         self.pending_deleted = set()
         self.checkpoints = list()
         self.log = log
-        self.loaded = LRU()
+        self.loaded = PLE()
         self.pending_saved = OrderedDict()
         self.maturity = 100
         self.size_limit = cache_size

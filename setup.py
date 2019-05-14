@@ -148,7 +148,7 @@ setup(name='pybtc',
         'bdist_wheel': bdist_wheel
       },
       distclass=Distribution,
-      ext_modules=[Extension("_lru", ["pybtc/_lru/lru.c"]),
+      ext_modules=[Extension("cache_strategies", ["pybtc/cache_strategies/ple.c"]),
                    Extension("_secp256k1", ["pybtc/_secp256k1/module_secp256k1.c"],
                              include_dirs=["libsecp256k1/include/", "libsecp256k1/src/"]),
                    Extension("_crypto",

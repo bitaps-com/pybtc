@@ -1,36 +1,6 @@
 #include <Python.h>
 
-/*
- * This is a simple implementation of LRU Dict that uses a Python dict and an associated doubly linked
- * list to keep track of recently inserted/accessed items.
- *
- * Dict will store: key -> Node mapping, where Node is a linked list node.
- * The Node itself will contain the value as well as the key.
- *
- * For eg:
- *
- * >>> l = LRU(2)
- * >>> l[0] = 'foo'
- * >>> l[1] = 'bar'
- *
- * can be visualised as:
- *
- *             ---+--(hash(0)--+--hash(1)--+
- * self->dict  ...|            |           |
- *             ---+-----|------+---------|-+
- *                      |                |
- *                +-----v------+   +-----v------+
- * self->first--->|<'foo'>, <0>|-->|<'bar'>, <1>|<---self->last
- *             +--|            |<--|            |--+
- *             |  +------------+   +------------+  |
- *             v                                   v
- *           NULL                                 NULL
- *
- *  The invariant is to maintain the list to reflect the LRU order of items in the dict.
- *  self->first will point to the MRU item and self-last to LRU item. Size of list will not
- *  grow beyond size of LRU dict.
- *
- */
+
 
 #ifndef Py_TYPE
  #define Py_TYPE(ob) (((PyObject*)(ob))->ob_type)
@@ -39,20 +9,6 @@
 #define GET_NODE(d, key) (Node *) Py_TYPE(d)->tp_as_mapping->mp_subscript((d), (key))
 #define PUT_NODE(d, key, node) Py_TYPE(d)->tp_as_mapping->mp_ass_subscript((d), (key), ((PyObject *)node))
 
-/* If someone figures out how to enable debug builds with setuptools, you can delete this */
-#if 0
-#undef assert
-#define str(s) #s
-#define assert(v) \
-  do {                                                                                \
-    if (!(v)) {                                                                       \
-      fprintf(stderr, "Assertion failed: %s on %s:%d\n",                              \
-              str(v), __FILE__, __LINE__);                                            \
-      fflush(stderr);                                                                 \
-      abort();                                                                        \
-    }                                                                                 \
-  } while(0)
-#endif
 
 typedef struct _Node {
     PyObject_HEAD
@@ -75,7 +31,7 @@ static PyObject*node_repr(Node* self) { return PyObject_Repr(self->value);}
 
 static PyTypeObject NodeType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "lru.Node",              /* tp_name */
+    "ple.Node",              /* tp_name */
     sizeof(Node),            /* tp_basicsize */
     0,                       /* tp_itemsize */
     (destructor)node_dealloc,/* tp_dealloc */
@@ -120,10 +76,10 @@ typedef struct {
     Node * first;
     Node * last;
     Py_ssize_t size;
-} LRU;
+} PLE;
 
 
-static void lru_remove_node(LRU *self, Node* node)
+static void ple_remove_node(PLE *self, Node* node)
 {
     if (self->first == node) {
         self->first = node->next;
@@ -140,7 +96,7 @@ static void lru_remove_node(LRU *self, Node* node)
     node->next = node->prev = NULL;
 }
 
-static void lru_add_node_at_head(LRU *self, Node* node)
+static void ple_add_node_at_head(PLE *self, Node* node)
 {
     node->prev = NULL;
     if (!self->first) {
@@ -155,7 +111,7 @@ static void lru_add_node_at_head(LRU *self, Node* node)
     }
 }
 
-static void lru_add_node_at_tail(LRU *self, Node* node)
+static void ple_add_node_at_tail(PLE *self, Node* node)
 {
     node->next = NULL;
     if (!self->first) {
@@ -170,19 +126,18 @@ static void lru_add_node_at_tail(LRU *self, Node* node)
     }
 }
 
-static void lru_delete_last(LRU *self)
+static void ple_delete_last(PLE *self)
 {
     Node* n = self->last;
     if (!self->last)  return;
-    lru_remove_node(self, n);
+    ple_remove_node(self, n);
     PyDict_DelItem(self->dict, n->key);
-//    PUT_NODE(self->dict, n->key, NULL);
 }
 
 
-static Py_ssize_t lru_length(LRU *self) { return PyDict_Size(self->dict); }
+static Py_ssize_t ple_length(PLE *self) {return PyDict_Size(self->dict);}
 
-static PyObject *LRU_contains_key(LRU *self, PyObject *key)
+static PyObject *PLE_contains_key(PLE *self, PyObject *key)
 {
     if (PyDict_Contains(self->dict, key)) {
         Py_RETURN_TRUE;
@@ -191,17 +146,17 @@ static PyObject *LRU_contains_key(LRU *self, PyObject *key)
     }
 }
 
-static PyObject *LRU_contains(LRU *self, PyObject *args)
+static PyObject *PLE_contains(PLE *self, PyObject *args)
 {
     PyObject *key;
     if (!PyArg_ParseTuple(args, "O", &key)) return NULL;
 
-    return LRU_contains_key(self, key);
+    return PLE_contains_key(self, key);
 }
 
-static int LRU_seq_contains(LRU *self, PyObject *key) { return PyDict_Contains(self->dict, key); }
+static int PLE_seq_contains(PLE *self, PyObject *key) {return PyDict_Contains(self->dict, key);}
 
-static PyObject *lru_subscript(LRU *self, register PyObject *key)
+static PyObject *ple_subscript(PLE *self, register PyObject *key)
 {
     Node *node = GET_NODE(self->dict, key);
     if (!node) return NULL;
@@ -211,7 +166,7 @@ static PyObject *lru_subscript(LRU *self, register PyObject *key)
     return node->value;
 }
 
-static PyObject *LRU_pop(LRU *self)
+static PyObject *PLE_pop(PLE *self)
 {
 
     if (self->last) {
@@ -221,16 +176,15 @@ static PyObject *LRU_pop(LRU *self)
         Py_INCREF(self->last->value);
         PyTuple_SET_ITEM(tuple, 1, self->last->value);
         Node* n = self->last;
-        lru_remove_node(self, n);
+        ple_remove_node(self, n);
         PyDict_DelItem(self->dict, n->key);
-//        PUT_NODE(self->dict, n->key, NULL);
         return tuple;
     }
     else Py_RETURN_NONE;
 }
 
 
-static PyObject *LRU_get(LRU *self, PyObject *args)
+static PyObject *PLE_get(PLE *self, PyObject *args)
 {
     PyObject *key;
     PyObject *instead = NULL;
@@ -238,7 +192,7 @@ static PyObject *LRU_get(LRU *self, PyObject *args)
 
     if (!PyArg_ParseTuple(args, "O|O", &key, &instead)) return NULL;
 
-    result = lru_subscript(self, key);
+    result = ple_subscript(self, key);
     PyErr_Clear();  /* GET_NODE sets an exception on miss. Shut it up. */
     if (result) return result;
 
@@ -249,7 +203,7 @@ static PyObject *LRU_get(LRU *self, PyObject *args)
 }
 
 
-static PyObject *LRU_delete(LRU *self, PyObject *args)
+static PyObject *PLE_delete(PLE *self, PyObject *args)
 {
 
     PyObject *key;
@@ -276,23 +230,16 @@ static PyObject *LRU_delete(LRU *self, PyObject *args)
     PyTuple_SET_ITEM(tuple, 0, node->key);
     Py_INCREF(node->value);
     PyTuple_SET_ITEM(tuple, 1, node->value);
-//    lru_delete_last(self);
-    lru_remove_node(self, node);
+    ple_remove_node(self, node);
     PyDict_DelItem(self->dict, node->key);
-//    PUT_NODE(self->dict, node->key, NULL);
     Py_XDECREF(node);
     return tuple;
-//    Py_RETURN_NONE;
-
-
-
-
 }
 
 
 
 
-static int lru_append(LRU *self, PyObject *key, PyObject *value)
+static int ple_append(PLE *self, PyObject *key, PyObject *value)
 {
     int res = 0;
     Node *node = GET_NODE(self->dict, key);
@@ -315,13 +262,13 @@ static int lru_append(LRU *self, PyObject *key, PyObject *value)
 
             res = PUT_NODE(self->dict, key, node);
             if (res == 0) {
-                if (self->size > 0 && lru_length(self) > self->size) lru_delete_last(self);
-                lru_add_node_at_tail(self, node);
+                if (self->size > 0 && ple_length(self) > self->size) ple_delete_last(self);
+                ple_add_node_at_tail(self, node);
             }
         }
     } else {
 
-        if (PUT_NODE(self->dict, key, NULL) == 0)  lru_remove_node(self, node);
+        if (PUT_NODE(self->dict, key, NULL) == 0)  ple_remove_node(self, node);
     }
 
     Py_XDECREF(node);
@@ -329,7 +276,7 @@ static int lru_append(LRU *self, PyObject *key, PyObject *value)
 }
 
 
-static int lru_ass_sub(LRU *self, PyObject *key, PyObject *value)
+static int ple_ass_sub(PLE *self, PyObject *key, PyObject *value)
 {
     int res = 0;
     Node *node = GET_NODE(self->dict, key);
@@ -352,19 +299,19 @@ static int lru_ass_sub(LRU *self, PyObject *key, PyObject *value)
 
             res = PUT_NODE(self->dict, key, node);
             if (res == 0) {
-                if (self->size > 0 && lru_length(self) > self->size) lru_delete_last(self);
-                lru_add_node_at_head(self, node);
+                if (self->size > 0 && ple_length(self) > self->size) ple_delete_last(self);
+                ple_add_node_at_head(self, node);
             }
         }
     } else {
-        if (PUT_NODE(self->dict, key, NULL) == 0)  lru_remove_node(self, node);
+        if (PUT_NODE(self->dict, key, NULL) == 0)  ple_remove_node(self, node);
     }
 
     Py_XDECREF(node);
     return res;
 }
 
-static int lru_put(LRU *self, PyObject *key, PyObject *value)
+static int ple_put(PLE *self, PyObject *key, PyObject *value)
 {
     int res = 0;
 
@@ -378,26 +325,26 @@ static int lru_put(LRU *self, PyObject *key, PyObject *value)
 
     res = PUT_NODE(self->dict, key, node);
     if (res == 0) {
-        if (self->size > 0 && lru_length(self) > self->size) lru_delete_last(self);
-        lru_add_node_at_head(self, node);
+        if (self->size > 0 && ple_length(self) > self->size) ple_delete_last(self);
+        ple_add_node_at_head(self, node);
     }
 
     Py_XDECREF(node);
     return res;
 }
 
-static PyMappingMethods LRU_as_mapping = {
-    (lenfunc)lru_length,        /*mp_length*/
-    (binaryfunc)lru_subscript,  /*mp_subscript*/
-    (objobjargproc)lru_ass_sub, /*mp_ass_subscript*/
+static PyMappingMethods PLE_as_mapping = {
+    (lenfunc)ple_length,        /*mp_length*/
+    (binaryfunc)ple_subscript,  /*mp_subscript*/
+    (objobjargproc)ple_ass_sub, /*mp_ass_subscript*/
 };
 
-static PyObject *collect(LRU *self, PyObject * (*getterfunc)(Node *))
+static PyObject *collect(PLE *self, PyObject * (*getterfunc)(Node *))
 {
     register PyObject *v;
     Node *curr;
     int i;
-    v = PyList_New(lru_length(self));
+    v = PyList_New(ple_length(self));
     if (v == NULL)
         return NULL;
     curr = self->first;
@@ -407,7 +354,7 @@ static PyObject *collect(LRU *self, PyObject * (*getterfunc)(Node *))
         PyList_SET_ITEM(v, i++, getterfunc(curr));
         curr = curr->next;
     }
-    assert(i == lru_length(self));
+    assert(i == ple_length(self));
     return v;
 }
 
@@ -417,7 +364,7 @@ static PyObject *get_key(Node *node)
     return node->key;
 }
 
-static PyObject *LRU_append(LRU *self, PyObject *args, PyObject *kwargs)
+static PyObject *PLE_append(PLE *self, PyObject *args, PyObject *kwargs)
 {
 	PyObject *key, *value;
 	PyObject *arg = NULL;
@@ -426,19 +373,19 @@ static PyObject *LRU_append(LRU *self, PyObject *args, PyObject *kwargs)
 	if ((PyArg_ParseTuple(args, "|O", &arg))) {
 		if (arg && PyDict_Check(arg)) {
 			while (PyDict_Next(arg, &pos, &key, &value))
-				lru_append(self, key, value);
+				ple_append(self, key, value);
 		}
 	}
 
 	if (kwargs != NULL && PyDict_Check(kwargs)) {
 		while (PyDict_Next(kwargs, &pos, &key, &value))
-			lru_append(self, key, value);
+			ple_append(self, key, value);
 	}
 
 	Py_RETURN_NONE;
 }
 
-static PyObject *LRU_update(LRU *self, PyObject *args, PyObject *kwargs)
+static PyObject *PLE_update(PLE *self, PyObject *args, PyObject *kwargs)
 {
 	PyObject *key, *value;
 	PyObject *arg = NULL;
@@ -447,19 +394,19 @@ static PyObject *LRU_update(LRU *self, PyObject *args, PyObject *kwargs)
 	if ((PyArg_ParseTuple(args, "|O", &arg))) {
 		if (arg && PyDict_Check(arg)) {
 			while (PyDict_Next(arg, &pos, &key, &value))
-				lru_ass_sub(self, key, value);
+				ple_ass_sub(self, key, value);
 		}
 	}
 
 	if (kwargs != NULL && PyDict_Check(kwargs)) {
 		while (PyDict_Next(kwargs, &pos, &key, &value))
-			lru_ass_sub(self, key, value);
+			ple_ass_sub(self, key, value);
 	}
 
 	Py_RETURN_NONE;
 }
 
-static PyObject *LRU_put(LRU *self, PyObject *args, PyObject *kwargs)
+static PyObject *PLE_put(PLE *self, PyObject *args, PyObject *kwargs)
 {
 	PyObject *key, *value;
 	PyObject *arg = NULL;
@@ -468,19 +415,19 @@ static PyObject *LRU_put(LRU *self, PyObject *args, PyObject *kwargs)
 	if ((PyArg_ParseTuple(args, "|O", &arg))) {
 		if (arg && PyDict_Check(arg)) {
 			while (PyDict_Next(arg, &pos, &key, &value))
-				lru_put(self, key, value);
+				ple_put(self, key, value);
 		}
 	}
 
 	if (kwargs != NULL && PyDict_Check(kwargs)) {
 		while (PyDict_Next(kwargs, &pos, &key, &value))
-			lru_put(self, key, value);
+			ple_put(self, key, value);
 	}
 
 	Py_RETURN_NONE;
 }
 
-static PyObject *LRU_peek_first_item(LRU *self)
+static PyObject *PLE_peek_first_item(PLE *self)
 {
     if (self->first) {
         PyObject *tuple = PyTuple_New(2);
@@ -493,7 +440,7 @@ static PyObject *LRU_peek_first_item(LRU *self)
     else Py_RETURN_NONE;
 }
 
-static PyObject *LRU_peek_last_item(LRU *self)
+static PyObject *PLE_peek_last_item(PLE *self)
 {
     if (self->last) {
         PyObject *tuple = PyTuple_New(2);
@@ -506,7 +453,7 @@ static PyObject *LRU_peek_last_item(LRU *self)
     else Py_RETURN_NONE;
 }
 
-static PyObject *LRU_keys(LRU *self) { return collect(self, get_key); }
+static PyObject *PLE_keys(PLE *self) {return collect(self, get_key);}
 
 static PyObject *get_value(Node *node)
 {
@@ -514,7 +461,7 @@ static PyObject *get_value(Node *node)
     return node->value;
 }
 
-static PyObject *LRU_values(LRU *self) { return collect(self, get_value); }
+static PyObject *PLE_values(PLE *self) {return collect(self, get_value);}
 
 
 static PyObject *get_item(Node *node)
@@ -527,9 +474,9 @@ static PyObject *get_item(Node *node)
     return tuple;
 }
 
-static PyObject *LRU_items(LRU *self) { return collect(self, get_item); }
+static PyObject *PLE_items(PLE *self) {return collect(self, get_item);}
 
-static PyObject *LRU_set_size(LRU *self, PyObject *args, PyObject *kwds)
+static PyObject *PLE_set_size(PLE *self, PyObject *args, PyObject *kwds)
 {
     Py_ssize_t newSize;
     if (!PyArg_ParseTuple(args, "n", &newSize))  return NULL;
@@ -538,20 +485,20 @@ static PyObject *LRU_set_size(LRU *self, PyObject *args, PyObject *kwds)
         PyErr_SetString(PyExc_ValueError, "Size should be a positive number");
         return NULL;
     }
-    while (lru_length(self) > newSize)  lru_delete_last(self);
+    while (ple_length(self) > newSize)  ple_delete_last(self);
 
     self->size = newSize;
     Py_RETURN_NONE;
 }
 
-static PyObject *LRU_clear(LRU *self)
+static PyObject *PLE_clear(PLE *self)
 {
     Node *c = self->first;
 
     while (c) {
         Node* n = c;
         c = c->next;
-        lru_remove_node(self, n);
+        ple_remove_node(self, n);
     }
     PyDict_Clear(self->dict);
 
@@ -559,12 +506,12 @@ static PyObject *LRU_clear(LRU *self)
 }
 
 
-static PyObject *LRU_get_size(LRU *self) { return Py_BuildValue("i", self->size); }
+static PyObject *PLE_get_size(PLE *self) {return Py_BuildValue("i", self->size);}
 
 
 
-/* Hack to implement "key in lru" */
-static PySequenceMethods lru_as_sequence = {
+/* Hack to implement "key in ple" */
+static PySequenceMethods ple_as_sequence = {
     0,                             /* sq_length */
     0,                             /* sq_concat */
     0,                             /* sq_repeat */
@@ -572,51 +519,51 @@ static PySequenceMethods lru_as_sequence = {
     0,                             /* sq_slice */
     0,                             /* sq_ass_item */
     0,                             /* sq_ass_slice */
-    (objobjproc) LRU_seq_contains, /* sq_contains */
+    (objobjproc) PLE_seq_contains, /* sq_contains */
     0,                             /* sq_inplace_concat */
     0,                             /* sq_inplace_repeat */
 };
 
-static PyMethodDef LRU_methods[] = {
-    {"__contains__", (PyCFunction)LRU_contains_key, METH_O | METH_COEXIST,
+static PyMethodDef PLE_methods[] = {
+    {"__contains__", (PyCFunction)PLE_contains_key, METH_O | METH_COEXIST,
                     PyDoc_STR("L.__contains__(key) -> Check if key is there in L")},
-    {"keys", (PyCFunction)LRU_keys, METH_NOARGS,
+    {"keys", (PyCFunction)PLE_keys, METH_NOARGS,
                     PyDoc_STR("L.keys() -> list of L's keys in MRU order")},
-    {"values", (PyCFunction)LRU_values, METH_NOARGS,
+    {"values", (PyCFunction)PLE_values, METH_NOARGS,
                     PyDoc_STR("L.values() -> list of L's values in MRU order")},
-    {"items", (PyCFunction)LRU_items, METH_NOARGS,
+    {"items", (PyCFunction)PLE_items, METH_NOARGS,
                     PyDoc_STR("L.items() -> list of L's items (key,value) in MRU order")},
-    {"has_key",	(PyCFunction)LRU_contains, METH_VARARGS,
+    {"has_key",	(PyCFunction)PLE_contains, METH_VARARGS,
                     PyDoc_STR("L.has_key(key) -> Check if key is there in L")},
-    {"get",	(PyCFunction)LRU_get, METH_VARARGS,
+    {"get",	(PyCFunction)PLE_get, METH_VARARGS,
                     PyDoc_STR("L.get(key, instead) -> If L has key return its value, otherwise instead")},
-    {"delete",	(PyCFunction)LRU_delete, METH_VARARGS,
+    {"delete",	(PyCFunction)PLE_delete, METH_VARARGS,
                     PyDoc_STR("L.get(key, instead) -> If L has key return its value, otherwise instead")},
-    {"set_size", (PyCFunction)LRU_set_size, METH_VARARGS,
+    {"set_size", (PyCFunction)PLE_set_size, METH_VARARGS,
                     PyDoc_STR("L.set_size() -> set size of LRU")},
-    {"get_size", (PyCFunction)LRU_get_size, METH_NOARGS,
+    {"get_size", (PyCFunction)PLE_get_size, METH_NOARGS,
                     PyDoc_STR("L.get_size() -> get size of LRU")},
-    {"clear", (PyCFunction)LRU_clear, METH_NOARGS,
+    {"clear", (PyCFunction)PLE_clear, METH_NOARGS,
                     PyDoc_STR("L.clear() -> clear LRU")},
-    {"peek_first_item", (PyCFunction)LRU_peek_first_item, METH_NOARGS,
+    {"peek_first_item", (PyCFunction)PLE_peek_first_item, METH_NOARGS,
                     PyDoc_STR("L.peek_first_item() -> returns the MRU item (key,value) without changing key order")},
-    {"peek_last_item", (PyCFunction)LRU_peek_last_item, METH_NOARGS,
+    {"peek_last_item", (PyCFunction)PLE_peek_last_item, METH_NOARGS,
                     PyDoc_STR("L.peek_last_item() -> returns the LRU item (key,value) without changing key order")},
-    {"pop", (PyCFunction)LRU_pop, METH_NOARGS,
+    {"pop", (PyCFunction)PLE_pop, METH_NOARGS,
                     PyDoc_STR("L.pop() -> returns the LRU item (key,value) without changing key order")},
-    {"update", (PyCFunction)LRU_update, METH_VARARGS | METH_KEYWORDS,
+    {"update", (PyCFunction)PLE_update, METH_VARARGS | METH_KEYWORDS,
                     PyDoc_STR("L.update() -> update value for key in LRU")},
-    {"put", (PyCFunction)LRU_put, METH_VARARGS | METH_KEYWORDS,
+    {"put", (PyCFunction)PLE_put, METH_VARARGS | METH_KEYWORDS,
                     PyDoc_STR("L.append() -> append value for key in LRU")},
-    {"append", (PyCFunction)LRU_append, METH_VARARGS | METH_KEYWORDS,
+    {"append", (PyCFunction)PLE_append, METH_VARARGS | METH_KEYWORDS,
                     PyDoc_STR("L.append() -> append value for key in LRU")},
 
     {NULL,	NULL},
 };
 
-static PyObject*LRU_repr(LRU* self) { return PyObject_Repr(self->dict); }
+static PyObject*PLE_repr(PLE* self) {return PyObject_Repr(self->dict);}
 
-static int LRU_init(LRU *self, PyObject *args, PyObject *kwds)
+static int PLE_init(PLE *self, PyObject *args, PyObject *kwds)
 {
     static char *kwlist[] = {"size", NULL};
 
@@ -632,17 +579,16 @@ static int LRU_init(LRU *self, PyObject *args, PyObject *kwds)
     return 0;
 }
 
-static void
-LRU_dealloc(LRU *self)
+static void PLE_dealloc(PLE *self)
 {
     if (self->dict) {
-        LRU_clear(self);
+        PLE_clear(self);
         Py_DECREF(self->dict);
     }
     PyObject_Del((PyObject*)self);
 }
 
-PyDoc_STRVAR(lru_doc,
+PyDoc_STRVAR(ple_doc,
 "LRU(size) -> new LRU dict that can store up to size elements\n"
 "An LRU dict behaves like a standard dict, except that it stores only fixed\n"
 "set of elements. Once the size overflows, it evicts least recently used\n"
@@ -656,20 +602,20 @@ PyDoc_STRVAR(lru_doc,
 "Note: An LRU(n) can be thought of as a dict that will have the most\n"
 "recently accessed n items.\n");
 
-static PyTypeObject LRUType = {
+static PyTypeObject PLEType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "_lru.LRU",               /* tp_name */
-    sizeof(LRU),             /* tp_basicsize */
+    "_ple.PLE",               /* tp_name */
+    sizeof(PLE),             /* tp_basicsize */
     0,                       /* tp_itemsize */
-    (destructor)LRU_dealloc, /* tp_dealloc */
+    (destructor)PLE_dealloc, /* tp_dealloc */
     0,                       /* tp_print */
     0,                       /* tp_getattr */
     0,                       /* tp_setattr */
     0,                       /* tp_compare */
-    (reprfunc)LRU_repr,      /* tp_repr */
+    (reprfunc)PLE_repr,      /* tp_repr */
     0,                       /* tp_as_number */
-    &lru_as_sequence,        /* tp_as_sequence */
-    &LRU_as_mapping,         /* tp_as_mapping */
+    &ple_as_sequence,        /* tp_as_sequence */
+    &PLE_as_mapping,         /* tp_as_mapping */
     0,                       /* tp_hash */
     0,                       /* tp_call */
     0,                       /* tp_str */
@@ -677,14 +623,14 @@ static PyTypeObject LRUType = {
     0,                       /* tp_setattro */
     0,                       /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT,      /* tp_flags */
-    lru_doc,                 /* tp_doc */
+    ple_doc,                 /* tp_doc */
     0,                       /* tp_traverse */
     0,                       /* tp_clear */
     0,                       /* tp_richcompare */
     0,                       /* tp_weaklistoffset */
     0,                       /* tp_iter */
     0,                       /* tp_iternext */
-    LRU_methods,             /* tp_methods */
+    PLE_methods,             /* tp_methods */
     0,                       /* tp_members */
     0,                       /* tp_getset */
     0,                       /* tp_base */
@@ -692,7 +638,7 @@ static PyTypeObject LRUType = {
     0,                       /* tp_descr_get */
     0,                       /* tp_descr_set */
     0,                       /* tp_dictoffset */
-    (initproc)LRU_init,      /* tp_init */
+    (initproc)PLE_init,      /* tp_init */
     0,                       /* tp_alloc */
     0,                       /* tp_new */
 };
@@ -700,8 +646,8 @@ static PyTypeObject LRUType = {
 
 static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
-    "_lru",            /* m_name */
-    lru_doc,          /* m_doc */
+    "_ple",            /* m_name */
+    ple_doc,          /* m_doc */
     -1,               /* m_size */
     NULL,             /* m_methods */
     NULL,             /* m_reload */
@@ -715,14 +661,14 @@ static PyObject *moduleinit(void) {
     PyObject *m;
     NodeType.tp_new = PyType_GenericNew;
     if (PyType_Ready(&NodeType) < 0) return NULL;
-    LRUType.tp_new = PyType_GenericNew;
-    if (PyType_Ready(&LRUType) < 0) return NULL;
+    PLEType.tp_new = PyType_GenericNew;
+    if (PyType_Ready(&PLEType) < 0) return NULL;
     m = PyModule_Create(&moduledef);
     if (m == NULL) return NULL;
     Py_INCREF(&NodeType);
-    Py_INCREF(&LRUType);
-    PyModule_AddObject(m, "LRU", (PyObject *) &LRUType);
+    Py_INCREF(&PLEType);
+    PyModule_AddObject(m, "PLE", (PyObject *) &PLEType);
     return m;
 }
 
-PyMODINIT_FUNC PyInit__lru(void) { return moduleinit(); }
+PyMODINIT_FUNC PyInit__ple(void) {return moduleinit();}
