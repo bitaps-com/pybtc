@@ -121,9 +121,9 @@ class BlockLoader:
         # start message loop
         self.loop.create_task(self.message_loop(index))
         # wait if process crash
-        await self.loop.run_in_executor(None, worker.join)
+        r =  await self.loop.run_in_executor(None, worker.join)
         del self.worker[index]
-        self.log.warning('Block loader worker %s is stopped' % index)
+        self.log.warning('Block loader worker %s is stopped [%s]' % (index, r))
 
 
 
@@ -286,6 +286,7 @@ class Worker:
             while True:
                 msg_type, msg = await self.pipe_get_msg(self.reader)
                 if msg_type ==  b'pipe_read_error':
+                    self.log.critical("pipe_read_error")
                     return
 
                 if msg_type == b'get':
