@@ -7,6 +7,6 @@ from .block import *
 from .address import *
 from .wallet import *
 from .crypto import *
-from pybtc.cache_strategies  import PLE
 from pybtc.connector import Connector
+from cache_strategies import LRU, MRU
 

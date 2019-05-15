@@ -598,34 +598,42 @@ class Connector:
     async def _new_transaction(self, tx, block_time = None, block_height = None, block_index = None):
         if not(tx["txId"] in self.tx_in_process or self.tx_cache.get(tx["txId"])):
             try:
-                stxo = None
+                c = 0
                 self.tx_in_process.add(tx["txId"])
                 if not tx["coinbase"]:
                     if block_height is not None:
                         await self.wait_block_dependences(tx)
                     if self.utxo:
-                        stxo, missed = set(), set()
+                        stxo, missed = dict(), set()
                         for i in tx["vIn"]:
                             inp = tx["vIn"][i]
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                             try:
-                                stxo.add((outpoint, inp["_c_"][0], inp["_c_"][1], inp["_c_"][2]))
+                                tx["vIn"][i]["outpoint"] = outpoint
+                                tx["vIn"][i]["coin"] = inp["_c_"]
+                                c += 1
                                 self.yy += 1
-                            except Exception as err:
+                            except:
                                 r = self.utxo.get(outpoint)
-                                stxo.add(r) if r else missed.add((outpoint, (block_height << 42) + (block_index << 21) + i))
+                                if r:
+                                    tx["vIn"][i]["coin"]  = r
+                                    c += 1
+                                else:
+                                    missed.add((outpoint, (block_height << 42) + (block_index << 21) + i, i))
 
                         if missed:
                             await self.utxo.load_utxo()
-                            [stxo.add(self.utxo.get_loaded(o)) for o, s in missed]
+                            for o, s, i in missed:
+                                tx["vIn"][i]["coin"] = self.utxo.get_loaded(o)
+                                c += 1
 
-                        if len(stxo)  != len(tx["vIn"]) and not self.cache_loading:
+
+                        if c != len(tx["vIn"]) and not self.cache_loading:
                             self.log.critical("utxo get failed " + rh2s(tx["txId"]))
-                            self.log.critical(str(stxo))
-                            raise Exception("utxo get failed " + str(""))
+                            raise Exception("utxo get failed ")
 
                 if self.tx_handler and  not self.cache_loading:
-                    await self.tx_handler(tx, stxo, block_time, block_height, block_index)
+                    await self.tx_handler(tx, block_time, block_height, block_index)
 
                 if self.utxo:
                     for i in tx["vOut"]:
@@ -633,11 +641,11 @@ class Connector:
                             self.tt += 1
                         else:
                             out = tx["vOut"][i]
-                            # if self.skip_opreturn and out["nType"] in (3, 8):
-                            #     continue
+                            if self.skip_opreturn and out["nType"] in (3, 8):
+                                continue
                             pointer = (block_height << 42) + (block_index << 21) + i
                             try:
-                                address = out["scriptPubKey"]
+                                address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
                             except:
                                 address = b"".join((bytes([out["nType"]]), out["addressHash"]))
                             self.utxo.set(b"".join((tx["txId"], int_to_bytes(i))), pointer, out["value"], address)
@@ -662,70 +670,6 @@ class Connector:
                 self.log.debug(str(traceback.format_exc()))
             finally:
                 self.tx_in_process.remove(tx["txId"])
-
-    # async def _new_transaction(self, tx, block_time = None, block_height = None, block_index = None):
-    #     if not(tx["txId"] in self.tx_in_process or self.tx_cache.get(tx["txId"])):
-    #         try:
-    #             stxo = None
-    #             self.tx_in_process.add(tx["txId"])
-    #             if not tx["coinbase"]:
-    #                 if block_height is not None:
-    #                     await self.wait_block_dependences(tx)
-    #                 if self.utxo:
-    #                     #     stxo = await self.get_stxo(tx, block_height, block_index)
-    #                     stxo, missed = set(), set()
-    #                     for i in tx["vIn"]:
-    #                         inp = tx["vIn"][i]
-    #                         outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-    #                         r = self.utxo.get(outpoint, block_height)
-    #                         stxo.add(r) if r else missed.add((outpoint,
-    #                                                           (block_height << 42) + (block_index << 21) + i))
-    #
-    #                     if missed:
-    #                         await self.utxo.load_utxo()
-    #                         [stxo.add(self.utxo.get_loaded(o, block_height)) for o, s in missed]
-    #
-    #                     if len(stxo) != len(tx["vIn"]) and not self.cache_loading:
-    #                         self.log.critical("utxo get failed " + rh2s(tx["txId"]))
-    #                         self.log.critical(str(stxo))
-    #                         raise Exception("utxo get failed ")
-    #
-    #             if self.tx_handler and  not self.cache_loading:
-    #                 await self.tx_handler(tx, stxo, block_time, block_height, block_index)
-    #
-    #             if self.utxo:
-    #                 for i in tx["vOut"]:
-    #                     out = tx["vOut"][i]
-    #                     if out["nType"] in (3, 8):
-    #                         continue
-    #                     pointer = (block_height << 42) + (block_index << 21) + i
-    #                     try:
-    #                         address = out["scriptPubKey"]
-    #                     except:
-    #                         address = b"".join((bytes([out["nType"]]), out["addressHash"]))
-    #                     outpoint = b"".join((tx["txId"], int_to_bytes(i)))
-    #                     self.utxo.set(outpoint, pointer, out["value"], address)
-    #
-    #             self.tx_cache.set(tx["txId"], True)
-    #             try:
-    #                 self.await_tx.remove(tx["txId"])
-    #                 if not self.await_tx_future[tx["txId"]].done():
-    #                     self.await_tx_future[tx["txId"]].set_result(True)
-    #                 if not self.await_tx:
-    #                     self.block_txs_request.set_result(True)
-    #             except:
-    #                 pass
-    #         except Exception as err:
-    #             if tx["txId"] in self.await_tx:
-    #                 self.await_tx = set()
-    #                 self.block_txs_request.cancel()
-    #                 for i in self.await_tx_future:
-    #                     if not self.await_tx_future[i].done():
-    #                         self.await_tx_future[i].cancel()
-    #             self.log.debug("new transaction error %s " % err)
-    #             self.log.debug(str(traceback.format_exc()))
-    #         finally:
-    #             self.tx_in_process.remove(tx["txId"])
 
 
     async def get_stxo(self, tx, block_height, block_index):

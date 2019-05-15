@@ -12,7 +12,7 @@ import traceback
 from pybtc.connector.utils import decode_block_tx
 
 import _pickle as pickle
-from pybtc.cache_strategies  import PLE
+from pybtc  import MRU
 
 
 class BlockLoader:
@@ -209,8 +209,8 @@ class Worker:
         self.loop.set_default_executor(ThreadPoolExecutor(20))
         self.out_writer = out_writer
         self.in_reader = in_reader
-        self.coins = PLE(100000)
-        self.destroyed_coins = PLE(100000)
+        self.coins = MRU(100000)
+        self.destroyed_coins = MRU(100000)
         signal.signal(signal.SIGTERM, self.terminate)
         self.loop.create_task(self.message_loop())
         self.loop.run_forever()
@@ -246,9 +246,9 @@ class Worker:
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                             try:
                                r = self.coins.delete(outpoint)
-                               block["rawTx"][z]["vIn"][i]["_c_"] = r[1]
+                               block["rawTx"][z]["vIn"][i]["_c_"] = r
                                t += 1
-                               self.destroyed_coins[r[1][0]] = True
+                               self.destroyed_coins[r[0]] = True
                             except:
                                 pass
                         for i in block["rawTx"][z]["vOut"]:
@@ -269,7 +269,7 @@ class Worker:
                         try:
                             pointer = (x << 42) + (y << 21) + i
                             r = self.destroyed_coins.delete(pointer)
-                            blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r[1]
+                            blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                         except: pass
 
                 blocks[x] = pickle.dumps(blocks[x])
