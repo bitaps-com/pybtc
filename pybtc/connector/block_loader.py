@@ -245,10 +245,10 @@ class Worker:
                             inp = block["rawTx"][z]["vIn"][i]
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                             try:
-                               # r = self.coins.delete(outpoint)
+                               r = self.coins.delete(outpoint)
                                block["rawTx"][z]["vIn"][i]["_c_"] = r
                                t += 1
-                               # self.destroyed_coins[r[0]] = True
+                               self.destroyed_coins[r[0]] = True
                             except:
                                 pass
                         for i in block["rawTx"][z]["vOut"]:
@@ -259,7 +259,7 @@ class Worker:
                             except:
                                 address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
                                                            block["rawTx"][z]["vOut"][i]["addressHash"]))
-                            # self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
+                            self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
                     blocks[x] = block
             if blocks:
                 blocks[x]["checkpoint"] = x
@@ -268,7 +268,7 @@ class Worker:
                     for i in blocks[x]["rawTx"][y]["vOut"]:
                         try:
                             pointer = (x << 42) + (y << 21) + i
-                            # r = self.destroyed_coins.delete(pointer)
+                            r = self.destroyed_coins.delete(pointer)
                             blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                         except: pass
 
