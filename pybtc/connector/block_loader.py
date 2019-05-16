@@ -273,7 +273,7 @@ class Worker:
                         except: pass
 
                 blocks[x] = pickle.dumps(blocks[x])
-
+            self.log.critical("worker [%s]" % self.name)
             self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except:
             self.pipe_sent_msg(b'result', pickle.dumps([]))
