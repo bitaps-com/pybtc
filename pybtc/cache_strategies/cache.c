@@ -242,12 +242,11 @@ static PyObject *CACHE_delete(CACHE *self, PyObject *args) {
        return instead;
     }
 
-    Py_INCREF(node->value);
     cache_remove_node(self, node);
     PyDict_DelItem(self->dict, node->key);
     Py_XDECREF(node);
-
-    return node->value;
+    PyObject *return_value = Py_BuildValue("O", node->value);
+    return return_value;
 }
 
 static PyObject *CACHE_set_size(CACHE *self, PyObject *args, PyObject *kwds) {
