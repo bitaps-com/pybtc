@@ -269,7 +269,7 @@ class Worker:
                         try:
                             pointer = (x << 42) + (y << 21) + i
                             # r = self.destroyed_coins.delete(pointer)
-                            blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
+                            # blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                         except: pass
 
                 blocks[x] = pickle.dumps(blocks[x])
