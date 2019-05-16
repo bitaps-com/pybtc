@@ -210,7 +210,7 @@ class Worker:
         self.out_writer = out_writer
         self.in_reader = in_reader
         self.coins = MRU(100000)
-        # self.destroyed_coins = MRU(100000)
+        self.destroyed_coins = MRU(100000)
         signal.signal(signal.SIGTERM, self.terminate)
         self.loop.create_task(self.message_loop())
         self.loop.run_forever()
@@ -248,7 +248,7 @@ class Worker:
                                r = self.coins.delete(outpoint)
                                # block["rawTx"][z]["vIn"][i]["_c_"] = r
                                t += 1
-                               # self.destroyed_coins[r[0]] = True
+                               self.destroyed_coins[r[0]] = True
                             except:
                                 pass
                         for i in block["rawTx"][z]["vOut"]:
@@ -268,7 +268,7 @@ class Worker:
                     for i in blocks[x]["rawTx"][y]["vOut"]:
                         try:
                             pointer = (x << 42) + (y << 21) + i
-                            # r = self.destroyed_coins.delete(pointer)
+                            r = self.destroyed_coins.delete(pointer)
                             # blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                         except: pass
 
