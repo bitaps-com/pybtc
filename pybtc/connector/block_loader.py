@@ -243,6 +243,15 @@ class Worker:
                 if y["result"] is not None:
                     block = decode_block_tx(y["result"])
                     for z in block["rawTx"]:
+                        for i in block["rawTx"][z]["vOut"]:
+                            o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
+                            pointer = (x << 42) + (z << 21) + i
+                            try:
+                                address = block["rawTx"][z]["vOut"][i]["scriptPubKey"]
+                            except:
+                                address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
+                                                           block["rawTx"][z]["vOut"][i]["addressHash"]))
+                            self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
                         if not block["rawTx"][z]["coinbase"]:
                             for i  in block["rawTx"][z]["vIn"]:
                                 inp = block["rawTx"][z]["vIn"][i]
@@ -254,15 +263,7 @@ class Worker:
                                    self.destroyed_coins[r[0]] = True
                                 except:
                                     pass
-                        for i in block["rawTx"][z]["vOut"]:
-                            o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
-                            pointer = (x << 42) + (z << 21) + i
-                            try:
-                                address = block["rawTx"][z]["vOut"][i]["scriptPubKey"]
-                            except:
-                                address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
-                                                           block["rawTx"][z]["vOut"][i]["addressHash"]))
-                            self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
+
                     blocks[x] = block
             if blocks:
                 blocks[x]["checkpoint"] = x
