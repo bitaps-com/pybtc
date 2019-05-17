@@ -219,6 +219,7 @@ class Worker:
 
     async def load_blocks(self, height):
         try:
+            attempt = 10
             t = 0
             start_height = height
             batch = list()
@@ -237,7 +238,15 @@ class Worker:
                 if r["result"] is not None:
                     batch.append(["getblock", r["result"], 0])
                     h.append(lh)
-            result = await self.rpc.batch(batch)
+            while True:
+                try:
+                    result = await self.rpc.batch(batch)
+                    break
+                except:
+                    await asyncio.sleep(5)
+                    attempt -= 1
+                if not attempt:
+                    raise RuntimeError("Connect to bitcoind failed")
             blocks = dict()
 
             for x, y in zip(h, result):
