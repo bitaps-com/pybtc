@@ -218,6 +218,7 @@ class Worker:
     async def load_blocks(self, height):
         try:
             t = 0
+            start_height = height
             batch = list()
             h_list = list()
             while True:
@@ -247,7 +248,11 @@ class Worker:
                                 outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                 try:
                                    r = self.coins.delete(outpoint)
-                                   block["rawTx"][z]["vIn"][i]["_c_"] = r
+                                   h = r[0] >> 42
+                                   if h >= start_height and h < height:
+                                       block["rawTx"][z]["vIn"][i]["_a_"] = r
+                                   else:
+                                       block["rawTx"][z]["vIn"][i]["_c_"] = r
                                    t += 1
                                    self.destroyed_coins[r[0]] = True
                                 except:
