@@ -387,7 +387,7 @@ class Connector:
                     # self.utxo.checkpoints = n
                     if self.utxo.checkpoints[0] < block["height"]:
                         self.utxo.deleted_last_block = block["height"]
-                        self.utxo.pending_deleted = self.utxo.pending_deleted.union(self.utxo.deleted)
+                        for d in self.utxo.deleted: self.utxo.pending_deleted.add(d)
                         self.utxo.deleted = set()
                         self.loop.create_task(self.utxo.save_utxo())
 

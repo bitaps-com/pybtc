@@ -90,38 +90,6 @@ class UTXO():
                 self.log.critical("checkpoint not found " +str(lb) +" > "+ str(self.checkpoints))
                 await asyncio.sleep(5)
                 return
-            # self.log.critical("checkpoints " + str(self.checkpoints) + " > " + str(checkpoint))
-            # self.log.critical("found checkpoint " + str(lb) + "  len " + str(len(utxo)) + " cached " + str(len(self.cached)) )
-
-            # self.log.critical(">" + str(len(self.cached)))
-            #
-            #     block_height
-            # for key in iter(self.cached):
-            #     i = self.cached[key]
-            #     if c>0 and (i[0] >> 42) <= block_height:
-            #         c -= 1
-            #         lb = i[0] >> 42
-            #         continue
-            #     break
-            #
-            # if lb:
-            #     d = set()
-            #     for key in range(self.last_saved_block + 1, lb + 1):
-            #         try:
-            #             [d.add(i) for i in self.deleted[key]]
-            #         except:
-            #             pass
-            #
-            #     a = set()
-            #     for key in iter(self.cached):
-            #         i = self.cached[key]
-            #         if (i[0] >> 42) > lb: break
-            #         a.add((key,b"".join((int_to_c_int(i[0]),
-            #                               int_to_c_int(i[1]),
-            #                               i[2]))))
-
-            # insert to db
-            # self.log.critical("start  " + str(len(utxo)))
 
 
             async with self._db_pool.acquire() as conn:
@@ -140,18 +108,7 @@ class UTXO():
             self.deleted_utxo += len(self.pending_deleted)
             self.pending_deleted = set()
 
-            # # remove from cache
-            # for key in a:
-            #     try:
-            #         self.cached.pop(key[0])
-            #     except:
-            #         pass
-            #
-            # for key in range(self.last_saved_block + 1, lb + 1):
-            #     try:
-            #         self.deleted.pop(key)
-            #     except:
-            #         pass
+
             self.last_saved_block = lb
         except:
             import traceback
