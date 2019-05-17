@@ -346,7 +346,7 @@ class Connector:
         if self.block_headers_cache.get(block["hash"]) is not None: return
         if self.deep_synchronization:  block["height"] = self.last_block_height + 1
         if self.last_block_height >= block["height"]:  return
-        if self.active_block.done():  return
+        if not self.active_block.done():  return
 
         try:
 
