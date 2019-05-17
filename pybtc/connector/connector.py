@@ -584,7 +584,7 @@ class Connector:
 
 
             if self.block_batch_handler and not self.cache_loading:
-                await self.block_batch_handler(tx, block)
+                await self.block_batch_handler(block)
 
         except Exception as err:
             self.log.critical("new block error %s " % err)
