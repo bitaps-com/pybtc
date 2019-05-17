@@ -211,6 +211,7 @@ class Worker:
         self.in_reader = in_reader
         self.coins = MRU(500000)
         self.destroyed_coins = MRU(500000)
+        self.a_coins = MRU(500000)
         signal.signal(signal.SIGTERM, self.terminate)
         self.loop.create_task(self.message_loop())
         self.loop.run_forever()
@@ -248,11 +249,7 @@ class Worker:
                                 outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                 try:
                                    r = self.coins.delete(outpoint)
-                                   h = r[0] >> 42
-                                   if h >= start_height and h < height:
-                                       block["rawTx"][z]["vIn"][i]["_c_"] = r
-                                   else:
-                                       block["rawTx"][z]["vIn"][i]["_c_"] = r
+                                   block["rawTx"][z]["vIn"][i]["_c_"] = r
                                    t += 1
                                    self.destroyed_coins[r[0]] = True
                                 except:
@@ -275,8 +272,17 @@ class Worker:
                         try:
                             pointer = (x << 42) + (y << 21) + i
                             r = self.destroyed_coins.delete(pointer)
+                            self.a_coins[pointer]=True
                             blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                         except: pass
+                if not blocks[x]["rawTx"][y]["coinbase"]:
+                    for i in blocks[x]["rawTx"][y]["vOut"]:
+                        try:
+                           r = blocks[x]["rawTx"][y]["vIn"][i]["_c_"]
+                           self.a_coins.delete(r[0])
+                           blocks[x]["rawTx"][y]["vIn"][i]["_a_"] = True
+                        except:
+                            pass
 
                 blocks[x] = pickle.dumps(blocks[x])
             self.pipe_sent_msg(b'result', pickle.dumps(blocks))
