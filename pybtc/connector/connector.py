@@ -398,8 +398,9 @@ class Connector:
 
 
             self.blocks_processed_count += 1
-
-            for h in tx_bin_list: self.tx_cache.pop(h)
+            if not (self.deep_synchronization and self.block_batch_handler):
+                for h in tx_bin_list:
+                    self.tx_cache.pop(h)
 
             tx_rate = round(self.total_received_tx / (time.time() - self.start_time), 4)
             t = 10000 if not self.deep_synchronization else 10000
