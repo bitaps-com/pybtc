@@ -586,7 +586,7 @@ class Connector:
 
             if self.block_batch_handler and not self.cache_loading:
                 await self.block_batch_handler(block)
-
+            self.total_received_tx += len(block["rawTx"])
         except Exception as err:
             self.log.critical("new block error %s " % err)
             self.log.critical(str(traceback.format_exc()))
