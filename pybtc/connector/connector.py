@@ -617,7 +617,7 @@ class Connector:
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                             tx["vIn"][i]["outpoint"] = outpoint
                             try:
-                                inp["_a_"]
+                                # inp["_a_"]
                                 tx["vIn"][i]["coin"] = inp["_c_"]
                                 c += 1
                                 self.yy += 1
