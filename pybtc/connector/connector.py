@@ -369,7 +369,7 @@ class Connector:
 
             if self.before_block_handler and not self.cache_loading:
                 await self.before_block_handler(block)
-            if self.block_batch_handler:
+            if self.deep_synchronization and self.block_batch_handler:
                 await self._block_as_transactions_batch(block)
             else:
                 await self.fetch_block_transactions(block, tx_bin_list)
