@@ -341,15 +341,15 @@ class Connector:
             self.log.error(str(traceback.format_exc()))
 
     async def _new_block(self, block):
+        if not self.active: return
         tq = time.time()
-        if not self.active or not self.active_block.done() or self.last_block_height >= block["height"]:
-            return
-        try:
-            if self.block_headers_cache.get(block["hash"]) is not None:
-                    return
+        if self.block_headers_cache.get(block["hash"]) is not None: return
+        if self.deep_synchronization:  block["height"] = self.last_block_height + 1
+        if self.last_block_height >= block["height"]:  return
+        if self.active_block.done():  return
 
-            if self.deep_synchronization:
-                block["height"] = self.last_block_height + 1
+        try:
+
 
             self.active_block = asyncio.Future()
 
