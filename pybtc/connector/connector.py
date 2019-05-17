@@ -80,6 +80,7 @@ class Connector:
         self.destroyed_coins = 0
         self.tt = 0
         self.yy = 0
+        self.aa = 0
         self.start_time = time.time()
 
         # cache and system
@@ -439,7 +440,7 @@ class Connector:
                 self.log.info("total tx fetch time %s;" % self.total_received_tx_time)
                 self.log.info("total blocks processing time %s;" % self.blocks_processing_time)
                 self.log.info("total time %s;" % (time.time() - self.start_time ,))
-                self.log.info("yy/tt fetch time >>%s %s;" % (self.yy, self.tt))
+                self.log.info("yy-aa/tt fetch time >>%s-%s %s;" % (self.yy, self.aa, self.tt))
                 self.log.info("coins/destroyed unspent %s/%s %s;" % (self.coins,
                                                                      self.destroyed_coins,
                                                                      self.coins - self.destroyed_coins))
@@ -623,7 +624,7 @@ class Connector:
                                 try:
                                     tx["vIn"][i]["coin"] = inp["_c_"]
                                     c += 1
-                                    self.yy += 1
+                                    self.aa += 1
                                     self.utxo.deleted.add(outpoint)
                                 except:
                                     r = self.utxo.get(outpoint)
