@@ -48,7 +48,7 @@ class BlockLoader:
                         if next(iter(self.parent.block_preload._store)) <= self.parent.last_block_height:
                             for i in range(next(iter(self.parent.block_preload._store)),
                                            self.parent.last_block_height + 1):
-                                try: del self.parent.block_preload.cached[i]
+                                try: del self.parent.block_preload._store[i]
                                 except: pass
 
             except asyncio.CancelledError:
