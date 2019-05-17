@@ -388,7 +388,7 @@ class Connector:
                     # self.utxo.checkpoints = n
                     if self.utxo.checkpoints[0] < block["height"]:
                         self.utxo.deleted_last_block = block["height"]
-                        for d in self.utxo.deleted: self.utxo.pending_deleted.add(d)
+                        self.utxo.pending_deleted = self.utxo.pending_deleted | self.utxo.deleted
                         self.utxo.deleted = set()
                         self.loop.create_task(self.utxo.save_utxo())
 
@@ -621,21 +621,21 @@ class Connector:
                                 c += 1
                                 self.yy += 1
                             except:
-                                # try:
-                                #     tx["vIn"][i]["coin"] = inp["_a_"]
-                                #     c += 1
-                                #     self.aa += 1
-                                #     try:
-                                #         self.utxo.get(outpoint)
-                                #     except:
-                                #         self.utxo.deleted.add(outpoint)
-                                # except:
-                                r = self.utxo.get(outpoint)
-                                if r:
-                                    tx["vIn"][i]["coin"]  = r
+                                try:
+                                    tx["vIn"][i]["coin"] = inp["_a_"]
                                     c += 1
-                                else:
-                                    missed.add((outpoint, (block_height << 42) + (block_index << 21) + i, i))
+                                    self.aa += 1
+                                    try:
+                                        self.utxo.get(outpoint)
+                                    except:
+                                        self.utxo.deleted.add(outpoint)
+                                except:
+                                    r = self.utxo.get(outpoint)
+                                    if r:
+                                        tx["vIn"][i]["coin"]  = r
+                                        c += 1
+                                    else:
+                                        missed.add((outpoint, (block_height << 42) + (block_index << 21) + i, i))
 
                         if missed:
                             await self.utxo.load_utxo()
