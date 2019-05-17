@@ -342,14 +342,15 @@ class Connector:
 
     async def _new_block(self, block):
         tq = time.time()
+        if not self.active or not self.active_block.done() or self.last_block_height >= block["height"]:
+            return
         try:
             if self.block_headers_cache.get(block["hash"]) is not None:
                     return
 
             if self.deep_synchronization:
                 block["height"] = self.last_block_height + 1
-            if not self.active or not self.active_block.done() or self.last_block_height >= block["height"]:
-                return
+
             self.active_block = asyncio.Future()
 
             self.log.debug("Block %s %s" % (block["height"], block["hash"]))
