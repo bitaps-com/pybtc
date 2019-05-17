@@ -258,7 +258,10 @@ class Worker:
                                 outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                 try:
                                    r = self.coins.delete(outpoint)
-                                   block["rawTx"][z]["vIn"][i]["_c_"] = r
+                                   if r[0] >> 42 >= start_height and r[0] < height:
+                                       block["rawTx"][z]["vIn"][i]["_a_"] = r
+                                   else:
+                                       block["rawTx"][z]["vIn"][i]["_c_"] = r
                                    t += 1
                                    self.destroyed_coins[r[0]] = True
                                 except:
@@ -276,14 +279,14 @@ class Worker:
                             self.a_coins[pointer]=True
                             blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                         except: pass
-                if not blocks[x]["rawTx"][y]["coinbase"]:
-                    for i in blocks[x]["rawTx"][y]["vOut"]:
-                        try:
-                           r = blocks[x]["rawTx"][y]["vIn"][i]["_c_"]
-                           self.a_coins.delete(r[0])
-                           blocks[x]["rawTx"][y]["vIn"][i]["_a_"] = True
-                        except:
-                            pass
+                # if not blocks[x]["rawTx"][y]["coinbase"]:
+                #     for i in blocks[x]["rawTx"][y]["vOut"]:
+                #         try:
+                #            r = blocks[x]["rawTx"][y]["vIn"][i]["_c_"]
+                #            self.a_coins.delete(r[0])
+                #            blocks[x]["rawTx"][y]["vIn"][i]["_a_"] = True
+                #         except:
+                #             pass
 
                 blocks[x] = pickle.dumps(blocks[x])
             self.pipe_sent_msg(b'result', pickle.dumps(blocks))
