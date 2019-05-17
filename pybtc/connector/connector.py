@@ -587,8 +587,8 @@ class Connector:
                 await self.block_batch_handler(tx, block)
 
         except Exception as err:
-            self.log.debug("new block error %s " % err)
-            self.log.debug(str(traceback.format_exc()))
+            self.log.critical("new block error %s " % err)
+            self.log.critical(str(traceback.format_exc()))
         finally:
             pass
 
