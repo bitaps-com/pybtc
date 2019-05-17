@@ -625,7 +625,10 @@ class Connector:
                                     tx["vIn"][i]["coin"] = inp["_a_"]
                                     c += 1
                                     self.aa += 1
-                                    self.utxo.deleted.add(outpoint)
+                                    try:
+                                        self.utxo.get(outpoint)
+                                    except:
+                                        self.utxo.deleted.add(outpoint)
                                 except:
                                     r = self.utxo.get(outpoint)
                                     if r:
