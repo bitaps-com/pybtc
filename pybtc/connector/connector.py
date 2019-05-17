@@ -622,7 +622,7 @@ class Connector:
                                 self.yy += 1
                             except:
                                 try:
-                                    tx["vIn"][i]["coin"] = inp["_c_"]
+                                    tx["vIn"][i]["coin"] = inp["_a_"]
                                     c += 1
                                     self.aa += 1
                                     self.utxo.deleted.add(outpoint)
