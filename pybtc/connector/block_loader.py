@@ -48,8 +48,9 @@ class BlockLoader:
                         if next(iter(self.parent.block_preload._store)) <= self.parent.last_block_height:
                             for i in range(next(iter(self.parent.block_preload._store)),
                                            self.parent.last_block_height + 1):
-                                try: del self.parent.block_preload._store[i]
-                                except: pass
+
+                                try: self.parent.block_preload.remove(i)
+                                except: self.log.warning(str(traceback.format_exc()))
 
             except asyncio.CancelledError:
                 self.log.info("connector watchdog terminated")
@@ -72,7 +73,7 @@ class BlockLoader:
                     if self.last_batch_size < 8000000:
                         self.rpc_batch_limit += 10
                     elif self.last_batch_size >  50000000 and self.rpc_batch_limit > 10:
-                        self.rpc_batch_limit = 80
+                        self.rpc_batch_limit = 50
                     if self.last_batch_size > 400:
                         self.last_batch_size = 400
                     for i in self.worker_busy:
@@ -94,7 +95,7 @@ class BlockLoader:
                     self.log.error("Loading task  error %s " % err)
             else:
                 await  asyncio.sleep(1)
-        [self.worker_tasks[p].terminate() for p in self.worker_tasks]
+        [p.terminate() for p in self.worker_tasks]
         for p in self.worker_busy: self.worker_busy[p] = False
 
 
