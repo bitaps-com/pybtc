@@ -11,6 +11,7 @@ class UTXO():
         self.deleted = set()
         self.pending_deleted = set()
         self.pending_utxo = set()
+        self.checkpoint = None
         self.checkpoints = list()
         self.log = log
         self.loaded = MRU()
