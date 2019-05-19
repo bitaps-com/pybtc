@@ -400,7 +400,7 @@ class Connector:
             self.last_block_height = block["height"]
 
             if self.utxo_data and self.utxo.save_process:
-                self.loop.create_task(self.utxo.save_utxo())
+                self.loop.create_task(self.utxo.save_checkpoint())
 
 
             self.blocks_processed_count += 1
