@@ -44,13 +44,12 @@ class BlockLoader:
                 else:
                     # clear unused cache
                     if self.parent.block_preload._store:
-                        self.log.warning(">>>" + str(next(iter(self.parent.block_preload._store))))
                         if next(iter(self.parent.block_preload._store)) <= self.parent.last_block_height:
                             for i in range(next(iter(self.parent.block_preload._store)),
                                            self.parent.last_block_height + 1):
 
                                 try: self.parent.block_preload.remove(i)
-                                except: self.log.warning(str(traceback.format_exc()))
+                                except: pass
 
             except asyncio.CancelledError:
                 self.log.info("connector watchdog terminated")

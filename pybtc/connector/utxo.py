@@ -2,6 +2,7 @@ from pybtc import int_to_c_int, c_int_to_int, c_int_len
 import asyncio
 from collections import OrderedDict
 from pybtc  import MRU
+import traceback
 
 class UTXO():
     def __init__(self, db_pool, loop, log, cache_size):
@@ -9,6 +10,7 @@ class UTXO():
         self.missed = set()
         self.deleted = set()
         self.pending_deleted = set()
+        self.pending_utxo = set()
         self.checkpoints = list()
         self.log = log
         self.loaded = MRU()
@@ -43,21 +45,19 @@ class UTXO():
         del self.cached[outpoint]
 
 
-    async def save_utxo(self):
+    def create_checkpoint(self):
         # save to db tail from cache
         if  self.save_process or not self.cached: return
         if  not self.checkpoints: return
-
         self.save_process = True
         try:
-            # self.log.critical("cached " + str(len(self.cached)) )
             i = self.cached.peek_last_item()
             self.checkpoints = sorted(self.checkpoints)
             checkpoint = self.checkpoints.pop(0)
             lb = 0
             block_changed = False
             checkpoint_found = False
-            utxo = set()
+
             while self.cached:
                 i = self.cached.pop()
                 if lb != i[1][0] >> 42:
@@ -77,19 +77,26 @@ class UTXO():
                 if len(self.cached) <= self.size_limit:
                     if block_changed and checkpoint_found:
                         break
-                utxo.add((i[0],b"".join((int_to_c_int(i[1][0]),
+                self.pending_utxo.add((i[0],b"".join((int_to_c_int(i[1][0]),
                                          int_to_c_int(i[1][1]),
                                          i[1][2]))))
                 self.pending_saved[i[0]] = i[1]
             if block_changed:
                 self.cached.append({i[0]: i[1]})
                 lb -= 1
-            if not checkpoint_found:
-                for i in reversed(self.pending_saved):
-                    self.cached.append({i: self.pending_saved[i]})
-                self.log.critical("checkpoint not found " +str(lb) +" > "+ str(self.checkpoints))
-                await asyncio.sleep(5)
-                return
+
+            self.checkpoint = lb  if checkpoint_found else None
+
+        except:
+            self.log.critical("create checkpoint error")
+            self.log.critical(str(traceback.format_exc()))
+
+
+    async def save_checkpoint(self):
+        # save to db tail from cache
+        if  not self.checkpoint: return
+        try:
+            if not self.checkpoint: return
 
 
             async with self._db_pool.acquire() as conn:
@@ -97,21 +104,22 @@ class UTXO():
                     if self.pending_deleted:
                         await conn.execute("DELETE FROM connector_utxo WHERE "
                                            "outpoint = ANY($1);", self.pending_deleted)
-                    if utxo:
+                    if self.pending_utxo:
                         await conn.copy_records_to_table('connector_utxo',
-                                                         columns=["outpoint", "data"], records=utxo)
+                                                         columns=["outpoint", "data"], records=self.pending_utxo)
                     await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                        "WHERE name = 'last_block';", lb)
                     await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                        "WHERE name = 'last_cached_block';", self.deleted_last_block)
-            self.saved_utxo += len(utxo)
+            self.saved_utxo += len(self.pending_utxo)
             self.deleted_utxo += len(self.pending_deleted)
             self.pending_deleted = set()
+            self.pending_utxo = set()
 
 
-            self.last_saved_block = lb
+            self.last_saved_block = self.checkpoint
+            self.checkpoint = None
         except:
-            import traceback
             self.log.critical("implement rollback  ")
             self.log.critical(str(traceback.format_exc()))
         finally:

@@ -361,8 +361,9 @@ class Connector:
             self.cache_loading = True if self.last_block_height < self.app_block_height_on_start else False
 
 
-            if self.deep_synchronization:
-                tx_bin_list = [block["rawTx"][i]["txId"] for i in block["rawTx"]]
+            if not self.deep_synchronization:
+                if not  self.block_batch_handler:
+                    tx_bin_list = [block["rawTx"][i]["txId"] for i in block["rawTx"]]
             else:
                 tx_bin_list = [s2rh(h) for h in block["tx"]]
             await self.verify_block_position(block)
@@ -374,27 +375,32 @@ class Connector:
             else:
                 await self.fetch_block_transactions(block, tx_bin_list)
 
-            if self.block_handler and not self.cache_loading:
-                await self.block_handler(block)
-
-            self.block_headers_cache.set(block["hash"], block["height"])
-            self.last_block_height = block["height"]
             if self.utxo_data:
+                checkpoint = self.utxo.checkpoint
                 try: self.utxo.checkpoints.append(block["checkpoint"])
                 except: pass
                 if len(self.utxo.cached) > self.utxo.size_limit and \
                    not self.utxo.save_process and \
                    self.utxo.checkpoints:
-                    # n = list()
-                    # for i in self.utxo.checkpoints:
-                    #     if i >= block["height"]:
-                    #         n.append(i)
-                    # self.utxo.checkpoints = n
                     if self.utxo.checkpoints[0] < block["height"]:
                         self.utxo.deleted_last_block = block["height"]
                         self.utxo.pending_deleted = self.utxo.pending_deleted | self.utxo.deleted
                         self.utxo.deleted = set()
-                        self.loop.create_task(self.utxo.save_utxo())
+                        self.utxo.create_checkpoint()
+            else:
+                checkpoint = None
+
+            if self.block_batch_handler and not self.cache_loading:
+                await self.block_batch_handler(block, checkpoint)
+
+            if self.block_handler and not self.cache_loading:
+                await self.block_handler(block)
+
+            self.block_headers_cache.set(block["hash"], block["height"])
+            self.last_block_height = block["height"]
+
+            if self.utxo_data and self.utxo.save_process:
+                self.loop.create_task(self.utxo.save_utxo())
 
 
             self.blocks_processed_count += 1
@@ -583,9 +589,6 @@ class Connector:
                     self.log.critical("utxo get failed " + rh2s(block["hash"]))
                     raise Exception("utxo get failed ")
 
-
-            if self.block_batch_handler and not self.cache_loading:
-                await self.block_batch_handler(block)
             self.total_received_tx += len(block["rawTx"])
         except Exception as err:
             self.log.critical("new block error %s " % err)
