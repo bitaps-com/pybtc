@@ -375,7 +375,7 @@ class Worker:
         msg_type = msg_type[:20].ljust(20)
         msg = msg_type + msg
         msg = b''.join((b'ME', len(msg).to_bytes(4, byteorder='little'), msg))
-        self.out_writer.write(msg)
-        await self.out_writer.drain()
+        self.writer.write(msg)
+        await self.writer.drain()
 
 
