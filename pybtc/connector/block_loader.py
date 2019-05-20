@@ -159,7 +159,7 @@ class BlockLoader:
         msg = msg_type + msg
         msg = b''.join((b'ME', len(msg).to_bytes(4, byteorder='little'), msg))
         writer.write(msg)
-        writer.flush()
+        # writer.flush()
 
 
 
@@ -359,6 +359,6 @@ class Worker:
         msg = msg_type + msg
         msg = b''.join((b'ME', len(msg).to_bytes(4, byteorder='little'), msg))
         self.out_writer.write(msg)
-        self.out_writer.flush()
+        # self.out_writer.flush()
 
 
