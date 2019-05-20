@@ -115,7 +115,7 @@ class BlockLoader:
         out_writer.close()
         # get stream reader
         worker.reader = await self.get_pipe_reader(out_reader)
-        worker.writer = in_writer
+        worker.writer = await self.get_pipe_writer(in_writer)
         worker.name   = str(index)
         self.worker[index] =  worker
         self.worker_busy[index] =  False
@@ -136,6 +136,14 @@ class BlockLoader:
         except:
             return None
         return reader
+
+    async def get_pipe_writer(self, fd_writer):
+        try:
+            wt, wp = await self.loop.connect_write_pipe(asyncio.streams.FlowControlMixin, fd_writer)
+            writer = asyncio.streams.StreamWriter(wt, wp, None, self.loop)
+        except:
+            return None
+        return writer
 
     async def pipe_get_msg(self, reader):
         while True:
@@ -159,7 +167,7 @@ class BlockLoader:
         msg = msg_type + msg
         msg = b''.join((b'ME', len(msg).to_bytes(4, byteorder='little'), msg))
         writer.write(msg)
-        # writer.flush()
+        await writer.drain()
 
 
 
@@ -359,6 +367,6 @@ class Worker:
         msg = msg_type + msg
         msg = b''.join((b'ME', len(msg).to_bytes(4, byteorder='little'), msg))
         self.out_writer.write(msg)
-        # self.out_writer.flush()
+        self.out_writer.flush()
 
 
