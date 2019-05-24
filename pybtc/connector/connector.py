@@ -538,7 +538,7 @@ class Connector:
                             out = tx["vOut"][i]
                             if self.skip_opreturn and out["nType"] in (3, 8):
                                 continue
-                            pointer = (block["height"] << 42) + (block["height"] << 21) + i
+                            pointer = (block["height"] << 42) + (q << 21) + i
                             try:
                                 address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
                             except:
