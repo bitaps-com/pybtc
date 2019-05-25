@@ -24,6 +24,7 @@ class UTXO():
         self.last_saved_block = 0
         self.last_cached_block = 0
         self.save_process = False
+        self.write_to_db = False
         self.load_utxo_future = asyncio.Future()
         self.load_utxo_future.set_result(True)
         self._requests = 0
@@ -96,7 +97,9 @@ class UTXO():
     async def save_checkpoint(self):
         # save to db tail from cache
         if  not self.checkpoint: return
+        if  self.write_to_db: return
         try:
+            self.write_to_db = True
             if not self.checkpoint: return
 
 
@@ -126,6 +129,7 @@ class UTXO():
         finally:
             self.pending_saved = OrderedDict()
             self.save_process = False
+            self.write_to_db = False
 
     def get(self, key):
         self._requests += 1
