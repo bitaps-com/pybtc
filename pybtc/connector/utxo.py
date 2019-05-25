@@ -109,7 +109,7 @@ class UTXO():
                         await conn.copy_records_to_table('connector_utxo',
                                                          columns=["outpoint", "data"], records=self.pending_utxo)
                     await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-                                       "WHERE name = 'last_block';", lb)
+                                       "WHERE name = 'last_block';", self.checkpoint)
                     await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                        "WHERE name = 'last_cached_block';", self.deleted_last_block)
             self.saved_utxo += len(self.pending_utxo)
