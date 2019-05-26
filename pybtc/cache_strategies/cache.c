@@ -230,7 +230,7 @@ static PyObject *CACHE_delete(CACHE *self, PyObject *args) {
     PyObject *instead = NULL;
     if (!PyArg_ParseTuple(args, "O|O", &key, &instead)) return NULL;
     Node *node = GET_NODE(self->dict, key);
-    PyErr_Clear();
+
     if (!node) {
        if (!instead) {
        Py_XDECREF(node);
