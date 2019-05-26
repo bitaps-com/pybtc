@@ -165,6 +165,7 @@ static PyObject *cache_contains_key(CACHE *self, PyObject *key) {
     if (PyDict_Contains(self->dict, key)) {
         Py_RETURN_TRUE;
     } else {
+        PyErr_Clear();
         Py_RETURN_FALSE;
     }
 }
