@@ -265,10 +265,11 @@ class Worker:
                             o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
                             pointer = (x << 42) + (z << 21) + i
                             try:
-                                address = block["rawTx"][z]["vOut"][i]["scriptPubKey"]
-                            except:
                                 address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
                                                            block["rawTx"][z]["vOut"][i]["addressHash"]))
+                            except:
+                                address = block["rawTx"][z]["vOut"][i]["scriptPubKey"]
+
                             self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
                         if not block["rawTx"][z]["coinbase"]:
                             for i  in block["rawTx"][z]["vIn"]:

@@ -540,9 +540,9 @@ class Connector:
                                 continue
                             pointer = (block["height"] << 42) + (q << 21) + i
                             try:
-                                address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
-                            except:
                                 address = b"".join((bytes([out["nType"]]), out["addressHash"]))
+                            except:
+                                address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
                             self.utxo.set(b"".join((tx["txId"], int_to_bytes(i))), pointer, out["value"], address)
 
             c = 0
@@ -745,9 +745,10 @@ class Connector:
                                 continue
                             pointer = (block_height << 42) + (block_index << 21) + i
                             try:
-                                address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
-                            except:
                                 address = b"".join((bytes([out["nType"]]), out["addressHash"]))
+
+                            except:
+                                address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
                             self.utxo.set(b"".join((tx["txId"], int_to_bytes(i))), pointer, out["value"], address)
 
                 self.tx_cache.set(tx["txId"], True)
