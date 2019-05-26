@@ -165,7 +165,6 @@ static PyObject *cache_contains_key(CACHE *self, PyObject *key) {
     if (PyDict_Contains(self->dict, key)) {
         Py_RETURN_TRUE;
     } else {
-        PyErr_Clear();
         Py_RETURN_FALSE;
     }
 }
@@ -231,7 +230,7 @@ static PyObject *CACHE_delete(CACHE *self, PyObject *args) {
     PyObject *instead = NULL;
     if (!PyArg_ParseTuple(args, "O|O", &key, &instead)) return NULL;
     Node *node = GET_NODE(self->dict, key);
-
+    PyErr_Clear();
     if (!node) {
        if (!instead) {
        Py_XDECREF(node);
