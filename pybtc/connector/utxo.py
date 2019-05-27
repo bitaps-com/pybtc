@@ -155,7 +155,7 @@ class UTXO():
             l = set(self.missed)
             rows = []
             [rows.append({"outpoint": k, "data": self.get(k)}) for k in l]
-
+            self.log.critical(str(rows))
             for i in l:
                 try:
                     self.missed.remove(i)
