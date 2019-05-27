@@ -154,21 +154,21 @@ class UTXO():
         try:
             self.load_utxo_future = asyncio.Future()
             l = set(self.missed)
-            rows = []
-            [rows.append({"outpoint": k, "data": self.db.get(k)}) for k in l]
+            rows = self.db.multi_get(l)
+
             for i in l:
                 try:
                     self.missed.remove(i)
                 except:
                     pass
-            for row in rows:
-                d = row["data"]
+            for outpoint in rows:
+                d = rows[outpoint]
                 pointer = c_int_to_int(d)
                 f = c_int_len(pointer)
                 amount = c_int_to_int(d[f:])
                 f += c_int_len(amount)
                 address = d[f:]
-                self.loaded[row["outpoint"]] = (pointer, amount, address)
+                self.loaded[outpoint] = (pointer, amount, address)
                 self.loaded_utxo += 1
         finally:
             self.load_utxo_future.set_result(True)
