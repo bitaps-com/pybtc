@@ -105,7 +105,6 @@ class UTXO():
             [batch.delete(k) for k in self.pending_deleted]
             for k in self.pending_utxo:
                 batch.put(k[0], k[1])
-                self.log.critical(str(k))
             batch.put(b"last_block", int_to_bytes(self.checkpoint))
             batch.put(b"last_cached_block", int_to_bytes(self.deleted_last_block))
             self.db.write(batch)
@@ -156,8 +155,7 @@ class UTXO():
             self.load_utxo_future = asyncio.Future()
             l = set(self.missed)
             rows = []
-            [rows.append({"outpoint": k, "data": self.get(k)}) for k in l]
-            self.log.critical(str(rows))
+            [rows.append({"outpoint": k, "data": self.db.get(k)}) for k in l]
             for i in l:
                 try:
                     self.missed.remove(i)
