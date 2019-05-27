@@ -40,7 +40,6 @@ class UTXO():
         self.outs_total = 0
 
     def set(self, outpoint, pointer, amount, address):
-        # self.cached.put({outpoint: (pointer, amount, address)})
         self.cached[outpoint] = (pointer, amount, address)
 
     def remove(self, outpoint):
@@ -73,8 +72,6 @@ class UTXO():
                         checkpoint_found = True
                 while self.checkpoints and checkpoint < lb - 1:
                     checkpoint = self.checkpoints.pop(0)
-
-
 
                 if len(self.cached) <= self.size_limit:
                     if block_changed and checkpoint_found:
@@ -119,15 +116,12 @@ class UTXO():
             self.deleted_utxo += len(self.pending_deleted)
             self.pending_deleted = set()
             self.pending_utxo = set()
-
-
+            self.pending_saved = OrderedDict()
             self.last_saved_block = self.checkpoint
             self.checkpoint = None
-        except:
-            self.log.critical("implement rollback  ")
-            self.log.critical(str(traceback.format_exc()))
+        except Exception as err:
+            self.log.critical("save_checkpoint error: %s" % str(err))
         finally:
-            self.pending_saved = OrderedDict()
             self.save_process = False
             self.write_to_db = False
 

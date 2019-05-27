@@ -135,12 +135,12 @@ class Connector:
                 await asyncio.sleep(10)
                 continue
             elif self.node_last_block == self.last_block_height:
-                self.log.warning("Blockchain is synchronized")
+                self.log.info("Blockchain is synchronized")
             else:
                 d = self.node_last_block - self.last_block_height
-                self.log.warning("%s blocks before synchronization" % d)
+                self.log.info("%s blocks before synchronization" % d)
                 if d > self.deep_sync_limit:
-                    self.log.warning("Deep synchronization mode")
+                    self.log.info("Deep synchronization mode")
                     self.deep_synchronization = True
             break
 
@@ -297,11 +297,11 @@ class Connector:
 
                 if d > self.deep_sync_limit:
                     if not self.deep_synchronization:
-                        self.log.warning("Deep synchronization mode")
+                        self.log.info("Deep synchronization mode")
                         self.deep_synchronization = True
                 else:
                     if self.deep_synchronization:
-                        self.log.warning("Normal synchronization mode")
+                        self.log.info("Normal synchronization mode")
                         # clear preload caches
                         self.deep_synchronization = False
                 block = None
@@ -324,7 +324,6 @@ class Connector:
                 self.get_next_block_mutex = False
 
     async def _get_block_by_hash(self, hash):
-        self.log.debug("get block by hash %s" % hash)
         try:
             if self.deep_synchronization:
                 q = time.time()
@@ -355,8 +354,6 @@ class Connector:
 
 
             self.active_block = asyncio.Future()
-
-            self.log.debug("Block %s %s" % (block["height"], block["hash"]))
 
             self.cache_loading = True if self.last_block_height < self.app_block_height_on_start else False
 
@@ -415,24 +412,24 @@ class Connector:
                 self.log.warning("Blocks %s; tx rate: %s;" % (block["height"], tx_rate))
                 if self.utxo_data:
                     loading = "Loading ... " if self.cache_loading else ""
-                    self.log.info(loading + "UTXO %s; hit rate: %s;" % (self.utxo.len(),
-                                                                        self.utxo.hit_rate()))
-                    self.log.info("Blocks downloaded  %s; decoded %s" % (round(self.blocks_download_time, 4),
-                                                                         round(self.blocks_decode_time, 4)))
+                    self.log.debug(loading + "UTXO %s; hit rate: %s;" % (self.utxo.len(),
+                                                                         round(self.utxo.hit_rate(), 4)))
+                    self.log.debug("Blocks downloaded  %s; decoded %s" % (round(self.blocks_download_time, 4),
+                                                                          round(self.blocks_decode_time, 4)))
                     if self.deep_synchronization:
-                        self.log.info("Blocks not cached %s; "
+                        self.log.debug("Blocks:  not cached %s; "
                                       "cache count %s; "
                                       "cache size %s M;" % (self.non_cached_blocks,
                                                             self.block_preload.len(),
                                                             round(self.block_preload._store_size / 1024 / 1024, 2)))
                         if self.block_preload._store:
-                            self.log.info(
-                                          "cache first %s; "
-                                          "cache last %s;" % (
+                            self.log.debug(
+                                          "cache first block %s; "
+                                          "cache last block %s;" % (
                                                                 next(iter(self.block_preload._store)),
                                                                 next(reversed(self.block_preload._store))))
 
-                        self.log.info("saved utxo block %s; "
+                        self.log.debug("utxo checkpoint block %s; "
                                       "saved utxo %s; "
                                       "deleted utxo %s; "
                                       "loaded utxo %s; "% (self.utxo.last_saved_block,
@@ -440,21 +437,18 @@ class Connector:
                                                                    self.utxo.deleted_utxo,
                                                                    self.utxo.loaded_utxo
                                                            ))
-                        self.log.info(
-                                      "destroyed utxo %s; "
-                                      "destroyed utxo block %s; "
-                                      "outs total %s;" % (
-                                                           self.utxo.destroyed_utxo,
-                                                           self.utxo.destroyed_utxo_block,
-                                                           self.utxo.outs_total
-                                                           ))
-                self.log.info("total tx fetch time %s;" % self.total_received_tx_time)
-                self.log.info("total blocks processing time %s;" % self.blocks_processing_time)
-                self.log.info("total time %s;" % (time.time() - self.start_time ,))
-                self.log.info("yy-aa/tt fetch time >>%s-%s %s;" % (self.yy, self.aa, self.tt))
-                self.log.info("coins/destroyed unspent %s/%s %s;" % (self.coins,
+                self.log.debug("Preload coins chached/destoyed  -> %s-%s [%s];" % (self.yy, self.aa, self.tt))
+                self.log.debug("Coins %s; destroyed %s; unspent %s;" % (self.coins,
                                                                      self.destroyed_coins,
                                                                      self.coins - self.destroyed_coins))
+                self.log.debug("total tx fetch time %s;" % self.total_received_tx_time)
+                self.log.debug("total blocks processing time %s;" % self.blocks_processing_time)
+                t = time.time() - self.start_time
+                h = t // 3600
+                m = (t % 3600 ) // 60
+                s = (t % 3600) % 60
+                self.log.info("Total time %s:%s:%s;" % (h,m,s))
+
 
             # after block added handler
             if self.after_block_handler and not self.cache_loading:
