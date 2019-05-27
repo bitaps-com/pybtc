@@ -1,11 +1,12 @@
 from pybtc import int_to_c_int, c_int_to_int, c_int_len
+from pybtc import int_to_bytes, bytes_to_int
 import asyncio
 from collections import OrderedDict
 from pybtc  import MRU
 import traceback
 
 class UTXO():
-    def __init__(self, db_pool, loop, log, cache_size):
+    def __init__(self, db, loop, log, cache_size):
         self.cached = MRU()
         self.missed = set()
         self.deleted = set()
@@ -18,7 +19,7 @@ class UTXO():
         self.pending_saved = OrderedDict()
         self.maturity = 100
         self.size_limit = cache_size
-        self._db_pool = db_pool
+        self.db = db
         self.loop = loop
         self.clear_tail = False
         self.last_saved_block = 0
@@ -99,19 +100,13 @@ class UTXO():
             self.write_to_db = True
             if not self.checkpoint: return
 
+            batch = rocksdb.WriteBatch()
+            [batch.delete(k) for k in self.pending_deleted]
+            [batch.put(k[0], k[1]) for k in self.pending_utxo]
+            batch.put(b"last_block", int_to_bytes(self.checkpoint))
+            batch.put(b"last_cached_block", int_to_bytes(self.deleted_last_block))
+            self.db.write(batch)
 
-            async with self._db_pool.acquire() as conn:
-                async with conn.transaction():
-                    if self.pending_deleted:
-                        await conn.execute("DELETE FROM connector_utxo WHERE "
-                                           "outpoint = ANY($1);", self.pending_deleted)
-                    if self.pending_utxo:
-                        await conn.copy_records_to_table('connector_utxo',
-                                                         columns=["outpoint", "data"], records=self.pending_utxo)
-                    await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-                                       "WHERE name = 'last_block';", self.checkpoint)
-                    await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-                                       "WHERE name = 'last_cached_block';", self.deleted_last_block)
             self.saved_utxo += len(self.pending_utxo)
             self.deleted_utxo += len(self.pending_deleted)
             self.pending_deleted = set()
@@ -157,10 +152,9 @@ class UTXO():
         try:
             self.load_utxo_future = asyncio.Future()
             l = set(self.missed)
-            async with self._db_pool.acquire() as conn:
-                rows = await conn.fetch("SELECT outpoint, connector_utxo.data "
-                                        "FROM connector_utxo "
-                                        "WHERE outpoint = ANY($1);", l)
+            rows = []
+            [rows.append({"outpoint": k, "data": self.get(k)}) for k in l]
+
             for i in l:
                 try:
                     self.missed.remove(i)

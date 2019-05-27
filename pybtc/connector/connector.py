@@ -4,7 +4,7 @@ from pybtc.connector.utxo import UTXO
 from pybtc.connector.utils import decode_block_tx
 from pybtc.connector.utils import Cache
 from pybtc.transaction import Transaction
-from pybtc import int_to_bytes
+from pybtc import int_to_bytes, bytes_to_int
 
 import traceback
 import aiojsonrpc
@@ -28,7 +28,7 @@ class Connector:
                  skip_opreturn=True,
                  block_preload_cache_limit= 1000 * 1000000,
                  block_hashes_cache_limit= 200 * 1000000,
-                 postgres_pool=None):
+                 db=None):
         self.loop = asyncio.get_event_loop()
 
         # settings
@@ -48,7 +48,7 @@ class Connector:
         self.deep_sync_limit = deep_sync_limit
         self.backlog = backlog
         self.mempool_tx = mempool_tx
-        self.postgress_pool = postgres_pool
+        self.db = db
         self.utxo_cache_size = utxo_cache_size
         self.utxo_data = utxo_data
         self.chain_tail = list(chain_tail) if chain_tail else []
@@ -145,7 +145,7 @@ class Connector:
             break
 
         if self.utxo_data:
-            self.utxo = UTXO(self.postgress_pool,
+            self.utxo = UTXO(self.db,
                              self.loop,
                              self.log,
                              self.utxo_cache_size if self.deep_synchronization else 0)
@@ -166,29 +166,18 @@ class Connector:
 
     async def utxo_init(self):
         if self.utxo_data:
-            if self.postgress_pool is None:
-                raise Exception("UTXO data required postgresql db connection pool")
+            if self.db is None:
+                raise Exception("UTXO data required  db connection")
+            import rocksdb
+            lb = self.db.get(b"last_block")
+            if lb is None:
+                lb = 0
+                self.db.set(b"last_block", int_to_bytes(0))
+                self.db.set(b"last_cached_block", int_to_bytes(0))
+            else:
+                lb = bytes_to_int(lb)
+            lc = bytes_to_int(self.db.get(b"last_cached_block"))
 
-            async with self.postgress_pool.acquire() as conn:
-                await conn.execute("""CREATE TABLE IF NOT EXISTS 
-                                          connector_utxo (outpoint BYTEA,
-                                                          data BYTEA,
-                                                          PRIMARY KEY(outpoint));
-                                   """)
-                await conn.execute("""CREATE TABLE IF NOT EXISTS 
-                                          connector_utxo_state (name VARCHAR,
-                                                                value BIGINT,
-                                                                PRIMARY KEY(name));
-                                   """)
-                lb = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_block';")
-                lc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
-                if lb is None:
-                    lb = 0
-                    lc = 0
-                    await conn.execute("INSERT INTO connector_utxo_state (name, value) "
-                                       "VALUES ('last_block', 0);")
-                    await conn.execute("INSERT INTO connector_utxo_state (name, value) "
-                                       "VALUES ('last_cached_block', 0);")
             self.last_block_height = lb
             self.last_block_utxo_cached_height = lc
             if self.app_block_height_on_start:
