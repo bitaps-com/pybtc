@@ -103,7 +103,9 @@ class UTXO():
 
             batch = rocksdb.WriteBatch()
             [batch.delete(k) for k in self.pending_deleted]
-            [batch.put(k[0], k[1]) for k in self.pending_utxo]
+            for k in self.pending_utxo:
+                batch.put(k[0], k[1])
+                self.log.critical(str(k))
             batch.put(b"last_block", int_to_bytes(self.checkpoint))
             batch.put(b"last_cached_block", int_to_bytes(self.deleted_last_block))
             self.db.write(batch)
