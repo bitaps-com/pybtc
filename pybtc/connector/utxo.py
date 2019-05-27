@@ -153,7 +153,7 @@ class UTXO():
             break
         try:
             self.load_utxo_future = asyncio.Future()
-            l = set(self.missed)
+            l = list(self.missed)
             rows = self.db.multi_get(l)
 
             for i in l:
