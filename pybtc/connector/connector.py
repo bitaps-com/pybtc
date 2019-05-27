@@ -173,7 +173,7 @@ class Connector:
             if lb is None:
                 lb = 0
                 self.db.put(b"last_block", int_to_bytes(0))
-                self.db.puts(b"last_cached_block", int_to_bytes(0))
+                self.db.put(b"last_cached_block", int_to_bytes(0))
             else:
                 lb = bytes_to_int(lb)
             lc = bytes_to_int(self.db.get(b"last_cached_block"))
