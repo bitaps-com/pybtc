@@ -406,8 +406,8 @@ class Connector:
                     self.tx_cache.pop(h)
 
             tx_rate = round(self.total_received_tx / (time.time() - self.start_time), 4)
-            t = 10000 if not self.deep_synchronization else 10000
-            if (self.total_received_tx - self.total_received_tx_stat) > t:
+            t = time.time() - self.start_time
+            if t % 20 == 0:
                 self.total_received_tx_stat = self.total_received_tx
                 self.log.warning("Blocks %s; tx rate: %s;" % (block["height"], tx_rate))
                 if self.utxo_data:
@@ -443,7 +443,7 @@ class Connector:
                                                                      self.coins - self.destroyed_coins))
                 self.log.debug("total tx fetch time %s;" % self.total_received_tx_time)
                 self.log.debug("total blocks processing time %s;" % self.blocks_processing_time)
-                t = time.time() - self.start_time
+
                 h = t // 3600
                 m = (t % 3600 ) // 60
                 s = (t % 3600) % 60
