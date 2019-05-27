@@ -432,7 +432,7 @@ class Connector:
                                                                      self.coins - self.destroyed_coins))
                 self.log.debug("total tx fetch time %s;" % self.total_received_tx_time)
                 self.log.debug("total blocks processing time %s;" % self.blocks_processing_time)
-
+                t = int(self.start_time - time.time())
                 h = t // 3600
                 m = (t % 3600 ) // 60
                 s = (t % 3600) % 60

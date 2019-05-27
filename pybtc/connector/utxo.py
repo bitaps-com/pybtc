@@ -4,6 +4,7 @@ import asyncio
 from collections import OrderedDict
 from pybtc  import MRU
 import traceback
+import rocksdb
 
 class UTXO():
     def __init__(self, db, loop, log, cache_size):
