@@ -268,7 +268,9 @@ class Worker:
                                 address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
                                                            block["rawTx"][z]["vOut"][i]["addressHash"]))
                             except:
-                                address = block["rawTx"][z]["vOut"][i]["scriptPubKey"]
+                                address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
+                                                    block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
+
 
                             self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
                         if not block["rawTx"][z]["coinbase"]:
@@ -298,14 +300,6 @@ class Worker:
                             self.a_coins[pointer]=True
                             blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                         except: pass
-                # if not blocks[x]["rawTx"][y]["coinbase"]:
-                #     for i in blocks[x]["rawTx"][y]["vOut"]:
-                #         try:
-                #            r = blocks[x]["rawTx"][y]["vIn"][i]["_c_"]
-                #            self.a_coins.delete(r[0])
-                #            blocks[x]["rawTx"][y]["vIn"][i]["_a_"] = True
-                #         except:
-                #             pass
 
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
