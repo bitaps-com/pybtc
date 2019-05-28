@@ -218,9 +218,9 @@ class Worker:
         self.loop.set_default_executor(ThreadPoolExecutor(20))
         self.out_writer = out_writer
         self.in_reader = in_reader
-        self.coins = MRU(400000)
-        self.destroyed_coins = MRU(400000)
-        self.a_coins = MRU(400000)
+        self.coins = MRU(1400000)
+        self.destroyed_coins = MRU(1400000)
+        self.a_coins = MRU(1400000)
         signal.signal(signal.SIGTERM, self.terminate)
         self.loop.create_task(self.message_loop())
         self.loop.run_forever()
