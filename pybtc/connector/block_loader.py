@@ -72,7 +72,7 @@ class BlockLoader:
                     if self.last_batch_size < 8000000:
                         self.rpc_batch_limit += 10
                     elif self.last_batch_size >  50000000 and self.rpc_batch_limit > 10:
-                        self.rpc_batch_limit = 40
+                        self.rpc_batch_limit = 30
                     if self.last_batch_size > 400:
                         self.last_batch_size = 400
                     for i in self.worker_busy:
@@ -218,9 +218,9 @@ class Worker:
         self.loop.set_default_executor(ThreadPoolExecutor(20))
         self.out_writer = out_writer
         self.in_reader = in_reader
-        self.coins = MRU(500000)
-        self.destroyed_coins = MRU(500000)
-        self.a_coins = MRU(500000)
+        self.coins = MRU(400000)
+        self.destroyed_coins = MRU(400000)
+        self.a_coins = MRU(400000)
         signal.signal(signal.SIGTERM, self.terminate)
         self.loop.create_task(self.message_loop())
         self.loop.run_forever()
