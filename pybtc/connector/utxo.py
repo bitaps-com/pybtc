@@ -54,6 +54,7 @@ class UTXO():
         if  not self.checkpoints: return
         self.save_process = True
         try:
+            self.log.critical("create checkpoint")
             i = self.cached.peek_last_item()
             self.checkpoints = sorted(self.checkpoints)
             checkpoint = self.checkpoints.pop(0)
