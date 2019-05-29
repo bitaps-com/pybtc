@@ -26,6 +26,7 @@ class Connector:
                  utxo_data=False,
                  utxo_cache_size=1000000,
                  skip_opreturn=True,
+                 block_cache_workers= 4,
                  block_preload_cache_limit= 1000 * 1000000,
                  block_hashes_cache_limit= 200 * 1000000,
                  db_type=None,
@@ -52,6 +53,7 @@ class Connector:
         self.db_type = db_type
         self.db = db
         self.utxo_cache_size = utxo_cache_size
+        self.block_cache_workers = block_cache_workers
         self.utxo_data = utxo_data
         self.chain_tail = list(chain_tail) if chain_tail else []
 
@@ -157,7 +159,7 @@ class Connector:
         for row in reversed(self.chain_tail):
             self.block_headers_cache.set(row, h)
             h -= 1
-        self.block_loader = BlockLoader(self)
+        self.block_loader = BlockLoader(self,workers = self.block_cache_workers)
 
         self.tasks.append(self.loop.create_task(self.zeromq_handler()))
         self.tasks.append(self.loop.create_task(self.watchdog()))
