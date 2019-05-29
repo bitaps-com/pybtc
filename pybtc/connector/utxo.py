@@ -93,6 +93,14 @@ class UTXO():
             self.log.critical("create checkpoint error")
             self.log.critical(str(traceback.format_exc()))
 
+    def rocksdb_atomic_batch(self):
+        batch = rocksdb.WriteBatch()
+        [batch.delete(k) for k in self.pending_deleted]
+        for k in self.pending_utxo:
+            batch.put(k[0], k[1])
+        batch.put(b"last_block", int_to_bytes(self.checkpoint))
+        batch.put(b"last_cached_block", int_to_bytes(self.deleted_last_block))
+        self.db.write(batch)
 
     async def save_checkpoint(self):
         # save to db tail from cache
@@ -101,15 +109,7 @@ class UTXO():
         try:
             self.write_to_db = True
             if not self.checkpoint: return
-
-            batch = rocksdb.WriteBatch()
-            [batch.delete(k) for k in self.pending_deleted]
-            for k in self.pending_utxo:
-                batch.put(k[0], k[1])
-            batch.put(b"last_block", int_to_bytes(self.checkpoint))
-            batch.put(b"last_cached_block", int_to_bytes(self.deleted_last_block))
-            self.db.write(batch)
-
+            await self.loop.run_in_executor(None, self.rocksdb_atomic_batch, self)
             self.saved_utxo += len(self.pending_utxo)
             self.deleted_utxo += len(self.pending_deleted)
             self.pending_deleted = set()

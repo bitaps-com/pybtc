@@ -363,10 +363,7 @@ class Connector:
 
             if self.utxo_data:
                 checkpoint = self.utxo.checkpoint
-                try:
-                    self.log.critical("append checkpoint " + str( block["checkpoint"]))
-
-                    self.utxo.checkpoints.append(block["checkpoint"])
+                try: self.utxo.checkpoints.append(block["checkpoint"])
                 except: pass
                 if len(self.utxo.cached) > self.utxo.size_limit and \
                    not self.utxo.save_process and \
@@ -429,7 +426,7 @@ class Connector:
                                                                    self.utxo.deleted_utxo,
                                                                    self.utxo.loaded_utxo
                                                            ))
-                self.log.debug("Preload coins cached/destoyed  -> %s-%s [%s];" % (self.yy, self.aa, self.tt))
+                self.log.debug("Preload coins chached/destoyed  -> %s-%s [%s];" % (self.yy, self.aa, self.tt))
                 self.log.debug("Coins %s; destroyed %s; unspent %s;" % (self.coins,
                                                                      self.destroyed_coins,
                                                                      self.coins - self.destroyed_coins))
