@@ -28,6 +28,7 @@ class Connector:
                  skip_opreturn=True,
                  block_preload_cache_limit= 1000 * 1000000,
                  block_hashes_cache_limit= 200 * 1000000,
+                 db_type=None,
                  db=None):
         self.loop = asyncio.get_event_loop()
 
@@ -48,6 +49,7 @@ class Connector:
         self.deep_sync_limit = deep_sync_limit
         self.backlog = backlog
         self.mempool_tx = mempool_tx
+        self.db_type = db_type
         self.db = db
         self.utxo_cache_size = utxo_cache_size
         self.utxo_data = utxo_data
@@ -145,9 +147,8 @@ class Connector:
             break
 
         if self.utxo_data:
-            self.utxo = UTXO(self.db,
-                             self.loop,
-                             self.log,
+            self.utxo = UTXO(self.db_type, self.db,
+                             self.loop, self.log,
                              self.utxo_cache_size if self.deep_synchronization else 0)
 
         h = self.last_block_height
@@ -166,17 +167,43 @@ class Connector:
 
     async def utxo_init(self):
         if self.utxo_data:
-            if self.db is None:
+            if self.db_type is None:
                 raise Exception("UTXO data required  db connection")
-            import rocksdb
-            lb = self.db.get(b"last_block")
-            if lb is None:
-                lb = 0
-                self.db.put(b"last_block", int_to_bytes(0))
-                self.db.put(b"last_cached_block", int_to_bytes(0))
+            if self.db_type not in ("rocksdb", "leveldb", "postgresql"):
+                raise Exception("Connector supported database types is: rocksdb, leveldb, postgresql")
+            if self.db_type in ("rocksdb", "leveldb"):
+                # rocksdb and leveldb
+                lb = self.db.get(b"last_block")
+                if lb is None:
+                    lb = 0
+                    self.db.put(b"last_block", int_to_bytes(0))
+                    self.db.put(b"last_cached_block", int_to_bytes(0))
+                else:
+                    lb = bytes_to_int(lb)
+                lc = bytes_to_int(self.db.get(b"last_cached_block"))
             else:
-                lb = bytes_to_int(lb)
-            lc = bytes_to_int(self.db.get(b"last_cached_block"))
+                # postgresql
+                async with self.db.acquire() as conn:
+                    await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                              connector_utxo (outpoint BYTEA,
+                                                              data BYTEA,
+                                                              PRIMARY KEY(outpoint));
+                                       """)
+                    await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                              connector_utxo_state (name VARCHAR,
+                                                                    value BIGINT,
+                                                                    PRIMARY KEY(name));
+                                       """)
+                    lb = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_block';")
+                    lc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
+                    if lb is None:
+                        lb = 0
+                        lc = 0
+                        await conn.execute("INSERT INTO connector_utxo_state (name, value) "
+                                           "VALUES ('last_block', 0);")
+                        await conn.execute("INSERT INTO connector_utxo_state (name, value) "
+                                           "VALUES ('last_cached_block', 0);")
+
 
             self.last_block_height = lb
             self.last_block_utxo_cached_height = lc
