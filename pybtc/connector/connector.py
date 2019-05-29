@@ -453,7 +453,7 @@ class Connector:
                                                                    self.utxo.deleted_utxo,
                                                                    self.utxo.loaded_utxo
                                                            ))
-                self.log.debug("Preload coins chached/destoyed  -> %s-%s [%s];" % (self.yy, self.aa, self.tt))
+                self.log.debug("Preload coins cached/destoyed  -> %s-%s [%s];" % (self.yy, self.aa, self.tt))
                 self.log.debug("Coins %s; destroyed %s; unspent %s;" % (self.coins,
                                                                      self.destroyed_coins,
                                                                      self.coins - self.destroyed_coins))

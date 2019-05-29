@@ -16,7 +16,7 @@ from pybtc import MRU
 
 
 class BlockLoader:
-    def __init__(self, parent, workers=8):
+    def __init__(self, parent, workers=6):
         self.worker_limit = workers
         self.worker = dict()
         self.worker_tasks = list()
@@ -187,7 +187,8 @@ class BlockLoader:
                 for i in blocks:
                     self.parent.block_preload.set(i, blocks[i])
                 if blocks:
-                    self.parent.utxo.checkpoints.append(i)
+                    if self.parent.utxo.checkpoints[-1] < i:
+                        self.parent.utxo.checkpoints.append(i)
 
 
                 # def disconnect(self,ip):
@@ -218,9 +219,9 @@ class Worker:
         self.loop.set_default_executor(ThreadPoolExecutor(20))
         self.out_writer = out_writer
         self.in_reader = in_reader
-        self.coins = MRU(100000)
-        self.destroyed_coins = MRU(100000)
-        self.a_coins = MRU(100000)
+        self.coins = MRU(1000000)
+        self.destroyed_coins = MRU(1000000)
+        self.a_coins = MRU(1000000)
         signal.signal(signal.SIGTERM, self.terminate)
         self.loop.create_task(self.message_loop())
         self.loop.run_forever()
