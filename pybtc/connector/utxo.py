@@ -109,7 +109,7 @@ class UTXO():
         try:
             self.write_to_db = True
             if not self.checkpoint: return
-            await self.loop.run_in_executor(None, self.rocksdb_atomic_batch, self)
+            await self.loop.run_in_executor(None, self.rocksdb_atomic_batch)
             self.saved_utxo += len(self.pending_utxo)
             self.deleted_utxo += len(self.pending_deleted)
             self.pending_deleted = set()
