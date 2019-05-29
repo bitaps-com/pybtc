@@ -62,7 +62,7 @@ class UTXO():
         try:
             self.log.debug("create connector utxo checkpoint on block: " + str( self.checkpoints))
             i = self.cached.peek_last_item()
-            self.checkpoints = sorted(self.checkpoints)
+            # self.checkpoints = sorted(self.checkpoints)
             checkpoint = self.checkpoints.pop(0)
             lb = 0
             block_changed = False
@@ -74,7 +74,7 @@ class UTXO():
                     block_changed = True
                     lb = i[1][0] >> 42
                 if lb - 1 == checkpoint:
-                    if len(self.cached) > int(self.size_limit):
+                    if len(self.cached) > int(self.size_limit * 0.95):
                         if self.checkpoints:
                             checkpoint = self.checkpoints.pop(0)
                     else:
