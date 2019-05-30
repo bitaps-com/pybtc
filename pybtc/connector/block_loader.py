@@ -61,6 +61,7 @@ class BlockLoader:
 
 
     async def loading(self):
+        self.last_batch_size = 10
         self.worker_tasks = [self.loop.create_task(self.start_worker(i)) for i in range(self.worker_limit)]
         target_height = self.parent.node_last_block - self.parent.deep_sync_limit
         height = self.parent.last_block_height + 1
@@ -69,12 +70,10 @@ class BlockLoader:
             new_requests = 0
             if self.parent.block_preload._store_size < self.parent.block_preload_cache_limit:
                 try:
-                    if self.last_batch_size < 8000000:
-                        self.rpc_batch_limit += 10
+                    if self.last_batch_size < 1000000:
+                        self.rpc_batch_limit += 50
                     elif self.last_batch_size >  50000000 and self.rpc_batch_limit > 10:
-                        self.rpc_batch_limit = 30
-                    if self.last_batch_size > 400:
-                        self.last_batch_size = 400
+                        self.rpc_batch_limit = 10
                     for i in self.worker_busy:
                         if not self.worker_busy[i]:
                             self.worker_busy[i] = True
@@ -94,7 +93,7 @@ class BlockLoader:
                     self.log.error("Loading task  error %s " % err)
             else:
                 await  asyncio.sleep(1)
-        [p.terminate() for p in self.worker_tasks]
+        [self.worker[p].terminate() for p in self.worker]
         for p in self.worker_busy: self.worker_busy[p] = False
 
 
