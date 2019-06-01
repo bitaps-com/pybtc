@@ -4,6 +4,7 @@ import asyncio
 from collections import OrderedDict
 from pybtc  import MRU
 import traceback
+import time
 
 try: import rocksdb
 except: pass
@@ -60,9 +61,7 @@ class UTXO():
         if  not self.checkpoints: return
         self.save_process = True
         try:
-            self.log.debug("create connector utxo checkpoint on block: " + str( self.checkpoints))
             i = self.cached.peek_last_item()
-            # self.checkpoints = sorted(self.checkpoints)
             checkpoint = self.checkpoints.pop(0)
             lb = 0
             block_changed = False
@@ -140,7 +139,7 @@ class UTXO():
             if  self.write_to_db: return
             try:
                 self.write_to_db = True
-
+                t = time.time()
                 if not self.checkpoint: return
                 if self.db_type == "rocksdb":
                     await self.loop.run_in_executor(None, self.rocksdb_atomic_batch)
@@ -148,7 +147,7 @@ class UTXO():
                     await self.loop.run_in_executor(None, self.leveldb_atomic_batch)
                 else:
                     await self.postgresql_atomic_batch()
-
+                self.log.debug("utxo checkpoint saved time %s" % round(time.time()-t, 4))
                 self.saved_utxo += len(self.pending_utxo)
                 self.deleted_utxo += len(self.pending_deleted)
                 self.pending_deleted = set()
