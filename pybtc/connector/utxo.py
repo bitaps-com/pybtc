@@ -119,7 +119,6 @@ class UTXO():
                if self.pending_deleted:
                    await conn.execute("DELETE FROM connector_utxo WHERE "
                                       "outpoint = ANY($1);", self.pending_deleted)
-                   self.deleted_utxo += len(self.pending_deleted)
                if self.pending_utxo:
                    await conn.copy_records_to_table('connector_utxo',
                                                     columns=["outpoint",
