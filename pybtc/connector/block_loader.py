@@ -272,7 +272,7 @@ class Worker:
                     for z in block["rawTx"]:
                         for i in block["rawTx"][z]["vOut"]:
                             o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
-                            pointer = (x << 42) + (z << 21) + i
+                            pointer = (x << 39)+(z << 20)+(1 << 19) + i
                             try:
                                 address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
                                                            block["rawTx"][z]["vOut"][i]["addressHash"]))
@@ -288,7 +288,7 @@ class Worker:
                                 outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                 try:
                                    r = self.coins.delete(outpoint)
-                                   if r[0] >> 42 >= start_height and r[0] >> 42 < height:
+                                   if r[0] >> 39 >= start_height and r[0] >> 39 < height:
                                        block["rawTx"][z]["vIn"][i]["_a_"] = r
                                    else:
                                        block["rawTx"][z]["vIn"][i]["_c_"] = r
@@ -304,7 +304,7 @@ class Worker:
                 for y in blocks[x]["rawTx"]:
                     for i in blocks[x]["rawTx"][y]["vOut"]:
                         try:
-                            pointer = (x << 42) + (y << 21) + i
+                            pointer = (x << 39)+(y << 20)+(1 << 19) + i
                             r = self.destroyed_coins.delete(pointer)
                             self.a_coins[pointer]=True
                             blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r

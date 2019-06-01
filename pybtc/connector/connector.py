@@ -569,7 +569,7 @@ class Connector:
                                 self.op_return += 1
                                 continue
                             self.coins += 1
-                            pointer = (block["height"] << 42) + (q << 21) + i
+                            pointer = (block["height"] << 39) + (q << 20) + (1 << 19) + i
                             try:
                                 address = b"".join((bytes([out["nType"]]), out["addressHash"]))
                             except:
@@ -609,7 +609,7 @@ class Connector:
                                         tx["vIn"][i]["coin"] = r
                                         c += 1
                                     else:
-                                        missed.add((outpoint, (block["height"] << 42) + (q << 21) + i, q, i))
+                                        missed.add((outpoint, (block["height"] << 39) + (q << 20) + (1 << 19) + i, q, i))
 
             if missed:
                 await self.utxo.load_utxo()
@@ -750,7 +750,7 @@ class Connector:
                                         tx["vIn"][i]["coin"]  = r
                                         c += 1
                                     else:
-                                        missed.add((outpoint, (block_height << 42) + (block_index << 21) + i, i))
+                                        missed.add((outpoint,(block_height << 39)+(block_index << 20)+(1 << 19) + i))
 
                         if missed:
                             await self.utxo.load_utxo()
@@ -775,7 +775,7 @@ class Connector:
                             out = tx["vOut"][i]
                             if self.skip_opreturn and out["nType"] in (3, 8):
                                 continue
-                            pointer = (block_height << 42) + (block_index << 21) + i
+                            pointer = (block_height << 39)+(block_index << 20)+(1 << 19) + i
                             try:
                                 address = b"".join((bytes([out["nType"]]), out["addressHash"]))
 
@@ -814,7 +814,7 @@ class Connector:
             inp = tx["vIn"][i]
             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
             r = self.utxo.get(outpoint)
-            stxo.add(r) if r else missed.add((outpoint, (block_height << 42) + (block_index << 21) + i))
+            stxo.add(r) if r else missed.add((outpoint, (block_height << 39)+(block_index << 20)+(1 << 19) + i))
 
         if missed:
             await self.utxo.load_utxo()
