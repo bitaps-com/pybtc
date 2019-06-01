@@ -468,12 +468,9 @@ class Connector:
                                                                         self.destroyed_coins,
                                                                         self.coins - self.destroyed_coins))
                 self.log.debug("Coins destroyed in cache %s; "
-                               "cache effectivity [+preload cache] %s [%s];" % (self.utxo.deleted_utxo,
+                               "cache effectivity  %s;" % (self.destroyed_coins - self.utxo.deleted_utxo - self.preload_cached_annihilated,
                                                                                 round(self.preload_cached_total
-                                                                                      / self.destroyed_coins, 4),
-                                                                                round((self.preload_cached_total
-                                                                                       + self.preload_cached_total)
-                                                                                       / self.destroyed_coins, 4)))
+                                                                                      / self.destroyed_coins, 4)))
 
                 self.log.debug("total tx fetch time %s;" % self.total_received_tx_time)
                 self.log.debug("total blocks processing time %s;" % self.blocks_processing_time)
