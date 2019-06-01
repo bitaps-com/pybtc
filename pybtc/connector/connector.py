@@ -84,6 +84,7 @@ class Connector:
         self.non_cached_blocks = 0
         self.total_received_tx_time = 0
         self.coins = 0
+        self.op_return = 0
         self.destroyed_coins = 0
         self.preload_cached_total = 0
         self.preload_cached = 0
@@ -464,9 +465,11 @@ class Connector:
                                                                    self.preload_cached_total,
                                                                    round(self.preload_cached_total
                                                                          / self.destroyed_coins, 4)))
-                self.log.debug("Coins %s; destroyed %s; unspent %s;" % (self.coins,
-                                                                        self.destroyed_coins,
-                                                                        self.coins - self.destroyed_coins))
+                self.log.debug("Coins %s; destroyed %s; "
+                               "unspent %s; op_return %s;" % (self.coins,
+                                                              self.destroyed_coins,
+                                                              self.coins - self.destroyed_coins,
+                                                              self.op_return))
                 self.log.debug("Coins destroyed in cache %s; "
                                "cache effectivity  %s;" % (self.destroyed_coins - self.utxo.deleted_utxo - self.preload_cached_annihilated,
                                                                                 round((self.destroyed_coins - self.utxo.deleted_utxo - self.preload_cached_annihilated)
@@ -556,13 +559,16 @@ class Connector:
                 for q in block["rawTx"]:
                     tx = block["rawTx"][q]
                     for i in tx["vOut"]:
-                        self.coins += 1
+
                         if "_s_" in tx["vOut"][i]:
-                            self.preload_cached_total += 1
+                            self.preload_cached_annihilated += 1
+                            self.coins += 1
                         else:
                             out = tx["vOut"][i]
                             if self.skip_opreturn and out["nType"] in (3, 8):
+                                self.op_return += 1
                                 continue
+                            self.coins += 1
                             pointer = (block["height"] << 42) + (q << 21) + i
                             try:
                                 address = b"".join((bytes([out["nType"]]), out["addressHash"]))
@@ -586,11 +592,12 @@ class Connector:
                             try:
                                 tx["vIn"][i]["coin"] = inp["_a_"]
                                 c += 1
-                                self.preload_cached_annihilated += 1
+                                self.preload_cached_total += 1
                             except:
                                 try:
                                     tx["vIn"][i]["coin"] = inp["_c_"]
                                     c += 1
+                                    self.preload_cached_total += 1
                                     self.preload_cached += 1
                                     try:
                                         self.utxo.get(outpoint)
