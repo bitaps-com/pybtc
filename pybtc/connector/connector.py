@@ -15,6 +15,7 @@ import time
 from _pickle import loads
 
 class Connector:
+
     def __init__(self, node_rpc_url, node_zerromq_url, logger,
                  last_block_height=0, chain_tail=None,
                  tx_handler=None, orphan_handler=None,
@@ -84,9 +85,9 @@ class Connector:
         self.total_received_tx_time = 0
         self.coins = 0
         self.destroyed_coins = 0
-        self.tt = 0
-        self.yy = 0
-        self.aa = 0
+        self.preload_cached_total = 0
+        self.preload_cached = 0
+        self.preload_cached_annihilated = 0
         self.start_time = time.time()
 
         # cache and system
@@ -188,7 +189,9 @@ class Connector:
                 async with self.db.acquire() as conn:
                     await conn.execute("""CREATE TABLE IF NOT EXISTS 
                                               connector_utxo (outpoint BYTEA,
-                                                              data BYTEA,
+                                                              pointer BIGINT,
+                                                              address BYTEA,
+                                                              amount  BIGINT,
                                                               PRIMARY KEY(outpoint));
                                        """)
                     await conn.execute("""CREATE TABLE IF NOT EXISTS 
@@ -448,17 +451,30 @@ class Connector:
                                                                 next(reversed(self.block_preload._store))))
 
                         self.log.debug("utxo checkpoint block %s; "
-                                      "saved utxo %s; "
-                                      "deleted utxo %s; "
-                                      "loaded utxo %s; "% (self.utxo.last_saved_block,
+                                       "saved utxo %s; "
+                                       "deleted utxo %s; "
+                                       "loaded utxo %s; "% (self.utxo.last_saved_block,
                                                                   self.utxo.saved_utxo,
                                                                    self.utxo.deleted_utxo,
                                                                    self.utxo.loaded_utxo
                                                            ))
-                self.log.debug("Preload coins cached/destoyed  -> %s-%s [%s];" % (self.yy, self.aa, self.tt))
+                self.log.debug("Preload coins cache -> %s:%s [%s] "
+                               "preload cache effectivity %s ;" % (self.preload_cached,
+                                                                   self.preload_cached_annihilated,
+                                                                   self.preload_cached_total,
+                                                                   round(self.preload_cached_total
+                                                                         / self.destroyed_coins, 4)))
                 self.log.debug("Coins %s; destroyed %s; unspent %s;" % (self.coins,
-                                                                     self.destroyed_coins,
-                                                                     self.coins - self.destroyed_coins))
+                                                                        self.destroyed_coins,
+                                                                        self.coins - self.destroyed_coins))
+                self.log.debug("Coins destroyed in cache %s; "
+                               "cache effectivity [+preload cache] %s [%s];" % (self.utxo.deleted_utxo,
+                                                                                round(self.preload_cached_total
+                                                                                      / self.destroyed_coins, 4),
+                                                                                round((self.preload_cached_total
+                                                                                       + self.preload_cached_total)
+                                                                                       / self.destroyed_coins, 4)))
+
                 self.log.debug("total tx fetch time %s;" % self.total_received_tx_time)
                 self.log.debug("total blocks processing time %s;" % self.blocks_processing_time)
                 t = int(time.time() - self.start_time)
@@ -545,7 +561,7 @@ class Connector:
                     for i in tx["vOut"]:
                         self.coins += 1
                         if "_s_" in tx["vOut"][i]:
-                            self.tt += 1
+                            self.preload_cached_total += 1
                         else:
                             out = tx["vOut"][i]
                             if self.skip_opreturn and out["nType"] in (3, 8):
@@ -573,12 +589,12 @@ class Connector:
                             try:
                                 tx["vIn"][i]["coin"] = inp["_a_"]
                                 c += 1
-                                self.aa += 1
+                                self.preload_cached_annihilated += 1
                             except:
                                 try:
                                     tx["vIn"][i]["coin"] = inp["_c_"]
                                     c += 1
-                                    self.yy += 1
+                                    self.preload_cached += 1
                                     try:
                                         self.utxo.get(outpoint)
                                     except:
@@ -714,12 +730,12 @@ class Connector:
                             try:
                                 tx["vIn"][i]["coin"] = inp["_a_"]
                                 c += 1
-                                self.aa += 1
+                                self.preload_cached_anigilated += 1
                             except:
                                 try:
                                     tx["vIn"][i]["coin"] = inp["_c_"]
                                     c += 1
-                                    self.yy += 1
+                                    self.preload_cached += 1
                                     try:
                                         self.utxo.get(outpoint)
                                     except:
@@ -750,7 +766,7 @@ class Connector:
                     for i in tx["vOut"]:
                         self.coins += 1
                         if "_s_" in tx["vOut"][i]:
-                            self.tt += 1
+                            self.preload_cached_total += 1
                         else:
                             out = tx["vOut"][i]
                             if self.skip_opreturn and out["nType"] in (3, 8):

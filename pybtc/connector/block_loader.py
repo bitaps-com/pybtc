@@ -61,7 +61,7 @@ class BlockLoader:
 
 
     async def loading(self):
-        self.last_batch_size = 10
+        self.rpc_batch_limit = 10
         self.worker_tasks = [self.loop.create_task(self.start_worker(i)) for i in range(self.worker_limit)]
         target_height = self.parent.node_last_block - self.parent.deep_sync_limit
         height = self.parent.last_block_height + 1
@@ -70,12 +70,15 @@ class BlockLoader:
             new_requests = 0
             if self.parent.block_preload._store_size < self.parent.block_preload_cache_limit:
                 try:
-                    if self.last_batch_size < 1000000:
+                    if self.last_batch_size < 1000000 and self.rpc_batch_limit < 450:
                         self.rpc_batch_limit += 50
+                        self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
                     elif self.last_batch_size >  40000000 and self.rpc_batch_limit > 10:
                         self.rpc_batch_limit = 30
+                        self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
                     if self.last_batch_size >  80000000 and self.rpc_batch_limit > 10:
                         self.rpc_batch_limit = 20
+                        self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
                     for i in self.worker_busy:
                         if not self.worker_busy[i]:
                             self.worker_busy[i] = True

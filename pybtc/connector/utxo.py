@@ -41,7 +41,7 @@ class UTXO():
         self.saved_utxo = 0
         self.deleted_utxo = 0
         self.deleted_last_block = 0
-        self.deleted_utxo_saved = 0
+        self.deleted_utxo = 0
         self.loaded_utxo = 0
         self.destroyed_utxo = 0
         self.destroyed_utxo_block = 0
@@ -85,9 +85,8 @@ class UTXO():
                 if len(self.cached) <= self.size_limit:
                     if block_changed and checkpoint_found:
                         break
-                self.pending_utxo.add((i[0],b"".join((int_to_c_int(i[1][0]),
-                                         int_to_c_int(i[1][1]),
-                                         i[1][2]))))
+                self.pending_utxo.add((i[0], i[1][0], i[1][2], i[1][1]))
+
                 self.pending_saved[i[0]] = i[1]
             if block_changed:
                 self.cached.append({i[0]: i[1]})
@@ -121,9 +120,14 @@ class UTXO():
                if self.pending_deleted:
                    await conn.execute("DELETE FROM connector_utxo WHERE "
                                       "outpoint = ANY($1);", self.pending_deleted)
+                   self.deleted_utxo += len(self.pending_deleted)
                if self.pending_utxo:
                    await conn.copy_records_to_table('connector_utxo',
-                                                    columns=["outpoint", "data"], records=self.pending_utxo)
+                                                    columns=["outpoint",
+                                                             "pointer",
+                                                             "address",
+                                                             "amount"],
+                                                    records=self.pending_utxo)
                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                   "WHERE name = 'last_block';", self.checkpoint)
                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
@@ -193,17 +197,16 @@ class UTXO():
             l = list(self.missed)
             if self.db_type == "postgresql":
                 async with self.db.acquire() as conn:
-                    rows = await conn.fetch("SELECT outpoint, connector_utxo.data "
+                    rows = await conn.fetch("SELECT outpoint, "
+                                            "       pointer,"
+                                            "       address,"
+                                            "       amount "
                                             "FROM connector_utxo "
                                             "WHERE outpoint = ANY($1);", l)
                 for row in rows:
-                    d = row["data"]
-                    pointer = c_int_to_int(d)
-                    f = c_int_len(pointer)
-                    amount = c_int_to_int(d[f:])
-                    f += c_int_len(amount)
-                    address = d[f:]
-                    self.loaded[row["outpoint"]] = (pointer, amount, address)
+                    self.loaded[row["outpoint"]] = (row["pointer"],
+                                                    row["amount"],
+                                                    row["address"])
                     self.loaded_utxo += 1
 
 
