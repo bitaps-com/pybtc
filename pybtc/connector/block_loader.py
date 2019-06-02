@@ -73,11 +73,11 @@ class BlockLoader:
                     if self.last_batch_size < 1000000 and self.rpc_batch_limit < 450:
                         self.rpc_batch_limit += 50
                         self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
-                    elif self.last_batch_size >  40000000 and self.rpc_batch_limit > 100:
+                    elif self.last_batch_size >  40000000 and self.rpc_batch_limit > 150:
                         self.rpc_batch_limit -= 50
                         self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
                     elif self.last_batch_size >  80000000 and self.rpc_batch_limit < 60:
-                        self.rpc_batch_limit = 20
+                        self.rpc_batch_limit = 40
 
                         self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
                     for i in self.worker_busy:
