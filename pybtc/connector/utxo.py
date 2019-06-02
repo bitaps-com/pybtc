@@ -63,6 +63,7 @@ class UTXO():
         if  not self.checkpoints: return
         self.save_process = True
         try:
+            self.log.debug("create utxo checkpoint")
             i = self.cached.peek_last_item()
             checkpoint = self.checkpoints.pop(0)
             lb = 0
