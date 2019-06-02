@@ -432,9 +432,6 @@ class Connector:
                     loading = "Loading ... " if self.cache_loading else ""
                     if self.deep_synchronization:
                         self.log.debug("-Blocks--------------------------------------------------------------------")
-                        self.log.debug("Blocks downloaded  %s s; decoded %s s" % (int(self.blocks_download_time),
-                                                                                  int(self.blocks_decode_time)))
-
 
                         self.log.debug("Blocks not cached %s; "
                                       "blocks cached %s; "
@@ -462,6 +459,9 @@ class Connector:
                                                                     self.utxo.saved_utxo,
                                                                     self.utxo.deleted_utxo,
                                                                     self.utxo.loaded_utxo))
+                        self.log.debug("Read from db last batch %s s; "
+                                       "total  %s s; " % (round(self.utxo.read_from_db_time, 4),
+                                                          int(self.utxo.read_from_db_time_total))
                 self.log.debug("-Coins--------------------------------------------------------------------")
                 self.log.debug("Coins %s; destroyed %s; "
                                "unspent %s; op_return %s;" % (self.coins,
@@ -578,6 +578,7 @@ class Connector:
                                 tx["vIn"][i]["coin"] = inp["_a_"]
                                 c += 1
                                 self.preload_cached_annihilated += 1
+                                self.preload_cached_total += 1
                             except:
                                 try:
                                     tx["vIn"][i]["coin"] = inp["_c_"]

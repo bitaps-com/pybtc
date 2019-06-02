@@ -43,6 +43,8 @@ class UTXO():
         self.deleted_utxo = 0
         self.deleted_last_block = 0
         self.deleted_utxo = 0
+        self.read_from_db_time = 0
+        self.read_from_db_time_total = 0
         self.loaded_utxo = 0
         self.destroyed_utxo = 0
         self.destroyed_utxo_block = 0
@@ -193,6 +195,7 @@ class UTXO():
         try:
             self.load_utxo_future = asyncio.Future()
             l = list(self.missed)
+            t = time.time()
             if self.db_type == "postgresql":
                 async with self.db.acquire() as conn:
                     rows = await conn.fetch("SELECT outpoint, "
@@ -235,6 +238,8 @@ class UTXO():
             for i in l:
                 try: self.missed.remove(i)
                 except: pass
+            self.read_from_db_time += time.time() - t
+            self.read_from_db_time_total += time.time() - t
 
 
         finally:
