@@ -442,7 +442,7 @@ class Connector:
                                        "cache last block %s;" % (next(iter(self.block_preload._store)),
                                                                  next(reversed(self.block_preload._store))))
                         self.log.debug("Preload coins cache -> %s:%s [%s] "
-                                       "preload cache efficiency %s ;" % (self.preload_cached,
+                                       "preload cache efficiency %s;" % (self.preload_cached,
                                                                           self.preload_cached_annihilated,
                                                                           self.preload_cached_total,
                                                                           round(self.preload_cached_total
