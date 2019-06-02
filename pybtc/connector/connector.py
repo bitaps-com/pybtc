@@ -462,6 +462,7 @@ class Connector:
                         self.log.debug("Read from db last batch %s s; "
                                        "total  %s s; " % (round(self.utxo.read_from_db_time, 4),
                                                           int(self.utxo.read_from_db_time_total)))
+                        self.utxo.read_from_db_time = 0
                 self.log.debug("-Coins--------------------------------------------------------------------")
                 self.log.debug("Coins %s; destroyed %s; "
                                "unspent %s; op_return %s;" % (self.coins,

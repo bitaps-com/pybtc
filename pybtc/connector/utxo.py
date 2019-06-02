@@ -241,7 +241,8 @@ class UTXO():
             self.read_from_db_time += time.time() - t
             self.read_from_db_time_total += time.time() - t
 
-
+        except:
+            self.log.critical(str(traceback.format_exc()))
         finally:
             self.load_utxo_future.set_result(True)
 
