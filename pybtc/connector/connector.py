@@ -427,11 +427,11 @@ class Connector:
             t = 10000 if not self.deep_synchronization else 100000
             if (self.total_received_tx - self.total_received_tx_stat) > t:
                 self.total_received_tx_stat = self.total_received_tx
-                self.log.warning("Blocks %s; tx rate: %s;" % (block["height"], tx_rate))
+                self.log.info("Blocks %s; tx rate: %s;" % (block["height"], tx_rate))
                 if self.utxo_data:
                     loading = "Loading ... " if self.cache_loading else ""
                     if self.deep_synchronization:
-                        self.log.debug("-Blocks--------------------------------------------------------------------")
+                        self.log.debug("-Blocks-----------------------------------------------------------------------")
 
                         self.log.debug("  Blocks not cached %s; "
                                       "blocks cached %s; "
@@ -448,7 +448,7 @@ class Connector:
                                                                           round(self.preload_cached_total
                                                                                 / self.destroyed_coins, 4)))
 
-                        self.log.debug("-UTXO---------------------------------------------------------------------")
+                        self.log.debug("-UTXO-------------------------------------------------------------------------")
                         if loading: self.log.debug(loading)
 
                         self.log.debug("  Cache count %s; hit rate: %s;" % (self.utxo.len(),
@@ -463,7 +463,7 @@ class Connector:
                                        "total  %s s; " % (round(self.utxo.read_from_db_time, 4),
                                                           int(self.utxo.read_from_db_time_total)))
                         self.utxo.read_from_db_time = 0
-                self.log.debug("-Coins--------------------------------------------------------------------")
+                self.log.debug("-Coins------------------------------------------------------------------------")
                 self.log.debug("  Coins %s; destroyed %s; "
                                "unspent %s; op_return %s;" % (self.coins,
                                                               self.destroyed_coins,
@@ -474,10 +474,10 @@ class Connector:
                                                                round( self.utxo._hit / self.destroyed_coins, 4),
                                                                round((self.utxo._hit + self.preload_cached_annihilated)
                                                                       / self.destroyed_coins, 4)))
+                self.log.debug("------------------------------------------------------------------------------")
                 t = int(time.time() - self.start_time)
                 h, m, s = t // 3600, (t % 3600 ) // 60, (t % 3600) % 60
                 self.log.info("Total time %s:%s:%s;" % (h,m,s))
-
             # after block added handler
             if self.after_block_handler and not self.cache_loading:
                 try:
