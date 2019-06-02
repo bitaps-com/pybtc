@@ -373,12 +373,8 @@ class Connector:
         if not self.active_block.done():  return
 
         try:
-
-
             self.active_block = asyncio.Future()
-
             self.cache_loading = True if self.last_block_height < self.app_block_height_on_start else False
-
 
             if not self.deep_synchronization:
                 if not  self.block_batch_handler:
@@ -434,55 +430,52 @@ class Connector:
                 self.log.warning("Blocks %s; tx rate: %s;" % (block["height"], tx_rate))
                 if self.utxo_data:
                     loading = "Loading ... " if self.cache_loading else ""
-                    self.log.debug(loading + "UTXO %s; hit rate: %s;" % (self.utxo.len(),
-                                                                         round(self.utxo.hit_rate(), 4)))
-                    self.log.debug("Blocks downloaded  %s; decoded %s" % (round(self.blocks_download_time, 4),
-                                                                          round(self.blocks_decode_time, 4)))
                     if self.deep_synchronization:
-                        self.log.debug("Blocks:  not cached %s; "
-                                      "cache count %s; "
+                        self.log.debug("-Blocks--------------------------------------------------------------------")
+                        self.log.debug("Blocks downloaded  %s s; decoded %s s" % (int(self.blocks_download_time),
+                                                                                  int(self.blocks_decode_time)))
+
+
+                        self.log.debug("Blocks not cached %s; "
+                                      "blocks cached %s; "
                                       "cache size %s M;" % (self.non_cached_blocks,
                                                             self.block_preload.len(),
                                                             round(self.block_preload._store_size / 1024 / 1024, 2)))
-                        if self.block_preload._store:
-                            self.log.debug(
-                                          "cache first block %s; "
-                                          "cache last block %s;" % (
-                                                                next(iter(self.block_preload._store)),
-                                                                next(reversed(self.block_preload._store))))
+                        self.log.debug("Cache first block %s; "
+                                       "cache last block %s;" % (next(iter(self.block_preload._store)),
+                                                                 next(reversed(self.block_preload._store))))
+                        self.log.debug("Preload coins cache -> %s:%s [%s] "
+                                       "preload cache efficiency %s ;" % (self.preload_cached,
+                                                                          self.preload_cached_annihilated,
+                                                                          self.preload_cached_total,
+                                                                          round(self.preload_cached_total
+                                                                                / self.destroyed_coins, 4)))
 
-                        self.log.debug("utxo checkpoint block %s; "
-                                       "saved utxo %s; "
-                                       "deleted utxo %s; "
-                                       "loaded utxo %s; "% (self.utxo.last_saved_block,
-                                                                  self.utxo.saved_utxo,
-                                                                   self.utxo.deleted_utxo,
-                                                                   self.utxo.loaded_utxo
-                                                           ))
-                self.log.debug("Preload coins cache -> %s:%s [%s] "
-                               "preload cache effectivity %s ;" % (self.preload_cached,
-                                                                   self.preload_cached_annihilated,
-                                                                   self.preload_cached_total,
-                                                                   round(self.preload_cached_total
-                                                                         / self.destroyed_coins, 4)))
+                        self.log.debug("-UTXO---------------------------------------------------------------------")
+                        if loading: self.log.debug(loading)
+
+                        self.log.debug("Cache count %s; hit rate: %s;" % (self.utxo.len(),
+                                                                          round(self.utxo.hit_rate(), 4)))
+                        self.log.debug("Checkpoint block %s; saved to db %s; "
+                                       "deleted from db %s; "
+                                       "loaded utxo from db %s; "% (self.utxo.last_saved_block,
+                                                                    self.utxo.saved_utxo,
+                                                                    self.utxo.deleted_utxo,
+                                                                    self.utxo.loaded_utxo))
+                self.log.debug("-Coins--------------------------------------------------------------------")
                 self.log.debug("Coins %s; destroyed %s; "
                                "unspent %s; op_return %s;" % (self.coins,
                                                               self.destroyed_coins,
                                                               self.coins - self.destroyed_coins,
                                                               self.op_return))
                 self.log.debug("Coins destroyed in cache %s; "
-                               "cache effectivity  %s;" % (self.destroyed_coins - self.utxo.deleted_utxo - self.preload_cached_annihilated,
-                                                                                round((self.destroyed_coins - self.utxo.deleted_utxo - self.preload_cached_annihilated)
-                                                                                      / self.destroyed_coins, 4)))
-
-                self.log.debug("total tx fetch time %s;" % self.total_received_tx_time)
-                self.log.debug("total blocks processing time %s;" % self.blocks_processing_time)
+                               "cache efficiency  %s [%s];" % (self.utxo._hit,
+                                                               round( self.utxo._hit / self.destroyed_coins, 4),
+                                                               round((self.utxo._hit + self.preload_cached_annihilated)
+                                                                      / self.destroyed_coins, 4)))
                 t = int(time.time() - self.start_time)
-                h = t // 3600
-                m = (t % 3600 ) // 60
-                s = (t % 3600) % 60
+                h, m, s = t // 3600, (t % 3600 ) // 60, (t % 3600) % 60
                 self.log.info("Total time %s:%s:%s;" % (h,m,s))
-
 
             # after block added handler
             if self.after_block_handler and not self.cache_loading:
@@ -501,13 +494,6 @@ class Connector:
             self.log.error(str(traceback.format_exc()))
             self.log.error("block error %s" % str(err))
         finally:
-            # self.log.debug("%s block [%s tx/ %s size] processing time %s cache [%s/%s]" %
-            #               (block["height"],
-            #                len(block["tx"]),
-            #                block["size"] / 1000000,
-            #                tm(bt),
-            #                len(self.block_hashes._store),
-            #                len(self.block_preload._store)))
             if self.node_last_block > self.last_block_height:
                 self.get_next_block_mutex = True
                 self.loop.create_task(self.get_next_block())
@@ -561,7 +547,6 @@ class Connector:
                     for i in tx["vOut"]:
 
                         if "_s_" in tx["vOut"][i]:
-                            self.preload_cached_annihilated += 1
                             self.coins += 1
                         else:
                             out = tx["vOut"][i]
@@ -592,17 +577,14 @@ class Connector:
                             try:
                                 tx["vIn"][i]["coin"] = inp["_a_"]
                                 c += 1
-                                self.preload_cached_total += 1
+                                self.preload_cached_annihilated += 1
                             except:
                                 try:
                                     tx["vIn"][i]["coin"] = inp["_c_"]
                                     c += 1
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
-                                    try:
-                                        self.utxo.get(outpoint)
-                                    except:
-                                        self.utxo.deleted.add(outpoint)
+                                    self.utxo.get(outpoint)
                                 except:
                                     r = self.utxo.get(outpoint)
                                     if r:
