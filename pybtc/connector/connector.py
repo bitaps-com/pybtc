@@ -459,10 +459,13 @@ class Connector:
                                                                     self.utxo.saved_utxo,
                                                                     self.utxo.deleted_utxo,
                                                                     self.utxo.loaded_utxo))
-                        self.log.debug("  Read from db last batch %s s; "
-                                       "total  %s s; " % (round(self.utxo.read_from_db_time, 4),
+                        self.log.debug("  Read from db last batch %s; "
+                                       "count %s; "
+                                       "total time %s; " % (round(self.utxo.read_from_db_time, 4),
+                                                            self.utxo.read_from_db_count,
                                                           int(self.utxo.read_from_db_time_total)))
                         self.utxo.read_from_db_time = 0
+                        self.utxo.read_from_db_count = 0
                 self.log.debug("- Coins ---------------")
                 self.log.debug("  Coins %s; destroyed %s; "
                                "unspent %s; op_return %s;" % (self.coins,
