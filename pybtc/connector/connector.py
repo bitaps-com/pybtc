@@ -424,7 +424,7 @@ class Connector:
                     self.tx_cache.pop(h)
 
             tx_rate = round(self.total_received_tx / (time.time() - self.start_time), 4)
-            t = 10000 if not self.deep_synchronization else 10000
+            t = 10000 if not self.deep_synchronization else 100000
             if (self.total_received_tx - self.total_received_tx_stat) > t:
                 self.total_received_tx_stat = self.total_received_tx
                 self.log.warning("Blocks %s; tx rate: %s;" % (block["height"], tx_rate))
@@ -433,15 +433,15 @@ class Connector:
                     if self.deep_synchronization:
                         self.log.debug("-Blocks--------------------------------------------------------------------")
 
-                        self.log.debug("Blocks not cached %s; "
+                        self.log.debug("  Blocks not cached %s; "
                                       "blocks cached %s; "
                                       "cache size %s M;" % (self.non_cached_blocks,
                                                             self.block_preload.len(),
                                                             round(self.block_preload._store_size / 1024 / 1024, 2)))
-                        self.log.debug("Cache first block %s; "
+                        self.log.debug("  Cache first block %s; "
                                        "cache last block %s;" % (next(iter(self.block_preload._store)),
                                                                  next(reversed(self.block_preload._store))))
-                        self.log.debug("Preload coins cache -> %s:%s [%s] "
+                        self.log.debug("  Preload coins cache -> %s:%s [%s] "
                                        "preload cache efficiency %s;" % (self.preload_cached,
                                                                           self.preload_cached_annihilated,
                                                                           self.preload_cached_total,
@@ -451,25 +451,25 @@ class Connector:
                         self.log.debug("-UTXO---------------------------------------------------------------------")
                         if loading: self.log.debug(loading)
 
-                        self.log.debug("Cache count %s; hit rate: %s;" % (self.utxo.len(),
+                        self.log.debug("  Cache count %s; hit rate: %s;" % (self.utxo.len(),
                                                                           round(self.utxo.hit_rate(), 4)))
-                        self.log.debug("Checkpoint block %s; saved to db %s; "
+                        self.log.debug("  Checkpoint block %s; saved to db %s; "
                                        "deleted from db %s; "
                                        "loaded utxo from db %s; "% (self.utxo.last_saved_block,
                                                                     self.utxo.saved_utxo,
                                                                     self.utxo.deleted_utxo,
                                                                     self.utxo.loaded_utxo))
-                        self.log.debug("Read from db last batch %s s; "
+                        self.log.debug("  Read from db last batch %s s; "
                                        "total  %s s; " % (round(self.utxo.read_from_db_time, 4),
                                                           int(self.utxo.read_from_db_time_total)))
                         self.utxo.read_from_db_time = 0
                 self.log.debug("-Coins--------------------------------------------------------------------")
-                self.log.debug("Coins %s; destroyed %s; "
+                self.log.debug("  Coins %s; destroyed %s; "
                                "unspent %s; op_return %s;" % (self.coins,
                                                               self.destroyed_coins,
                                                               self.coins - self.destroyed_coins,
                                                               self.op_return))
-                self.log.debug("Coins destroyed in cache %s; "
+                self.log.debug("  Coins destroyed in cache %s; "
                                "cache efficiency  %s [%s];" % (self.utxo._hit,
                                                                round( self.utxo._hit / self.destroyed_coins, 4),
                                                                round((self.utxo._hit + self.preload_cached_annihilated)
