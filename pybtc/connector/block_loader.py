@@ -195,6 +195,7 @@ class BlockLoader:
                     self.parent.block_preload.set(i, blocks[i])
                 if blocks:
                     if  self.parent.utxo.checkpoints:
+                        self.log.critical(str((self.parent.utxo.checkpoints[-1] ,i)))
                         if self.parent.utxo.checkpoints[-1] < i:
                             self.parent.utxo.checkpoints.append(i)
                     else:
