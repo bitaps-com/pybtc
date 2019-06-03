@@ -77,7 +77,7 @@ class UTXO():
                     block_changed = True
                     lb = i[1][0] >> 39
                 if lb - 1 == checkpoint:
-                    if len(self.cached) > int(self.size_limit * 0.95):
+                    if len(self.cached) > int(self.size_limit):
                         if self.checkpoints:
                             checkpoint = self.checkpoints.pop(0)
                     else:
