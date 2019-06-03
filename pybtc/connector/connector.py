@@ -428,14 +428,19 @@ class Connector:
             t = 10000 if not self.deep_synchronization else 100000
             if (self.total_received_tx - self.total_received_tx_stat) > t:
                 tx_rate = round(self.total_received_tx / (time.time() - self.start_time), 4)
+                io_rate = round((self.coins + self.destroyed_coins) / (time.time() - self.start_time), 4)
                 tx_rate_last = round(self.total_received_tx_last / (time.time() - self.start_time_last), 4)
                 self.total_received_tx_last = 0
                 self.start_time_last = time.time()
+                batch_tx_count = self.total_received_tx - self.total_received_tx_stat
                 self.total_received_tx_stat = self.total_received_tx
-                self.log.info("Blocks %s; tx rate: %s; [%s]" % (block["height"], tx_rate, tx_rate_last))
+                self.log.info("Blocks %s; tx rate: %s; io rate[%s];" % (block["height"], tx_rate, io_rate))
                 if self.utxo_data:
                     loading = "Loading ... " if self.cache_loading else ""
                     if self.deep_synchronization:
+                        self.log.debug("- Batch ---------------")
+                        self.log.debug("    Rate %s; transactions %s" % (tx_rate_last, batch_tx_count))
+
                         self.log.debug("- Blocks --------------")
 
                         self.log.debug("    Blocks not cached %s; "
