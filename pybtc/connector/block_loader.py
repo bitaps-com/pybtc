@@ -64,9 +64,9 @@ class BlockLoader:
         self.rpc_batch_limit = 10
         self.worker_tasks = [self.loop.create_task(self.start_worker(i)) for i in range(self.worker_limit)]
         target_height = self.parent.node_last_block - self.parent.deep_sync_limit
-        height = self.parent.last_block_height + 1
+        self.height = self.parent.last_block_height + 1
 
-        while height < target_height:
+        while self.height < target_height:
             new_requests = 0
             if self.parent.block_preload._store_size < self.parent.block_preload_cache_limit:
                 try:
@@ -83,12 +83,12 @@ class BlockLoader:
                     for i in self.worker_busy:
                         if not self.worker_busy[i]:
                             self.worker_busy[i] = True
-                            if height <= self.parent.last_block_height:
-                                height = self.parent.last_block_height + 1
+                            if self.height <= self.parent.last_block_height:
+                                self.height = self.parent.last_block_height + 1
                             await self.pipe_sent_msg(self.worker[i].writer, b'rpc_batch_limit',
                                                      int_to_bytes(self.rpc_batch_limit))
                             await self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(height))
-                            height += self.rpc_batch_limit
+                            self.height += self.rpc_batch_limit
                             new_requests += 1
                     if not new_requests:
                         await asyncio.sleep(1)
@@ -200,7 +200,9 @@ class BlockLoader:
                     else:
                         self.parent.utxo.checkpoints.append(i)
 
-
+            if msg_type == b'failed':
+                self.height = bytes_to_int(msg)
+                continue
                 # def disconnect(self,ip):
     #     """ Disconnect peer """
     #     p = self.out_connection_pool[self.outgoing_connection[ip]["pool"]]
@@ -326,6 +328,7 @@ class Worker:
             self.log.critical("load blocks error")
             self.log.critical(str(traceback.format_exc()))
             await self.pipe_sent_msg(b'result', pickle.dumps([]))
+            await self.pipe_sent_msg(b'failed', pickle.dumps(height))
 
 
     async def message_loop(self):
@@ -345,6 +348,7 @@ class Worker:
                 if msg_type == b'rpc_batch_limit':
                     self.rpc_batch_limit = bytes_to_int(msg)
                     continue
+
         except:
             pass
 
