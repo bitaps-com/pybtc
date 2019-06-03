@@ -456,9 +456,10 @@ class Connector:
                                       "cache size %s M;" % (self.non_cached_blocks,
                                                             self.block_preload.len(),
                                                             round(self.block_preload._store_size / 1024 / 1024, 2)))
-                        self.log.debug("    Cache first block %s; "
-                                       "cache last block %s;" % (next(iter(self.block_preload._store)),
-                                                                 next(reversed(self.block_preload._store))))
+                        if self.block_preload._store:
+                            self.log.debug("    Cache first block %s; "
+                                           "cache last block %s;" % (next(iter(self.block_preload._store)),
+                                                                     next(reversed(self.block_preload._store))))
                         self.log.debug("    Preload coins cache -> %s:%s [%s] "
                                        "preload cache efficiency %s;" % (self.preload_cached,
                                                                           self.preload_cached_annihilated,
