@@ -479,7 +479,7 @@ class Connector:
                                        "rate %s; "
                                        "total time %s; " % (round(self.utxo.read_from_db_time, 4),
                                                             self.utxo.read_from_db_count,
-                                                            round(self.utxo.read_from_db_batch_time, 4),
+                                                            round(time.time() - self.utxo.read_from_db_batch_time, 4),
                                                             c,
                                                             int(self.utxo.read_from_db_time_total)))
                         self.utxo.read_from_db_batch_time = time.time()
