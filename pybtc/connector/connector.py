@@ -424,12 +424,12 @@ class Connector:
                 for h in tx_bin_list:
                     self.tx_cache.pop(h)
 
-            tx_rate = round(self.total_received_tx / (time.time() - self.start_time), 4)
-            tx_rate_last = round(self.total_received_tx_last / (time.time() - self.start_time_last), 4)
-            self.total_received_tx_last = 0
-            self.start_time_last = time.time()
             t = 10000 if not self.deep_synchronization else 100000
             if (self.total_received_tx - self.total_received_tx_stat) > t:
+                tx_rate = round(self.total_received_tx / (time.time() - self.start_time), 4)
+                tx_rate_last = round(self.total_received_tx_last / (time.time() - self.start_time_last), 4)
+                self.total_received_tx_last = 0
+                self.start_time_last = time.time()
                 self.total_received_tx_stat = self.total_received_tx
                 self.log.info("Blocks %s; tx rate: %s; [%s]" % (block["height"], tx_rate, tx_rate_last))
                 if self.utxo_data:
@@ -464,7 +464,8 @@ class Connector:
                                                                     self.utxo.deleted_utxo,
                                                                     self.utxo.loaded_utxo))
                         if self.utxo.read_from_db_time_total:
-                           c =  round(self.utxo.read_from_db_count / self.utxo.read_from_db_time_total, 4)
+                           c =  round(self.utxo.read_from_db_count
+                                      / (time.time() - self.utxo.read_from_db_batch_time), 4)
                         else:
                             c = 0
                         self.log.debug("    Read from db last batch %s; "
@@ -474,7 +475,7 @@ class Connector:
                                                             self.utxo.read_from_db_count,
                                                             c,
                                                             int(self.utxo.read_from_db_time_total)))
-                        self.utxo.read_from_db_time = 0
+                        self.utxo.read_from_db_batch_time = time.time()
                         self.utxo.read_from_db_count = 0
                 self.log.debug("- Coins ---------------")
                 self.log.debug("    Coins %s; destroyed %s; "
