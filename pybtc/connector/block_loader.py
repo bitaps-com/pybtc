@@ -87,7 +87,7 @@ class BlockLoader:
                                 self.height = self.parent.last_block_height + 1
                             await self.pipe_sent_msg(self.worker[i].writer, b'rpc_batch_limit',
                                                      int_to_bytes(self.rpc_batch_limit))
-                            await self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(height))
+                            await self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(self.height))
                             self.height += self.rpc_batch_limit
                             new_requests += 1
                     if not new_requests:
