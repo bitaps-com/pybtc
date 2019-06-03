@@ -465,9 +465,12 @@ class Connector:
                                                                     self.utxo.loaded_utxo))
                         self.log.debug("    Read from db last batch %s; "
                                        "count %s; "
+                                       "rate %s; "
                                        "total time %s; " % (round(self.utxo.read_from_db_time, 4),
                                                             self.utxo.read_from_db_count,
-                                                          int(self.utxo.read_from_db_time_total)))
+                                                            round(self.utxo.read_from_db_count
+                                                                  /self.utxo.read_from_db_time_total, 4),
+                                                            int(self.utxo.read_from_db_time_total)))
                         self.utxo.read_from_db_time = 0
                         self.utxo.read_from_db_count = 0
                 self.log.debug("- Coins ---------------")
