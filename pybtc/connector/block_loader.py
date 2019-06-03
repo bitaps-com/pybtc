@@ -73,10 +73,10 @@ class BlockLoader:
                     if self.last_batch_size < 1000000 and self.rpc_batch_limit < 450:
                         self.rpc_batch_limit += 50
                         self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
-                    elif self.last_batch_size >  40000000 and self.rpc_batch_limit > 100:
+                    elif self.last_batch_size >  40000000 and self.rpc_batch_limit > 80:
                         self.rpc_batch_limit -= 40
                         self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
-                    elif self.last_batch_size >  80000000 and self.rpc_batch_limit < 100:
+                    elif self.last_batch_size >  80000000 and self.rpc_batch_limit < 80:
                         self.rpc_batch_limit = 20
 
                         self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
@@ -189,6 +189,8 @@ class BlockLoader:
                 blocks = pickle.loads(msg)
                 if blocks:
                     self.last_batch_size = len(msg)
+                else:
+                    self.rpc_batch_limit = 20
                 for i in blocks:
                     self.parent.block_preload.set(i, blocks[i])
                 if blocks:
