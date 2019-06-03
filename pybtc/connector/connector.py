@@ -497,7 +497,7 @@ class Connector:
                                                                       / self.destroyed_coins, 4)))
                 self.log.debug("---------------------")
                 t = int(time.time() - self.start_time)
-                t2 = int(time.time() - self.batch_time)
+                t2 = round(time.time() - self.batch_time, 2)
                 self.batch_time = time.time()
                 h, m, s = t // 3600, (t % 3600 ) // 60, (t % 3600) % 60
                 self.log.info("Total time %s:%s:%s;  batch time: %s" % (h,m,s, t2))
