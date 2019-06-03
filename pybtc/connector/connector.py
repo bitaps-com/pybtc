@@ -548,6 +548,7 @@ class Connector:
                     raise RuntimeError("block transaction request timeout")
         tx_count = len(block["tx"])
         self.total_received_tx += tx_count
+        self.total_received_tx_last += tx_count
         self.total_received_tx_time += time.time() - q
         rate = round(self.total_received_tx/self.total_received_tx_time)
         self.log.debug("Transactions received: %s [%s] received tx rate tx/s ->> %s <<" % (tx_count, time.time() - q, rate))
