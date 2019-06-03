@@ -238,6 +238,7 @@ class Worker:
         try:
             self.log.critical("%s block loader get from %s to %s" % (self.name, height, limit))
             attempt = 10
+            x = None
             t = 0
             start_height = height
             batch = list()
@@ -300,7 +301,8 @@ class Worker:
                                     pass
 
                     blocks[x] = block
-            x = None
+
+
             if blocks:
                 blocks[x]["checkpoint"] = x
             for x in blocks:
