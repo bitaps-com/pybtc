@@ -236,9 +236,10 @@ class Worker:
 
     async def load_blocks(self, height, limit):
         try:
-            self.log.critical("%s block loader get from %s to %s" % (self.name, height, limit))
+            self.log.critical("%s block loader get from %s to %s" % (self.name, height, height + limit))
             attempt = 10
             x = None
+
             t = 0
             start_height = height
             batch = list()
