@@ -343,6 +343,7 @@ class Connector:
                     h = await self.rpc.getblockhash(self.last_block_height + 1)
                     block = await self._get_block_by_hash(h)
                     block["checkpoint"] = h
+                    block["height"] = h
 
                 self.loop.create_task(self._new_block(block))
             except Exception as err:
