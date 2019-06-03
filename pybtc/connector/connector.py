@@ -93,6 +93,8 @@ class Connector:
         self.total_received_tx_last = 0
         self.start_time_last = time.time()
         self.batch_time = time.time()
+        self.batch_load_utxo = 0
+        self.batch_parsing = 0
         # cache and system
         self.block_preload_cache_limit = block_preload_cache_limit
         self.block_hashes_cache_limit = block_hashes_cache_limit
@@ -340,6 +342,7 @@ class Connector:
                 if not block:
                     h = await self.rpc.getblockhash(self.last_block_height + 1)
                     block = await self._get_block_by_hash(h)
+                    block["checkpoint"] = h
 
                 self.loop.create_task(self._new_block(block))
             except Exception as err:
@@ -440,6 +443,10 @@ class Connector:
                     if self.deep_synchronization:
                         self.log.debug("- Batch ---------------")
                         self.log.debug("    Rate %s; transactions %s" % (tx_rate_last, batch_tx_count))
+                        self.log.debug("    Load utxo %s; parsing %s" % (self.batch_load_utxo,
+                                                                         self.batch_parsing))
+                        self.batch_load_utxo = 0
+                        self.batch_parsing = 0
 
                         self.log.debug("- Blocks --------------")
 
@@ -566,7 +573,8 @@ class Connector:
 
     async def _block_as_transactions_batch(self, block):
         try:
-
+            t2 = 0
+            t = time.time()
             if self.utxo:
                 for q in block["rawTx"]:
                     tx = block["rawTx"][q]
@@ -621,7 +629,10 @@ class Connector:
                                         missed.add((outpoint, (block["height"] << 39) + (q << 20) + (1 << 19) + i, q, i))
 
             if missed:
+                t2 = time.time()
                 await self.utxo.load_utxo()
+                t2 =time.time() - t2
+                self.batch_load_utxo += t2
                 for o, s, q, i in missed:
                     block["rawTx"][q]["vIn"][i]["coin"] = self.utxo.get_loaded(o)
                     c += 1
@@ -632,6 +643,7 @@ class Connector:
 
             self.total_received_tx += len(block["rawTx"])
             self.total_received_tx_last += len(block["rawTx"])
+            self.batch_parsing += (time.time() - t) - t2
         except Exception as err:
             self.log.critical("new block error %s " % err)
             self.log.critical(str(traceback.format_exc()))

@@ -600,18 +600,19 @@ class BlockDeserializeTests(unittest.TestCase):
         f = open('./pybtc/test/raw_block.txt')
         fc = f.readline()
         qt = time.time()
-        bt = (
-            Block(fc[:-1], format="raw", keep_raw_tx=False),
-              )
+        bt = Block(fc[:-1], format="raw", keep_raw_tx=False)
+        print(len(bt["tx"]))
+        print([t["txId"] for t in bt["tx"].values()])
+        print(merkle_branches([t["txId"] for t in bt["tx"].values()]))
 
-        import ujson as pickle
-        qt = time.time()
-        k = pickle.dumps(bt[0]["tx"][0])
-        print("decoded block dump", time.time() - qt)
-        qt = time.time()
-        p = pickle.loads(k)
-        print("decoded block load", time.time() - qt)
-        print(p[0]["hash"])
+        # import   pickle
+        # qt = time.time()
+        # k = pickle.dumps(bt[0]["tx"][0])
+        # print("decoded block dump", time.time() - qt)
+        # qt = time.time()
+        # p = pickle.loads(k)
+        # print("decoded block load", time.time() - qt)
+        # print(p)
 
 
 
