@@ -483,6 +483,7 @@ class Connector:
                                                             c,
                                                             int(self.utxo.read_from_db_time_total)))
                         self.utxo.read_from_db_batch_time = 0
+                        self.utxo.read_from_db_time = 0
                         self.utxo.read_from_db_count = 0
                 self.log.debug("- Coins ---------------")
                 self.log.debug("    Coins %s; destroyed %s; "
