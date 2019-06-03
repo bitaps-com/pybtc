@@ -92,6 +92,7 @@ class Connector:
         self.start_time = time.time()
         self.total_received_tx_last = 0
         self.start_time_last = time.time()
+        self.batch_time = time.time()
         # cache and system
         self.block_preload_cache_limit = block_preload_cache_limit
         self.block_hashes_cache_limit = block_hashes_cache_limit
@@ -464,15 +465,16 @@ class Connector:
                                                                     self.utxo.deleted_utxo,
                                                                     self.utxo.loaded_utxo))
                         if self.utxo.read_from_db_time_total:
-                           c =  round(self.utxo.read_from_db_count
-                                      / (time.time() - self.utxo.read_from_db_batch_time), 4)
+                           c =  round(self.utxo.read_from_db_count / self.utxo.read_from_db_batch_time, 4)
                         else:
                             c = 0
                         self.log.debug("    Read from db last batch %s; "
                                        "count %s; "
+                                       "batch time %s; "
                                        "rate %s; "
                                        "total time %s; " % (round(self.utxo.read_from_db_time, 4),
                                                             self.utxo.read_from_db_count,
+                                                            round(self.utxo.read_from_db_batch_time, 4),
                                                             c,
                                                             int(self.utxo.read_from_db_time_total)))
                         self.utxo.read_from_db_batch_time = time.time()
@@ -490,8 +492,10 @@ class Connector:
                                                                       / self.destroyed_coins, 4)))
                 self.log.debug("---------------------")
                 t = int(time.time() - self.start_time)
+                t2 = int(time.time() - self.batch_time)
+                self.batch_time = time.time()
                 h, m, s = t // 3600, (t % 3600 ) // 60, (t % 3600) % 60
-                self.log.info("Total time %s:%s:%s;" % (h,m,s))
+                self.log.info("Total time %s:%s:%s;  batch time: %s" % (h,m,s, t2))
             # after block added handler
             if self.after_block_handler and not self.cache_loading:
                 try:
