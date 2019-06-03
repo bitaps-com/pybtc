@@ -445,7 +445,7 @@ class Connector:
                         self.log.debug("    Cache first block %s; "
                                        "cache last block %s;" % (next(iter(self.block_preload._store)),
                                                                  next(reversed(self.block_preload._store))))
-                        self.log.debug("  Preload coins cache -> %s:%s [%s] "
+                        self.log.debug("    Preload coins cache -> %s:%s [%s] "
                                        "preload cache efficiency %s;" % (self.preload_cached,
                                                                           self.preload_cached_annihilated,
                                                                           self.preload_cached_total,
@@ -463,13 +463,16 @@ class Connector:
                                                                     self.utxo.saved_utxo,
                                                                     self.utxo.deleted_utxo,
                                                                     self.utxo.loaded_utxo))
+                        if self.utxo.read_from_db_time_total:
+                           c =  round(self.utxo.read_from_db_count / self.utxo.read_from_db_time_total, 4)
+                        else:
+                            c = 0
                         self.log.debug("    Read from db last batch %s; "
                                        "count %s; "
                                        "rate %s; "
                                        "total time %s; " % (round(self.utxo.read_from_db_time, 4),
                                                             self.utxo.read_from_db_count,
-                                                            round(self.utxo.read_from_db_count
-                                                                  /self.utxo.read_from_db_time_total, 4),
+                                                            c,
                                                             int(self.utxo.read_from_db_time_total)))
                         self.utxo.read_from_db_time = 0
                         self.utxo.read_from_db_count = 0

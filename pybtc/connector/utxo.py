@@ -45,7 +45,7 @@ class UTXO():
         self.deleted_utxo = 0
         self.read_from_db_time = 0
         self.read_from_db_count = 0
-        self.read_from_db_time_total = 1
+        self.read_from_db_time_total = 0
         self.loaded_utxo = 0
         self.destroyed_utxo = 0
         self.destroyed_utxo_block = 0
