@@ -300,6 +300,7 @@ class Worker:
                                     pass
 
                     blocks[x] = block
+            x = None
             if blocks:
                 blocks[x]["checkpoint"] = x
             for x in blocks:
@@ -313,8 +314,8 @@ class Worker:
                         except: pass
 
                 blocks[x] = pickle.dumps(blocks[x])
-            self.log.critical("%s block loader blocks %s" %(self.name, len(blocks[x])))
-            self.log.critical("%s block loader checkpoint %s" %(self.name, blocks[x]["checkpoint"]))
+            self.log.critical("%s block loader blocks %s" %(self.name, len(blocks)))
+            self.log.critical("%s block loader checkpoint %s" %(self.name, x))
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except:
             self.log.critical("load blocks error")
