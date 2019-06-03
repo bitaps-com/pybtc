@@ -620,6 +620,7 @@ class Connector:
                     raise Exception("utxo get failed ")
 
             self.total_received_tx += len(block["rawTx"])
+            self.total_received_tx_last += len(block["rawTx"])
         except Exception as err:
             self.log.critical("new block error %s " % err)
             self.log.critical(str(traceback.format_exc()))
