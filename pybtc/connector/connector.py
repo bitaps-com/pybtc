@@ -90,7 +90,8 @@ class Connector:
         self.preload_cached = 0
         self.preload_cached_annihilated = 0
         self.start_time = time.time()
-
+        self.total_received_tx_last = 0
+        self.start_time_last = time.time()
         # cache and system
         self.block_preload_cache_limit = block_preload_cache_limit
         self.block_hashes_cache_limit = block_hashes_cache_limit
@@ -424,10 +425,13 @@ class Connector:
                     self.tx_cache.pop(h)
 
             tx_rate = round(self.total_received_tx / (time.time() - self.start_time), 4)
+            tx_rate_last = round(self.total_received_tx_last / (time.time() - self.start_time_last), 4)
+            self.total_received_tx_last = 0
+            self.start_time_last = time.time()
             t = 10000 if not self.deep_synchronization else 100000
             if (self.total_received_tx - self.total_received_tx_stat) > t:
                 self.total_received_tx_stat = self.total_received_tx
-                self.log.info("Blocks %s; tx rate: %s;" % (block["height"], tx_rate))
+                self.log.info("Blocks %s; tx rate: %s; [%s]" % (block["height"], tx_rate, tx_rate_last))
                 if self.utxo_data:
                     loading = "Loading ... " if self.cache_loading else ""
                     if self.deep_synchronization:

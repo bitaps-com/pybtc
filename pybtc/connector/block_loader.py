@@ -73,11 +73,11 @@ class BlockLoader:
                     if self.last_batch_size < 1000000 and self.rpc_batch_limit < 450:
                         self.rpc_batch_limit += 50
                         self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
-                    elif self.last_batch_size >  40000000 and self.rpc_batch_limit > 150:
-                        self.rpc_batch_limit -= 50
+                    elif self.last_batch_size >  40000000 and self.rpc_batch_limit > 100:
+                        self.rpc_batch_limit -= 40
                         self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
-                    elif self.last_batch_size >  80000000 and self.rpc_batch_limit < 60:
-                        self.rpc_batch_limit = 40
+                    elif self.last_batch_size >  80000000 and self.rpc_batch_limit < 100:
+                        self.rpc_batch_limit = 20
 
                         self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
                     for i in self.worker_busy:
@@ -227,9 +227,9 @@ class Worker:
         self.loop.set_default_executor(ThreadPoolExecutor(20))
         self.out_writer = out_writer
         self.in_reader = in_reader
-        self.coins = MRU(1000000)
-        self.destroyed_coins = MRU(1000000)
-        self.a_coins = MRU(1000000)
+        self.coins = MRU(4000000)
+        self.destroyed_coins = MRU(4000000)
+        self.a_coins = MRU(4000000)
         signal.signal(signal.SIGTERM, self.terminate)
         self.loop.create_task(self.message_loop())
         self.loop.run_forever()
@@ -260,6 +260,7 @@ class Worker:
                     result = await self.rpc.batch(batch)
                     break
                 except:
+                    self.log.critical(str(traceback.format_exc()))
                     await asyncio.sleep(5)
                     attempt -= 1
                 if not attempt:
