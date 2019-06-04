@@ -5,7 +5,7 @@ from pybtc.connector.utils import decode_block_tx
 from pybtc.connector.utils import Cache
 from pybtc.transaction import Transaction
 from pybtc import int_to_bytes, bytes_to_int
-
+from collections import deque
 import traceback
 import aiojsonrpc
 import zmq
@@ -602,7 +602,7 @@ class Connector:
 
             c = 0
             ti = 0
-            stxo, missed = dict(), set()
+            stxo, missed = dict(), deque()
             for q in block["rawTx"]:
                 tx = block["rawTx"][q]
                 if not tx["coinbase"]:

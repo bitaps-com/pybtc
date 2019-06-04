@@ -1,7 +1,7 @@
 from pybtc import int_to_c_int, c_int_to_int, c_int_len
 from pybtc import int_to_bytes, bytes_to_int
 import asyncio
-from collections import OrderedDict
+from collections import OrderedDict, deque
 from pybtc  import MRU
 import traceback
 import time
@@ -15,7 +15,7 @@ except: pass
 class UTXO():
     def __init__(self, db_type, db,  loop, log, cache_size):
         self.cached = MRU()
-        self.missed = set()
+        self.missed = deque()
         self.deleted = set()
         self.pending_deleted = set()
         self.pending_utxo = set()
@@ -182,7 +182,7 @@ class UTXO():
                 return i
             except:
                 self._failed_requests += 1
-                self.missed.add(key)
+                self.missed.append(key)
                 return None
 
     def get_loaded(self, key):
@@ -201,7 +201,6 @@ class UTXO():
             break
         try:
             self.load_utxo_future = asyncio.Future()
-            l = list(self.missed)
             t = time.time()
             if self.db_type == "postgresql":
                 async with self.db.acquire() as conn:
@@ -210,7 +209,7 @@ class UTXO():
                                             "       address,"
                                             "       amount "
                                             "FROM connector_utxo "
-                                            "WHERE outpoint = ANY($1);", l)
+                                            "WHERE outpoint = ANY($1);", self.missed)
                 for row in rows:
                     self.loaded[row["outpoint"]] = (row["pointer"],
                                                     row["amount"],
@@ -219,7 +218,7 @@ class UTXO():
 
 
             elif self.db_type == "rocksdb":
-                rows = self.db.multi_get(l)
+                rows = self.db.multi_get(list(self.missed))
                 for outpoint in rows:
                     d = rows[outpoint]
                     pointer = c_int_to_int(d)
@@ -230,7 +229,7 @@ class UTXO():
                     self.loaded[outpoint] = (pointer, amount, address)
                     self.loaded_utxo += 1
             else:
-                for outpoint in l:
+                for outpoint in self.missed:
                     d = self.db.get(outpoint)
                     if d is None: continue
                     pointer = c_int_to_int(d)
@@ -242,14 +241,11 @@ class UTXO():
                     self.loaded_utxo += 1
 
 
-            for i in l:
-                try: self.missed.remove(i)
-                except: pass
-            self.read_from_db_count += len(l)
+            self.read_from_db_count += len(self.missed)
             self.read_from_db_time += time.time() - t
             self.read_from_db_batch_time += time.time() - t
             self.read_from_db_time_total += time.time() - t
-
+            self.missed= deque()
         except:
             self.log.critical(str(traceback.format_exc()))
         finally:
