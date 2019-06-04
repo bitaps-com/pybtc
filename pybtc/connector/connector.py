@@ -639,7 +639,7 @@ class Connector:
                                     c += 1
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
-                                    # self.utxo.get(outpoint)
+                                    self.utxo.get(outpoint)
                                 except:
                                     r = self.utxo.get(outpoint)
                                     if r:
