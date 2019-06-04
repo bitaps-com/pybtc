@@ -82,7 +82,7 @@ class UTXO():
                         limit = self.size_limit
                     else:
                         limit = self.size_limit * 0.9
-                    if len(self.cached) > limit:
+                    if len(self.cached) > limit and self.checkpoints:
                         if self.checkpoints:
                             checkpoint = self.checkpoints.pop(0)
                     else:
