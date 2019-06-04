@@ -329,7 +329,7 @@ class Worker:
                                                       row["amount"],
                                                       row["address"])
                    for block in  blocks:
-                       for z in blocks[block]:
+                       for z in blocks[block]["rawTx"]:
                            if not blocks[block][z]["coinbase"]:
                                for i in blocks[block][z]["vIn"]:
                                    inp = blocks[block][z]["vIn"][i]
