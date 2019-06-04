@@ -627,6 +627,7 @@ class Connector:
                             except:
                                 try:
                                     tx["vIn"][i]["coin"] = inp["_c_"]
+
                                     c += 1
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
