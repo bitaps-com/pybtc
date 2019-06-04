@@ -623,7 +623,7 @@ class Connector:
                                 c += 1
                                 self.preload_cached_annihilated += 1
                                 self.preload_cached_total += 1
-                                del tx["vIn"][i]["_a_"]
+                                # del tx["vIn"][i]["_a_"]
                             except:
                                 try:
                                     tx["vIn"][i]["coin"] = inp["_c_"]
@@ -632,7 +632,7 @@ class Connector:
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
                                     self.utxo.get(outpoint)
-                                    del tx["vIn"][i]["_c_"]
+                                    # del tx["vIn"][i]["_c_"]
                                 except:
                                     r = self.utxo.get(outpoint)
                                     if r:
