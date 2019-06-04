@@ -496,7 +496,7 @@ class Connector:
                                                                     self.utxo.saved_utxo,
                                                                     self.utxo.deleted_utxo,
                                                                     self.utxo.loaded_utxo))
-                        if self.utxo.read_from_db_time_total:
+                        if self.utxo.read_from_db_batch_time:
                            c =  round(self.utxo.read_from_db_count / self.utxo.read_from_db_batch_time, 4)
                         else:
                             c = 0
