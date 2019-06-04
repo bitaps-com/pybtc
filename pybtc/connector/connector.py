@@ -95,6 +95,7 @@ class Connector:
         self.batch_time = time.time()
         self.batch_load_utxo = 0
         self.batch_parsing = 0
+        self.batch_handler = 0
         # cache and system
         self.block_preload_cache_limit = block_preload_cache_limit
         self.block_hashes_cache_limit = block_hashes_cache_limit
@@ -412,8 +413,9 @@ class Connector:
                 checkpoint = None
 
             if self.block_batch_handler and not self.cache_loading:
+                t = time.time()
                 await self.block_batch_handler(block, checkpoint)
-
+                self.batch_handler += time.time() - t
             if self.block_handler and not self.cache_loading:
                 await self.block_handler(block)
 
@@ -444,8 +446,9 @@ class Connector:
                     if self.deep_synchronization:
                         self.log.debug("- Batch ---------------")
                         self.log.debug("    Rate %s; transactions %s" % (tx_rate_last, batch_tx_count))
-                        self.log.debug("    Load utxo %s; parsing %s" % (self.batch_load_utxo,
-                                                                         self.batch_parsing))
+                        self.log.debug("    Load utxo %s; parsing %s" % (self.batch_load_utxo, self.batch_parsing))
+                        self.log.debug("    Batch handler %s;" % self.batch_handler)
+                        self.batch_handler = 0
                         self.batch_load_utxo = 0
                         self.batch_parsing = 0
 
