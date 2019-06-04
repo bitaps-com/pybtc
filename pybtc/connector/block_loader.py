@@ -327,8 +327,9 @@ class Worker:
                                                "FROM connector_utxo "
                                                "WHERE outpoint = ANY($1);", missed)
                    m += len(rows)
+                   p = dict()
                    for row in rows:
-                       self.coins[row["outpoint"]] = (row["pointer"],
+                       p[row["outpoint"]] = (row["pointer"],
                                                       row["amount"],
                                                       row["address"])
                    for block in  blocks:
@@ -338,7 +339,7 @@ class Worker:
                                    inp = blocks[block]["rawTx"][z]["vIn"][i]
                                    outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                    try:
-                                       block["rawTx"][z]["vIn"][i]["_c_"] = self.coins.delete(outpoint)
+                                       blocks[block]["rawTx"][z]["vIn"][i]["_c_"] = p[outpoint]
                                        t += 1
                                        n += 1
                                    except:
