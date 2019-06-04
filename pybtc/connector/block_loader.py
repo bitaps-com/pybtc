@@ -314,7 +314,9 @@ class Worker:
                                         missed.append(outpoint)
 
                     blocks[x] = block
-
+            m = 0
+            n = 0
+            k = len(missed)
             if missed and self.dsn:
                if self.dsn:
                    async with self.db.acquire() as conn:
@@ -324,6 +326,7 @@ class Worker:
                                                "       amount "
                                                "FROM connector_utxo "
                                                "WHERE outpoint = ANY($1);", missed)
+                   m += len(rows)
                    for row in rows:
                        self.coins[row["outpoint"]] = (row["pointer"],
                                                       row["amount"],
@@ -337,9 +340,10 @@ class Worker:
                                    try:
                                        block["rawTx"][z]["vIn"][i]["_c_"] = self.coins.delete(outpoint)
                                        t += 1
+                                       n += 1
                                    except:
                                        pass
-
+            self.log.critical(">> loaded %s  apply %s  missed %s" % (m, n, k))
             if blocks:
                 blocks[x]["checkpoint"] = x
             for x in blocks:
