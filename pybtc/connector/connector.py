@@ -631,7 +631,7 @@ class Connector:
                                         tx["vIn"][i]["coin"] = r
                                         c += 1
                                     else:
-                                        missed.add((outpoint, (block["height"] << 39) + (q << 20) + (1 << 19) + i, q, i))
+                                        missed.append((outpoint, (block["height"] << 39) + (q << 20) + (1 << 19) + i, q, i))
 
             if missed:
                 t2 = time.time()
