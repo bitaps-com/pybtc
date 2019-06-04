@@ -330,9 +330,9 @@ class Worker:
                                                       row["address"])
                    for block in  blocks:
                        for z in blocks[block]["rawTx"]:
-                           if not blocks[block][z]["coinbase"]:
-                               for i in blocks[block][z]["vIn"]:
-                                   inp = blocks[block][z]["vIn"][i]
+                           if not blocks[block]["rawTx"][z]["coinbase"]:
+                               for i in blocks[block]["rawTx"][z]["vIn"]:
+                                   inp = blocks[block]["rawTx"][z]["vIn"][i]
                                    outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                    try:
                                        block["rawTx"][z]["vIn"][i]["_c_"] = self.coins.delete(outpoint)
