@@ -310,13 +310,35 @@ class Worker:
                                    t += 1
                                    self.destroyed_coins[r[0]] = True
                                 except:
-                                    missed.append(outpoint)
+                                    if self.dsn:
+                                        missed.append(outpoint)
 
                     blocks[x] = block
 
-            if missed:
+            if missed and self.dsn:
                if self.dsn:
-                   self.log.critical("dsn ok")
+                   async with self.db.acquire() as conn:
+                       rows = await conn.fetch("SELECT outpoint, "
+                                               "       pointer,"
+                                               "       address,"
+                                               "       amount "
+                                               "FROM connector_utxo "
+                                               "WHERE outpoint = ANY($1);", missed)
+                   for row in rows:
+                       self.coins[row["outpoint"]] = (row["pointer"],
+                                                      row["amount"],
+                                                      row["address"])
+                   for block in  blocks:
+                       for z in blocks[block]:
+                           if not blocks[block][z]["coinbase"]:
+                               for i in blocks[block][z]["vIn"]:
+                                   inp = blocks[block][z]["vIn"][i]
+                                   outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
+                                   try:
+                                       block["rawTx"][z]["vIn"][i]["_c_"] = self.coins.delete(outpoint)
+                                       t += 1
+                                   except:
+                                       pass
 
             if blocks:
                 blocks[x]["checkpoint"] = x
