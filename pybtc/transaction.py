@@ -167,8 +167,7 @@ class Transaction(dict):
             self["hash"] = self["txId"]
         if not keep_raw_tx:
             self["rawTx"] = None
-        else:
-            self["rawTx"] = None
+
         if self["format"] == "decoded":
             self.decode()
 

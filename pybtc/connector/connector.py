@@ -581,21 +581,28 @@ class Connector:
                 for q in block["rawTx"]:
                     tx = block["rawTx"][q]
                     for i in tx["vOut"]:
+                        out = tx["vOut"][i]
+                        try:
+                            tx["vOut"][i]["address"] = b"".join((bytes([tx["vOut"][i]["nType"]]), out["addressHash"]))
+                        except:
+                            tx["vOut"][i]["address"] = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
+                        tx["vOut"][i]["pointer"] = (block["height"] << 39) + (q << 20) + (1 << 19) + i
 
                         if "_s_" in tx["vOut"][i]:
                             self.coins += 1
+                            del tx["vOut"][i]
                         else:
                             out = tx["vOut"][i]
                             if self.skip_opreturn and out["nType"] in (3, 8):
                                 self.op_return += 1
                                 continue
                             self.coins += 1
-                            pointer = (block["height"] << 39) + (q << 20) + (1 << 19) + i
-                            try:
-                                address = b"".join((bytes([out["nType"]]), out["addressHash"]))
-                            except:
-                                address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
-                            self.utxo.set(b"".join((tx["txId"], int_to_bytes(i))), pointer, out["value"], address)
+
+
+                            self.utxo.set(b"".join((tx["txId"], int_to_bytes(i))),
+                                          tx["vOut"][i]["pointer"],
+                                          out["value"],
+                                          tx["vOut"][i]["address"])
 
             c = 0
             ti = 0
@@ -608,6 +615,7 @@ class Connector:
                             ti += 1
                             self.destroyed_coins += 1
                             inp = tx["vIn"][i]
+                            tx["vIn"][i]["pointer"] = (block["height"] << 39) + (q << 20) + (1 << 19) + i
                             outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                             tx["vIn"][i]["outpoint"] = outpoint
                             try:
@@ -615,6 +623,7 @@ class Connector:
                                 c += 1
                                 self.preload_cached_annihilated += 1
                                 self.preload_cached_total += 1
+                                del inp["_a_"]
                             except:
                                 try:
                                     tx["vIn"][i]["coin"] = inp["_c_"]
@@ -622,13 +631,15 @@ class Connector:
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
                                     self.utxo.get(outpoint)
+                                    del inp["_c_"]
                                 except:
                                     r = self.utxo.get(outpoint)
                                     if r:
                                         tx["vIn"][i]["coin"] = r
                                         c += 1
                                     else:
-                                        missed.add((outpoint, (block["height"] << 39) + (q << 20) + (1 << 19) + i, q, i))
+                                        missed.add((outpoint, tx["vIn"][i]["pointer"], q, i))
+
 
             if missed:
                 t2 = time.time()
