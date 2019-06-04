@@ -10,13 +10,17 @@ import sys
 import aiojsonrpc
 import traceback
 from pybtc.connector.utils import decode_block_tx
-
+from collections import deque
 import _pickle as pickle
 from pybtc import MRU
+try:
+    import asyncpg
+except:
+    pass
 
 
 class BlockLoader:
-    def __init__(self, parent, workers=4):
+    def __init__(self, parent, workers=4, dsn = None):
         self.worker_limit = workers
         self.worker = dict()
         self.worker_tasks = list()
@@ -25,6 +29,7 @@ class BlockLoader:
         self.last_batch_size = 0
         self.last_cleared_block = 0
         self.loading_task = None
+        self.dsn = dsn
         self.log = parent.log
         self.loop = parent.loop
         self.rpc_url = parent.rpc_url
@@ -114,7 +119,7 @@ class BlockLoader:
 
         # create new process
         worker = Process(target=Worker, args=(index, in_reader, in_writer, out_reader, out_writer,
-                                              self.rpc_url, self.rpc_timeout, self.rpc_batch_limit))
+                                              self.rpc_url, self.rpc_timeout, self.rpc_batch_limit, self.dsn))
         worker.start()
         in_reader.close()
         out_writer.close()
@@ -215,12 +220,14 @@ class BlockLoader:
 class Worker:
 
     def __init__(self, name , in_reader, in_writer, out_reader, out_writer,
-                 rpc_url, rpc_timeout, rpc_batch_limit):
+                 rpc_url, rpc_timeout, rpc_batch_limit, dsn):
         setproctitle('Block loader: worker %s' % name)
         self.rpc_url = rpc_url
         self.rpc_timeout = rpc_timeout
         self.rpc_batch_limit = rpc_batch_limit
         self.name = name
+        self.dsn = dsn
+        self.db = None
         in_writer.close()
         out_reader.close()
         policy = asyncio.get_event_loop_policy()
@@ -273,7 +280,7 @@ class Worker:
                 if not attempt:
                     raise RuntimeError("Connect to bitcoind failed")
             blocks = dict()
-
+            missed =deque()
             for x, y in zip(h, result):
                 if y["result"] is not None:
                     block = decode_block_tx(y["result"])
@@ -303,10 +310,13 @@ class Worker:
                                    t += 1
                                    self.destroyed_coins[r[0]] = True
                                 except:
-                                    pass
+                                    missed.append(outpoint)
 
                     blocks[x] = block
 
+            if missed:
+               if self.dsn:
+                   self.log.critical("dsn ok")
 
             if blocks:
                 blocks[x]["checkpoint"] = x
@@ -334,6 +344,8 @@ class Worker:
     async def message_loop(self):
         try:
             self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
+            if self.dsn:
+                self.db = await asyncpg.create_pool(dsn=self.dsn, min_size=1, max_size=1)
             self.reader = await self.get_pipe_reader(self.in_reader)
             self.writer = await self.get_pipe_writer(self.out_writer)
             while True:

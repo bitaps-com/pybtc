@@ -14,6 +14,11 @@ import asyncio
 import time
 from _pickle import loads
 
+try:
+    import asyncpg
+except:
+    pass
+
 class Connector:
 
     def __init__(self, node_rpc_url, node_zerromq_url, logger,
@@ -156,7 +161,11 @@ class Connector:
             break
 
         if self.utxo_data:
-            self.utxo = UTXO(self.db_type, self.db,
+            if self.db_type == "postgresql":
+                db = self.db_pool
+            else:
+                db = self.db
+            self.utxo = UTXO(self.db_type, db,
                              self.loop, self.log,
                              self.utxo_cache_size if self.deep_synchronization else 0)
 
@@ -166,7 +175,10 @@ class Connector:
         for row in reversed(self.chain_tail):
             self.block_headers_cache.set(row, h)
             h -= 1
-        self.block_loader = BlockLoader(self,workers = self.block_cache_workers)
+        if self.utxo_data and self.db_type == "postgresql":
+            self.block_loader = BlockLoader(self, workers=self.block_cache_workers, dsn = self.db)
+        else:
+            self.block_loader = BlockLoader(self,workers = self.block_cache_workers)
 
         self.tasks.append(self.loop.create_task(self.zeromq_handler()))
         self.tasks.append(self.loop.create_task(self.watchdog()))
@@ -192,7 +204,10 @@ class Connector:
                 lc = bytes_to_int(self.db.get(b"last_cached_block"))
             else:
                 # postgresql
-                async with self.db.acquire() as conn:
+                self.db_pool = await asyncpg.create_pool(dsn=self.db,
+                                                         min_size=1,
+                                                         max_size=10)
+                async with self.db_pool.acquire() as conn:
                     await conn.execute("""CREATE TABLE IF NOT EXISTS 
                                               connector_utxo (outpoint BYTEA,
                                                               pointer BIGINT,
