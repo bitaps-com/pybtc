@@ -590,7 +590,7 @@ class Connector:
 
                         if "_s_" in tx["vOut"][i]:
                             self.coins += 1
-                            del tx["vOut"][i]
+                            del tx["vOut"][i]["_s_"]
                         else:
                             out = tx["vOut"][i]
                             if self.skip_opreturn and out["nType"] in (3, 8):
@@ -623,7 +623,7 @@ class Connector:
                                 c += 1
                                 self.preload_cached_annihilated += 1
                                 self.preload_cached_total += 1
-                                del inp["_a_"]
+                                del tx["vIn"][i]["_a_"]
                             except:
                                 try:
                                     tx["vIn"][i]["coin"] = inp["_c_"]
@@ -631,7 +631,7 @@ class Connector:
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
                                     self.utxo.get(outpoint)
-                                    del inp["_c_"]
+                                    del tx["vIn"][i]["_c_"]
                                 except:
                                     r = self.utxo.get(outpoint)
                                     if r:
