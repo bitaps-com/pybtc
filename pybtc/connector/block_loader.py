@@ -75,16 +75,16 @@ class BlockLoader:
             new_requests = 0
             if self.parent.block_preload._store_size < self.parent.block_preload_cache_limit:
                 try:
-                    if self.last_batch_size < 150000000 and self.rpc_batch_limit < 1450:
+                    if self.last_batch_size < 200000000:
                         self.rpc_batch_limit += 20
                         self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
-                    elif self.last_batch_size >  200000000:
+                    elif self.last_batch_size >  250000000:
                         self.rpc_batch_limit -= 20
                         self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
                     # elif self.last_batch_size >  80000000 and self.rpc_batch_limit < 100:
                     #     self.rpc_batch_limit = 50
 
-                    self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
+                    # self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
                     for i in self.worker_busy:
                         if not self.worker_busy[i]:
                             self.worker_busy[i] = True
@@ -195,7 +195,7 @@ class BlockLoader:
                 if blocks:
                     self.last_batch_size = len(msg)
                 else:
-                    self.rpc_batch_limit = 100
+                    self.rpc_batch_limit = 40
                 for i in blocks:
                     self.parent.block_preload.set(i, blocks[i])
                 if blocks:
@@ -250,76 +250,70 @@ class Worker:
             self.log.critical("%s block loader get from %s to %s" % (self.name, height, height + limit))
             attempt = 10
             x = None
-            blocks = dict()
-            missed = deque()
+
             t = 0
             start_height = height
-            end_height = height + limit
-
-
-            while height < end_height:
-                batch_limit = 40
-                batch = list()
-                h_list = list()
-                while batch_limit:
-                    batch.append(["getblockhash", height])
-                    h_list.append(height)
-                    if len(batch) >= limit:
-                        height += 1
-                        break
+            batch = list()
+            h_list = list()
+            while True:
+                batch.append(["getblockhash", height])
+                h_list.append(height)
+                if len(batch) >= limit:
                     height += 1
-                    batch_limit -= 1
-                result = await self.rpc.batch(batch)
-                h = list()
-                batch = list()
-                for lh, r in zip(h_list, result):
-                    if r["result"] is not None:
-                        batch.append(["getblock", r["result"], 0])
-                        h.append(lh)
-                while True:
-                    try:
-                        result = await self.rpc.batch(batch)
-                        break
-                    except:
-                        self.log.critical(str(traceback.format_exc()))
-                        await asyncio.sleep(1)
-                        attempt -= 1
-                    if not attempt:
-                        raise RuntimeError("Connect to bitcoind failed")
+                    break
+                height += 1
+            result = await self.rpc.batch(batch)
+            h = list()
+            batch = list()
+            for lh, r in zip(h_list, result):
+                if r["result"] is not None:
+                    batch.append(["getblock", r["result"], 0])
+                    h.append(lh)
+            while True:
+                try:
+                    result = await self.rpc.batch(batch)
+                    break
+                except:
+                    self.log.critical(str(traceback.format_exc()))
+                    await asyncio.sleep(5)
+                    attempt -= 1
+                if not attempt:
+                    raise RuntimeError("Connect to bitcoind failed")
+            blocks = dict()
+            missed =deque()
+            for x, y in zip(h, result):
+                if y["result"] is not None:
+                    block = decode_block_tx(y["result"])
+                    for z in block["rawTx"]:
+                        for i in block["rawTx"][z]["vOut"]:
+                            o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
+                            pointer = (x << 39)+(z << 20)+(1 << 19) + i
+                            try:
+                                address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
+                                                           block["rawTx"][z]["vOut"][i]["addressHash"]))
+                            except:
+                                address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
+                                                    block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
 
-                for x, y in zip(h, result):
-                    if y["result"] is not None:
-                        block = decode_block_tx(y["result"])
-                        for z in block["rawTx"]:
-                            for i in block["rawTx"][z]["vOut"]:
-                                o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
-                                pointer = (x << 39)+(z << 20)+(1 << 19) + i
+
+                            self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
+                        if not block["rawTx"][z]["coinbase"]:
+                            for i  in block["rawTx"][z]["vIn"]:
+                                inp = block["rawTx"][z]["vIn"][i]
+                                outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                 try:
-                                    address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
-                                                               block["rawTx"][z]["vOut"][i]["addressHash"]))
+                                   r = self.coins.delete(outpoint)
+                                   if r[0] >> 39 >= start_height and r[0] >> 39 < height:
+                                       block["rawTx"][z]["vIn"][i]["_a_"] = r
+                                   else:
+                                       block["rawTx"][z]["vIn"][i]["_c_"] = r
+                                   t += 1
+                                   self.destroyed_coins[r[0]] = True
                                 except:
-                                    address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
-                                                        block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
+                                    if self.dsn:
+                                        missed.append(outpoint)
 
-
-                                self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
-                            if not block["rawTx"][z]["coinbase"]:
-                                for i  in block["rawTx"][z]["vIn"]:
-                                    inp = block["rawTx"][z]["vIn"][i]
-                                    outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                                    try:
-                                       r = self.coins.delete(outpoint)
-                                       if r[0] >> 39 >= start_height and r[0] >> 39 < height:
-                                           block["rawTx"][z]["vIn"][i]["_a_"] = r
-                                       else:
-                                           block["rawTx"][z]["vIn"][i]["_c_"] = r
-                                       t += 1
-                                       self.destroyed_coins[r[0]] = True
-                                    except:
-                                        if self.dsn:
-                                            missed.append(outpoint)
-
-                        blocks[x] = block
+                    blocks[x] = block
             m = 0
             n = 0
             k = len(missed)
