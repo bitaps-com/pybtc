@@ -65,7 +65,7 @@ class UTXO():
         if  not self.checkpoints: return
         self.save_process = True
         try:
-            self.log.debug("create utxo checkpoint")
+            self.log.critical("create utxo checkpoint %s" % str(self.checkpoints))
             i = self.cached.peek_last_item()
             checkpoint = self.checkpoints.pop(0)
             lb = 0
@@ -101,7 +101,7 @@ class UTXO():
                 lb -= 1
 
             self.checkpoint = lb  if checkpoint_found else None
-
+            self.log.critical("checkpoint %s" % str(self.checkpoint))
         except:
             self.log.critical("create checkpoint error")
             self.log.critical(str(traceback.format_exc()))
