@@ -261,7 +261,7 @@ class Worker:
             while height < e:
 
                 batch, h_list = list(), list()
-                while len(batch) < limit or height < e:
+                while len(batch) < limit and height < e:
                     batch.append(["getblockhash", height])
                     h_list.append(height)
                     height += 1
