@@ -256,7 +256,7 @@ class Worker:
             missed =deque()
             t = 0
             e = height + limit
-            # limit = 40
+            limit = 40
             while height < e:
                 start_height = height
                 batch = list()
