@@ -257,7 +257,7 @@ class Worker:
             start_height = height
             t = 0
             e = height + limit
-            limit = 40
+            limit = 20
             while height < e:
 
                 batch, h_list = list(), list()
@@ -267,7 +267,7 @@ class Worker:
                     height += 1
 
                 result = await self.rpc.batch(batch)
-
+                self.log.critical(">>  %s" %len(batch))
 
                 h, batch = list(), list()
                 for lh, r in zip(h_list, result):
