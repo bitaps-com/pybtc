@@ -94,10 +94,10 @@ class BlockLoader:
                         await asyncio.sleep(1)
                         continue
                     if self.last_batch_size < 200000000 and self.rpc_batch_limit < 1500:
-                        self.rpc_batch_limit += 30
+                        self.rpc_batch_limit += 1
                         self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
-                    elif self.last_batch_size >  200000000 and self.rpc_batch_limit > 50:
-                        self.rpc_batch_limit -= 30
+                    elif self.last_batch_size >  200000000 and self.rpc_batch_limit > 40:
+                        self.rpc_batch_limit -= 1
                         self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
                 except asyncio.CancelledError:
                     self.log.info("Loading task terminated")
@@ -254,38 +254,29 @@ class Worker:
             x = None
             blocks = dict()
             missed =deque()
+            start_height = height
             t = 0
             e = height + limit
-            # limit = 40
+            limit = 40
             while height < e:
-                start_height = height
-                batch = list()
-                h_list = list()
-                while True:
+
+                batch, h_list = list(), list()
+                while len(batch) < limit or height < e:
                     batch.append(["getblockhash", height])
                     h_list.append(height)
-                    if len(batch) >= limit or height == e:
-                        height += 1
-                        break
                     height += 1
 
                 result = await self.rpc.batch(batch)
-                h = list()
-                batch = list()
+
+
+                h, batch = list(), list()
                 for lh, r in zip(h_list, result):
                     if r["result"] is not None:
                         batch.append(["getblock", r["result"], 0])
                         h.append(lh)
-                while True:
-                    try:
-                        result = await self.rpc.batch(batch)
-                        break
-                    except:
-                        self.log.critical(str(traceback.format_exc()))
-                        await asyncio.sleep(0.2)
-                        attempt -= 1
-                    if not attempt:
-                        raise RuntimeError("Connect to bitcoind failed")
+
+                result = await self.rpc.batch(batch)
+
 
                 for x, y in zip(h, result):
                     if y["result"] is not None:
@@ -300,9 +291,9 @@ class Worker:
                                 except:
                                     address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
                                                         block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
-
-
                                 self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
+
+
                             if not block["rawTx"][z]["coinbase"]:
                                 for i  in block["rawTx"][z]["vIn"]:
                                     inp = block["rawTx"][z]["vIn"][i]
