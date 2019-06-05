@@ -101,6 +101,7 @@ class Connector:
         self.batch_load_utxo = 0
         self.batch_parsing = 0
         self.batch_handler = 0
+        self.app_last_block = None
         # cache and system
         self.block_preload_cache_limit = block_preload_cache_limit
         self.block_hashes_cache_limit = block_hashes_cache_limit
@@ -423,7 +424,7 @@ class Connector:
                         self.utxo.deleted_last_block = block["height"]
                         self.utxo.pending_deleted = self.utxo.pending_deleted | self.utxo.deleted
                         self.utxo.deleted = set()
-                        self.utxo.create_checkpoint()
+                        self.utxo.create_checkpoint(self.app_last_block )
             else:
                 checkpoint = None
 
