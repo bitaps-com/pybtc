@@ -66,7 +66,7 @@ class BlockLoader:
 
 
     async def loading(self):
-        self.rpc_batch_limit = 100
+        self.rpc_batch_limit = 1000
         self.worker_tasks = [self.loop.create_task(self.start_worker(i)) for i in range(self.worker_limit)]
         target_height = self.parent.node_last_block - self.parent.deep_sync_limit
         self.height = self.parent.last_block_height + 1
@@ -94,10 +94,10 @@ class BlockLoader:
                         await asyncio.sleep(1)
                         continue
                     if self.last_batch_size < 200000000:
-                        self.rpc_batch_limit += 1
+                        self.rpc_batch_limit += 20
                         self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
                     elif self.last_batch_size >  200000000 and self.rpc_batch_limit > 60:
-                        self.rpc_batch_limit -= 1
+                        self.rpc_batch_limit -= 20
                         self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
                 except asyncio.CancelledError:
                     self.log.info("Loading task terminated")
