@@ -309,14 +309,13 @@ class Worker:
                                     outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                     try:
                                        r = self.coins.delete(outpoint)
-                                       if r is None:
-                                           r=90
                                        if r[0] >> 39 >= start_height and r[0] >> 39 < height:
                                            block["rawTx"][z]["vIn"][i]["_a_"] = r
                                        else:
                                            block["rawTx"][z]["vIn"][i]["_c_"] = r
                                        t += 1
                                        self.destroyed_coins[r[0]] = True
+                                       assert r is not None
                                     except:
                                         if self.dsn:
                                             missed.append(outpoint)
@@ -351,6 +350,7 @@ class Worker:
                                    outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                    try:
                                        blocks[block]["rawTx"][z]["vIn"][i]["_c_"] = p[outpoint]
+                                       assert p[outpoint] is not None
                                        t += 1
                                        n += 1
                                    except:
@@ -366,6 +366,7 @@ class Worker:
                             r = self.destroyed_coins.delete(pointer)
                             self.a_coins[pointer]=True
                             blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
+                            assert r is not None
                         except: pass
 
                 blocks[x] = pickle.dumps(blocks[x])
