@@ -594,7 +594,6 @@ class Connector:
     async def _block_as_transactions_batch(self, block):
         try:
             t2 = 0
-            self.log.critical("--->>>r %s " % block["height"])
             t = time.time()
             if self.utxo:
                 for q in block["rawTx"]:
@@ -647,7 +646,7 @@ class Connector:
                                         tx["vIn"][i]["coin"] = r
                                         c += 1
                                     else:
-                                        self.log.critical(">>>r %s " % outpoint)
+                                        # self.log.critical(">>>r %s " % outpoint)
                                         missed.append((outpoint, (block["height"] << 39) + (q << 20) + (1 << 19) + i, q, i))
 
             if missed:

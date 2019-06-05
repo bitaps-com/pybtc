@@ -93,7 +93,7 @@ class BlockLoader:
                     if not new_requests:
                         await asyncio.sleep(1)
                         continue
-                    if self.last_batch_size < 200000000 and self.rpc_batch_limit < 2000:
+                    if self.last_batch_size < 200000000 and self.rpc_batch_limit < 1500:
                         self.rpc_batch_limit += 30
                         self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
                     elif self.last_batch_size >  200000000:
@@ -256,7 +256,7 @@ class Worker:
             missed =deque()
             t = 0
             e = height + limit
-            limit = 40
+            # limit = 40
             while height < e:
                 start_height = height
                 batch = list()
