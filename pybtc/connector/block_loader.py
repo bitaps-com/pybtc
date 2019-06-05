@@ -93,10 +93,10 @@ class BlockLoader:
                     if not new_requests:
                         await asyncio.sleep(1)
                         continue
-                    if self.last_batch_size < 200000000 and self.rpc_batch_limit < 1500:
+                    if self.last_batch_size < 200000000:
                         self.rpc_batch_limit += 1
                         self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
-                    elif self.last_batch_size >  200000000 and self.rpc_batch_limit > 40:
+                    elif self.last_batch_size >  200000000 and self.rpc_batch_limit > 60:
                         self.rpc_batch_limit -= 1
                         self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
                 except asyncio.CancelledError:
