@@ -66,7 +66,7 @@ class BlockLoader:
 
 
     async def loading(self):
-        self.rpc_batch_limit = 1000
+        self.rpc_batch_limit = 500
         self.worker_tasks = [self.loop.create_task(self.start_worker(i)) for i in range(self.worker_limit)]
         target_height = self.parent.node_last_block - self.parent.deep_sync_limit
         self.height = self.parent.last_block_height + 1
