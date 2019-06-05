@@ -257,7 +257,7 @@ class Worker:
             t = 0
             e = height + limit
             limit = 40
-            while height <= e:
+            while height < e:
                 start_height = height
                 batch = list()
                 h_list = list()
@@ -339,9 +339,7 @@ class Worker:
                    m += len(rows)
                    p = dict()
                    for row in rows:
-                       p[row["outpoint"]] = (row["pointer"],
-                                                      row["amount"],
-                                                      row["address"])
+                       p[row["outpoint"]] = (row["pointer"],  row["amount"], row["address"])
                    for block in  blocks:
                        for z in blocks[block]["rawTx"]:
                            if not blocks[block]["rawTx"][z]["coinbase"]:

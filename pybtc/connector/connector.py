@@ -646,6 +646,7 @@ class Connector:
                                         tx["vIn"][i]["coin"] = r
                                         c += 1
                                     else:
+                                        self.log.critical(">>>r %s " % outpoint)
                                         missed.append((outpoint, (block["height"] << 39) + (q << 20) + (1 << 19) + i, q, i))
 
             if missed:
@@ -654,6 +655,7 @@ class Connector:
                 t2 =time.time() - t2
                 self.batch_load_utxo += t2
                 for o, s, q, i in missed:
+                    self.log.critical("+++ %s " % o)
                     block["rawTx"][q]["vIn"][i]["coin"] = self.utxo.get_loaded(o)
                     if  block["rawTx"][q]["vIn"][i]["coin"] is None:
                         raise Exception("utxo get failed ")
