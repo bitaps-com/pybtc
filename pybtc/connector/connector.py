@@ -594,6 +594,7 @@ class Connector:
     async def _block_as_transactions_batch(self, block):
         try:
             t2 = 0
+            self.log.critical("--->>>r %s " % block["height"])
             t = time.time()
             if self.utxo:
                 for q in block["rawTx"]:
