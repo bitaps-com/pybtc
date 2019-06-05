@@ -309,6 +309,8 @@ class Worker:
                                     outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                     try:
                                        r = self.coins.delete(outpoint)
+                                       if r is None:
+                                           r=90
                                        if r[0] >> 39 >= start_height and r[0] >> 39 < height:
                                            block["rawTx"][z]["vIn"][i]["_a_"] = r
                                        else:
