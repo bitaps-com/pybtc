@@ -257,7 +257,7 @@ class Worker:
             start_height = height
             t = 0
             e = height + limit
-            limit = 20
+            limit = 40
             while height < e:
 
                 batch, h_list = list(), list()
