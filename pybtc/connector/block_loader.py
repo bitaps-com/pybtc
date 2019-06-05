@@ -267,7 +267,6 @@ class Worker:
                     height += 1
 
                 result = await self.rpc.batch(batch)
-                self.log.critical(">>  %s" %len(batch))
 
                 h, batch = list(), list()
                 for lh, r in zip(h_list, result):
