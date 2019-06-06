@@ -68,6 +68,7 @@ class UTXO():
 
         self.save_process = True
         try:
+            self.log.critical("create utxo checkpoint %s" % app_last_block)
             self.log.critical("create utxo checkpoint %s" % str(self.checkpoints))
             i = self.cached.peek_last_item()
             checkpoint = self.checkpoints.pop(0)
@@ -86,7 +87,7 @@ class UTXO():
                     else:
                         limit = self.size_limit * 0.9
                     if len(self.cached) > limit and self.checkpoints:
-                        if self.checkpoints:
+                        if self.checkpoints and app_last_block < self.checkpoints[-1]:
                             checkpoint = self.checkpoints.pop(0)
                     else:
                         checkpoint_found = True

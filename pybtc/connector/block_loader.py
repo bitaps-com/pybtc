@@ -337,7 +337,7 @@ class Worker:
                                    inp = blocks[block]["rawTx"][z]["vIn"][i]
                                    outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                    try:
-                                       blocks[block]["rawTx"][z]["vIn"][i]["_c_"] = p[outpoint]
+                                       blocks[block]["rawTx"][z]["vIn"][i]["_l_"] = p[outpoint]
                                        assert p[outpoint] is not None
                                        t += 1
                                        n += 1

@@ -627,8 +627,8 @@ class Connector:
                             ti += 1
                             self.destroyed_coins += 1
                             inp = tx["vIn"][i]
-                            outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                            tx["vIn"][i]["outpoint"] = outpoint
+                            # outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
+                            # tx["vIn"][i]["outpoint"] = outpoint
                             try:
                                 tx["vIn"][i]["coin"] = inp["_a_"]
                                 c += 1
@@ -640,14 +640,23 @@ class Connector:
                                     c += 1
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
+                                    outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                     self.utxo.get(outpoint)
                                 except:
-                                    r = self.utxo.get(outpoint)
-                                    if r:
-                                        tx["vIn"][i]["coin"] = r
+                                    try:
+                                        tx["vIn"][i]["coin"] = inp["_l_"]
                                         c += 1
-                                    else:
-                                        missed.append((outpoint, (block["height"] << 39) + (q << 20) + (1 << 19) + i, q, i))
+                                        self.preload_cached_total += 1
+                                        self.preload_cached += 1
+                                        self.utxo.self.deleted.add(tx["vIn"][i]["coin"][0])
+                                    except:
+                                        outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
+                                        r = self.utxo.get(outpoint)
+                                        if r:
+                                            tx["vIn"][i]["coin"] = r
+                                            c += 1
+                                        else:
+                                            missed.append((outpoint, (block["height"] << 39) + (q << 20) + (1 << 19) + i, q, i))
 
             if missed:
                 t2 = time.time()
