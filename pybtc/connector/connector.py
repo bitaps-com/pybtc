@@ -648,7 +648,7 @@ class Connector:
                                         c += 1
                                         self.preload_cached_total += 1
                                         self.preload_cached += 1
-                                        self.utxo.self.deleted.add(tx["vIn"][i]["coin"][0])
+                                        self.utxo.deleted.add(tx["vIn"][i]["coin"][0])
                                     except:
                                         outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                         r = self.utxo.get(outpoint)
