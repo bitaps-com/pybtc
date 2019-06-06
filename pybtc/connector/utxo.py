@@ -103,7 +103,7 @@ class UTXO():
                         if self.checkpoints:
                             if app_last_block is None:
                                 checkpoint = self.checkpoints.pop(0)
-                            elif app_last_block > self.checkpoints[-1]:
+                            elif app_last_block < self.checkpoints[-1]:
                                 checkpoint = self.checkpoints.pop(0)
                     else:
                         checkpoint_found = True
