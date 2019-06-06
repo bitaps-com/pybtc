@@ -62,7 +62,9 @@ class UTXO():
     def create_checkpoint(self, app_last_block = None):
         # save to db tail from cache
         self.log.critical("app_last_block %s" % app_last_block)
-        self.log.critical("create utxo checkpoint %s" % len(self.checkpoints))
+        if self.checkpoints:
+            self.log.critical("create utxo checkpoint %s first %s last % " %
+                              (len(self.checkpoints), self.checkpoints[0], self.checkpoints[-1]))
         if  self.save_process or not self.cached:
             self.log.critical("create utxo checkpoint canceled %s" % str((self.save_process,
                                                                len( self.cached))))
