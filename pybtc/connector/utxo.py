@@ -61,15 +61,24 @@ class UTXO():
 
     def create_checkpoint(self, app_last_block = None):
         # save to db tail from cache
-        if  self.save_process or not self.cached: return
-        if  not self.checkpoints: return
+        self.log.critical("create utxo checkpoint %s" % app_last_block)
+        self.log.critical("create utxo checkpoint %s" % str(self.checkpoints))
+        if  self.save_process or not self.cached:
+            self.log.critical("create utxo checkpoint canceled %s" % str((self.save_process,
+                                                               len( self.cached))))
+            return
+        if  not self.checkpoints:
+            self.log.critical("create utxo checkpoint canceled - no checkoints")
+            return
         if app_last_block is not None:
-            if app_last_block < self.checkpoints[-1]: return
+            if app_last_block < self.checkpoints[-1]:
+                self.log.critical("create utxo checkpoint canceled - app_last_block lag")
+
+                return
 
         self.save_process = True
         try:
-            self.log.critical("create utxo checkpoint %s" % app_last_block)
-            self.log.critical("create utxo checkpoint %s" % str(self.checkpoints))
+
             i = self.cached.peek_last_item()
             checkpoint = self.checkpoints.pop(0)
             lb = 0
