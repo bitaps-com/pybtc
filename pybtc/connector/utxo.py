@@ -87,8 +87,11 @@ class UTXO():
                     else:
                         limit = self.size_limit * 0.9
                     if len(self.cached) > limit and self.checkpoints:
-                        if self.checkpoints and app_last_block < self.checkpoints[-1]:
-                            checkpoint = self.checkpoints.pop(0)
+                        if self.checkpoints:
+                            if app_last_block is None:
+                                checkpoint = self.checkpoints.pop(0)
+                            elif app_last_block < self.checkpoints[-1]:
+                                checkpoint = self.checkpoints.pop(0)
                     else:
                         checkpoint_found = True
                 while self.checkpoints and checkpoint < lb - 1:
