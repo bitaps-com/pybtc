@@ -77,7 +77,7 @@ class UTXO():
             self.log.critical("Create utxo checkpoint canceled: no checkoints")
             return
         if app_last_block is not None:
-            if app_last_block < self.checkpoints[-1]:
+            if app_last_block < self.checkpoints[0]:
                 self.log.critical("Create utxo checkpoint canceled - utxo lag")
                 return
 
