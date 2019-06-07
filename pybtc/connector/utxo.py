@@ -82,14 +82,10 @@ class UTXO():
                 return
 
         self.save_process = True
+        limit = 0
         try:
-
-            i = self.cached.peek_last_item()
             checkpoint = self.checkpoints.pop(0)
             lb = 0
-            block_changed = False
-            checkpoint_found = False
-
             while self.cached:
                 key, value = self.cached.peek_last_item()
                 if value[0] >> 39 != lb:
@@ -122,7 +118,9 @@ class UTXO():
 
 
             self.checkpoint = lb
-            self.log.critical("checkpoint %s" % str(self.checkpoint))
+            self.log.critical("checkpoint %s cache size %s limit %s" % (self.checkpoint,
+                                                                        len(self.cached),
+                                                                        limit))
         except:
             self.log.critical("create checkpoint error")
             self.log.critical(str(traceback.format_exc()))
