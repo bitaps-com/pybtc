@@ -249,8 +249,7 @@ class Worker:
 
     async def load_blocks(self, height, limit):
         try:
-            self.log.critical("%s block loader get from %s to %s" % (self.name, height, height + limit))
-            attempt = 10
+            # self.log.critical("%s block loader get from %s to %s" % (self.name, height, height + limit))
             x = None
             blocks = dict()
             missed =deque()
@@ -343,7 +342,7 @@ class Worker:
                                        n += 1
                                    except:
                                        pass
-            self.log.critical(">> loaded %s  apply %s  missed %s" % (m, n, k))
+            # self.log.critical(">> loaded %s  apply %s  missed %s" % (m, n, k))
             if blocks:
                 blocks[x]["checkpoint"] = x
             for x in blocks:
@@ -358,8 +357,8 @@ class Worker:
                         except: pass
 
                 blocks[x] = pickle.dumps(blocks[x])
-            self.log.critical("%s block loader blocks %s" %(self.name, len(blocks)))
-            self.log.critical("%s block loader checkpoint %s" %(self.name, x))
+            # self.log.critical("%s block loader blocks %s" %(self.name, len(blocks)))
+            # self.log.critical("%s block loader checkpoint %s" %(self.name, x))
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except:
             self.log.critical("load blocks error")
