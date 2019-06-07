@@ -92,7 +92,7 @@ class UTXO():
 
             while self.cached:
                 key, value = self.cached.peek_last_item()
-                if value[0] >> 30 != lb:
+                if value[0] >> 39 != lb:
                     # block changed
                     if checkpoint == lb:
                         # last block was checkpoint block
@@ -115,7 +115,7 @@ class UTXO():
 
                         if len(self.cached) < limit:
                             break
-                    lb = value[0] >> 30
+                    lb = value[0] >> 39
 
                 self.cached.delete(key)
                 self.pending_utxo.add((key, value[0], value[2], value[1]))
