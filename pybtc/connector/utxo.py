@@ -114,6 +114,7 @@ class UTXO():
                     lb = value[0] >> 39
 
                 self.cached.delete(key)
+                self.log.critical(str((key, value[0], value[2], value[1])))
                 self.pending_utxo.add((key, value[0], value[2], value[1]))
 
 
