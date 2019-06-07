@@ -61,23 +61,24 @@ class UTXO():
 
     def create_checkpoint(self, app_last_block = None):
         # save to db tail from cache
-        self.log.critical("app_last_block %s" % app_last_block)
+        self.log.critical("create utxo checkpoint")
+        if app_last_block:
+            self.log.critical("Application last block  %s;" % app_last_block)
         if self.checkpoints:
-            self.log.critical("create utxo checkpoint %s first %s last %s " %
+            self.log.critical("Available utxo checkpoint %s; first %s; last %s;" %
                               (len(self.checkpoints),
                                self.checkpoints[0],
                                self.checkpoints[-1]))
         if  self.save_process or not self.cached:
-            self.log.critical("create utxo checkpoint canceled %s" % str((self.save_process,
-                                                               len( self.cached))))
+            self.log.critical("Create utxo checkpoint canceled %s" % str((self.save_process,
+                                                                         len( self.cached))))
             return
         if  not self.checkpoints:
-            self.log.critical("create utxo checkpoint canceled - no checkoints")
+            self.log.critical("Create utxo checkpoint canceled: no checkoints")
             return
         if app_last_block is not None:
-            if app_last_block > self.checkpoints[-1]:
-                self.log.critical("create utxo checkpoint canceled - utxo lag")
-
+            if app_last_block < self.checkpoints[-1]:
+                self.log.critical("Create utxo checkpoint canceled - utxo lag")
                 return
 
         self.save_process = True
@@ -90,37 +91,37 @@ class UTXO():
             checkpoint_found = False
 
             while self.cached:
-                i = self.cached.pop()
-                if lb != i[1][0] >> 39:
-                    block_changed = True
-                    lb = i[1][0] >> 39
-                if lb - 1 == checkpoint:
-                    if len(self.pending_utxo) > self.size_limit * 0.9:
-                        limit = self.size_limit
-                    else:
-                        limit = self.size_limit * 0.9
-                    if len(self.cached) > limit and self.checkpoints:
+                key, value = self.cached.peek_last_item()
+                if value[0] >> 30 != lb:
+                    # block changed
+                    if checkpoint == lb:
+                        # last block was checkpoint block
                         if self.checkpoints:
                             if app_last_block is None:
+                                # no app checkpoint constraint
                                 checkpoint = self.checkpoints.pop(0)
-                            elif app_last_block < self.checkpoints[-1]:
+                            elif app_last_block > self.checkpoints[0]:
+                                # app checkpoint ahead of utxo checkpoint
                                 checkpoint = self.checkpoints.pop(0)
-                    else:
-                        checkpoint_found = True
-                while self.checkpoints and checkpoint < lb - 1:
-                    checkpoint = self.checkpoints.pop(0)
+                            else:
+                                break
+                        else:
+                            # no more checkpoints
+                            break
+                        if len(self.pending_utxo) > self.size_limit * 0.9:
+                            limit = self.size_limit
+                        else:
+                            limit = self.size_limit * 0.9
 
-                if len(self.cached) <= self.size_limit:
-                    if block_changed and checkpoint_found:
-                        break
-                self.pending_utxo.add((i[0], i[1][0], i[1][2], i[1][1]))
+                        if len(self.cached) < limit:
+                            break
+                    lb = value[0] >> 30
 
-                self.pending_saved[i[0]] = i[1]
-            if block_changed:
-                self.cached.append({i[0]: i[1]})
-                lb -= 1
+                self.cached.delete(key)
+                self.pending_utxo.add((key, value[0], value[2], value[1]))
 
-            self.checkpoint = lb  if checkpoint_found else None
+
+            self.checkpoint = lb
             self.log.critical("checkpoint %s" % str(self.checkpoint))
         except:
             self.log.critical("create checkpoint error")
