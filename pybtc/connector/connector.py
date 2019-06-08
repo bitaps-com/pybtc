@@ -359,7 +359,7 @@ class Connector:
                 if not block:
                     h = await self.rpc.getblockhash(self.last_block_height + 1)
                     block = await self._get_block_by_hash(h)
-                    block["checkpoint"] = self.last_block_height + 1
+                    # block["checkpoint"] = self.last_block_height + 1
                     block["height"] = self.last_block_height + 1
 
                 self.loop.create_task(self._new_block(block))
