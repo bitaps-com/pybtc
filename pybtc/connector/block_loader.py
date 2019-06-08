@@ -345,6 +345,7 @@ class Worker:
             # self.log.critical(">> loaded %s  apply %s  missed %s" % (m, n, k))
             if blocks:
                 blocks[x]["checkpoint"] = x
+                self.log.critical(">> lcheckpoint %s  " % x)
             for x in blocks:
                 for y in blocks[x]["rawTx"]:
                     for i in blocks[x]["rawTx"][y]["vOut"]:
