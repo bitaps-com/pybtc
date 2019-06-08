@@ -415,7 +415,9 @@ class Connector:
 
             if self.utxo_data:
                 checkpoint = self.utxo.checkpoint
-                try: self.utxo.checkpoints.append(block["checkpoint"])
+                try:
+                    self.utxo.checkpoints.append(block["checkpoint"])
+                    self.log.warning("Checkpoint %s" % block["checkpoint"] )
                 except: pass
                 if len(self.utxo.cached) > self.utxo.size_limit and \
                    not self.utxo.save_process and \
