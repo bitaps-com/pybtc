@@ -64,6 +64,7 @@ class UTXO():
             self.log.critical("Create utxo checkpoint canceled: no checkoints")
             return
         checkpoints = set()
+        self.log.critical("checkpoints %s" % str(self.checkpoints))
         for i in self.checkpoints:
             if i > self.checkpoint:
                 checkpoints.add(i)
