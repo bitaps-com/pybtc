@@ -92,7 +92,7 @@ class UTXO():
                     # block changed
 
                     if checkpoint == lb:
-                        self.log.critical(">>>>>>>%s" % checkpoint)
+                        self.log.critical(">>>>>>>%s" % str(self.checkpoints))
                         # last block was checkpoint block
                         if len(self.pending_utxo) > self.size_limit * 0.9:
                             limit = self.size_limit
