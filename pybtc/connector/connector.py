@@ -370,6 +370,7 @@ class Connector:
 
     async def _get_block_by_hash(self, hash):
         try:
+            self.log.warning("get block by hash ")
             if self.deep_synchronization:
                 q = time.time()
                 self.non_cached_blocks += 1
@@ -418,6 +419,9 @@ class Connector:
                 try:
                     self.utxo.checkpoints.append(block["checkpoint"])
                     self.log.warning("Checkpoint %s" % block["checkpoint"] )
+                    self.log.warning("Checkpoints %s; first %s;Last %s;" % (len(block["checkpoint"]),
+                                                                            self.utxo.checkpoints[0],
+                                                                            self.utxo.checkpoints[-1]))
                 except: pass
                 if len(self.utxo.cached) > self.utxo.size_limit and \
                    not self.utxo.save_process and \
