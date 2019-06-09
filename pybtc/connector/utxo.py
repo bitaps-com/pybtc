@@ -104,6 +104,7 @@ class UTXO():
 
                         if self.checkpoints:
                             self.log.critical(">> %s " % app_last_block)
+                            self.log.critical(">>[0] %s " % self.checkpoints[0])
                             if app_last_block is None:
                                 # no app checkpoint constraint
                                 self.log.critical("pop ")
