@@ -90,20 +90,9 @@ class UTXO():
                 key, value = self.cached.peek_last_item()
                 if value[0] >> 39 != lb:
                     # block changed
+
                     if checkpoint == lb:
                         # last block was checkpoint block
-                        if self.checkpoints:
-                            if app_last_block is None:
-                                # no app checkpoint constraint
-                                checkpoint = self.checkpoints.pop(0)
-                            elif app_last_block > self.checkpoints[0]:
-                                # app checkpoint ahead of utxo checkpoint
-                                checkpoint = self.checkpoints.pop(0)
-                            else:
-                                break
-                        else:
-                            # no more checkpoints
-                            break
                         if len(self.pending_utxo) > self.size_limit * 0.9:
                             limit = self.size_limit
                         else:
@@ -111,6 +100,22 @@ class UTXO():
 
                         if len(self.cached) < limit:
                             break
+
+                        if self.checkpoints:
+                            if app_last_block is None:
+                                # no app checkpoint constraint
+                                checkpoint = self.checkpoints.pop(0)
+                            elif app_last_block > self.checkpoints[0]:
+                                # app checkpoint ahead of utxo checkpoint
+
+                                checkpoint = self.checkpoints.pop(0)
+                                self.log.critical("pop checkpoint %s " % checkpoint)
+                            else:
+                                break
+                        else:
+                            # no more checkpoints
+                            break
+
                     lb = value[0] >> 39
 
                 self.cached.delete(key)
