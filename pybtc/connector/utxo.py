@@ -60,6 +60,7 @@ class UTXO():
 
 
     def create_checkpoint(self, app_last_block = None):
+        self.checkpoints = sorted(list(set(self.checkpoints)))
         # save to db tail from cache
         self.log.critical("create utxo checkpoint")
         if app_last_block:
