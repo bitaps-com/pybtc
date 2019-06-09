@@ -97,7 +97,7 @@ class UTXO():
                 key, value = self.cached.peek_last_item()
                 if value[0] >> 39 != lb:
                     # block changed
-
+                    self.log.critical(" checkpoint == lb %s" % str((checkpoint, lb)))
                     if checkpoint == lb:
                         self.log.critical(">>>>>>>%s" % str(self.checkpoints))
                         # last block was checkpoint block
