@@ -92,6 +92,7 @@ class UTXO():
                     # block changed
 
                     if checkpoint == lb:
+                        self.log.critical(">>>>>>>%s" % checkpoint)
                         # last block was checkpoint block
                         if len(self.pending_utxo) > self.size_limit * 0.9:
                             limit = self.size_limit
@@ -102,8 +103,10 @@ class UTXO():
                             break
 
                         if self.checkpoints:
+                            self.log.critical(">> %s " % app_last_block)
                             if app_last_block is None:
                                 # no app checkpoint constraint
+                                self.log.critical("pop ")
                                 checkpoint = self.checkpoints.pop(0)
                             elif app_last_block > self.checkpoints[0]:
                                 # app checkpoint ahead of utxo checkpoint
@@ -111,9 +114,11 @@ class UTXO():
                                 checkpoint = self.checkpoints.pop(0)
                                 self.log.critical("pop checkpoint %s " % checkpoint)
                             else:
+                                self.log.critical("break 1")
                                 break
                         else:
                             # no more checkpoints
+                            self.log.critical("break 2")
                             break
 
                     lb = value[0] >> 39
