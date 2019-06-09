@@ -129,7 +129,7 @@ class UTXO():
                             self.log.critical("break 2")
                             break
 
-                    lb = value[0] >> 39
+                lb = value[0] >> 39
 
                 self.cached.delete(key)
                 self.pending_utxo.add((key, value[0], value[2], value[1]))
