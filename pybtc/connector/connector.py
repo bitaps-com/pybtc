@@ -370,7 +370,6 @@ class Connector:
 
     async def _get_block_by_hash(self, hash):
         try:
-            self.log.warning("get block by hash ")
             if self.deep_synchronization:
                 q = time.time()
                 self.non_cached_blocks += 1

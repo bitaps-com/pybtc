@@ -60,6 +60,9 @@ class UTXO():
 
 
     def create_checkpoint(self, app_last_block = None):
+        if  not self.checkpoints:
+            self.log.critical("Create utxo checkpoint canceled: no checkoints")
+            return
         checkpoints = set()
         for i in self.checkpoints:
             if i > self.checkpoint:
@@ -78,9 +81,7 @@ class UTXO():
             self.log.critical("Create utxo checkpoint canceled %s" % str((self.save_process,
                                                                          len( self.cached))))
             return
-        if  not self.checkpoints:
-            self.log.critical("Create utxo checkpoint canceled: no checkoints")
-            return
+
         if app_last_block is not None:
             if app_last_block < self.checkpoints[0]:
                 self.log.critical("Create utxo checkpoint canceled - utxo lag")
