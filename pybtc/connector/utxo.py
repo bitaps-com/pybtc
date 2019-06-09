@@ -200,7 +200,6 @@ class UTXO():
                 self.pending_utxo = set()
                 self.pending_saved = OrderedDict()
                 self.last_saved_block = self.checkpoint
-                self.checkpoint = None
             except Exception as err:
                 self.log.critical("save_checkpoint error: %s" % str(err))
             finally:
