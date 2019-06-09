@@ -418,8 +418,8 @@ class Connector:
                 checkpoint = self.utxo.checkpoint
                 try:
                     self.utxo.checkpoints.append(block["checkpoint"])
-                    self.log.warning("Checkpoint %s" % block["checkpoint"] )
-                    self.log.warning("Checkpoints %s; first %s;Last %s;" % (len(block["checkpoint"]),
+                    self.log.critical("Checkpoint %s" % block["checkpoint"] )
+                    self.log.critical("Checkpoints %s; first %s;Last %s;" % (len(block["checkpoint"]),
                                                                             self.utxo.checkpoints[0],
                                                                             self.utxo.checkpoints[-1]))
                 except: pass
