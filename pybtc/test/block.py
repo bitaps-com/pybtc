@@ -602,7 +602,7 @@ class BlockDeserializeTests(unittest.TestCase):
         qt = time.time()
         bt = Block(fc[:-1], format="raw", keep_raw_tx=False)
         print(len(bt["tx"]))
-        print([t["txId"] for t in bt["tx"].values()])
+        # print([t["txId"] for t in bt["tx"].values()])
         print(merkle_branches([t["txId"] for t in bt["tx"].values()]))
 
         # import   pickle

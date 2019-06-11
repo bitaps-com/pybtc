@@ -435,7 +435,7 @@ class Connector:
 
             if self.block_batch_handler and not self.cache_loading:
                 t = time.time()
-                await self.block_batch_handler(block, checkpoint)
+                await self.block_batch_handler(block)
                 self.batch_handler += time.time() - t
             if self.block_handler and not self.cache_loading:
                 await self.block_handler(block)
