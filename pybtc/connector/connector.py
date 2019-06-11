@@ -428,10 +428,6 @@ class Connector:
                 checkpoint = self.utxo.checkpoint
                 try:
                     self.utxo.checkpoints.append(block["checkpoint"])
-                    self.log.critical("Checkpoint %s" % block["checkpoint"] )
-                    self.log.critical("Checkpoints %s; first %s;Last %s;" % (len(self.utxo.checkpoints),
-                                                                            self.utxo.checkpoints[0],
-                                                                            self.utxo.checkpoints[-1]))
                 except: pass
                 if len(self.utxo.cached) > self.utxo.size_limit and \
                    not self.utxo.save_process and \
