@@ -39,7 +39,7 @@ def decode_block_tx(block):
     b["target"] = b["target"].to_bytes(32, byteorder="little")
     b["nonce"] = unpack("<L", s.read(4))[0]
     s.seek(-80, 1)
-    b["header"] = s.read(80).hex()
+    b["header"] = s.read(80)
     b["bits"] = rh2s(b["bits"])
     b["target"] = rh2s(b["target"])
     b["hash"] = double_sha256(b["header"], hex=0)
