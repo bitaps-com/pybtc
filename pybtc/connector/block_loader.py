@@ -95,10 +95,8 @@ class BlockLoader:
                         continue
                     if self.last_batch_size < 200000000:
                         self.rpc_batch_limit += 20
-                        self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
                     elif self.last_batch_size >  200000000 and self.rpc_batch_limit > 60:
                         self.rpc_batch_limit -= 40
-                        self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
                 except asyncio.CancelledError:
                     self.log.info("Loading task terminated")
                     break
