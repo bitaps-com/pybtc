@@ -485,6 +485,7 @@ class Connector:
                         self.batch_handler = 0
                         self.batch_load_utxo = 0
                         self.batch_parsing = 0
+                        self.batch_time = 0
 
                         self.log.debug("- Blocks --------------")
 
