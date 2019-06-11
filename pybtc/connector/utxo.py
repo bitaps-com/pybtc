@@ -61,31 +61,30 @@ class UTXO():
 
     def create_checkpoint(self, app_last_block = None):
         if  not self.checkpoints:
-            self.log.critical("Create utxo checkpoint canceled: no checkoints")
+            self.log.debug("Create utxo checkpoint canceled: no checkoints")
             return
         checkpoints = set()
-        self.log.critical("checkpoints %s" % str(self.checkpoints))
         for i in self.checkpoints:
             if i > self.checkpoint:
                 checkpoints.add(i)
         self.checkpoints = sorted(checkpoints)
         # save to db tail from cache
-        self.log.critical("create utxo checkpoint")
+        self.log.debug("create utxo checkpoint")
         if app_last_block:
-            self.log.critical("Application last block  %s;" % app_last_block)
+            self.log.debug("Application last block  %s;" % app_last_block)
         if self.checkpoints:
-            self.log.critical("Available utxo checkpoint %s; first %s; last %s;" %
+            self.log.debug("Available utxo checkpoint %s; first %s; last %s;" %
                               (len(self.checkpoints),
                                self.checkpoints[0],
                                self.checkpoints[-1]))
         if  self.save_process or not self.cached:
-            self.log.critical("Create utxo checkpoint canceled %s" % str((self.save_process,
+            self.log.debug("Create utxo checkpoint canceled %s" % str((self.save_process,
                                                                          len( self.cached))))
             return
 
         if app_last_block is not None:
             if app_last_block < self.checkpoints[0]:
-                self.log.critical("Create utxo checkpoint canceled - utxo lag")
+                self.log.debug("Create utxo checkpoint canceled - utxo lag")
                 return
 
         self.save_process = True
@@ -99,7 +98,6 @@ class UTXO():
                     # block changed
 
                     if checkpoint <= lb:
-                        self.log.critical(">>>>>>>%s" % str(self.checkpoints))
                         # last block was checkpoint block
                         if len(self.pending_utxo) > self.size_limit * 0.9:
                             limit = self.size_limit
@@ -110,8 +108,6 @@ class UTXO():
                             break
 
                         if self.checkpoints:
-                            self.log.critical(">> %s " % app_last_block)
-                            self.log.critical(">>[0] %s " % self.checkpoints[0])
                             if app_last_block is None:
                                 # no app checkpoint constraint
                                 self.log.critical("pop ")
@@ -120,13 +116,10 @@ class UTXO():
                                 # app checkpoint ahead of utxo checkpoint
 
                                 checkpoint = self.checkpoints.pop(0)
-                                self.log.critical("pop checkpoint %s " % checkpoint)
                             else:
-                                self.log.critical("break 1")
                                 break
                         else:
                             # no more checkpoints
-                            self.log.critical("break 2")
                             break
 
                 lb = value[0] >> 39
@@ -137,7 +130,7 @@ class UTXO():
 
 
             self.checkpoint = lb
-            self.log.critical("checkpoint %s cache size %s limit %s" % (self.checkpoint,
+            self.log.debug("checkpoint %s cache size %s limit %s" % (self.checkpoint,
                                                                         len(self.cached),
                                                                         limit))
         except:
