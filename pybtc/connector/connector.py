@@ -509,12 +509,12 @@ class Connector:
 
                         self.log.debug("    Cache count %s; hit rate: %s;" % (self.utxo.len(),
                                                                           round(self.utxo.hit_rate(), 4)))
-                        self.log.debug("    Checkpoint block %s; saved to db %s; "
-                                       "deleted from db %s; "
-                                       "loaded utxo from db %s; "% (self.utxo.last_saved_block,
-                                                                    self.utxo.saved_utxo,
-                                                                    self.utxo.deleted_utxo,
-                                                                    self.utxo.loaded_utxo))
+                        self.log.debug("    Checkpoint block %s; App checkpoint %s" % (self.utxo.last_saved_block,
+                                                                                      self.app_last_block))
+                        self.log.debug("    Saved to db %s; deleted from db %s; "
+                                       "loaded  from db %s" % (self.utxo.saved_utxo,
+                                                               self.utxo.deleted_utxo,
+                                                               self.utxo.loaded_utxo))
                         if self.utxo.read_from_db_batch_time:
                            c =  round(self.utxo.read_from_db_count / self.utxo.read_from_db_batch_time, 4)
                         else:
