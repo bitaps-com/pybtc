@@ -469,26 +469,27 @@ class Connector:
                 self.start_time_last = time.time()
                 batch_tx_count = self.total_received_tx - self.total_received_tx_stat
                 self.total_received_tx_stat = self.total_received_tx
-                self.log.info("Blocks %s; tx rate: %s; "
-                              "io rate[%s]; Uptime %s" % (block["height"], tx_rate,
+                self.log.info("Blocks %s; tx/s rate: %s; "
+                              "io/s rate %s; Uptime %s" % (block["height"], tx_rate,
                                                           io_rate, seconds_to_age(int(time.time() - self.start_time))))
                 if self.utxo_data:
                     loading = "Loading ... " if self.cache_loading else ""
                     if self.deep_synchronization:
                         self.log.debug("- Batch ---------------")
-                        self.log.debug("    Rate %s; transactions %s" % (tx_rate_last, batch_tx_count))
-                        self.log.debug("    Load utxo %s; parsing %s" % (self.batch_load_utxo, self.batch_parsing))
+                        self.log.debug("    Rate tx/s %s; transactions count %s" % (tx_rate_last, batch_tx_count))
+                        self.log.debug("    Load utxo time %s; parsing time %s" % (round(self.batch_load_utxo, 2),
+                                                                                   round(self.batch_parsing, 2)))
                         self.log.debug("    Batch time %s; "
-                                       "Batch handler %s;" % (round(time.time() - self.batch_time, 2),
-                                                              self.batch_handler))
+                                       "Batch handler time %s;" % (round(time.time() - self.batch_time, 2),
+                                                                   round(self.batch_handler, 2)))
                         self.batch_handler = 0
                         self.batch_load_utxo = 0
                         self.batch_parsing = 0
 
                         self.log.debug("- Blocks --------------")
 
-                        self.log.debug("    Blocks not cached %s; "
-                                      "blocks cached %s; "
+                        self.log.debug("    Not cached count %s; "
+                                      "cached count %s; "
                                       "cache size %s M;" % (self.non_cached_blocks,
                                                             self.block_preload.len(),
                                                             round(self.block_preload._store_size / 1024 / 1024, 2)))
