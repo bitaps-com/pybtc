@@ -462,9 +462,9 @@ class Connector:
 
             t = 10000 if not self.deep_synchronization else 100000
             if (self.total_received_tx - self.total_received_tx_stat) > t:
-                tx_rate = round(self.total_received_tx / (time.time() - self.start_time), 4)
-                io_rate = round((self.coins + self.destroyed_coins) / (time.time() - self.start_time), 4)
-                tx_rate_last = round(self.total_received_tx_last / (time.time() - self.start_time_last), 4)
+                tx_rate = round(self.total_received_tx / (time.time() - self.start_time), 2)
+                io_rate = round((self.coins + self.destroyed_coins) / (time.time() - self.start_time), 2)
+                tx_rate_last = round(self.total_received_tx_last / (time.time() - self.start_time_last), 2)
                 self.total_received_tx_last = 0
                 self.start_time_last = time.time()
                 batch_tx_count = self.total_received_tx - self.total_received_tx_stat
