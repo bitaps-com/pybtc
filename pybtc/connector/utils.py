@@ -144,4 +144,6 @@ def seconds_to_age(time):
     minutes = time // 60
     time %= 60
     seconds = time
-    return "%d:%d:%d:%d" % (day, hour, minutes, seconds)
+    if day:
+        return "%d days %d:%d:%d" % (day, hour, minutes, seconds)
+    return "%d:%d:%d" % (hour, minutes, seconds)
