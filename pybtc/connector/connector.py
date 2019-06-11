@@ -3,6 +3,7 @@ from pybtc.connector.block_loader import BlockLoader
 from pybtc.connector.utxo import UTXO
 from pybtc.connector.utils import decode_block_tx
 from pybtc.connector.utils import Cache
+from pybtc.connector.utils import seconds_to_age
 from pybtc.transaction import Transaction
 from pybtc import int_to_bytes, bytes_to_int
 from collections import deque
@@ -151,11 +152,11 @@ class Connector:
                 self.log.error("Get node best block error:" + str(err))
             if not isinstance(self.node_last_block, int):
                 self.log.error("Get node best block height failed")
-                self.log.error("Node rpc url: "+self.rpc_url)
+                self.log.error("Node rpc url: " + self.rpc_url)
                 await asyncio.sleep(10)
                 continue
 
-            self.log.info("Node best block height %s" %self.node_last_block)
+            self.log.info("Node best block height %s" % self.node_last_block)
             self.log.info("Connector last block height %s" % self.last_block_height)
 
             if self.node_last_block < self.last_block_height:
@@ -468,14 +469,18 @@ class Connector:
                 self.start_time_last = time.time()
                 batch_tx_count = self.total_received_tx - self.total_received_tx_stat
                 self.total_received_tx_stat = self.total_received_tx
-                self.log.info("Blocks %s; tx rate: %s; io rate[%s];" % (block["height"], tx_rate, io_rate))
+                self.log.info("Blocks %s; tx rate: %s; "
+                              "io rate[%s]; Uptime %s" % (block["height"], tx_rate,
+                                                          io_rate, seconds_to_age(int(time.time() - self.start_time))))
                 if self.utxo_data:
                     loading = "Loading ... " if self.cache_loading else ""
                     if self.deep_synchronization:
                         self.log.debug("- Batch ---------------")
                         self.log.debug("    Rate %s; transactions %s" % (tx_rate_last, batch_tx_count))
                         self.log.debug("    Load utxo %s; parsing %s" % (self.batch_load_utxo, self.batch_parsing))
-                        self.log.debug("    Batch handler %s;" % self.batch_handler)
+                        self.log.debug("    Batch time %s; "
+                                       "Batch handler %s;" % (round(time.time() - self.batch_time, 2),
+                                                              self.batch_handler))
                         self.batch_handler = 0
                         self.batch_load_utxo = 0
                         self.batch_parsing = 0
@@ -537,11 +542,6 @@ class Connector:
                                                                round((self.utxo._hit + self.preload_cached_annihilated)
                                                                       / self.destroyed_coins, 4)))
                 self.log.debug("---------------------")
-                t = int(time.time() - self.start_time)
-                t2 = round(time.time() - self.batch_time, 2)
-                self.batch_time = time.time()
-                h, m, s = t // 3600, (t % 3600 ) // 60, (t % 3600) % 60
-                self.log.info("Total time %s:%s:%s;  batch time: %s" % (h,m,s, t2))
             # after block added handler
             if self.after_block_handler and not self.cache_loading:
                 try:
