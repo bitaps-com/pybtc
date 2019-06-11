@@ -80,11 +80,6 @@ class BlockLoader:
             new_requests = 0
             if self.parent.block_preload._store_size < self.parent.block_preload_cache_limit:
                 try:
-
-                    # elif self.last_batch_size >  80000000 and self.rpc_batch_limit < 100:
-                    #     self.rpc_batch_limit = 50
-                    # self.log.warning("rpc batch limit %s " % self.rpc_batch_limit)
-
                     for i in self.worker_busy:
                         if not self.worker_busy[i]:
                             self.worker_busy[i] = True
@@ -248,7 +243,6 @@ class Worker:
 
     async def load_blocks(self, height, limit):
         try:
-            # self.log.critical("%s block loader get from %s to %s" % (self.name, height, height + limit))
             x = None
             blocks = dict()
             missed =deque()
@@ -314,7 +308,6 @@ class Worker:
 
             m = 0
             n = 0
-            k = len(missed)
             if missed and self.dsn:
                if self.dsn:
                    async with self.db.acquire() as conn:
@@ -341,10 +334,8 @@ class Worker:
                                        n += 1
                                    except:
                                        pass
-            # self.log.critical(">> loaded %s  apply %s  missed %s" % (m, n, k))
             if blocks:
                 blocks[x]["checkpoint"] = x
-                self.log.critical("checkpoint %s  " % x)
             for x in blocks:
                 for y in blocks[x]["rawTx"]:
                     for i in blocks[x]["rawTx"][y]["vOut"]:
@@ -357,8 +348,6 @@ class Worker:
                         except: pass
 
                 blocks[x] = pickle.dumps(blocks[x])
-            # self.log.critical("%s block loader blocks %s" %(self.name, len(blocks)))
-            # self.log.critical("%s block loader checkpoint %s" %(self.name, x))
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except:
             self.log.critical("load blocks error")
