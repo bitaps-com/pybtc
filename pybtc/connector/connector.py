@@ -7,8 +7,17 @@ from pybtc.transaction import Transaction
 from pybtc import int_to_bytes, bytes_to_int
 from collections import deque
 import traceback
-import aiojsonrpc
-import zmq
+
+try:
+    import aiojsonrpc
+except:
+    raise Exception("required module https://github.com/bitaps-com/aiojsonrpc")
+
+try:
+    import zmq
+except:
+    raise Exception("required module pyzmq")
+
 import zmq.asyncio
 import asyncio
 import time
@@ -36,12 +45,14 @@ class Connector:
                  block_preload_cache_limit= 1000 * 1000000,
                  block_hashes_cache_limit= 200 * 1000000,
                  db_type=None,
-                 db=None):
+                 db=None,
+                 app_proc_title="Connector"):
         self.loop = asyncio.get_event_loop()
 
         # settings
         self.log = logger
         self.rpc_url = node_rpc_url
+        self.app_proc_title = app_proc_title
         self.rpc_timeout = rpc_timeout
         self.rpc_batch_limit = rpc_batch_limit
         self.zmq_url = node_zerromq_url

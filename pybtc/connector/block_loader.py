@@ -3,7 +3,12 @@ import os
 from multiprocessing import Process
 from pybtc.functions.tools import int_to_bytes, bytes_to_int
 from concurrent.futures import ThreadPoolExecutor
-from setproctitle import setproctitle
+
+try:
+    from setproctitle import setproctitle
+except:
+    raise Exception("required module setproctitle")
+
 import logging
 import signal
 import sys
@@ -121,7 +126,8 @@ class BlockLoader:
 
         # create new process
         worker = Process(target=Worker, args=(index, in_reader, in_writer, out_reader, out_writer,
-                                              self.rpc_url, self.rpc_timeout, self.rpc_batch_limit, self.dsn))
+                                              self.rpc_url, self.rpc_timeout, self.rpc_batch_limit,
+                                              self.dsn, self.parent.app_proc_title))
         worker.start()
         in_reader.close()
         out_writer.close()
@@ -210,20 +216,13 @@ class BlockLoader:
             if msg_type == b'failed':
                 self.height = bytes_to_int(msg)
                 continue
-                # def disconnect(self,ip):
-    #     """ Disconnect peer """
-    #     p = self.out_connection_pool[self.outgoing_connection[ip]["pool"]]
-    #     pipe_sent_msg(p.writer, b'disconnect', ip.encode())
-
-
-
 
 
 class Worker:
 
     def __init__(self, name , in_reader, in_writer, out_reader, out_writer,
-                 rpc_url, rpc_timeout, rpc_batch_limit, dsn):
-        setproctitle('Block loader: worker %s' % name)
+                 rpc_url, rpc_timeout, rpc_batch_limit, dsn, app_proc_title):
+        setproctitle('%s: blocks preload worker %s' % (app_proc_title, name))
         self.rpc_url = rpc_url
         self.rpc_timeout = rpc_timeout
         self.rpc_batch_limit = rpc_batch_limit
