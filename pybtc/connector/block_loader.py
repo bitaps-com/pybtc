@@ -110,7 +110,7 @@ class BlockLoader:
 
 
     async def start_worker(self,index):
-        self.log.warning('Start block loader worker %s' % index)
+        self.log.info('Start block loader worker %s' % index)
         # prepare pipes for communications
         in_reader, in_writer = os.pipe()
         out_reader, out_writer = os.pipe()
@@ -135,7 +135,7 @@ class BlockLoader:
         # wait if process crash
         await self.loop.run_in_executor(None, worker.join)
         del self.worker[index]
-        self.log.warning('Block loader worker %s is stopped' % index)
+        self.log.info('Block loader worker %s is stopped' % index)
 
 
 
