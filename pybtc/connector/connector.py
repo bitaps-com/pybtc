@@ -426,7 +426,6 @@ class Connector:
                 await self.fetch_block_transactions(block, tx_bin_list)
 
             if self.utxo_data:
-                checkpoint = self.utxo.checkpoint
                 try:
                     self.utxo.checkpoints.append(block["checkpoint"])
                 except: pass
@@ -437,9 +436,7 @@ class Connector:
                         self.utxo.deleted_last_block = block["height"]
                         self.utxo.pending_deleted = self.utxo.pending_deleted | self.utxo.deleted
                         self.utxo.deleted = set()
-                        self.utxo.create_checkpoint(self.app_last_block )
-            else:
-                checkpoint = None
+                        self.utxo.create_checkpoint(self.app_last_block)
 
             if self.block_batch_handler and not self.cache_loading:
                 t = time.time()
