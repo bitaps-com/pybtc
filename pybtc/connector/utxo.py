@@ -61,6 +61,7 @@ class UTXO():
 
     def create_checkpoint(self, app_last_block = None):
         if  not self.checkpoints:
+            self.log.debug("Create utxo checkpoint canceled: no checkoints")
             return
         checkpoints = set()
         for i in self.checkpoints:
@@ -68,11 +69,22 @@ class UTXO():
                 checkpoints.add(i)
         self.checkpoints = sorted(checkpoints)
         # save to db tail from cache
+        self.log.debug("create utxo checkpoint")
+        if app_last_block:
+            self.log.debug("Application last block  %s;" % app_last_block)
+        if self.checkpoints:
+            self.log.debug("Available utxo checkpoint %s; first %s; last %s;" %
+                              (len(self.checkpoints),
+                               self.checkpoints[0],
+                               self.checkpoints[-1]))
         if  self.save_process or not self.cached:
+            self.log.debug("Create utxo checkpoint canceled %s" % str((self.save_process,
+                                                                         len( self.cached))))
             return
 
         if app_last_block is not None:
             if app_last_block < self.checkpoints[0]:
+                self.log.debug("Create utxo checkpoint canceled - utxo lag")
                 return
 
         self.save_process = True
@@ -98,6 +110,7 @@ class UTXO():
                         if self.checkpoints:
                             if app_last_block is None:
                                 # no app checkpoint constraint
+
                                 checkpoint = self.checkpoints.pop(0)
                             elif app_last_block > self.checkpoints[0]:
                                 # app checkpoint ahead of utxo checkpoint

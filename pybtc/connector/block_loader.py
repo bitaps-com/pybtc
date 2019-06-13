@@ -233,7 +233,7 @@ class Worker:
         self.out_writer = out_writer
         self.in_reader = in_reader
         self.coins = MRU(500000)
-        self.destroyed_coins = MRU(500000)
+        self.destroyed_coins = MRU(1000000)
         signal.signal(signal.SIGTERM, self.terminate)
         self.loop.create_task(self.message_loop())
         self.loop.run_forever()
