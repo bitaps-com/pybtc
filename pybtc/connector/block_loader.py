@@ -232,7 +232,7 @@ class Worker:
         self.loop.set_default_executor(ThreadPoolExecutor(20))
         self.out_writer = out_writer
         self.in_reader = in_reader
-        self.coins = MRU(2000000)
+        self.coins = MRU(500000)
         self.destroyed_coins = MRU(2000000)
         self.a_coins = MRU(2000000)
         signal.signal(signal.SIGTERM, self.terminate)
