@@ -249,7 +249,7 @@ class Connector:
             self.last_block_height = lb
             self.last_block_utxo_cached_height = lc
             if self.app_block_height_on_start:
-                if self.app_block_height_on_start > self.last_block_height:
+                if self.app_block_height_on_start < self.last_block_height:
                     self.log.critical("UTXO state last block %s app state last block %s " % (self.last_block_height,
                                                                                              self.app_block_height_on_start))
                     raise Exception("App blockchain state behind connector blockchain state")
