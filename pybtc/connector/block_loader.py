@@ -234,7 +234,7 @@ class Worker:
         self.in_reader = in_reader
         self.coins = MRU(500000)
         self.destroyed_coins = MRU(2000000)
-        self.a_coins = MRU(2000000)
+        # self.a_coins = MRU(2000000)
         signal.signal(signal.SIGTERM, self.terminate)
         self.loop.create_task(self.message_loop())
         self.loop.run_forever()
@@ -340,7 +340,7 @@ class Worker:
                         try:
                             pointer = (x << 39)+(y << 20)+(1 << 19) + i
                             r = self.destroyed_coins.delete(pointer)
-                            self.a_coins[pointer]=True
+                            # self.a_coins[pointer]=True
                             blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                             assert r is not None
                         except: pass
