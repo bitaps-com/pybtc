@@ -679,7 +679,7 @@ class Connector:
                 self.batch_load_utxo += t2
                 for o, s, q, i in missed:
                     block["rawTx"][q]["vIn"][i]["coin"] = self.utxo.get_loaded(o)
-                    if  block["rawTx"][q]["vIn"][i]["coin"] is None:
+                    if  block["rawTx"][q]["vIn"][i]["coin"] is None and not self.cache_loading:
                         raise Exception("utxo get failed ")
                     c += 1
 
