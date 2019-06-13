@@ -44,6 +44,7 @@ class Connector:
                  skip_opreturn=True,
                  block_cache_workers= 4,
                  block_preload_cache_limit= 1000 * 1000000,
+                 block_preload_batch_size_limit = 200000000,
                  block_hashes_cache_limit= 200 * 1000000,
                  db_type=None,
                  db=None,
@@ -65,6 +66,7 @@ class Connector:
         self.block_handler = block_handler
         self.after_block_handler = after_block_handler
         self.block_batch_handler = block_batch_handler
+        self.block_preload_batch_size_limit = block_preload_batch_size_limit
         self.deep_sync_limit = deep_sync_limit
         self.backlog = backlog
         self.mempool_tx = mempool_tx

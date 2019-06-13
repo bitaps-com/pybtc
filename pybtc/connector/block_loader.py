@@ -93,9 +93,9 @@ class BlockLoader:
                     if not new_requests:
                         await asyncio.sleep(1)
                         continue
-                    if self.last_batch_size < 200000000:
+                    if self.last_batch_size < self.parent.block_preload_batch_size_limit:
                         self.rpc_batch_limit += 20
-                    elif self.last_batch_size >  200000000 and self.rpc_batch_limit > 60:
+                    elif self.last_batch_size >  self.parent.block_preload_batch_size_limit and self.rpc_batch_limit > 60:
                         self.rpc_batch_limit -= 40
                 except asyncio.CancelledError:
                     self.log.info("Loading task terminated")
