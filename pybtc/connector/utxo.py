@@ -110,7 +110,6 @@ class UTXO():
                         if self.checkpoints:
                             if app_last_block is None:
                                 # no app checkpoint constraint
-                                self.log.critical("pop ")
                                 checkpoint = self.checkpoints.pop(0)
                             elif app_last_block > self.checkpoints[0]:
                                 # app checkpoint ahead of utxo checkpoint
