@@ -40,17 +40,12 @@ def merkle_tree_depth(tx_hash_count):
         raise ValueError('hash_count must be at least 1')
     return ceil(log(tx_hash_count, 2))
 
-def merkle_tree(tx_hash_list, return_hex=False, receive_hex=None):
-    if receive_hex is None:
+def merkle_tree(tx_hash_list, return_hex=False, receive_hex=False):
+    if receive_hex:
         tx_hash_deque = deque()
         tx_hash_deque_append = tx_hash_deque.append
         for h in tx_hash_list:
             tx_hash_deque_append(h if isinstance(h, bytes) else s2rh(h))
-    elif receive_hex:
-        tx_hash_deque = deque()
-        tx_hash_deque_append = tx_hash_deque.append
-        for h in tx_hash_list:
-            tx_hash_deque_append(s2rh(h))
     else:
         tx_hash_deque = deque(tx_hash_list)
     c = merkle_tree_depth(len(tx_hash_deque))
