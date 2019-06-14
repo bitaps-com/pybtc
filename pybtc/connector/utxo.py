@@ -19,6 +19,7 @@ class UTXO():
         self.missed = deque()
         self.deleted = MRU()
         self.destroyed = deque()
+        self.restored = dict()
         self.destroyed_backup = None
         self.pending_deleted = set()
         self.pending_utxo = set()
@@ -134,6 +135,7 @@ class UTXO():
                     self.destroyed.popleft()
                 else:
                     break
+            print(">>", len(self.destroyed))
             self.destroyed_backup = pickle.dumps(self.destroyed)
 
             self.log.debug("checkpoint %s cache size %s limit %s" % (self.checkpoint,
@@ -177,6 +179,16 @@ class UTXO():
                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                   "WHERE name = 'cache_restore';", self.destroyed_backup)
 
+    async def restore_cache(self):
+        async with self.db.acquire() as conn:
+            row = await conn.fetchval("SELECT value FROM connector_utxo_state "
+                                      "WHERE name = 'cache_restore' LIMIT 1")
+        if row:
+            self.deleted = pickle.loads(row["value"])
+            for r in self.deleted:
+                self.restored[r[0]] = r[1]
+
+
     async def save_checkpoint(self):
             # save to db tail from cache
             if  not self.checkpoint: return
@@ -216,11 +228,17 @@ class UTXO():
             try:
                 i = self.pending_saved[key]
                 self._hit += 1
+                self.destroyed.append((key, i))
                 return i
             except:
-                self._failed_requests += 1
-                self.missed.append(key)
-                return None
+                try:
+                    i = self.restored[key]
+                    self._hit += 1
+                    return i
+                except:
+                    self._failed_requests += 1
+                    self.missed.append(key)
+                    return None
 
     def get_loaded(self, key):
         try:

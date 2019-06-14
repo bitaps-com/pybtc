@@ -416,17 +416,12 @@ class Connector:
             if self.last_block_height < self.last_block_utxo_cached_height:
                 if not self.cache_loading:
                     self.log.info("Bootstrap UTXO cache ...")
+                    await self.utxo.restore_cache()
                 self.cache_loading = True
             else:
                 if self.cache_loading:
                     self.log.info("UTXO Cache bootstrap completed")
-                    if self.app_block_height_on_start < self.last_block_utxo_cached_height:
-                        delta = self.last_block_utxo_cached_height - self.app_block_height_on_start
-                        [self.block_headers_cache.pop_last() for i in range(delta)]
-                        self.log.debug("Rewind from last UTXO cached block %s to app last block %s" % (self.last_block_utxo_cached_height,
-                                                                                                      self.app_block_height_on_start))
-                        self.last_block_utxo_cached_height = self.app_block_height_on_start
-                        self.last_block_height = self.app_block_height_on_start
+
                 self.cache_loading = False
 
 
@@ -694,11 +689,11 @@ class Connector:
                 self.batch_load_utxo += t2
                 for o, s, q, i in missed:
                     block["rawTx"][q]["vIn"][i]["coin"] = self.utxo.get_loaded(o)
-                    if  block["rawTx"][q]["vIn"][i]["coin"] is None and not self.cache_loading:
+                    if  block["rawTx"][q]["vIn"][i]["coin"] is None:
                         raise Exception("utxo get failed ")
                     c += 1
 
-                if c != ti and not self.cache_loading:
+                if c != ti:
                     self.log.critical("utxo get failed " + rh2s(block["hash"]))
                     raise Exception("utxo get failed ")
 
