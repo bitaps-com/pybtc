@@ -412,10 +412,13 @@ class Connector:
         try:
             self.active_block = asyncio.Future()
             if self.last_block_height <= self.app_block_height_on_start:
+                if not self.cache_loading:
+                    self.log.info("Bootstrap UTXO cache ...")
                 self.cache_loading = True
             else:
+                if self.cache_loading:
+                    self.log.info("UTXO Cache bootstrap completed")
                 self.cache_loading = False
-                self.log.info("Cache bootstrap completed")
 
             if not self.deep_synchronization:
                 if not  self.block_batch_handler:
