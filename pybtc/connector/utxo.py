@@ -129,14 +129,17 @@ class UTXO():
                     break
 
 
-            # prepare cache restore data
-            while self.destroyed:
-                if self.destroyed[0][1][0] >> 39 <= self.last_checkpoint:
-                    self.destroyed.popleft()
-                else:
-                    break
+            if app_last_block:
+                # prepare cache restore data
+                while self.destroyed:
+                    if self.destroyed[0][1][0] >> 39 <= app_last_block:
+                        self.destroyed.popleft()
+                    else:
+                        break
+            else:
+                self.destroyed = deque()
             print(">>", len(self.destroyed), (self.destroyed[0][1][0] >> 39,
-                                              self.last_checkpoint))
+                                              app_last_block))
             self.destroyed_backup = pickle.dumps(self.destroyed)
 
             self.log.debug("checkpoint %s cache size %s limit %s" % (self.checkpoint,
