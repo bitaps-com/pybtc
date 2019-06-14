@@ -160,6 +160,7 @@ class Connector:
 
             self.log.info("Node best block height %s" % self.node_last_block)
             self.log.info("Connector last block height %s" % self.last_block_height)
+            self.log.info("Application last block height %s" % self.app_block_height_on_start)
 
             if self.node_last_block < self.last_block_height:
                 self.log.error("Node is behind application blockchain state!")
