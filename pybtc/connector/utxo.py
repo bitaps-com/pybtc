@@ -211,7 +211,7 @@ class UTXO():
                     await self.postgresql_atomic_batch()
                 self.log.debug("utxo checkpoint saved time %s" % round(time.time()-t, 4))
                 self.saved_utxo_count += len(self.utxo_records)
-                self.deleted_utxo_count += len(self.deleted_utxo_count)
+                self.deleted_utxo_count += len(self.deleted_utxo)
                 self.deleted_utxo = deque()
                 self.utxo_records = set()
                 self.pending_saved = dict()
