@@ -84,6 +84,7 @@ class Connector:
         self.cache_loading = False
         self.app_block_height_on_start = int(last_block_height) if int(last_block_height) else 0
         self.last_block_height = 0
+        self.last_block_utxo_cached_height = 0
         self.deep_synchronization = False
 
         self.block_dependency_tx = 0 # counter of tx that have dependencies in block
@@ -232,16 +233,23 @@ class Connector:
                                        """)
                     await conn.execute("""CREATE TABLE IF NOT EXISTS 
                                               connector_utxo_state (name VARCHAR,
-                                                                    value BIGINT,
+                                                                    value BYTEA,
                                                                     PRIMARY KEY(name));
                                        """)
                     lb = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_block';")
+                    lc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
                     if lb is None:
                         lb = 0
+                        lc = 0
                         await conn.execute("INSERT INTO connector_utxo_state (name, value) "
-                                           "VALUES ('last_block', 0);")
+                                           "VALUES ('last_block', $1);", int_to_bytes(0))
+                        await conn.execute("INSERT INTO connector_utxo_state (name, value) "
+                                           "VALUES ('last_cached_block', $1);", int_to_bytes(0))
+                        await conn.execute("INSERT INTO connector_utxo_state (name, value) "
+                                           "VALUES ('cache_restore', $1);", None)
 
-            self.last_block_height = lb
+            self.last_block_height = bytes_to_int(lb)
+            self.last_block_utxo_cached_height = bytes_to_int(lc)
             if self.app_block_height_on_start:
                 if self.app_block_height_on_start < self.last_block_height:
                     self.log.critical("UTXO state last block %s app state last block %s " % (self.last_block_height,
@@ -252,7 +260,7 @@ class Connector:
                                      (self.app_block_height_on_start - self.last_block_height,))
 
             else:
-                self.app_block_height_on_start = self.last_block_height
+                self.app_block_height_on_start = self.last_block_utxo_cached_height
 
 
     async def zeromq_handler(self):
@@ -405,11 +413,20 @@ class Connector:
 
         try:
             self.active_block = asyncio.Future()
-            if self.last_block_height < self.app_block_height_on_start:
-                if not self.cache_loading:  self.log.info("Bootstrap UTXO cache ...")
+            if self.last_block_height < self.last_block_utxo_cached_height:
+                if not self.cache_loading:
+                    self.log.info("Bootstrap UTXO cache ...")
                 self.cache_loading = True
             else:
-                if self.cache_loading: self.log.info("UTXO Cache bootstrap completed")
+                if self.cache_loading:
+                    self.log.info("UTXO Cache bootstrap completed")
+                    if self.app_block_height_on_start < self.last_block_utxo_cached_height:
+                        delta = self.last_block_utxo_cached_height - self.app_block_height_on_start
+                        [self.block_headers_cache.pop_last() for i in range(delta)]
+                        self.log.debug("Rewind from last UTXO cached block %s to app last block %s" % (self.last_block_utxo_cached_height,
+                                                                                                      self.app_block_height_on_start))
+                        self.last_block_utxo_cached_height = self.app_block_height_on_start
+                        self.last_block_height = self.app_block_height_on_start
                 self.cache_loading = False
 
 
@@ -435,6 +452,7 @@ class Connector:
                    not self.utxo.save_process and \
                    self.utxo.checkpoints:
                     if self.utxo.checkpoints[0] < block["height"]:
+                        self.utxo.last_block = block["height"]
                         self.utxo.create_checkpoint(self.app_last_block)
 
             if self.block_batch_handler and not self.cache_loading:
@@ -469,7 +487,7 @@ class Connector:
                               "io/s rate %s; Uptime %s" % (block["height"], tx_rate,
                                                           io_rate, seconds_to_age(int(time.time() - self.start_time))))
                 if self.utxo_data:
-                    loading = "Loading UTXO cache ... " if self.cache_loading else ""
+                    loading = "Loading UTXO cache... " if self.cache_loading else ""
                     if self.deep_synchronization:
                         self.log.debug("- Batch ---------------")
                         self.log.debug("    Rate tx/s %s; transactions count %s" % (tx_rate_last, batch_tx_count))
@@ -652,6 +670,7 @@ class Connector:
                                     self.utxo.get(outpoint)
                                 except:
                                     try:
+                                        # coin was loaded from db on preload stage
                                         tx["vIn"][i]["coin"] = inp["_l_"]
                                         c += 1
                                         self.preload_cached_total += 1

@@ -5,6 +5,7 @@ from collections import OrderedDict, deque
 from pybtc  import MRU
 import traceback
 import time
+import pickle
 
 try: import rocksdb
 except: pass
@@ -17,6 +18,8 @@ class UTXO():
         self.cached = MRU()
         self.missed = deque()
         self.deleted = MRU()
+        self.destroyed = MRU()
+        self.destroyed_backup = None
         self.pending_deleted = set()
         self.pending_utxo = set()
         self.checkpoint = 0
@@ -42,6 +45,7 @@ class UTXO():
         self.saved_utxo = 0
         self.deleted_utxo = 0
         self.deleted_last_block = 0
+        self.last_block = 0
         self.deleted_utxo = 0
         self.read_from_db_time = 0
         self.read_from_db_batch_time = 0
@@ -110,8 +114,11 @@ class UTXO():
                 self.cached.delete(key)
                 self.pending_utxo.add((key, value[0], value[2], value[1]))
                 self.pending_saved[key] = value
+            self.last_checkpoint = self.checkpoint
             self.checkpoint = lb
 
+
+            #  prepare records for destroyed coins in db
             while self.deleted:
                 key, value = self.deleted.peek_last_item()
                 if key >> 39 <= lb:
@@ -119,6 +126,16 @@ class UTXO():
                     self.deleted.delete(key)
                 else:
                     break
+
+
+            # prepare cache restore data
+            while self.destroyed:
+                key, value = self.destroyed.peek_last_item()
+                if key >> 39 <= self.last_checkpoint:
+                    self.destroyed.delete(key)
+                else:
+                    break
+            self.destroyed_backup = pickle.dumps(self.destroyed)
 
             self.log.debug("checkpoint %s cache size %s limit %s" % (self.checkpoint,
                                                                         len(self.cached),
@@ -155,8 +172,11 @@ class UTXO():
                                                              "amount"],
                                                     records=self.pending_utxo)
                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-                                  "WHERE name = 'last_block';", self.checkpoint)
-
+                                  "WHERE name = 'last_block';", int_to_bytes(self.checkpoint))
+               await conn.execute("UPDATE connector_utxo_state SET value = $1 "
+                                  "WHERE name = 'last_cached_block';", int_to_bytes(self.last_block))
+               await conn.execute("UPDATE connector_utxo_state SET value = $1 "
+                                  "WHERE name = 'cache_restore';", self.destroyed_backup)
 
     async def save_checkpoint(self):
             # save to db tail from cache
@@ -179,6 +199,7 @@ class UTXO():
                 self.pending_utxo = set()
                 self.pending_saved = OrderedDict()
                 self.last_saved_block = self.checkpoint
+                self.deleted_last_block = self.last_block
             except Exception as err:
                 self.log.critical("save_checkpoint error: %s" % str(err))
             finally:
@@ -190,6 +211,7 @@ class UTXO():
         try:
             i = self.cached.delete(key)
             self._hit += 1
+            self.destroyed[i[0]] = (key, i)
             return i
         except:
             try:
