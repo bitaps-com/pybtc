@@ -135,7 +135,8 @@ class UTXO():
                     self.destroyed.popleft()
                 else:
                     break
-            print(">>", len(self.destroyed))
+            print(">>", len(self.destroyed), (self.destroyed[0][1][0] >> 39,
+                                              self.last_checkpoint))
             self.destroyed_backup = pickle.dumps(self.destroyed)
 
             self.log.debug("checkpoint %s cache size %s limit %s" % (self.checkpoint,
