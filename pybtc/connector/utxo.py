@@ -125,7 +125,7 @@ class UTXO():
             #  prepare records for destroyed coins in db
             while self.deleted:
                 if self.deleted[0][0] <= lb:
-                    self.deleted_utxo.append(self.deleted[0][0])
+                    self.deleted_utxo.append(self.deleted[1][0])
                     self.deleted.popleft()
                 else:
                     break
