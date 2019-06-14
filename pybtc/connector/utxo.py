@@ -204,10 +204,9 @@ class UTXO():
     def get_loaded(self, key):
         try:
             i = self.loaded.delete(key)
-            self.deleted.add(i[0], key)
+            self.deleted[i[0]] =  key
             return i
         except:
-            print(traceback.format_exc())
             return None
 
 
