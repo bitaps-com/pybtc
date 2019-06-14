@@ -411,7 +411,7 @@ class Connector:
 
         try:
             self.active_block = asyncio.Future()
-            self.cache_loading = True if self.last_block_height < self.app_block_height_on_start else False
+            self.cache_loading = True if self.last_block_height <= self.app_block_height_on_start else False
 
             if not self.deep_synchronization:
                 if not  self.block_batch_handler:
