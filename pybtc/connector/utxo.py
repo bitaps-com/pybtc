@@ -116,7 +116,7 @@ class UTXO():
                 lb = value[0] >> 39
 
                 self.cache.delete(key)
-                self.utxo_records.add((key, value[0], value[2], value[1]))
+                self.utxo_records.append((key, value[0], value[2], value[1]))
                 self.pending_saved[key] = value
             self.last_checkpoint = self.checkpoint
             self.checkpoint = lb
