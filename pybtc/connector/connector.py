@@ -239,12 +239,12 @@ class Connector:
                     lb = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_block';")
                     lc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
                     if lb is None:
-                        lb = 0
-                        lc = 0
+                        lb = int_to_bytes(0)
+                        lc = int_to_bytes(0)
                         await conn.execute("INSERT INTO connector_utxo_state (name, value) "
-                                           "VALUES ('last_block', $1);", int_to_bytes(0))
+                                           "VALUES ('last_block', $1);", lb)
                         await conn.execute("INSERT INTO connector_utxo_state (name, value) "
-                                           "VALUES ('last_cached_block', $1);", int_to_bytes(0))
+                                           "VALUES ('last_cached_block', $1);", lc)
                         await conn.execute("INSERT INTO connector_utxo_state (name, value) "
                                            "VALUES ('cache_restore', $1);", None)
 
