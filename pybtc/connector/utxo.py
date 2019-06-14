@@ -116,7 +116,7 @@ class UTXO():
                 key, value = self.deleted.peek_last_item()
                 if key >> 39 <= lb:
                     self.pending_deleted.add(value)
-                    self.cached.delete(key)
+                    self.deleted.delete(key)
                 else:
                     break
 
