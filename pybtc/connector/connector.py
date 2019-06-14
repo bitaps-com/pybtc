@@ -443,7 +443,7 @@ class Connector:
                 try:
                     self.utxo.checkpoints.append(block["checkpoint"])
                 except: pass
-                if len(self.utxo.cached) > self.utxo.size_limit and \
+                if self.utxo.len() > self.utxo.size_limit and \
                    not self.utxo.save_process and \
                    self.utxo.checkpoints:
                     if self.utxo.checkpoints[0] < block["height"]:
@@ -519,7 +519,7 @@ class Connector:
 
                         self.log.debug("    Cache count %s; hit rate: %s;" % (self.utxo.len(),
                                                                           round(self.utxo.hit_rate(), 4)))
-                        self.log.debug("    Checkpoint block %s; App checkpoint %s" % (self.utxo.last_saved_block,
+                        self.log.debug("    Checkpoint block %s; App checkpoint %s" % (self.utxo.checkpoint,
                                                                                       self.app_last_block))
                         self.log.debug("    Saved to db %s; deleted from db %s; "
                                        "loaded  from db %s" % (self.utxo.saved_utxo,
@@ -671,7 +671,7 @@ class Connector:
                                         self.preload_cached_total += 1
                                         self.preload_cached += 1
                                         outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                                        self.utxo.deleted[(block["height"] << 39) + (q << 20) + (1 << 19) + i] = outpoint
+                                        self.utxo.deleted.append((block["height"], outpoint))
                                     except:
                                         outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                         r = self.utxo.get(outpoint)
@@ -680,7 +680,8 @@ class Connector:
                                             c += 1
                                         else:
                                             missed.append((outpoint,
-                                                          (block["height"] << 39) + (q << 20) + (1 << 19) + i, q, i))
+                                                          (block["height"]<<39)+(q<<20)+(1<<19)+i,
+                                                           q, i))
 
             if missed:
                 t2 = time.time()

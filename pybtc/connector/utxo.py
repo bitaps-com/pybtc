@@ -15,63 +15,67 @@ except: pass
 
 class UTXO():
     def __init__(self, db_type, db,  loop, log, cache_size):
-        self.cached = MRU()
-        self.missed = deque()
-        self.deleted = MRU()
+        self.cache = MRU()  # utxo cache
+
+        self.missed = deque()  # missed utxo
+        self.loaded = dict()   # loaded from db missed records
+
+        self.utxo_records = deque()  # prepared utxo records for write to db
+        self.pending_saved = dict()  # temp hash table, while records write process
+
+        self.deleted = deque()  # scheduled to delete
+        self.deleted_utxo_count = deque()
+
         self.destroyed = deque()
-        self.restored = dict()
-        self.destroyed_backup = None
-        self.pending_deleted = set()
-        self.pending_utxo = set()
+
         self.checkpoint = 0
         self.checkpoints = list()
         self.log = log
-        self.loaded = MRU()
-        self.pending_saved = OrderedDict()
-        self.maturity = 100
+
+
         self.size_limit = cache_size
         self.db_type = db_type
         self.db = db
         self.loop = loop
-        self.clear_tail = False
-        self.last_saved_block = 0
-        self.last_cached_block = 0
+
         self.save_process = False
         self.write_to_db = False
         self.load_utxo_future = asyncio.Future()
         self.load_utxo_future.set_result(True)
+
+        # stats
         self._requests = 0
         self._failed_requests = 0
         self._hit = 0
-        self.saved_utxo = 0
-        self.deleted_utxo = 0
-        self.deleted_last_block = 0
+        self.saved_utxo_count = 0
+        self.deleted_utxo_count = 0
+
         self.last_block = 0
-        self.deleted_utxo = 0
+        self.deleted_utxo_count = 0
         self.read_from_db_time = 0
         self.read_from_db_batch_time = 0
         self.read_from_db_count = 0
         self.read_from_db_time_total = 0
-        self.loaded_utxo = 0
-        self.destroyed_utxo = 0
-        self.destroyed_utxo_block = 0
-        self.outs_total = 0
+        self.loaded_utxo_count = 0
+
+
 
     def set(self, outpoint, pointer, amount, address):
-        self.cached[outpoint] = (pointer, amount, address)
+        self.cache[outpoint] = (pointer, amount, address)
 
     def remove(self, outpoint):
-        del self.cached[outpoint]
+        del self.cache[outpoint]
 
 
     def create_checkpoint(self, app_last_block = None):
+        # check checkpoints state
         if  not self.checkpoints: return
         checkpoints = set()
         for i in self.checkpoints:
             if i > self.checkpoint: checkpoints.add(i)
         self.checkpoints = sorted(checkpoints)
         # save to db tail from cache
-        if  self.save_process or not self.cached: return
+        if  self.save_process or not self.cache: return
         if app_last_block is not None:
             if app_last_block < self.checkpoints[0]: return
 
@@ -80,19 +84,19 @@ class UTXO():
         try:
             checkpoint = self.checkpoints.pop(0)
             lb = 0
-            while self.cached:
-                key, value = self.cached.peek_last_item()
+            while self.cache:
+                key, value = self.cache.peek_last_item()
                 if value[0] >> 39 != lb:
                     # block changed
 
                     if checkpoint <= lb:
                         # last block was checkpoint block
-                        if len(self.pending_utxo) > self.size_limit * 0.9:
+                        if len(self.utxo_records) > self.size_limit * 0.9:
                             limit = self.size_limit
                         else:
                             limit = self.size_limit * 0.9
 
-                        if len(self.cached) < limit:
+                        if len(self.cache) < limit:
                             break
 
                         if self.checkpoints:
@@ -112,8 +116,8 @@ class UTXO():
 
                 lb = value[0] >> 39
 
-                self.cached.delete(key)
-                self.pending_utxo.add((key, value[0], value[2], value[1]))
+                self.cache.delete(key)
+                self.utxo_records.add((key, value[0], value[2], value[1]))
                 self.pending_saved[key] = value
             self.last_checkpoint = self.checkpoint
             self.checkpoint = lb
@@ -121,29 +125,28 @@ class UTXO():
 
             #  prepare records for destroyed coins in db
             while self.deleted:
-                key, value = self.deleted.peek_last_item()
-                if key >> 39 <= lb:
-                    self.pending_deleted.add(value)
-                    self.deleted.delete(key)
+                if self.deleted[0][0] <= lb:
+                    self.deleted_utxo_count.append(self.deleted[0][0])
+                    self.deleted.popleft()
                 else:
                     break
 
 
-            if app_last_block:
-                # prepare cache restore data
-                while self.destroyed:
-                    if self.destroyed[0][1][0] >> 39 <= app_last_block:
-                        self.destroyed.popleft()
-                    else:
-                        break
-            else:
-                self.destroyed = deque()
-            print(">>", len(self.destroyed), (self.destroyed[0][1][0] >> 39,
-                                              app_last_block))
-            self.destroyed_backup = pickle.dumps(self.destroyed)
+            # if app_last_block:
+            #     # prepare cache restore data
+            #     while self.destroyed:
+            #         if self.destroyed[0][1][0] >> 39 <= app_last_block:
+            #             self.destroyed.popleft()
+            #         else:
+            #             break
+            # else:
+            #     self.destroyed = deque()
+            # print(">>", len(self.destroyed), (self.destroyed[0][1][0] >> 39,
+            #                                   app_last_block))
+            # self.destroyed_backup = pickle.dumps(self.destroyed)
 
             self.log.debug("checkpoint %s cache size %s limit %s" % (self.checkpoint,
-                                                                        len(self.cached),
+                                                                        len(self.cache),
                                                                         limit))
         except:
             self.log.critical("create checkpoint error")
@@ -151,46 +154,46 @@ class UTXO():
 
     def rocksdb_atomic_batch(self):
         batch = rocksdb.WriteBatch()
-        [batch.delete(k) for k in self.pending_deleted]
-        [batch.put(k[0], k[1]) for k in self.pending_utxo]
+        [batch.delete(k) for k in self.deleted_utxo_count]
+        [batch.put(k[0], k[1]) for k in self.utxo_records]
         batch.put(b"last_block", int_to_bytes(self.checkpoint))
         self.db.write(batch)
 
     def leveldb_atomic_batch(self):
         with self.db.write_batch() as batch:
-            [batch.delete(k) for k in self.pending_deleted]
-            [batch.put(k[0], k[1]) for k in self.pending_utxo]
+            [batch.delete(k) for k in self.deleted_utxo_count]
+            [batch.put(k[0], k[1]) for k in self.utxo_records]
             batch.put(b"last_block", int_to_bytes(self.checkpoint))
 
 
     async def postgresql_atomic_batch(self):
         async with self.db.acquire() as conn:
             async with conn.transaction():
-               if self.pending_deleted:
+               if self.deleted_utxo_count:
                    await conn.execute("DELETE FROM connector_utxo WHERE "
-                                      "outpoint = ANY($1);", self.pending_deleted)
-               if self.pending_utxo:
+                                      "outpoint = ANY($1);", self.deleted_utxo_count)
+               if self.utxo_records:
                    await conn.copy_records_to_table('connector_utxo',
                                                     columns=["outpoint",
                                                              "pointer",
                                                              "address",
                                                              "amount"],
-                                                    records=self.pending_utxo)
+                                                    records=self.utxo_records)
                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                   "WHERE name = 'last_block';", int_to_bytes(self.checkpoint))
                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                   "WHERE name = 'last_cached_block';", int_to_bytes(self.last_block))
-               await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-                                  "WHERE name = 'cache_restore';", self.destroyed_backup)
+               # await conn.execute("UPDATE connector_utxo_state SET value = $1 "
+               #                    "WHERE name = 'cache_restore';", self.destroyed_backup)
 
-    async def restore_cache(self):
-        async with self.db.acquire() as conn:
-            row = await conn.fetchval("SELECT value FROM connector_utxo_state "
-                                      "WHERE name = 'cache_restore' LIMIT 1")
-        if row:
-            self.deleted = pickle.loads(row["value"])
-            for r in self.deleted:
-                self.restored[r[0]] = r[1]
+    # async def restore_cache(self):
+    #     async with self.db.acquire() as conn:
+    #         row = await conn.fetchval("SELECT value FROM connector_utxo_state "
+    #                                   "WHERE name = 'cache_restore' LIMIT 1")
+    #     if row:
+    #         self.deleted = pickle.loads(row["value"])
+    #         for r in self.deleted:
+    #             self.restored[r[0]] = r[1]
 
 
     async def save_checkpoint(self):
@@ -208,13 +211,12 @@ class UTXO():
                 else:
                     await self.postgresql_atomic_batch()
                 self.log.debug("utxo checkpoint saved time %s" % round(time.time()-t, 4))
-                self.saved_utxo += len(self.pending_utxo)
-                self.deleted_utxo += len(self.pending_deleted)
-                self.pending_deleted = set()
-                self.pending_utxo = set()
-                self.pending_saved = OrderedDict()
-                self.last_saved_block = self.checkpoint
-                self.deleted_last_block = self.last_block
+                self.saved_utxo_count += len(self.utxo_records)
+                self.deleted_utxo_count += len(self.deleted_utxo_count)
+                self.deleted_utxo_count = deque()
+                self.utxo_records = set()
+                self.pending_saved = dict()
+
             except Exception as err:
                 self.log.critical("save_checkpoint error: %s" % str(err))
             finally:
@@ -223,31 +225,26 @@ class UTXO():
 
     def get(self, key):
         self._requests += 1
+        i = None
         try:
-            i = self.cached.delete(key)
-            self._hit += 1
-            self.destroyed.append((key, i))
-            return i
+            i = self.cache.delete(key)
         except:
             try:
                 i = self.pending_saved[key]
-                self._hit += 1
-                self.destroyed.append((key, i))
-                return i
             except:
-                try:
-                    i = self.restored[key]
-                    self._hit += 1
-                    return i
-                except:
-                    self._failed_requests += 1
-                    self.missed.append(key)
-                    return None
+                pass
+        if i is None:
+            self._failed_requests += 1
+            self.missed.append(key)
+        else:
+            self._hit += 1
+            # self.destroyed.append((key, i))
+        return i
 
     def get_loaded(self, key):
         try:
-            i = self.loaded.delete(key)
-            self.deleted[i[0]] =  key
+            i = self.loaded.pop(key)
+            self.deleted.append((i[0]>>39, key))
             return i
         except:
             return None
@@ -274,7 +271,7 @@ class UTXO():
                     self.loaded[row["outpoint"]] = (row["pointer"],
                                                     row["amount"],
                                                     row["address"])
-                    self.loaded_utxo += 1
+                    self.loaded_utxo_count += 1
 
 
             elif self.db_type == "rocksdb":
@@ -287,7 +284,7 @@ class UTXO():
                     f += c_int_len(amount)
                     address = d[f:]
                     self.loaded[outpoint] = (pointer, amount, address)
-                    self.loaded_utxo += 1
+                    self.loaded_utxo_count += 1
             else:
                 for outpoint in self.missed:
                     d = self.db.get(outpoint)
@@ -298,7 +295,7 @@ class UTXO():
                     f += c_int_len(amount)
                     address = d[f:]
                     self.loaded[outpoint] = (pointer, amount, address)
-                    self.loaded_utxo += 1
+                    self.loaded_utxo_count += 1
 
 
             self.read_from_db_count += len(self.missed)
@@ -313,7 +310,7 @@ class UTXO():
 
 
     def len(self):
-        return len(self.cached)
+        return len(self.cache)
 
     def hit_rate(self):
         if self._requests:
