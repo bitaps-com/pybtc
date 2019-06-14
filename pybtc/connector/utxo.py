@@ -18,7 +18,7 @@ class UTXO():
         self.cached = MRU()
         self.missed = deque()
         self.deleted = MRU()
-        self.destroyed = MRU()
+        self.destroyed = deque()
         self.destroyed_backup = None
         self.pending_deleted = set()
         self.pending_utxo = set()
@@ -130,9 +130,8 @@ class UTXO():
 
             # prepare cache restore data
             while self.destroyed:
-                key, value = self.destroyed.peek_last_item()
-                if key >> 39 <= self.last_checkpoint:
-                    self.destroyed.delete(key)
+                if self.destroyed[0][1][0] >> 39 <= self.last_checkpoint:
+                    self.destroyed.popleft()
                 else:
                     break
             self.destroyed_backup = pickle.dumps(self.destroyed)
@@ -211,7 +210,7 @@ class UTXO():
         try:
             i = self.cached.delete(key)
             self._hit += 1
-            self.destroyed[i[0]] = (key, i)
+            self.destroyed.append((key, i))
             return i
         except:
             try:
