@@ -522,9 +522,9 @@ class Connector:
                         self.log.debug("    Checkpoint block %s; App checkpoint %s" % (self.utxo.checkpoint,
                                                                                       self.app_last_block))
                         self.log.debug("    Saved to db %s; deleted from db %s; "
-                                       "loaded  from db %s" % (self.utxo.saved_utxo,
-                                                               self.utxo.deleted_utxo,
-                                                               self.utxo.loaded_utxo))
+                                       "loaded  from db %s" % (self.utxo.saved_utxo_count,
+                                                               self.utxo.deleted_utxo_count,
+                                                               self.utxo.loaded_utxo_count))
                         if self.utxo.read_from_db_batch_time:
                            c =  round(self.utxo.read_from_db_count / self.utxo.read_from_db_batch_time, 4)
                         else:

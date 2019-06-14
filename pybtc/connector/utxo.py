@@ -24,7 +24,7 @@ class UTXO():
         self.pending_saved = dict()  # temp hash table, while records write process
 
         self.deleted = deque()  # scheduled to delete
-        self.deleted_utxo_count = deque()
+        self.deleted_utxo = deque()
 
         self.destroyed = deque()
 
@@ -48,7 +48,6 @@ class UTXO():
         self._failed_requests = 0
         self._hit = 0
         self.saved_utxo_count = 0
-        self.deleted_utxo_count = 0
 
         self.last_block = 0
         self.deleted_utxo_count = 0
@@ -126,7 +125,7 @@ class UTXO():
             #  prepare records for destroyed coins in db
             while self.deleted:
                 if self.deleted[0][0] <= lb:
-                    self.deleted_utxo_count.append(self.deleted[0][0])
+                    self.deleted_utxo.append(self.deleted[0][0])
                     self.deleted.popleft()
                 else:
                     break
@@ -154,14 +153,14 @@ class UTXO():
 
     def rocksdb_atomic_batch(self):
         batch = rocksdb.WriteBatch()
-        [batch.delete(k) for k in self.deleted_utxo_count]
+        [batch.delete(k) for k in self.deleted_utxo]
         [batch.put(k[0], k[1]) for k in self.utxo_records]
         batch.put(b"last_block", int_to_bytes(self.checkpoint))
         self.db.write(batch)
 
     def leveldb_atomic_batch(self):
         with self.db.write_batch() as batch:
-            [batch.delete(k) for k in self.deleted_utxo_count]
+            [batch.delete(k) for k in self.deleted_utxo]
             [batch.put(k[0], k[1]) for k in self.utxo_records]
             batch.put(b"last_block", int_to_bytes(self.checkpoint))
 
@@ -169,9 +168,9 @@ class UTXO():
     async def postgresql_atomic_batch(self):
         async with self.db.acquire() as conn:
             async with conn.transaction():
-               if self.deleted_utxo_count:
+               if self.deleted_utxo:
                    await conn.execute("DELETE FROM connector_utxo WHERE "
-                                      "outpoint = ANY($1);", self.deleted_utxo_count)
+                                      "outpoint = ANY($1);", self.deleted_utxo)
                if self.utxo_records:
                    await conn.copy_records_to_table('connector_utxo',
                                                     columns=["outpoint",
@@ -213,7 +212,7 @@ class UTXO():
                 self.log.debug("utxo checkpoint saved time %s" % round(time.time()-t, 4))
                 self.saved_utxo_count += len(self.utxo_records)
                 self.deleted_utxo_count += len(self.deleted_utxo_count)
-                self.deleted_utxo_count = deque()
+                self.deleted_utxo = deque()
                 self.utxo_records = set()
                 self.pending_saved = dict()
 
