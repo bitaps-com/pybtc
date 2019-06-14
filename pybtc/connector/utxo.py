@@ -213,7 +213,7 @@ class UTXO():
                 self.saved_utxo_count += len(self.utxo_records)
                 self.deleted_utxo_count += len(self.deleted_utxo)
                 self.deleted_utxo = deque()
-                self.utxo_records = set()
+                self.utxo_records = deque()
                 self.pending_saved = dict()
 
             except Exception as err:
