@@ -16,7 +16,7 @@ class UTXO():
     def __init__(self, db_type, db,  loop, log, cache_size):
         self.cached = MRU()
         self.missed = deque()
-        self.deleted = set()
+        self.deleted = MRU()
         self.pending_deleted = set()
         self.pending_utxo = set()
         self.checkpoint = 0
@@ -63,8 +63,7 @@ class UTXO():
         if  not self.checkpoints: return
         checkpoints = set()
         for i in self.checkpoints:
-            if i > self.checkpoint:
-                checkpoints.add(i)
+            if i > self.checkpoint: checkpoints.add(i)
         self.checkpoints = sorted(checkpoints)
         # save to db tail from cache
         if  self.save_process or not self.cached: return
@@ -111,9 +110,16 @@ class UTXO():
                 self.cached.delete(key)
                 self.pending_utxo.add((key, value[0], value[2], value[1]))
                 self.pending_saved[key] = value
-
-
             self.checkpoint = lb
+
+            while self.deleted:
+                key, value = self.deleted.peek_last_item()
+                if key >> 39 <= lb:
+                    self.pending_deleted.add(value)
+                    self.cached.delete(key)
+                else:
+                    break
+
             self.log.debug("checkpoint %s cache size %s limit %s" % (self.checkpoint,
                                                                         len(self.cached),
                                                                         limit))
@@ -126,7 +132,6 @@ class UTXO():
         [batch.delete(k) for k in self.pending_deleted]
         [batch.put(k[0], k[1]) for k in self.pending_utxo]
         batch.put(b"last_block", int_to_bytes(self.checkpoint))
-        batch.put(b"last_cached_block", int_to_bytes(self.deleted_last_block))
         self.db.write(batch)
 
     def leveldb_atomic_batch(self):
@@ -134,7 +139,6 @@ class UTXO():
             [batch.delete(k) for k in self.pending_deleted]
             [batch.put(k[0], k[1]) for k in self.pending_utxo]
             batch.put(b"last_block", int_to_bytes(self.checkpoint))
-            batch.put(b"last_cached_block", int_to_bytes(self.deleted_last_block))
 
 
     async def postgresql_atomic_batch(self):
@@ -152,8 +156,6 @@ class UTXO():
                                                     records=self.pending_utxo)
                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                   "WHERE name = 'last_block';", self.checkpoint)
-               await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-                                  "WHERE name = 'last_cached_block';", self.deleted_last_block)
 
 
     async def save_checkpoint(self):
@@ -201,8 +203,9 @@ class UTXO():
 
     def get_loaded(self, key):
         try:
-            self.deleted.add(key)
-            return self.loaded.delete(key)
+            i = self.loaded.delete(key)
+            self.deleted.add(i[0], key)
+            return i
         except:
             return None
 

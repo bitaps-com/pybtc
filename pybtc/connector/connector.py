@@ -84,7 +84,6 @@ class Connector:
         self.cache_loading = False
         self.app_block_height_on_start = int(last_block_height) if int(last_block_height) else 0
         self.last_block_height = 0
-        self.last_block_utxo_cached_height = 0
         self.deep_synchronization = False
 
         self.block_dependency_tx = 0 # counter of tx that have dependencies in block
@@ -237,18 +236,12 @@ class Connector:
                                                                     PRIMARY KEY(name));
                                        """)
                     lb = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_block';")
-                    lc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
                     if lb is None:
                         lb = 0
-                        lc = 0
                         await conn.execute("INSERT INTO connector_utxo_state (name, value) "
                                            "VALUES ('last_block', 0);")
-                        await conn.execute("INSERT INTO connector_utxo_state (name, value) "
-                                           "VALUES ('last_cached_block', 0);")
-
 
             self.last_block_height = lb
-            self.last_block_utxo_cached_height = lc
             if self.app_block_height_on_start:
                 if self.app_block_height_on_start < self.last_block_height:
                     self.log.critical("UTXO state last block %s app state last block %s " % (self.last_block_height,
@@ -259,7 +252,7 @@ class Connector:
                                      (self.app_block_height_on_start - self.last_block_height,))
 
             else:
-                self.app_block_height_on_start = self.last_block_utxo_cached_height
+                self.app_block_height_on_start = self.last_block_height
 
 
     async def zeromq_handler(self):
@@ -412,14 +405,13 @@ class Connector:
 
         try:
             self.active_block = asyncio.Future()
-            if self.last_block_height <= self.app_block_height_on_start:
-                if not self.cache_loading:
-                    self.log.info("Bootstrap UTXO cache ...")
+            if self.last_block_height < self.app_block_height_on_start:
+                if not self.cache_loading:  self.log.info("Bootstrap UTXO cache ...")
                 self.cache_loading = True
             else:
-                if self.cache_loading:
-                    self.log.info("UTXO Cache bootstrap completed")
+                if self.cache_loading: self.log.info("UTXO Cache bootstrap completed")
                 self.cache_loading = False
+
 
             if not self.deep_synchronization:
                 if not  self.block_batch_handler:
@@ -443,9 +435,6 @@ class Connector:
                    not self.utxo.save_process and \
                    self.utxo.checkpoints:
                     if self.utxo.checkpoints[0] < block["height"]:
-                        self.utxo.deleted_last_block = block["height"]
-                        self.utxo.pending_deleted = self.utxo.pending_deleted | self.utxo.deleted
-                        self.utxo.deleted = set()
                         self.utxo.create_checkpoint(self.app_last_block)
 
             if self.block_batch_handler and not self.cache_loading:
@@ -480,7 +469,7 @@ class Connector:
                               "io/s rate %s; Uptime %s" % (block["height"], tx_rate,
                                                           io_rate, seconds_to_age(int(time.time() - self.start_time))))
                 if self.utxo_data:
-                    loading = "Loading ... " if self.cache_loading else ""
+                    loading = "Loading UTXO cache ... " if self.cache_loading else ""
                     if self.deep_synchronization:
                         self.log.debug("- Batch ---------------")
                         self.log.debug("    Rate tx/s %s; transactions count %s" % (tx_rate_last, batch_tx_count))
@@ -648,8 +637,6 @@ class Connector:
                             ti += 1
                             self.destroyed_coins += 1
                             inp = tx["vIn"][i]
-                            # outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                            # tx["vIn"][i]["outpoint"] = outpoint
                             try:
                                 tx["vIn"][i]["coin"] = inp["_a_"]
                                 c += 1
@@ -670,7 +657,7 @@ class Connector:
                                         self.preload_cached_total += 1
                                         self.preload_cached += 1
                                         outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                                        self.utxo.deleted.add(outpoint)
+                                        self.utxo.deleted[(block["height"] << 39) + (q << 20) + (1 << 19) + i] = outpoint
                                     except:
                                         outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                         r = self.utxo.get(outpoint)
@@ -678,7 +665,8 @@ class Connector:
                                             tx["vIn"][i]["coin"] = r
                                             c += 1
                                         else:
-                                            missed.append((outpoint, (block["height"] << 39) + (q << 20) + (1 << 19) + i, q, i))
+                                            missed.append((outpoint,
+                                                          (block["height"] << 39) + (q << 20) + (1 << 19) + i, q, i))
 
             if missed:
                 t2 = time.time()
@@ -687,11 +675,11 @@ class Connector:
                 self.batch_load_utxo += t2
                 for o, s, q, i in missed:
                     block["rawTx"][q]["vIn"][i]["coin"] = self.utxo.get_loaded(o)
-                    if  block["rawTx"][q]["vIn"][i]["coin"] is None and not self.cache_loading:
+                    if  block["rawTx"][q]["vIn"][i]["coin"] is None:
                         raise Exception("utxo get failed ")
                     c += 1
 
-                if c != ti and not self.cache_loading:
+                if c != ti:
                     self.log.critical("utxo get failed " + rh2s(block["hash"]))
                     raise Exception("utxo get failed ")
 
@@ -819,7 +807,7 @@ class Connector:
                                     try:
                                         self.utxo.get(outpoint)
                                     except:
-                                        self.utxo.deleted.add(outpoint)
+                                        self.utxo.deleted[(block_height << 39)+(block_index << 20)+(1 << 19) + i] = outpoint
                                 except:
                                     r = self.utxo.get(outpoint)
                                     if r:

@@ -49,7 +49,7 @@ class BlockLoader:
         while True:
             try:
                 if self.loading_task is None or self.loading_task.done():
-                    if self.parent.deep_synchronization:
+                    if self.parent.deep_synchronization and not self.parent.cache_loading:
                         self.loading_task = self.loop.create_task(self.loading())
                 else:
                     # clear unused cache
