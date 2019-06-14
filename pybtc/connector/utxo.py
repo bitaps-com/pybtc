@@ -207,6 +207,7 @@ class UTXO():
             self.deleted.add(i[0], key)
             return i
         except:
+            print(traceback.format_exc())
             return None
 
 
