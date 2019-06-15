@@ -444,7 +444,7 @@ class Connector:
                 except: pass
                 if self.utxo.len() > self.utxo.size_limit and \
                    not self.utxo.save_process and \
-                   self.utxo.checkpoints:
+                   self.utxo.checkpoints and  not self.cache_loading:
                     if self.utxo.checkpoints[0] < block["height"]:
                         self.utxo.last_block = block["height"]
                         self.utxo.create_checkpoint(self.app_last_block)
