@@ -19,6 +19,7 @@ class UTXO():
         self.restore_blocks_cache = LRU(100)  # utxo cache
 
         self.missed = deque()  # missed utxo
+        self.missed_failed = deque()
         self.loaded = dict()   # loaded from db missed records
 
         self.utxo_records = deque()  # prepared utxo records for write to db
@@ -27,7 +28,7 @@ class UTXO():
         self.deleted = deque()  # scheduled to delete
         self.deleted_utxo = deque()
 
-        self.destroyed = set()
+        self.destroyed = deque()
 
         self.checkpoint = 0
         self.checkpoints = list()
@@ -118,11 +119,7 @@ class UTXO():
                 lb = value[0] >> 39
 
                 self.cache.delete(key)
-                try:
-                    self.destroyed.remove(value[0])
-                except:
-                    self.utxo_records.append((key, value[0], value[2], value[1]))
-
+                self.utxo_records.append((key, value[0], value[2], value[1]))
                 self.pending_saved[key] = value
             self.last_checkpoint = self.checkpoint
             self.checkpoint = lb
@@ -232,7 +229,7 @@ class UTXO():
         self._requests += 1
         i = None
         try:
-            i = self.cache[key]
+            i = self.cache.delete(key)
         except:
             try:
                 i = self.pending_saved[key]
@@ -243,33 +240,33 @@ class UTXO():
             self.missed.append(key)
         else:
             self._hit += 1
-            self.destroyed.add(i[0])
+            # self.destroyed.append((key, i))
         return i
 
-    async def get_from_daemon(self, key):
-        try:
-            tx_id = rh2s(key[:32])
-            out_index = bytes_to_int(key[32:])
-            tx = await self.rpc.getrawtransaction(tx_id, 1)
-            amount = int(tx["vout"][out_index]["value"] * 100000000)
-            script = parse_script(tx["vout"][out_index]["scriptPubKey"]["hex"])
-            try:
-                address = b"".join((bytes([script["nType"]]), script["addressHash"]))
-            except:
-                address = b"".join((bytes([script["nType"]]), script["scriptPubKey"]))
-            try:
-                block = self.restore_blocks_cache[tx["blockhash"]]
-            except:
-                block = await self.rpc.getblock(tx["blockhash"])
-                self.restore_blocks_cache[tx["blockhash"]] = block
-
-            tx_index = block["tx"].index(tx_id)
-            block_height  = block["height"]
-            pointer = (block_height << 39) + (tx_index << 20) + (1 << 19) + out_index
-            return (pointer, amount, address)
-        except:
-            print(traceback.format_exc())
-            return None
+    # async def get_from_daemon(self, key):
+    #     try:
+    #         tx_id = rh2s(key[:32])
+    #         out_index = bytes_to_int(key[32:])
+    #         tx = await self.rpc.getrawtransaction(tx_id, 1)
+    #         amount = int(tx["vout"][out_index]["value"] * 100000000)
+    #         script = parse_script(tx["vout"][out_index]["scriptPubKey"]["hex"])
+    #         try:
+    #             address = b"".join((bytes([script["nType"]]), script["addressHash"]))
+    #         except:
+    #             address = b"".join((bytes([script["nType"]]), script["scriptPubKey"]))
+    #         try:
+    #             block = self.restore_blocks_cache[tx["blockhash"]]
+    #         except:
+    #             block = await self.rpc.getblock(tx["blockhash"])
+    #             self.restore_blocks_cache[tx["blockhash"]] = block
+    #
+    #         tx_index = block["tx"].index(tx_id)
+    #         block_height  = block["height"]
+    #         pointer = (block_height << 39) + (tx_index << 20) + (1 << 19) + out_index
+    #         return (pointer, amount, address)
+    #     except:
+    #         print(traceback.format_exc())
+    #         return None
 
 
 
@@ -283,6 +280,39 @@ class UTXO():
             return i
         except:
             return None
+
+    async def load_utxo_from_daemon(self):
+        if not self.missed_failed: return
+        result = await self.rpc.batch([["getrawtransaction", rh2s(i[:32]), 1] for i in self.missed_failed])
+        hash_list = set()
+        for r in result:
+            if r["result"]["blockhash"] not in self.restore_blocks_cache:
+                hash_list.add(r["result"]["blockhash"])
+
+        result2 = await self.rpc.batch([["getblock", r] for r in hash_list])
+        for r in result2:
+           self.restore_blocks_cache[r["result"]["hash"]] = r["result"]
+
+        for key, r in zip(result):
+            out_index = bytes_to_int(key[32:])
+            tx=r["result"]
+            amount = int(tx["vout"][out_index]["value"] * 100000000)
+            script = parse_script(tx["vout"][out_index]["scriptPubKey"]["hex"])
+            try:
+                address = b"".join((bytes([script["nType"]]), script["addressHash"]))
+            except:
+                address = b"".join((bytes([script["nType"]]), script["scriptPubKey"]))
+            block = self.restore_blocks_cache[tx["blockhash"]]
+
+            tx_index = block["tx"].index(tx["txId"])
+            block_height = block["height"]
+            pointer = (block_height << 39) + (tx_index << 20) + (1 << 19) + out_index
+            self.loaded[key] = (pointer, amount, address)
+
+        while len(self.restore_blocks_cache) > 1000:
+            self.restore_blocks_cache.pop()
+
+
 
 
     async def load_utxo(self):
@@ -307,6 +337,10 @@ class UTXO():
                                                     row["amount"],
                                                     row["address"])
                     self.loaded_utxo_count += 1
+                if len(self.missed) > len(rows):
+                    for row in rows:
+                        if row["outpoint"] not in self.missed:
+                            self.missed_failed.append(row["outpoint"])
 
 
             elif self.db_type == "rocksdb":
@@ -337,6 +371,7 @@ class UTXO():
             self.read_from_db_time += time.time() - t
             self.read_from_db_batch_time += time.time() - t
             self.read_from_db_time_total += time.time() - t
+
             self.missed= deque()
         except:
             self.log.critical(str(traceback.format_exc()))

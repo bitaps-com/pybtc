@@ -697,6 +697,9 @@ class Connector:
                 await self.utxo.load_utxo()
                 t2 =time.time() - t2
                 self.batch_load_utxo += t2
+                if  self.cache_loading:
+                    if block["height"] > self.app_block_height_on_start:
+                        await self.utxo.load_utxo_from_daemon()
                 for o, s, q, i in missed:
                     block["rawTx"][q]["vIn"][i]["coin"] = self.utxo.get_loaded(o)
                     if  block["rawTx"][q]["vIn"][i]["coin"] is None:
@@ -704,9 +707,7 @@ class Connector:
                             raise Exception("utxo get failed ")
                         else:
                             if block["height"] > self.app_block_height_on_start:
-                                block["rawTx"][q]["vIn"][i]["coin"] = await self.utxo.get_from_daemon(o)
-                                if  block["rawTx"][q]["vIn"][i]["coin"] is None:
-                                    raise Exception("utxo get failed ")
+                                raise Exception("utxo get failed ")
                     c += 1
 
                 if c != ti and not self.cache_loading:
