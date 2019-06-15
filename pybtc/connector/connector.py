@@ -416,7 +416,6 @@ class Connector:
             if self.last_block_height < self.last_block_utxo_cached_height:
                 if not self.cache_loading:
                     self.log.info("Bootstrap UTXO cache ...")
-                    await self.utxo.restore_cache()
                 self.cache_loading = True
             else:
                 if self.cache_loading:
