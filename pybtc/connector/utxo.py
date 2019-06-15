@@ -304,7 +304,7 @@ class UTXO():
                 address = b"".join((bytes([script["nType"]]), script["scriptPubKey"]))
             block = self.restore_blocks_cache[tx["blockhash"]]
 
-            tx_index = block["tx"].index(tx["txId"])
+            tx_index = block["tx"].index(tx["txid"])
             block_height = block["height"]
             pointer = (block_height << 39) + (tx_index << 20) + (1 << 19) + out_index
             self.loaded[key] = (pointer, amount, address)
