@@ -694,8 +694,6 @@ class Connector:
                         if not self.cache_loading:
                             raise Exception("utxo get failed ")
                         else:
-                            print(block["height"])
-                            raise Exception("utxo get failed ")
                             if block["height"] > self.app_block_height_on_start:
                                 raise Exception("stop")
                     c += 1
