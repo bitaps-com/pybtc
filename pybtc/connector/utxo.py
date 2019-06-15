@@ -16,7 +16,7 @@ except: pass
 class UTXO():
     def __init__(self, db_type, db,  rpc, loop, log, cache_size):
         self.cache = MRU()  # utxo cache
-        self.restore_blocks_cache = LRU(100)  # utxo cache
+        self.restore_blocks_cache = LRU()  # utxo cache
 
         self.missed = deque()  # missed utxo
         self.missed_failed = deque()
