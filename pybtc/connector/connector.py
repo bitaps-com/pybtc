@@ -711,6 +711,7 @@ class Connector:
 
                 if c != ti and not self.cache_loading:
                     self.log.critical("utxo get failed (not all utxo received) " + block["hash"])
+                    self.log.critical(str((c, ti)))
                     raise Exception("utxo get failed ")
 
             self.total_received_tx += len(block["rawTx"])
