@@ -711,7 +711,7 @@ class Connector:
 
                 if c != ti and not self.cache_loading:
                     self.log.critical("utxo get failed (not all utxo received) " + block["hash"])
-                    self.log.critical(str((c, ti)))
+                    self.log.critical(str((c, ti, len(missed))))
                     raise Exception("utxo get failed ")
 
             self.total_received_tx += len(block["rawTx"])
@@ -720,6 +720,7 @@ class Connector:
         except Exception as err:
             self.log.critical("new block error %s " % err)
             self.log.critical(str(traceback.format_exc()))
+            raise
         finally:
             pass
 
