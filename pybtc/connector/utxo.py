@@ -338,11 +338,12 @@ class UTXO():
                                                     row["amount"],
                                                     row["address"])
                     self.loaded_utxo_count += 1
-                print(len(rows) , len(self.missed))
+
                 if len(self.missed) > len(rows):
+                    self.missed_failed = set(self.missed)
                     for row in rows:
                         if row["outpoint"] not in self.missed:
-                            self.missed_failed.append(row["outpoint"])
+                            self.missed.remove(row["outpoint"])
 
 
             elif self.db_type == "rocksdb":
