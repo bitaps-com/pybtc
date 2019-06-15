@@ -311,6 +311,7 @@ class UTXO():
 
         while len(self.restore_blocks_cache) > 1000:
             self.restore_blocks_cache.pop()
+        print(">>")
 
 
 
