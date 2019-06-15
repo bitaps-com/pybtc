@@ -260,7 +260,7 @@ class UTXO():
                 self.restore_blocks_cache[tx["blockhash"]] = block
 
             tx_index = block["tx"].index(tx_id)
-            block_height  = block["height"].index(tx_id)
+            block_height  = block["height"]
             pointer = (block_height << 39) + (tx_index << 20) + (1 << 19) + out_index
             return (pointer, amount, address)
         except:
