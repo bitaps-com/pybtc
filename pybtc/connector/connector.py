@@ -421,7 +421,6 @@ class Connector:
             else:
                 if self.cache_loading:
                     self.log.info("UTXO Cache bootstrap completed")
-
                 self.cache_loading = False
 
 
@@ -432,8 +431,11 @@ class Connector:
                 tx_bin_list = [s2rh(h) for h in block["tx"]]
             await self.verify_block_position(block)
 
-            if self.before_block_handler and not self.cache_loading:
-                await self.before_block_handler(block)
+            # call before block handler
+            if self.before_block_handler:
+                if not self.cache_loading or block["height"] > self.app_block_height_on_start:
+                    await self.before_block_handler(block)
+
             if self.deep_synchronization and self.block_batch_handler:
                 await self._block_as_transactions_batch(block)
             else:
@@ -450,12 +452,18 @@ class Connector:
                         self.utxo.last_block = block["height"]
                         self.utxo.create_checkpoint(self.app_last_block)
 
-            if self.block_batch_handler and not self.cache_loading:
-                t = time.time()
-                await self.block_batch_handler(block)
-                self.batch_handler += time.time() - t
-            if self.block_handler and not self.cache_loading:
+
+            if self.deep_synchronization:
+                if not self.cache_loading or block["height"] > self.app_block_height_on_start:
+                    if self.block_batch_handler:
+                        t = time.time()
+                        await self.block_batch_handler(block)
+                        self.batch_handler += time.time() - t
+                    else:
+                        await self.block_handler(block)
+            else:
                 await self.block_handler(block)
+
 
             self.block_headers_cache.set(block["hash"], block["height"])
             self.last_block_height = block["height"]
@@ -554,11 +562,12 @@ class Connector:
                                                                       / self.destroyed_coins, 4)))
                 self.log.debug("---------------------")
             # after block added handler
-            if self.after_block_handler and not self.cache_loading:
-                try:
-                    await self.after_block_handler(block)
-                except:
-                    pass
+            if self.after_block_handler:
+                if not self.cache_loading or block["height"] > self.app_block_height_on_start:
+                    try:
+                        await self.after_block_handler(block)
+                    except:
+                        pass
 
         except Exception as err:
             if self.await_tx:
@@ -695,6 +704,8 @@ class Connector:
                             raise Exception("utxo get failed ")
                         else:
                             if block["height"] > self.app_block_height_on_start:
+                                coin = await self.utxo.get_from_daemon(o)
+                                print(coin)
                                 raise Exception("stop")
                     c += 1
 
