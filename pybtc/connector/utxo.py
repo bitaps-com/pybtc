@@ -7,10 +7,15 @@ import traceback
 import time
 import pickle
 
+
 try: import rocksdb
 except: pass
 try: import plyvel
 except: pass
+
+def chunks_by_count(l, n):
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
 
 
 class UTXO():
@@ -283,32 +288,34 @@ class UTXO():
 
     async def load_utxo_from_daemon(self):
         if not self.missed_failed: return
-        result = await self.rpc.batch([["getrawtransaction", rh2s(i[:32]), 1] for i in self.missed_failed])
-        hash_list = set()
-        for r in result:
-            if r["result"]["blockhash"] not in self.restore_blocks_cache:
-                hash_list.add(r["result"]["blockhash"])
+        missed = chunks_by_count(self.missed_failed, 500)
+        for m in missed:
+            result = await self.rpc.batch([["getrawtransaction", rh2s(i[:32]), 1] for i in m])
+            hash_list = set()
+            for r in result:
+                if r["result"]["blockhash"] not in self.restore_blocks_cache:
+                    hash_list.add(r["result"]["blockhash"])
 
-        result2 = await self.rpc.batch([["getblock", r] for r in hash_list])
-        for r in result2:
-           self.restore_blocks_cache[r["result"]["hash"]] = r["result"]
+            result2 = await self.rpc.batch([["getblock", r] for r in hash_list])
+            for r in result2:
+               self.restore_blocks_cache[r["result"]["hash"]] = r["result"]
 
-        for key, r in zip(self.missed_failed, result):
-            out_index = bytes_to_int(key[32:])
-            tx=r["result"]
-            amount = int(tx["vout"][out_index]["value"] * 100000000)
-            script = parse_script(tx["vout"][out_index]["scriptPubKey"]["hex"])
-            try:
-                address = b"".join((bytes([script["nType"]]), script["addressHash"]))
-            except:
-                address = b"".join((bytes([script["nType"]]), script["scriptPubKey"]))
-            block = self.restore_blocks_cache[tx["blockhash"]]
+            for key, r in zip(m, result):
+                out_index = bytes_to_int(key[32:])
+                tx=r["result"]
+                amount = int(tx["vout"][out_index]["value"] * 100000000)
+                script = parse_script(tx["vout"][out_index]["scriptPubKey"]["hex"])
+                try:
+                    address = b"".join((bytes([script["nType"]]), script["addressHash"]))
+                except:
+                    address = b"".join((bytes([script["nType"]]), script["scriptPubKey"]))
+                block = self.restore_blocks_cache[tx["blockhash"]]
 
-            tx_index = block["tx"].index(tx["txid"])
-            block_height = block["height"]
-            pointer = (block_height << 39) + (tx_index << 20) + (1 << 19) + out_index
-            self.loaded[key] = (pointer, amount, address)
-
+                tx_index = block["tx"].index(tx["txid"])
+                block_height = block["height"]
+                pointer = (block_height << 39) + (tx_index << 20) + (1 << 19) + out_index
+                self.loaded[key] = (pointer, amount, address)
+        self.missed_failed = list()
         while len(self.restore_blocks_cache) > 1000:
             self.restore_blocks_cache.pop()
 
