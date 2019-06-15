@@ -338,6 +338,7 @@ class UTXO():
                                                     row["amount"],
                                                     row["address"])
                     self.loaded_utxo_count += 1
+                print(len(rows) , len(self.missed))
                 if len(self.missed) > len(rows):
                     for row in rows:
                         if row["outpoint"] not in self.missed:

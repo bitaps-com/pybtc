@@ -699,7 +699,7 @@ class Connector:
                 self.batch_load_utxo += t2
                 if  self.cache_loading:
                     if block["height"] > self.app_block_height_on_start:
-                        print("----->>")
+                        print("----- >>")
                         await self.utxo.load_utxo_from_daemon()
                 for o, s, q, i in missed:
                     block["rawTx"][q]["vIn"][i]["coin"] = self.utxo.get_loaded(o)
