@@ -262,6 +262,7 @@ class Connector:
 
             else:
                 self.app_block_height_on_start = self.last_block_utxo_cached_height
+            self.app_last_block = self.app_block_height_on_start
 
 
     async def zeromq_handler(self):
@@ -502,7 +503,7 @@ class Connector:
                         self.batch_handler = 0
                         self.batch_load_utxo = 0
                         self.batch_parsing = 0
-                        self.batch_time = 0
+                        self.batch_time = time.time()
 
                         self.log.debug("- Blocks --------------")
 
