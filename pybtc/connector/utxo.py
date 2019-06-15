@@ -242,7 +242,7 @@ class UTXO():
             # self.destroyed.append((key, i))
         return i
 
-    def get_from_daemon(self, key):
+    async def get_from_daemon(self, key):
         try:
             tx_id = rh2s(key[:32])
             out_index = bytes_to_int(key[32:])
