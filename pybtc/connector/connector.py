@@ -181,7 +181,7 @@ class Connector:
                 db = self.db_pool
             else:
                 db = self.db
-            self.utxo = UTXO(self.db_type, db,
+            self.utxo = UTXO(self.db_type, db, self.rpc,
                              self.loop, self.log,
                              self.utxo_cache_size if self.deep_synchronization else 0)
 
@@ -691,11 +691,15 @@ class Connector:
                 for o, s, q, i in missed:
                     block["rawTx"][q]["vIn"][i]["coin"] = self.utxo.get_loaded(o)
                     if  block["rawTx"][q]["vIn"][i]["coin"] is None:
-                        raise Exception("utxo get failed ")
+                        if not self.cache_loading:
+                            raise Exception("utxo get failed ")
+                        else:
+                            if block["height"] > self.app_block_height_on_start:
+                                raise Exception("stop")
                     c += 1
 
-                if c != ti:
-                    self.log.critical("utxo get failed " + rh2s(block["hash"]))
+                if c != ti and not self.cache_loading:
+                    self.log.critical("utxo get failed (not all utxo received)" + rh2s(block["hash"]))
                     raise Exception("utxo get failed ")
 
             self.total_received_tx += len(block["rawTx"])

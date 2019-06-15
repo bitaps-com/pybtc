@@ -1,8 +1,8 @@
-from pybtc import int_to_c_int, c_int_to_int, c_int_len
-from pybtc import int_to_bytes, bytes_to_int
+from pybtc import bytes_to_int, c_int_to_int, c_int_len
+from pybtc import int_to_bytes, rh2s, parse_script
 import asyncio
 from collections import OrderedDict, deque
-from pybtc  import MRU
+from pybtc  import MRU, LRU
 import traceback
 import time
 import pickle
@@ -14,8 +14,9 @@ except: pass
 
 
 class UTXO():
-    def __init__(self, db_type, db,  loop, log, cache_size):
+    def __init__(self, db_type, db,  rpc, loop, log, cache_size):
         self.cache = MRU()  # utxo cache
+        self.restore_blocks_cache = LRU(100)  # utxo cache
 
         self.missed = deque()  # missed utxo
         self.loaded = dict()   # loaded from db missed records
@@ -42,6 +43,7 @@ class UTXO():
         self.write_to_db = False
         self.load_utxo_future = asyncio.Future()
         self.load_utxo_future.set_result(True)
+        self.rpc = rpc
 
         # stats
         self._requests = 0
@@ -239,6 +241,36 @@ class UTXO():
             self._hit += 1
             # self.destroyed.append((key, i))
         return i
+
+    def get_from_daemon(self, key):
+        try:
+            tx_id = rh2s(key[:32])
+            out_index = bytes_to_int(key[32:])
+            tx = await self.rpc.getrawtransaction(tx_id, 1)
+            amount = tx["vout"][out_index]["value"] * 100000000
+            script = parse_script(tx["vout"][out_index]["scriptPubKey"]["hex"])
+            try:
+                address = b"".join((bytes([script["nType"]]), script["addressHash"]))
+            except:
+                address = b"".join((bytes([script["nType"]]), script["scriptPubKey"]))
+            try:
+                block = self.restore_blocks_cache[tx["blockhash"]]
+            except:
+                block = await self.rpc.getblock(tx["blockhash"])
+                self.restore_blocks_cache[tx["blockhash"]] = block
+
+            tx_index = block["tx"].index(tx_id)
+            block_height  = block["height"].index(tx_id)
+            pointer = (block_height << 39) + (tx_index << 20) + (1 << 19) + out_index
+            return (pointer, amount, address)
+        except:
+            print(traceback.format_exc())
+            return None
+
+
+
+
+
 
     def get_loaded(self, key):
         try:
