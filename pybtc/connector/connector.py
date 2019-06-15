@@ -159,7 +159,8 @@ class Connector:
                 continue
 
             self.log.info("Node best block height %s" % self.node_last_block)
-            self.log.info("Connector last block height %s" % self.last_block_height)
+            self.log.info("Connector last block height %s [%s]" % (self.last_block_height,
+                                                                   self.last_block_utxo_cached_height))
             self.log.info("Application last block height %s" % self.app_block_height_on_start)
 
             if self.node_last_block < self.last_block_height:
@@ -693,6 +694,8 @@ class Connector:
                         if not self.cache_loading:
                             raise Exception("utxo get failed ")
                         else:
+                            print(block["height"])
+                            raise Exception("utxo get failed ")
                             if block["height"] > self.app_block_height_on_start:
                                 raise Exception("stop")
                     c += 1
