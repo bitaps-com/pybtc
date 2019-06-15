@@ -27,7 +27,7 @@ class UTXO():
         self.deleted = deque()  # scheduled to delete
         self.deleted_utxo = deque()
 
-        self.destroyed = deque()
+        self.destroyed = set()
 
         self.checkpoint = 0
         self.checkpoints = list()
@@ -118,7 +118,11 @@ class UTXO():
                 lb = value[0] >> 39
 
                 self.cache.delete(key)
-                self.utxo_records.append((key, value[0], value[2], value[1]))
+                try:
+                    self.destroyed.remove(value[0])
+                except:
+                    self.utxo_records.append((key, value[0], value[2], value[1]))
+
                 self.pending_saved[key] = value
             self.last_checkpoint = self.checkpoint
             self.checkpoint = lb
@@ -228,7 +232,7 @@ class UTXO():
         self._requests += 1
         i = None
         try:
-            i = self.cache.delete(key)
+            i = self.cache[key]
         except:
             try:
                 i = self.pending_saved[key]
@@ -239,7 +243,7 @@ class UTXO():
             self.missed.append(key)
         else:
             self._hit += 1
-            # self.destroyed.append((key, i))
+            self.destroyed.add(i[0])
         return i
 
     async def get_from_daemon(self, key):
