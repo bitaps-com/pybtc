@@ -707,12 +707,12 @@ class Connector:
                                 block["rawTx"][q]["vIn"][i]["coin"] = await self.utxo.get_from_daemon(o)
                                 if  block["rawTx"][q]["vIn"][i]["coin"] is None:
                                     raise Exception("utxo get failed ")
-                        c += 1
+                    c += 1
 
                 if c != ti and not self.cache_loading:
                     self.log.critical("utxo get failed (not all utxo received) " + block["hash"])
                     self.log.critical(str((c, ti, len(missed))))
-                    raise Exception("utxo get failed ")
+                    raise Exception("utxo get failed " + block["hash"])
 
             self.total_received_tx += len(block["rawTx"])
             self.total_received_tx_last += len(block["rawTx"])
