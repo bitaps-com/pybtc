@@ -293,7 +293,7 @@ class UTXO():
         for r in result2:
            self.restore_blocks_cache[r["result"]["hash"]] = r["result"]
 
-        for key, r in zip(result):
+        for key, r in zip(self.missed_failed, result):
             out_index = bytes_to_int(key[32:])
             tx=r["result"]
             amount = int(tx["vout"][out_index]["value"] * 100000000)
@@ -344,6 +344,7 @@ class UTXO():
                     for row in rows:
                         if row["outpoint"] not in self.missed:
                             self.missed.remove(row["outpoint"])
+                    self.missed_failed = list(self.missed)
 
 
             elif self.db_type == "rocksdb":
