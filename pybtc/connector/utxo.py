@@ -247,7 +247,7 @@ class UTXO():
             tx_id = rh2s(key[:32])
             out_index = bytes_to_int(key[32:])
             tx = await self.rpc.getrawtransaction(tx_id, 1)
-            amount = tx["vout"][out_index]["value"] * 100000000
+            amount = int(tx["vout"][out_index]["value"] * 100000000)
             script = parse_script(tx["vout"][out_index]["scriptPubKey"]["hex"])
             try:
                 address = b"".join((bytes([script["nType"]]), script["addressHash"]))

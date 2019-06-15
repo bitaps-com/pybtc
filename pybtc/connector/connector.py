@@ -704,10 +704,8 @@ class Connector:
                             raise Exception("utxo get failed ")
                         else:
                             if block["height"] > self.app_block_height_on_start:
-                                coin = await self.utxo.get_from_daemon(o)
-                                print(coin)
-                                raise Exception("stop")
-                    c += 1
+                                block["rawTx"][q]["vIn"][i]["coin"] = await self.utxo.get_from_daemon(o)
+                                c += 1
 
                 if c != ti and not self.cache_loading:
                     self.log.critical("utxo get failed (not all utxo received)" + rh2s(block["hash"]))
