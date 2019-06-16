@@ -263,6 +263,8 @@ class Connector:
             else:
                 self.app_block_height_on_start = self.last_block_utxo_cached_height
             self.app_last_block = self.app_block_height_on_start
+            if self.last_block_utxo_cached_height < self.app_block_height_on_start:
+                self.last_block_utxo_cached_height = self.app_block_height_on_start
 
 
     async def zeromq_handler(self):
