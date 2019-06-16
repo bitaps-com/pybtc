@@ -288,7 +288,7 @@ class UTXO():
 
     async def load_utxo_from_daemon(self):
         if not self.missed_failed: return
-        missed = chunks_by_count(self.missed_failed, 500)
+        missed = chunks_by_count(self.missed_failed, 50)
         for m in missed:
             result = await self.rpc.batch([["getrawtransaction", rh2s(i[:32]), 1] for i in m])
             hash_list = set()
