@@ -308,7 +308,7 @@ class UTXO():
                 try:
                     address = b"".join((bytes([script["nType"]]), script["addressHash"]))
                 except:
-                    address = b"".join((bytes([script["nType"]]), script["scriptPubKey"]))
+                    address = b"".join((bytes([script["nType"]]), script["script"]))
                 block = self.restore_blocks_cache[tx["blockhash"]]
 
                 tx_index = block["tx"].index(tx["txid"])
