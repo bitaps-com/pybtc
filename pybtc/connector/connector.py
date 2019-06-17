@@ -454,8 +454,7 @@ class Connector:
 
 
             if not self.deep_synchronization:
-                if not  self.block_batch_handler:
-                    tx_bin_list = [block["rawTx"][i]["txId"] for i in block["rawTx"]]
+                tx_bin_list = [block["rawTx"][i]["txId"] for i in block["rawTx"]]
             else:
                 tx_bin_list = [s2rh(h) for h in block["tx"]]
             await self.verify_block_position(block)
