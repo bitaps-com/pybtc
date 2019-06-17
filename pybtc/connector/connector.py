@@ -339,6 +339,13 @@ class Connector:
                     if not self.get_next_block_mutex:
                         self.get_next_block_mutex = True
                         self.loop.create_task(self.get_next_block())
+                    try:
+                        h = await self.rpc.getblockcount()
+                        if self.node_last_block < h:
+                            self.node_last_block = h
+                            self.log.info("watchdog -> bitcoind node last block %s" % h)
+                    except:
+                        pass
             except asyncio.CancelledError:
                 self.log.info("connector watchdog terminated")
                 break

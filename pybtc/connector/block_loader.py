@@ -32,7 +32,6 @@ class BlockLoader:
         self.worker_busy = dict()
         self.parent = parent
         self.last_batch_size = 0
-        self.last_cleared_block = 0
         self.loading_task = None
         self.dsn = dsn
         self.log = parent.log
@@ -45,7 +44,6 @@ class BlockLoader:
 
 
     async def watchdog(self):
-        self.last_cleared_block = self.parent.last_block_height
         while True:
             try:
                 if self.loading_task is None or self.loading_task.done():
@@ -62,7 +60,7 @@ class BlockLoader:
                                 except: pass
 
             except asyncio.CancelledError:
-                self.log.info("connector watchdog terminated")
+                self.log.info("block loader watchdog stopped")
                 break
             except Exception as err:
                 self.log.error(str(traceback.format_exc()))
@@ -77,6 +75,7 @@ class BlockLoader:
         self.height = self.parent.last_block_height + 1
 
         while self.height < target_height:
+            target_height = self.parent.node_last_block - self.parent.deep_sync_limit
             new_requests = 0
             if self.parent.block_preload._store_size < self.parent.block_preload_cache_limit:
                 try:
@@ -104,6 +103,11 @@ class BlockLoader:
                     self.log.error("Loading task  error %s " % err)
             else:
                 await  asyncio.sleep(1)
+        self.log.info("block loader reached target block %s" % target_height)
+        self.log.debug("    Cache first block %s; "
+                       "cache last block %s;" % (next(iter(self.parent.block_preload._store)),
+                                                 next(reversed(self.parent.block_preload._store))))
+        self.watchdog_task.cancel()
         [self.worker[p].terminate() for p in self.worker]
         for p in self.worker_busy: self.worker_busy[p] = False
 
