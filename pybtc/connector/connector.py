@@ -37,6 +37,7 @@ class Connector:
                  before_block_handler=None, block_handler=None, after_block_handler=None,
                  block_batch_handler=None,
                  flush_app_caches_handler=None,
+                 synchronization_completed_handler=None,
                  block_timeout=30,
                  deep_sync_limit=20, backlog=0, mempool_tx=True,
                  rpc_batch_limit=50, rpc_threads_limit=100, rpc_timeout=100,
@@ -68,6 +69,7 @@ class Connector:
         self.after_block_handler = after_block_handler
         self.block_batch_handler = block_batch_handler
         self.flush_app_caches_handler = flush_app_caches_handler
+        self.synchronization_completed_handler = synchronization_completed_handler
         self.block_preload_batch_size_limit = block_preload_batch_size_limit
         self.deep_sync_limit = deep_sync_limit
         self.backlog = backlog
@@ -391,7 +393,8 @@ class Connector:
 
                             await self.utxo.save_checkpoint()
                             self.log.info("Flush utxo cache completed")
-
+                        if self.synchronization_completed_handler:
+                            await self.synchronization_completed_handler()
                         self.deep_synchronization = False
 
                 block = None
