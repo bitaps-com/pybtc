@@ -373,7 +373,15 @@ class Connector:
                     if self.deep_synchronization:
                         self.log.info("Normal synchronization mode")
                         # clear preload caches
-                        self.deep_synchronization = False
+                        if len(self.utxo.cache):
+                            self.log.info("Flush utxo cache ...")
+                            self.utxo.checkpoints.append(self.app_last_block)
+                            self.utxo.size_limit = 0
+                            self.utxo.create_checkpoint(self.app_last_block)
+                            self.deep_synchronization = False
+                            await self.utxo.save_checkpoint()
+                            self.log.info("Flush utxo cache completed")
+
                 block = None
                 if self.deep_synchronization:
                     raw_block = self.block_preload.pop(self.last_block_height + 1)
