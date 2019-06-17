@@ -375,7 +375,13 @@ class Connector:
                         # clear preload caches
                         if len(self.utxo.cache):
                             self.log.info("Flush utxo cache ...")
-                            self.utxo.checkpoints = [self.app_last_block]
+                            while self.app_last_block < self.last_block_height:
+                                self.log.debug("Last block %s; App last block %s;" % (self.last_block_height,
+                                                                                      self.app_last_block))
+                                await asyncio.sleep(3)
+
+
+                            self.utxo.checkpoints.append(self.last_block_height)
                             self.utxo.size_limit = 0
                             self.utxo.create_checkpoint(self.app_last_block)
 
