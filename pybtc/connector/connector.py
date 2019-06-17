@@ -385,7 +385,7 @@ class Connector:
                                 await asyncio.sleep(3)
 
                             self.log.info("Last block %s" % self.last_block_height)
-                            self.utxo.checkpoints.append(self.last_block_height)
+                            self.utxo.checkpoints=[self.last_block_height]
                             self.utxo.size_limit = 0
                             self.utxo.create_checkpoint(self.app_last_block)
 
