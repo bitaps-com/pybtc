@@ -32,6 +32,7 @@ class BlockLoader:
         self.worker_busy = dict()
         self.parent = parent
         self.last_batch_size = 0
+        self.reached_height = 0
         self.loading_task = None
         self.dsn = dsn
         self.log = parent.log
@@ -74,6 +75,7 @@ class BlockLoader:
         target_height = self.parent.node_last_block - self.parent.deep_sync_limit
         self.height = self.parent.last_block_height + 1
 
+
         while self.height < target_height:
             target_height = self.parent.node_last_block - self.parent.deep_sync_limit
             new_requests = 0
@@ -103,11 +105,15 @@ class BlockLoader:
                     self.log.error("Loading task  error %s " % err)
             else:
                 await  asyncio.sleep(1)
+
+        self.watchdog_task.cancel()
+        while self.reached_height < target_height:
+            await asyncio.sleep(1)
         self.log.info("block loader reached target block %s" % target_height)
         self.log.debug("    Cache first block %s; "
                        "cache last block %s;" % (next(iter(self.parent.block_preload._store)),
                                                  next(reversed(self.parent.block_preload._store))))
-        self.watchdog_task.cancel()
+
         [self.worker[p].terminate() for p in self.worker]
         for p in self.worker_busy: self.worker_busy[p] = False
 
@@ -207,6 +213,7 @@ class BlockLoader:
                     if  self.parent.utxo.checkpoints:
                         if self.parent.utxo.checkpoints[-1] < i:
                             self.parent.utxo.checkpoints.append(i)
+                            self.reached_height = i
                     else:
                         self.parent.utxo.checkpoints.append(i)
 
