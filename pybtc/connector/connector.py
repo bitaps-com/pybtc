@@ -391,7 +391,9 @@ class Connector:
                             self.utxo.checkpoints=[self.last_block_height]
                             self.utxo.size_limit = 0
                             while not self.utxo.save_process:
-                                await asyncio.sleep(5)
+                                self.log.info("wait for utxo cache flush ...")
+                                await self.utxo.save_checkpoint()
+                                await asyncio.sleep(10)
                             self.utxo.create_checkpoint(self.app_last_block)
                             await self.utxo.save_checkpoint()
                             self.log.info("Flush utxo cache completed")
