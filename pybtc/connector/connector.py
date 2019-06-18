@@ -377,22 +377,23 @@ class Connector:
                     if self.deep_synchronization:
                         self.log.info("Switch from deep synchronization mode")
                         if self.flush_app_caches_handler:
-                            await self.flush_app_caches_handler()
+                            await self.flush_app_caches_handler(self.last_block_height)
                         # clear preload caches
                         if len(self.utxo.cache):
                             self.log.info("Flush utxo cache ...")
                             while self.app_last_block < self.last_block_height:
-                                self.log.debug("Last block %s; App last block %s;" % (self.last_block_height,
-                                                                                      self.app_last_block))
-                                await asyncio.sleep(3)
+                                self.log.debug("Waiting app ... Last block %s; "
+                                               "App last block %s;" % (self.last_block_height,
+                                                                       self.app_last_block))
+                                await asyncio.sleep(5)
 
                             self.log.info("Last block %s" % self.last_block_height)
                             self.utxo.checkpoints=[self.last_block_height]
                             self.utxo.size_limit = 0
                             self.utxo.create_checkpoint(self.app_last_block)
-
                             await self.utxo.save_checkpoint()
                             self.log.info("Flush utxo cache completed")
+
                         if self.synchronization_completed_handler:
                             await self.synchronization_completed_handler()
                         self.deep_synchronization = False
