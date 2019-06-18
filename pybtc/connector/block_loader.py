@@ -109,8 +109,9 @@ class BlockLoader:
 
 
         self.watchdog_task.cancel()
-        while next(reversed(self.parent.block_preload._store)) >= target_height:
-            await asyncio.sleep(1)
+        if self.parent.block_preload._store:
+            while next(reversed(self.parent.block_preload._store)) >= target_height:
+                await asyncio.sleep(1)
         self.log.info("block loader reached target block %s" % target_height)
         self.log.debug("    Cache first block %s; "
                        "cache last block %s;" % (next(iter(self.parent.block_preload._store)),
