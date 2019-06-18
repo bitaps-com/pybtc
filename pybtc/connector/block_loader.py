@@ -198,9 +198,7 @@ class BlockLoader:
         while True:
             msg_type, msg = await self.pipe_get_msg(self.worker[index].reader)
             if msg_type ==  b'pipe_read_error':
-                if not self.worker[index].is_alive():
-                    return
-                continue
+                return
 
             if msg_type == b'result':
                 self.worker_busy[index] = False
