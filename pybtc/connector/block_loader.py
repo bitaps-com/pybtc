@@ -107,19 +107,20 @@ class BlockLoader:
             else:
                 await  asyncio.sleep(1)
 
+        try:
+            self.watchdog_task.cancel()
+            if self.parent.block_preload._store:
+                while next(reversed(self.parent.block_preload._store)) >= target_height:
+                    await asyncio.sleep(1)
+            self.log.info("block loader reached target block %s" % target_height)
+            self.log.debug("    Cache first block %s; "
+                           "cache last block %s;" % (next(iter(self.parent.block_preload._store)),
+                                                     next(reversed(self.parent.block_preload._store))))
 
-        self.watchdog_task.cancel()
-        if self.parent.block_preload._store:
-            while next(reversed(self.parent.block_preload._store)) >= target_height:
-                await asyncio.sleep(1)
-        self.log.info("block loader reached target block %s" % target_height)
-        self.log.debug("    Cache first block %s; "
-                       "cache last block %s;" % (next(iter(self.parent.block_preload._store)),
-                                                 next(reversed(self.parent.block_preload._store))))
-
-        [self.worker[p].terminate() for p in self.worker]
-        for p in self.worker_busy: self.worker_busy[p] = False
-
+            [self.worker[p].terminate() for p in self.worker]
+            for p in self.worker_busy: self.worker_busy[p] = False
+        except:
+            print(traceback.format_exc())
 
 
     async def start_worker(self,index):
