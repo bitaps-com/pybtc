@@ -77,6 +77,7 @@ class BlockLoader:
 
 
         while self.height < target_height:
+            print('>>', self.height, target_height)
             target_height = self.parent.node_last_block - self.parent.deep_sync_limit
             new_requests = 0
             if self.parent.block_preload._store_size < self.parent.block_preload_cache_limit:
@@ -105,6 +106,7 @@ class BlockLoader:
                     self.log.error("Loading task  error %s " % err)
             else:
                 await  asyncio.sleep(1)
+
 
         self.watchdog_task.cancel()
         while next(reversed(self.parent.block_preload._store)) >= target_height:
