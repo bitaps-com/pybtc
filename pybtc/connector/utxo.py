@@ -190,17 +190,7 @@ class UTXO():
                                   "WHERE name = 'last_block';", int_to_bytes(self.checkpoint))
                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                   "WHERE name = 'last_cached_block';", int_to_bytes(self.last_block))
-               # await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-               #                    "WHERE name = 'cache_restore';", self.destroyed_backup)
 
-    # async def restore_cache(self):
-    #     async with self.db.acquire() as conn:
-    #         row = await conn.fetchval("SELECT value FROM connector_utxo_state "
-    #                                   "WHERE name = 'cache_restore' LIMIT 1")
-    #     if row:
-    #         self.deleted = pickle.loads(row["value"])
-    #         for r in self.deleted:
-    #             self.restored[r[0]] = r[1]
 
 
     async def save_checkpoint(self):
