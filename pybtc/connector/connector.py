@@ -497,8 +497,7 @@ class Connector:
                             if not self.sync_utxo.save_process:
                                 if self.sync_utxo.checkpoints and not self.cache_loading:
                                     if self.sync_utxo.checkpoints[0] < block["height"]:
-                                        self.sync_utxo.last_block = block["height"]
-                                        self.sync_utxo.create_checkpoint(self.app_last_block)
+                                        self.sync_utxo.create_checkpoint(block["height"], self.app_last_block)
                                         if self.sync_utxo.save_process:
                                             self.loop.create_task(self.sync_utxo.commit())
 
@@ -617,7 +616,7 @@ class Connector:
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
                                     outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                                    self.sync_utxo.get(outpoint, height)
+                                    self.sync_utxo.get(outpoint)
                                 except:
                                     try:
                                         # coin was loaded from db on preload stage
@@ -629,7 +628,7 @@ class Connector:
                                         self.sync_utxo.deleted.append(outpoint)
                                     except:
                                         outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                                        r = self.sync_utxo.get(outpoint, height)
+                                        r = self.sync_utxo.get(outpoint)
                                         if r:
                                             tx["vIn"][i]["coin"] = r
                                             c += 1
@@ -647,7 +646,7 @@ class Connector:
                     if block["height"] > self.app_block_height_on_start:
                         await self.sync_utxo.load_utxo_from_daemon()
                 for o, s, q, i in missed:
-                    block["rawTx"][q]["vIn"][i]["coin"] = self.sync_utxo.get_loaded(o, height)
+                    block["rawTx"][q]["vIn"][i]["coin"] = self.sync_utxo.get_loaded(o)
                     if  block["rawTx"][q]["vIn"][i]["coin"] is None:
                         if not self.cache_loading:
                             raise Exception("utxo get failed ")

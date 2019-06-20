@@ -64,14 +64,12 @@ class UTXO():
         self.loaded_utxo_count = 0
 
 
-    def get(self, key, block_height):
+    def get(self, key):
         #
         # get and destroy unspent coin from cache
         # in case coin in pending saved list, schedule to delete this coin from db
         # in case coin not exist add to missed coin list
         #
-        if block_height > self.last_block: self.last_block = block_height
-
         self._requests += 1
         i = None
 
@@ -202,9 +200,7 @@ class UTXO():
             self.restore_blocks_cache.pop()
 
 
-    def get_loaded(self, key, block_height):
-        if block_height > self.last_block:
-            self.last_block = block_height
+    def get_loaded(self, key):
         try:
             i = self.loaded.pop(key)
             self.scheduled_to_delete.append(key)
@@ -213,8 +209,9 @@ class UTXO():
             return None
 
 
-    def create_checkpoint(self, app_last_block = None):
+    def create_checkpoint(self, last_block, app_last_block = None):
         # check checkpoints state
+        self.last_block = last_block
         if  not self.checkpoints: return
         checkpoints = set()
         for i in self.checkpoints:
