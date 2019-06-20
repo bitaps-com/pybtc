@@ -493,9 +493,17 @@ class Connector:
                 if self.total_received_tx - self.total_received_tx_stat > 100000:
                     self.report_sync_process(block["height"])
                     if self.utxo_data:
-                        self.sync_utxo.create_checkpoint(self.app_last_block)
-                        if self.sync_utxo.save_process:
-                            self.loop.create_task(self.sync_utxo.commit())
+                        if self.sync_utxo.len() > self.sync_utxo.size_limit:
+                            if not self.sync_utxo.save_process:
+                                if self.sync_utxo.checkpoints and not self.cache_loading:
+                                    if self.sync_utxo.checkpoints[0] < block["height"]:
+                                        self.sync_utxo.last_block = block["height"]
+                                        self.sync_utxo.create_checkpoint(self.app_last_block)
+                                        if self.sync_utxo.save_process:
+                                            self.loop.create_task(self.sync_utxo.commit())
+
+
+
             else:
                 # call before block handler
                 if self.before_block_handler:
