@@ -609,26 +609,26 @@ class Connector:
                             inp = tx["vIn"][i]
                             try:
                                 tx["vIn"][i]["coin"] = inp["_a_"]
-                                c += 1
                                 self.preload_cached_annihilated += 1
                                 self.preload_cached_total += 1
+                                c += 1
                             except:
                                 try:
                                     tx["vIn"][i]["coin"] = inp["_c_"]
-                                    c += 1
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
                                     outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                     self.sync_utxo.get(outpoint)
+                                    c += 1
                                 except:
                                     try:
                                         # coin was loaded from db on preload stage
                                         tx["vIn"][i]["coin"] = inp["_l_"]
-                                        c += 1
                                         self.preload_cached_total += 1
                                         self.preload_cached += 1
                                         outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                         self.sync_utxo.deleted.append(outpoint)
+                                        c += 1
                                     except:
                                         outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                         r = self.sync_utxo.get(outpoint)
@@ -651,15 +651,15 @@ class Connector:
                 for o, s, q, i in missed:
                     block["rawTx"][q]["vIn"][i]["coin"] = self.sync_utxo.get_loaded(o)
                     if  block["rawTx"][q]["vIn"][i]["coin"] is None:
-                        if not self.cache_loading:
-                            raise Exception("utxo get failed ")
-                        else:
+                        if self.cache_loading:
                             if height > self.app_block_height_on_start:
                                 raise Exception("utxo get failed ")
+                        else:
+                            raise Exception("utxo get failed ")
                     c += 1
 
                 if c != ti and not self.cache_loading:
-                    raise Exception("fatal error utxo get failed " + height)
+                    raise Exception("fatal error utxo get failed  %s" % height)
 
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])
