@@ -1,27 +1,34 @@
+from pybtc.functions.tools import bytes_to_int
+from pybtc.functions.tools import int_to_bytes
+from pybtc.connector.utils import decode_block_tx
+from pybtc import MRU
 import asyncio
 import os
 from multiprocessing import Process
-from pybtc.functions.tools import int_to_bytes, bytes_to_int
 from concurrent.futures import ThreadPoolExecutor
+import logging
+import signal
+import sys
+import traceback
+from collections import deque
+import pickle
+
+
+try:
+    import asyncpg
+except:
+    pass
 
 try:
     from setproctitle import setproctitle
 except:
     raise Exception("required module setproctitle")
 
-import logging
-import signal
-import sys
-import aiojsonrpc
-import traceback
-from pybtc.connector.utils import decode_block_tx
-from collections import deque
-import _pickle as pickle
-from pybtc import MRU
 try:
-    import asyncpg
+    import aiojsonrpc
 except:
-    pass
+    raise Exception("required module aiojsonrpc")
+
 
 
 class BlockLoader:
@@ -120,7 +127,6 @@ class BlockLoader:
         for p in self.worker_busy: self.worker_busy[p] = False
 
 
-
     async def start_worker(self,index):
         self.log.info('Start block loader worker %s' % index)
         # prepare pipes for communications
@@ -150,7 +156,6 @@ class BlockLoader:
         self.log.info('Block loader worker %s is stopped' % index)
 
 
-
     async def get_pipe_reader(self, fd_reader):
         reader = asyncio.StreamReader()
         protocol = asyncio.StreamReaderProtocol(reader)
@@ -160,6 +165,7 @@ class BlockLoader:
             return None
         return reader
 
+
     async def get_pipe_writer(self, fd_writer):
         try:
             wt, wp = await self.loop.connect_write_pipe(asyncio.streams.FlowControlMixin, fd_writer)
@@ -167,6 +173,7 @@ class BlockLoader:
         except:
             return None
         return writer
+
 
     async def pipe_get_msg(self, reader):
         while True:
@@ -185,13 +192,13 @@ class BlockLoader:
             except:
                 return b'pipe_read_error', b''
 
+
     async def pipe_sent_msg(self, writer, msg_type, msg):
         msg_type = msg_type[:20].ljust(20)
         msg = msg_type + msg
         msg = b''.join((b'ME', len(msg).to_bytes(4, byteorder='little'), msg))
         writer.write(msg)
         await writer.drain()
-
 
 
     async def message_loop(self, index):
@@ -387,9 +394,9 @@ class Worker:
             pass
 
 
-
     def terminate(self,a,b):
         sys.exit(0)
+
 
     async def get_pipe_reader(self, fd_reader):
         reader = asyncio.StreamReader()
@@ -400,6 +407,7 @@ class Worker:
             return None
         return reader
 
+
     async def get_pipe_writer(self, fd_writer):
         try:
             wt, wp = await self.loop.connect_write_pipe(asyncio.streams.FlowControlMixin, fd_writer)
@@ -407,6 +415,7 @@ class Worker:
         except:
             return None
         return writer
+
 
     async def pipe_get_msg(self, reader):
         while True:
@@ -424,6 +433,7 @@ class Worker:
                     return b'pipe_read_error', b''
             except:
                 return b'pipe_read_error', b''
+
 
     async def pipe_sent_msg(self, msg_type, msg):
         msg_type = msg_type[:20].ljust(20)

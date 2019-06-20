@@ -1,14 +1,20 @@
 from pybtc.functions.tools import rh2s
-from pybtc.functions.tools import var_int_to_int, var_int_len
+from pybtc.functions.tools import var_int_to_int
+from pybtc.functions.tools import var_int_len
 from pybtc.functions.tools import read_var_int
 from pybtc.functions.hash import double_sha256
 from pybtc.transaction import Transaction
-from pybtc.functions.block import bits_to_target, target_to_difficulty
+from pybtc.functions.block import target_to_difficulty
+from pybtc.functions.block import bits_to_target
 from struct import unpack, pack
 import io
-import time
 import sys
 from collections import OrderedDict
+
+
+def chunks_by_count(l, n):
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
 
 
 def get_stream(stream):

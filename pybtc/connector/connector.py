@@ -1,11 +1,12 @@
 from pybtc.functions.tools import rh2s, s2rh
 from pybtc.connector.block_loader import BlockLoader
-from pybtc.connector.utxo import UTXO
+from pybtc.connector.utxo import UTXO, UUTXO
 from pybtc.connector.utils import decode_block_tx
 from pybtc.connector.utils import Cache
 from pybtc.connector.utils import seconds_to_age
 from pybtc.transaction import Transaction
 from pybtc import int_to_bytes, bytes_to_int
+from pybtc import MRU
 from collections import deque
 import traceback
 
@@ -84,7 +85,8 @@ class Connector:
 
         # state and stats
         self.node_last_block = None
-        self.utxo = None
+        self.sync_utxo = None
+        self.uutxo = None
         self.cache_loading = False
         self.app_block_height_on_start = int(last_block_height) if int(last_block_height) else 0
         self.last_block_height = 0
@@ -123,12 +125,12 @@ class Connector:
         # cache and system
         self.block_preload_cache_limit = block_preload_cache_limit
         self.block_hashes_cache_limit = block_hashes_cache_limit
-        self.tx_cache_limit = 100 * 100000
+        self.tx_cache_limit = 144 * 5000
         self.block_headers_cache_limit = 100 * 100000
         self.block_preload = Cache(max_size=self.block_preload_cache_limit, clear_tail=False)
         self.block_hashes = Cache(max_size=self.block_hashes_cache_limit)
         self.block_hashes_preload_mutex = False
-        self.tx_cache = Cache(max_size=self.tx_cache_limit)
+        self.tx_cache = MRU(self.tx_cache_limit)
         self.block_headers_cache = Cache(max_size=self.block_headers_cache_limit)
 
         self.block_txs_request = None
@@ -186,9 +188,9 @@ class Connector:
                 db = self.db_pool
             else:
                 db = self.db
-            self.utxo = UTXO(self.db_type, db, self.rpc,
-                             self.loop, self.log,
-                             self.utxo_cache_size if self.deep_synchronization else 0)
+            self.sync_utxo = UTXO(self.db_type, db, self.rpc, self.loop, self.log, self.utxo_cache_size)
+            self.uutxo = UUTXO(self.db_type, db, self.log)
+
 
         h = self.last_block_height
         if h < len(self.chain_tail):
@@ -236,6 +238,21 @@ class Connector:
                                                               amount  BIGINT,
                                                               PRIMARY KEY(outpoint));
                                        """)
+                    await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                              connector_unconfirmed_utxo (outpoint BYTEA,
+                                                                          address BYTEA,
+                                                                          amount  BIGINT,
+                                                                          PRIMARY KEY(outpoint));                                                      
+                                       """)
+                    await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                              connector_unconfirmed_stxo (outpoint BYTEA,
+                                                                          sequence  INT,
+                                                                          tx_id BYTEA,
+                                                                          input_index INT,
+                                                                          PRIMARY KEY(outpoint,
+                                                                                      sequence));                                                      
+                                       """)
+
                     await conn.execute("""CREATE TABLE IF NOT EXISTS 
                                               connector_utxo_state (name VARCHAR,
                                                                     value BYTEA,
@@ -379,7 +396,7 @@ class Connector:
                         if self.flush_app_caches_handler:
                             await self.flush_app_caches_handler(self.last_block_height)
                         # clear preload caches
-                        if len(self.utxo.cache):
+                        if len(self.sync_utxo.cache):
                             self.log.info("Flush utxo cache ...")
                             while self.app_last_block < self.last_block_height:
                                 self.log.debug("Waiting app ... Last block %s; "
@@ -388,14 +405,14 @@ class Connector:
                                 await asyncio.sleep(5)
 
                             self.log.info("Last block %s" % self.last_block_height)
-                            self.utxo.checkpoints=[self.last_block_height]
-                            self.utxo.size_limit = 0
-                            while  self.utxo.save_process:
+                            self.sync_utxo.checkpoints=[self.last_block_height]
+                            self.sync_utxo.size_limit = 0
+                            while  self.sync_utxo.save_process:
                                 self.log.info("wait for utxo cache flush ...")
-                                await self.utxo.save_checkpoint()
+                                await self.sync_utxo.commit()
                                 await asyncio.sleep(10)
-                            self.utxo.create_checkpoint(self.app_last_block)
-                            await self.utxo.save_checkpoint()
+                            self.sync_utxo.create_checkpoint(self.app_last_block)
+                            await self.sync_utxo.commit()
                             self.log.info("Flush utxo cache completed")
 
                         if self.synchronization_completed_handler:
@@ -452,6 +469,7 @@ class Connector:
 
         try:
             self.active_block = asyncio.Future()
+
             if self.last_block_height < self.last_block_utxo_cached_height:
                 if not self.cache_loading:
                     self.log.info("Bootstrap UTXO cache ...")
@@ -461,143 +479,42 @@ class Connector:
                     self.log.info("UTXO Cache bootstrap completed")
                 self.cache_loading = False
 
-
-            if not self.deep_synchronization:
-                tx_bin_list = [block["rawTx"][i]["txId"] for i in block["rawTx"]]
-            else:
-                tx_bin_list = [s2rh(h) for h in block["tx"]]
             await self.verify_block_position(block)
 
-            # call before block handler
-            if self.before_block_handler:
-                if not self.cache_loading or block["height"] > self.app_block_height_on_start:
-                    await self.before_block_handler(block)
-
-            if self.deep_synchronization and self.block_batch_handler:
-                await self._block_as_transactions_batch(block)
-            else:
-                await self.fetch_block_transactions(block, tx_bin_list)
-
-            if self.utxo_data:
-                try:
-                    self.utxo.checkpoints.append(block["checkpoint"])
-                except: pass
-                if self.utxo.len() > self.utxo.size_limit and \
-                   not self.utxo.save_process and \
-                   self.utxo.checkpoints and  not self.cache_loading:
-                    if self.utxo.checkpoints[0] < block["height"]:
-                        self.utxo.last_block = block["height"]
-                        self.utxo.create_checkpoint(self.app_last_block)
-
-
             if self.deep_synchronization:
+                await self._block_as_transactions_batch(block)
+
                 if not self.cache_loading or block["height"] > self.app_block_height_on_start:
                     if self.block_batch_handler:
                         t = time.time()
                         await self.block_batch_handler(block)
                         self.batch_handler += time.time() - t
-                    else:
-                        await self.block_handler(block)
+
+                if self.total_received_tx - self.total_received_tx_stat > 100000:
+                    self.report_sync_process(block["height"])
+                    if self.utxo_data:
+                        self.sync_utxo.create_checkpoint(self.app_last_block)
+                        if self.sync_utxo.save_process:
+                            self.loop.create_task(self.sync_utxo.commit())
             else:
-                await self.block_handler(block)
+                # call before block handler
+                if self.before_block_handler:
+                    await self.before_block_handler(block)
+
+                await self.fetch_block_transactions(block)
+                raise Exception("stop")
+                if self.block_handler:
+                    await self.block_handler(block)
+
+                # add to  utxo
+                # remover from uutxo and
+                # save checkpoint
 
 
             self.block_headers_cache.set(block["hash"], block["height"])
             self.last_block_height = block["height"]
-
-            if self.utxo_data and self.utxo.save_process:
-                self.loop.create_task(self.utxo.save_checkpoint())
-
-
             self.blocks_processed_count += 1
-            if not (self.deep_synchronization and self.block_batch_handler):
-                for h in tx_bin_list:
-                    self.tx_cache.pop(h)
 
-            t = 10000 if not self.deep_synchronization else 100000
-            if (self.total_received_tx - self.total_received_tx_stat) > t:
-                tx_rate = round(self.total_received_tx / (time.time() - self.start_time), 2)
-                io_rate = round((self.coins + self.destroyed_coins) / (time.time() - self.start_time), 2)
-                tx_rate_last = round(self.total_received_tx_last / (time.time() - self.start_time_last), 2)
-                self.total_received_tx_last = 0
-                self.start_time_last = time.time()
-                batch_tx_count = self.total_received_tx - self.total_received_tx_stat
-                self.total_received_tx_stat = self.total_received_tx
-                self.log.info("Blocks %s; tx/s rate: %s; "
-                              "io/s rate %s; Uptime %s" % (block["height"], tx_rate,
-                                                          io_rate, seconds_to_age(int(time.time() - self.start_time))))
-                if self.utxo_data:
-                    loading = "Loading UTXO cache... " if self.cache_loading else ""
-                    if self.deep_synchronization:
-                        self.log.debug("- Batch ---------------")
-                        self.log.debug("    Rate tx/s %s; transactions count %s" % (tx_rate_last, batch_tx_count))
-                        self.log.debug("    Load utxo time %s; parsing time %s" % (round(self.batch_load_utxo, 2),
-                                                                                   round(self.batch_parsing, 2)))
-                        self.log.debug("    Batch time %s; "
-                                       "Batch handler time %s;" % (round(time.time() - self.batch_time, 2),
-                                                                   round(self.batch_handler, 2)))
-                        self.batch_handler = 0
-                        self.batch_load_utxo = 0
-                        self.batch_parsing = 0
-                        self.batch_time = time.time()
-
-                        self.log.debug("- Blocks --------------")
-
-                        self.log.debug("    Not cached count %s; "
-                                      "cached count %s; "
-                                      "cache size %s M;" % (self.non_cached_blocks,
-                                                            self.block_preload.len(),
-                                                            round(self.block_preload._store_size / 1024 / 1024, 2)))
-                        if self.block_preload._store:
-                            self.log.debug("    Cache first block %s; "
-                                           "cache last block %s;" % (next(iter(self.block_preload._store)),
-                                                                     next(reversed(self.block_preload._store))))
-                        self.log.debug("    Preload coins cache -> %s:%s [%s] "
-                                       "preload cache efficiency %s;" % (self.preload_cached,
-                                                                          self.preload_cached_annihilated,
-                                                                          self.preload_cached_total,
-                                                                          round(self.preload_cached_total
-                                                                                / self.destroyed_coins, 4)))
-
-                        self.log.debug("- UTXO ----------------")
-                        if loading: self.log.debug(loading)
-
-                        self.log.debug("    Cache count %s; hit rate: %s;" % (self.utxo.len(),
-                                                                          round(self.utxo.hit_rate(), 4)))
-                        self.log.debug("    Checkpoint block %s; App checkpoint %s" % (self.utxo.checkpoint,
-                                                                                      self.app_last_block))
-                        self.log.debug("    Saved to db %s; deleted from db %s; "
-                                       "loaded  from db %s" % (self.utxo.saved_utxo_count,
-                                                               self.utxo.deleted_utxo_count,
-                                                               self.utxo.loaded_utxo_count))
-                        if self.utxo.read_from_db_batch_time:
-                           c =  round(self.utxo.read_from_db_count / self.utxo.read_from_db_batch_time, 4)
-                        else:
-                            c = 0
-                        self.log.debug("    Read from db last batch %s; "
-                                       "count %s; "
-                                       "batch time %s; "
-                                       "rate %s; "
-                                       "total time %s; " % (round(self.utxo.read_from_db_time, 4),
-                                                            self.utxo.read_from_db_count,
-                                                            round(self.utxo.read_from_db_batch_time, 4),
-                                                            c,
-                                                            int(self.utxo.read_from_db_time_total)))
-                        self.utxo.read_from_db_batch_time = 0
-                        self.utxo.read_from_db_time = 0
-                        self.utxo.read_from_db_count = 0
-                self.log.debug("- Coins ---------------")
-                self.log.debug("    Coins %s; destroyed %s; "
-                               "unspent %s; op_return %s;" % (self.coins,
-                                                              self.destroyed_coins,
-                                                              self.coins - self.destroyed_coins,
-                                                              self.op_return))
-                self.log.debug("    Coins destroyed in cache %s; "
-                               "cache efficiency  %s [%s];" % (self.utxo._hit,
-                                                               round( self.utxo._hit / self.destroyed_coins, 4),
-                                                               round((self.utxo._hit + self.preload_cached_annihilated)
-                                                                      / self.destroyed_coins, 4)))
-                self.log.debug("---------------------")
             # after block added handler
             if self.after_block_handler:
                 if not self.cache_loading or block["height"] > self.app_block_height_on_start:
@@ -622,145 +539,6 @@ class Connector:
             self.blocks_processing_time += time.time() - tq
             self.active_block.set_result(True)
 
-    async def fetch_block_transactions(self, block, tx_bin_list):
-        q = time.time()
-        if self.deep_synchronization:
-            self.await_tx = set(tx_bin_list)
-            self.await_tx_future = {i: asyncio.Future() for i in tx_bin_list}
-            self.block_txs_request = asyncio.Future()
-            for i in block["rawTx"]:
-                self.loop.create_task(self._new_transaction(block["rawTx"][i],
-                                                            block["time"],
-                                                            block["height"],
-                                                            i))
-            await asyncio.wait_for(self.block_txs_request, timeout=1500)
-
-
-        elif tx_bin_list:
-            raise Exception("not emplemted")
-            missed = list(tx_bin_list)
-            self.log.debug("Transactions missed %s" % len(missed))
-
-            if missed:
-                self.missed_tx = set(missed)
-                self.await_tx = set(missed)
-                self.await_tx_future = {i: asyncio.Future() for i in missed}
-                self.block_txs_request = asyncio.Future()
-                self.loop.create_task(self._get_missed(False, block["time"], block["height"]))
-                try:
-                    await asyncio.wait_for(self.block_txs_request, timeout=self.block_timeout)
-                except asyncio.CancelledError:
-                    # refresh rpc connection session
-                    await self.rpc.close()
-                    self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
-                    raise RuntimeError("block transaction request timeout")
-        tx_count = len(block["tx"])
-        self.total_received_tx += tx_count
-        self.total_received_tx_last += tx_count
-        self.total_received_tx_time += time.time() - q
-        rate = round(self.total_received_tx/self.total_received_tx_time)
-        self.log.debug("Transactions received: %s [%s] received tx rate tx/s ->> %s <<" % (tx_count, time.time() - q, rate))
-
-    async def _block_as_transactions_batch(self, block):
-        try:
-            t2 = 0
-            t = time.time()
-            if self.utxo:
-                for q in block["rawTx"]:
-                    tx = block["rawTx"][q]
-                    for i in tx["vOut"]:
-
-                        if "_s_" in tx["vOut"][i]:
-                            self.coins += 1
-                        else:
-                            out = tx["vOut"][i]
-                            if self.skip_opreturn and out["nType"] in (3, 8):
-                                self.op_return += 1
-                                continue
-                            self.coins += 1
-                            pointer = (block["height"] << 39) + (q << 20) + (1 << 19) + i
-                            try:
-                                address = b"".join((bytes([out["nType"]]), out["addressHash"]))
-                            except:
-                                address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
-                            self.utxo.set(b"".join((tx["txId"], int_to_bytes(i))), pointer, out["value"], address)
-
-            c = 0
-            ti = 0
-            stxo, missed = dict(), deque()
-            for q in block["rawTx"]:
-                tx = block["rawTx"][q]
-                if not tx["coinbase"]:
-                    if self.utxo:
-                        for i in tx["vIn"]:
-                            ti += 1
-                            self.destroyed_coins += 1
-                            inp = tx["vIn"][i]
-                            try:
-                                tx["vIn"][i]["coin"] = inp["_a_"]
-                                c += 1
-                                self.preload_cached_annihilated += 1
-                                self.preload_cached_total += 1
-                            except:
-                                try:
-                                    tx["vIn"][i]["coin"] = inp["_c_"]
-                                    c += 1
-                                    self.preload_cached_total += 1
-                                    self.preload_cached += 1
-                                    outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                                    self.utxo.get(outpoint)
-                                except:
-                                    try:
-                                        # coin was loaded from db on preload stage
-                                        tx["vIn"][i]["coin"] = inp["_l_"]
-                                        c += 1
-                                        self.preload_cached_total += 1
-                                        self.preload_cached += 1
-                                        outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                                        self.utxo.deleted.append((block["height"], outpoint))
-                                    except:
-                                        outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                                        r = self.utxo.get(outpoint)
-                                        if r:
-                                            tx["vIn"][i]["coin"] = r
-                                            c += 1
-                                        else:
-                                            missed.append((outpoint,
-                                                          (block["height"]<<39)+(q<<20)+(1<<19)+i,
-                                                           q, i))
-
-            if missed:
-                t2 = time.time()
-                await self.utxo.load_utxo()
-                t2 =time.time() - t2
-                self.batch_load_utxo += t2
-                if  self.cache_loading:
-                    if block["height"] > self.app_block_height_on_start:
-                        await self.utxo.load_utxo_from_daemon()
-                for o, s, q, i in missed:
-                    block["rawTx"][q]["vIn"][i]["coin"] = self.utxo.get_loaded(o)
-                    if  block["rawTx"][q]["vIn"][i]["coin"] is None:
-                        if not self.cache_loading:
-                            raise Exception("utxo get failed ")
-                        else:
-                            if block["height"] > self.app_block_height_on_start:
-                                raise Exception("utxo get failed ")
-                    c += 1
-
-                if c != ti and not self.cache_loading:
-                    self.log.critical("utxo get failed (not all utxo received) " + block["hash"])
-                    self.log.critical(str((c, ti, len(missed))))
-                    raise Exception("utxo get failed " + block["hash"])
-
-            self.total_received_tx += len(block["rawTx"])
-            self.total_received_tx_last += len(block["rawTx"])
-            self.batch_parsing += (time.time() - t) - t2
-        except Exception as err:
-            self.log.critical("new block error %s " % err)
-            self.log.critical(str(traceback.format_exc()))
-            raise
-        finally:
-            pass
 
     async def verify_block_position(self, block):
         if "previousblockhash" not in block :
@@ -781,41 +559,239 @@ class Connector:
             self.last_block_height -= 1
             raise Exception("Sidebranch block removed")
 
-    async def _get_missed(self, block_hash=False, block_time=None, block_height=None):
-        if block_hash:
-            try:
-                block = self.block_preload.pop(block_hash)
-                if not block:
-                    t = time.time()
-                    result = await self.rpc.getblock(block_hash, 0)
-                    dt = time.time() - t
-                    t = time.time()
-                    block = decode_block_tx(result)
-                    qt = time.time() - t
-                    self.blocks_download_time += dt
-                    self.blocks_decode_time += qt
 
-                    self.log.debug("block downloaded %s decoded %s " % (round(dt, 4), round(qt, 4)))
-                    for index, tx in enumerate(block):
+    async def _block_as_transactions_batch(self, block):
+        t, t2 = time.time(), 0
+        if self.sync_utxo:
+            #
+            #  utxo mode
+            #  fetch information about destroyed coins
+            #  save new coins to utxo table
+            #
+            for q in block["rawTx"]:
+                tx = block["rawTx"][q]
+                for i in tx["vOut"]:
+
+                    if "_s_" in tx["vOut"][i]: self.coins += 1
+                    else:
+                        out = tx["vOut"][i]
+                        if self.skip_opreturn and out["nType"] in (3, 8):
+                            self.op_return += 1
+                            continue
+                        self.coins += 1
+                        pointer = (block["height"] << 39) + (q << 20) + (1 << 19) + i
                         try:
-                            self.missed_tx.remove(block[tx]["txId"])
-                            self.loop.create_task(self._new_transaction(block[tx], block_time, block_height, index))
+                            address = b"".join((bytes([out["nType"]]), out["addressHash"]))
                         except:
-                            pass
-            except Exception as err:
-                self.log.error("_get_missed exception %s " % str(err))
-                self.log.error(str(traceback.format_exc()))
-                self.await_tx = set()
-                self.block_txs_request.cancel()
+                            address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
+                        self.sync_utxo.set(b"".join((tx["txId"], int_to_bytes(i))), pointer, out["value"], address)
 
-        elif self.get_missed_tx_threads <= self.get_missed_tx_threads_limit:
+            c, ti, height = 0, 0, block["height"]
+            stxo, missed = dict(), deque()
+            for q in block["rawTx"]:
+                tx = block["rawTx"][q]
+                if not tx["coinbase"]:
+                    if self.sync_utxo:
+                        for i in tx["vIn"]:
+                            ti += 1
+                            self.destroyed_coins += 1
+                            inp = tx["vIn"][i]
+                            try:
+                                tx["vIn"][i]["coin"] = inp["_a_"]
+                                c += 1
+                                self.preload_cached_annihilated += 1
+                                self.preload_cached_total += 1
+                            except:
+                                try:
+                                    tx["vIn"][i]["coin"] = inp["_c_"]
+                                    c += 1
+                                    self.preload_cached_total += 1
+                                    self.preload_cached += 1
+                                    outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
+                                    self.sync_utxo.get(outpoint, height)
+                                except:
+                                    try:
+                                        # coin was loaded from db on preload stage
+                                        tx["vIn"][i]["coin"] = inp["_l_"]
+                                        c += 1
+                                        self.preload_cached_total += 1
+                                        self.preload_cached += 1
+                                        outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
+                                        self.sync_utxo.deleted.append(outpoint)
+                                    except:
+                                        outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
+                                        r = self.sync_utxo.get(outpoint, height)
+                                        if r:
+                                            tx["vIn"][i]["coin"] = r
+                                            c += 1
+                                        else:
+                                            missed.append((outpoint,
+                                                          (block["height"]<<39)+(q<<20)+(1<<19)+i,
+                                                           q, i))
+
+            if missed:
+                t2 = time.time()
+                await self.sync_utxo.load_utxo()
+                t2 =time.time() - t2
+                self.batch_load_utxo += t2
+                if  self.cache_loading:
+                    if block["height"] > self.app_block_height_on_start:
+                        await self.sync_utxo.load_utxo_from_daemon()
+                for o, s, q, i in missed:
+                    block["rawTx"][q]["vIn"][i]["coin"] = self.sync_utxo.get_loaded(o, height)
+                    if  block["rawTx"][q]["vIn"][i]["coin"] is None:
+                        if not self.cache_loading:
+                            raise Exception("utxo get failed ")
+                        else:
+                            if block["height"] > self.app_block_height_on_start:
+                                raise Exception("utxo get failed ")
+                    c += 1
+
+                if c != ti and not self.cache_loading:
+                    raise Exception("fatal error utxo get failed " + block["hash"])
+
+        self.total_received_tx += len(block["rawTx"])
+        self.total_received_tx_last += len(block["rawTx"])
+        self.batch_parsing += (time.time() - t) - t2
+
+
+    def report_sync_process(self, height):
+        batch_tx_count = self.total_received_tx - self.total_received_tx_stat
+        tx_rate = round(self.total_received_tx / (time.time() - self.start_time), 2)
+        io_rate = round((self.coins + self.destroyed_coins) / (time.time() - self.start_time), 2)
+        tx_rate_last = round(self.total_received_tx_last / (time.time() - self.start_time_last), 2)
+        self.total_received_tx_last = 0
+        self.start_time_last = time.time()
+        self.total_received_tx_stat = self.total_received_tx
+
+        self.log.info("Blocks %s; tx/s rate: %s; "
+                      "io/s rate %s; Uptime %s" % (height,
+                                                   tx_rate,
+                                                   io_rate,
+                                                   seconds_to_age(int(time.time() - self.start_time))))
+        if self.utxo_data:
+            loading = "Loading UTXO cache mode ... " if self.cache_loading else ""
+
+            # last batch stat
+            self.log.debug("- Batch ---------------")
+            self.log.debug("    Rate tx/s %s; transactions count %s" % (tx_rate_last, batch_tx_count))
+            self.log.debug("    Load utxo time %s; parsing time %s" % (round(self.batch_load_utxo, 2),
+                                                                       round(self.batch_parsing, 2)))
+            self.log.debug("    Batch time %s; "
+                           "Batch handler time %s;" % (round(time.time() - self.batch_time, 2),
+                                                       round(self.batch_handler, 2)))
+            self.batch_handler = 0
+            self.batch_load_utxo = 0
+            self.batch_parsing = 0
+            self.batch_time = time.time()
+
+            # blocks stat
+            self.log.debug("- Blocks --------------")
+            self.log.debug("    Not cached count %s; "
+                           "cached count %s; "
+                           "cache size %s M;" % (self.non_cached_blocks,
+                                                 self.block_preload.len(),
+                                                 round(self.block_preload._store_size / 1024 / 1024, 2)))
+            if self.block_preload._store:
+                self.log.debug("    Cache first block %s; "
+                               "cache last block %s;" % (next(iter(self.block_preload._store)),
+                                                         next(reversed(self.block_preload._store))))
+            self.log.debug("    Preload coins cache -> %s:%s [%s] "
+                           "preload cache efficiency %s;" % (self.preload_cached,
+                                                             self.preload_cached_annihilated,
+                                                             self.preload_cached_total,
+                                                             round(self.preload_cached_total
+                                                                   / self.destroyed_coins, 4)))
+
+            # utxo stat
+            self.log.debug("- UTXO ----------------")
+            if loading: self.log.debug(loading)
+
+            self.log.debug("    Cache count %s; hit rate: %s;" % (self.sync_utxo.len(),
+                                                                  round(self.sync_utxo.hit_rate(), 4)))
+            self.log.debug("    Checkpoint block %s; App checkpoint %s" % (self.sync_utxo.checkpoint,
+                                                                           self.app_last_block))
+            self.log.debug("    Saved to db %s; deleted from db %s; "
+                           "loaded  from db %s" % (self.sync_utxo.saved_utxo_count,
+                                                   self.sync_utxo.deleted_utxo_count,
+                                                   self.sync_utxo.loaded_utxo_count))
+            if self.sync_utxo.read_from_db_batch_time:
+                c = round(self.sync_utxo.read_from_db_count / self.sync_utxo.read_from_db_batch_time, 4)
+            else:
+                c = 0
+            self.log.debug("    Read from db last batch %s; "
+                           "count %s; "
+                           "batch time %s; "
+                           "rate %s; "
+                           "total time %s; " % (round(self.sync_utxo.read_from_db_time, 4),
+                                                self.sync_utxo.read_from_db_count,
+                                                round(self.sync_utxo.read_from_db_batch_time, 4),
+                                                c,
+                                                int(self.sync_utxo.read_from_db_time_total)))
+            self.sync_utxo.read_from_db_batch_time = 0
+            self.sync_utxo.read_from_db_time = 0
+            self.sync_utxo.read_from_db_count = 0
+
+        # coins stat
+        self.log.debug("- Coins ---------------")
+        self.log.debug("    Coins %s; destroyed %s; "
+                       "unspent %s; op_return %s;" % (self.coins,
+                                                      self.destroyed_coins,
+                                                      self.coins - self.destroyed_coins,
+                                                      self.op_return))
+        self.log.debug("    Coins destroyed in cache %s; "
+                       "cache efficiency  %s [%s];" % (self.sync_utxo._hit,
+                                                       round(self.sync_utxo._hit / self.destroyed_coins, 4),
+                                                       round((self.sync_utxo._hit + self.preload_cached_annihilated)
+                                                             / self.destroyed_coins, 4)))
+        self.log.debug("---------------------")
+
+
+
+    async def fetch_block_transactions(self, block):
+        q = time.time()
+        missed = deque()
+        tx_count = len(block["tx"])
+        for h in block["tx"]:
+            try:
+                self.tx_cache[h]
+            except:
+                missed.append(h)
+        self.log.debug("Block missed transactions  %s from %s" % (len(missed), tx_count))
+
+        if missed:
+            self.missed_tx = set(missed)
+            self.await_tx = set(missed)
+            self.await_tx_future = {i: asyncio.Future() for i in missed}
+            self.block_txs_request = asyncio.Future()
+
+            self.loop.create_task(self._get_missed())
+            try:
+                await asyncio.wait_for(self.block_txs_request, timeout=self.block_timeout)
+            except asyncio.CancelledError:
+                # refresh rpc connection session
+                try:
+                    await self.rpc.close()
+                    self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
+                except:
+                    pass
+                raise RuntimeError("block transaction request timeout")
+
+        self.total_received_tx += tx_count
+        self.total_received_tx_last += tx_count
+        self.total_received_tx_time += time.time() - q
+        rate = round(self.total_received_tx/self.total_received_tx_time)
+        self.log.debug("Transactions received: %s [%s] received tx rate tx/s ->> %s <<" % (tx_count, time.time() - q, rate))
+
+
+    async def _get_missed(self):
+        if self.get_missed_tx_threads <= self.get_missed_tx_threads_limit:
             self.get_missed_tx_threads += 1
             # start more threads
             if len(self.missed_tx) > 1:
-                self.loop.create_task(self._get_missed(False, block_time, block_height))
+                self.loop.create_task(self._get_missed())
             while True:
-                if not self.missed_tx:
-                    break
+                if not self.missed_tx: break
                 try:
                     batch = list()
                     while self.missed_tx:
@@ -829,7 +805,7 @@ class Connector:
                         except:
                             self.log.error("Transaction decode failed: %s" % r["result"])
                             raise Exception("Transaction decode failed")
-                        self.loop.create_task(self._new_transaction(tx, block_time, None,  None))
+                        self.loop.create_task(self._new_transaction(tx))
                 except Exception as err:
                     self.log.error("_get_missed exception %s " % str(err))
                     self.log.error(str(traceback.format_exc()))
@@ -850,115 +826,88 @@ class Connector:
             else:
                 break
 
-    async def _new_transaction(self, tx, block_time = None, block_height = None, block_index = None):
-        if not(tx["txId"] in self.tx_in_process or self.tx_cache.get(tx["txId"])):
+    async def _new_transaction(self, tx):
+        tx_hash = rh2s(tx["txId"])
+
+        if tx_hash in self.tx_in_process or self.tx_cache.has_key(tx_hash):
+            return
+
+        try:
+            self.tx_in_process.add(tx["txId"])
+            if not tx["coinbase"]:
+                await self.wait_block_dependences(tx)
+
+            if self.utxo_data:
+                tx["double_spent"] = False
+                commit_uutxo_buffer = set()
+                commit_ustxo_buffer = set()
+
+                for i in tx["vIn"]:
+                    self.destroyed_coins += 1
+                    tx["vIn"][i]["outpoint"] = b"".join((tx["vIn"][i]["txId"], int_to_bytes(tx["vIn"][i]["vOut"])))
+                    self.uutxo.load_buffer.append(tx["vIn"][i]["outpoint"])
+                    commit_ustxo_buffer.add((tx["vIn"][i]["outpoint"], 0, tx["txId"], i))
+
+                await self.uutxo.load_utxo_data()
+
+                for i in tx["vIn"]:
+                    tx["vIn"][i]["coin"] = self.uutxo.loaded_utxo[tx["vIn"][i]["outpoint"]]
+                    try:
+                        tx["vIn"][i]["double_spent"] = self.uutxo.loaded_ustxo[tx["vIn"][i]["outpoint"]]
+                        tx["double_spent"] = True
+                    except:
+                        pass
+
+
+
+                for i in tx["vOut"]:
+                    try:
+                        address = b"".join((bytes([tx["vOut"][i]["nType"]]), tx["vOut"][i]["addressHash"]))
+                    except:
+                        address = b"".join((bytes([tx["vOut"][i]["nType"]]), tx["vOut"][i]["scriptPubKey"]))
+
+                    commit_uutxo_buffer.add((b"".join((tx["txId"],int_to_bytes(i))),
+                                             tx["vOut"][i]["value"],
+                                             address))
+                async with self.db.acquire() as conn:
+                    async with conn.transaction():
+                        await self.uutxo.commit(commit_uutxo_buffer, commit_ustxo_buffer, conn)
+
+                        if self.tx_handler:
+                            await self.tx_handler(tx, conn)
+            else:
+                if self.tx_handler:
+                    await self.tx_handler(tx, None)
+
+
+
+
+
+            self.tx_cache.set(tx_hash, True)
+
             try:
-                c = 0
-                self.tx_in_process.add(tx["txId"])
-                if not tx["coinbase"]:
-                    if block_height is not None:
-                        await self.wait_block_dependences(tx)
-                    if self.utxo:
-                        stxo, missed = dict(), set()
-                        for i in tx["vIn"]:
-                            self.destroyed_coins += 1
-                            inp = tx["vIn"][i]
-                            outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                            tx["vIn"][i]["outpoint"] = outpoint
-                            try:
-                                tx["vIn"][i]["coin"] = inp["_a_"]
-                                c += 1
-                                self.preload_cached_anigilated += 1
-                            except:
-                                try:
-                                    tx["vIn"][i]["coin"] = inp["_c_"]
-                                    c += 1
-                                    self.preload_cached += 1
-                                    try:
-                                        self.utxo.get(outpoint)
-                                    except:
-                                        self.utxo.deleted[(block_height << 39)+(block_index << 20)+(1 << 19) + i] = outpoint
-                                except:
-                                    r = self.utxo.get(outpoint)
-                                    if r:
-                                        tx["vIn"][i]["coin"]  = r
-                                        c += 1
-                                    else:
-                                        missed.add((outpoint,(block_height << 39)+(block_index << 20)+(1 << 19) + i))
-
-                        if missed:
-                            await self.utxo.load_utxo()
-                            for o, s, i in missed:
-                                tx["vIn"][i]["coin"] = self.utxo.get_loaded(o)
-                                c += 1
-
-
-                        if c != len(tx["vIn"]) and not self.cache_loading:
-                            self.log.critical("utxo get failed " + rh2s(tx["txId"]))
-                            raise Exception("utxo get failed ")
-
-                if self.tx_handler and  not self.cache_loading:
-                    await self.tx_handler(tx, block_time, block_height, block_index)
-
-                if self.utxo:
-                    for i in tx["vOut"]:
-                        self.coins += 1
-                        if "_s_" in tx["vOut"][i]:
-                            self.preload_cached_total += 1
-                        else:
-                            out = tx["vOut"][i]
-                            if self.skip_opreturn and out["nType"] in (3, 8):
-                                continue
-                            pointer = (block_height << 39)+(block_index << 20)+(1 << 19) + i
-                            try:
-                                address = b"".join((bytes([out["nType"]]), out["addressHash"]))
-
-                            except:
-                                address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
-                            self.utxo.set(b"".join((tx["txId"], int_to_bytes(i))), pointer, out["value"], address)
-
-                self.tx_cache.set(tx["txId"], True)
-                try:
-                    self.await_tx.remove(tx["txId"])
-                    if not self.await_tx_future[tx["txId"]].done():
-                        self.await_tx_future[tx["txId"]].set_result(True)
+                if self.await_tx:
+                    self.await_tx.remove(tx_hash)
+                    if not self.await_tx_future[tx_hash].done():
+                        self.await_tx_future[tx_hash].set_result(True)
                     if not self.await_tx:
                         self.block_txs_request.set_result(True)
-                except:
-                    pass
-            except Exception as err:
-                if tx["txId"] in self.await_tx:
-                    self.await_tx = set()
-                    self.block_txs_request.cancel()
-                    for i in self.await_tx_future:
-                        if not self.await_tx_future[i].done():
-                            self.await_tx_future[i].cancel()
-                self.log.debug("new transaction error %s " % err)
-                self.log.debug(str(traceback.format_exc()))
-            finally:
-                self.tx_in_process.remove(tx["txId"])
+            except:
+                pass
 
+        except Exception as err:
+            if tx_hash in self.await_tx:
+                self.await_tx = set()
+                self.block_txs_request.cancel()
+                for i in self.await_tx_future:
+                    if not self.await_tx_future[i].done():
+                        self.await_tx_future[i].cancel()
+                self.log.critical("new transaction error %s " % err)
+            self.log.debug("new transaction error %s " % err)
+            self.log.debug(str(traceback.format_exc()))
+        finally:
+            self.tx_in_process.remove(tx["txId"])
 
-    async def get_stxo(self, tx, block_height, block_index):
-        stxo, missed = set(), set()
-        block_height = 0 if block_height is None else block_height
-        block_index = 0 if block_index is None else block_index
-
-        for i in tx["vIn"]:
-            inp = tx["vIn"][i]
-            outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-            r = self.utxo.get(outpoint)
-            stxo.add(r) if r else missed.add((outpoint, (block_height << 39)+(block_index << 20)+(1 << 19) + i))
-
-        if missed:
-            await self.utxo.load_utxo()
-            [stxo.add(self.utxo.get_loaded(o, block_height)) for o, s in missed]
-
-        if len(stxo) != len(tx["vIn"]) and not self.cache_loading:
-            self.log.critical("utxo get failed " + rh2s(tx["txId"]))
-            self.log.critical(str(stxo))
-            raise Exception("utxo get failed ")
-        return stxo
 
 
 
