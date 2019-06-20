@@ -262,12 +262,12 @@ class UTXO():
             self.last_checkpoint = self.checkpoint
             self.checkpoint = lb
 
-            # self.pending_deleted = deque(self.scheduled_to_delete)
-            # self.scheduled_to_delete = deque()
+            self.pending_deleted = deque(self.scheduled_to_delete)
+            self.scheduled_to_delete = deque()
 
             self.log.debug("checkpoint %s cache size %s limit %s" % (self.checkpoint,
-                                                                        len(self.cache),
-                                                                        limit))
+                                                                     len(self.cache),
+                                                                     limit))
         except:
             self.log.critical("create checkpoint error")
 
