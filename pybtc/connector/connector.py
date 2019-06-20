@@ -608,12 +608,14 @@ class Connector:
                             self.destroyed_coins += 1
                             inp = tx["vIn"][i]
                             try:
+                                # preloaded and destroyed in preload batch
                                 tx["vIn"][i]["coin"] = inp["_a_"]
                                 self.preload_cached_annihilated += 1
                                 self.preload_cached_total += 1
                                 c += 1
                             except:
                                 try:
+                                    # preloaded and should exist in cache
                                     tx["vIn"][i]["coin"] = inp["_c_"]
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
