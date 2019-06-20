@@ -238,18 +238,15 @@ class UTXO():
                             limit = self.size_limit
                         else:
                             limit = self.size_limit * 0.9
-
                         if len(self.cache) < limit:
                             break
 
                         if self.checkpoints:
                             if app_last_block is None:
                                 # no app checkpoint constraint
-
                                 checkpoint = self.checkpoints.pop(0)
                             elif app_last_block > self.checkpoints[0]:
                                 # app checkpoint ahead of utxo checkpoint
-
                                 checkpoint = self.checkpoints.pop(0)
                             else:
                                 break
@@ -279,6 +276,7 @@ class UTXO():
         # save to db tail from cache
         if  not self.checkpoint: return
         if  self.write_to_db: return
+
         try:
             self.write_to_db = True
             t = time.time()

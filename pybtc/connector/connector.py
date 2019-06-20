@@ -569,6 +569,7 @@ class Connector:
 
     async def _block_as_transactions_batch(self, block):
         t, t2 = time.time(), 0
+        height = block["height"]
         if self.utxo_data:
             #
             #  utxo mode
@@ -586,15 +587,17 @@ class Connector:
                             self.op_return += 1
                             continue
                         self.coins += 1
-                        pointer = (block["height"] << 39) + (q << 20) + (1 << 19) + i
+
                         try:
                             address = b"".join((bytes([out["nType"]]), out["addressHash"]))
                         except:
                             address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
-                        self.sync_utxo.set(b"".join((tx["txId"], int_to_bytes(i))), pointer, out["value"],
+                        self.sync_utxo.set(b"".join((tx["txId"], int_to_bytes(i))),
+                                           (height<<39)+(q<<20)+(1<<19)+i,
+                                           out["value"],
                                            address)
 
-            c, ti, height = 0, 0, block["height"]
+            c, ti = 0, 0
             stxo, missed = dict(), deque()
             for q in block["rawTx"]:
                 tx = block["rawTx"][q]
@@ -634,7 +637,7 @@ class Connector:
                                             c += 1
                                         else:
                                             missed.append((outpoint,
-                                                          (block["height"]<<39)+(q<<20)+(1<<19)+i,
+                                                          (height<<39)+(q<<20)+(1<<19)+i,
                                                            q, i))
 
             if missed:
@@ -643,7 +646,7 @@ class Connector:
                 t2 =time.time() - t2
                 self.batch_load_utxo += t2
                 if  self.cache_loading:
-                    if block["height"] > self.app_block_height_on_start:
+                    if height > self.app_block_height_on_start:
                         await self.sync_utxo.load_utxo_from_daemon()
                 for o, s, q, i in missed:
                     block["rawTx"][q]["vIn"][i]["coin"] = self.sync_utxo.get_loaded(o)
@@ -651,12 +654,12 @@ class Connector:
                         if not self.cache_loading:
                             raise Exception("utxo get failed ")
                         else:
-                            if block["height"] > self.app_block_height_on_start:
+                            if height > self.app_block_height_on_start:
                                 raise Exception("utxo get failed ")
                     c += 1
 
                 if c != ti and not self.cache_loading:
-                    raise Exception("fatal error utxo get failed " + block["hash"])
+                    raise Exception("fatal error utxo get failed " + height)
 
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])
