@@ -217,9 +217,9 @@ class BlockLoader:
                 for i in blocks:
                     self.parent.block_preload.set(i, blocks[i])
                 if blocks:
-                    if  self.parent.utxo.checkpoints:
-                        if self.parent.utxo.checkpoints[-1] < i:
-                            self.parent.utxo.checkpoints.append(i)
+                    if  self.parent.sync_utxo.checkpoints:
+                        if self.parent.sync_utxo.checkpoints[-1] < i:
+                            self.parent.sync_utxo.checkpoints.append(i)
                             self.reached_height = i
                     else:
                         self.parent.utxo.checkpoints.append(i)
