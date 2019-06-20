@@ -160,7 +160,7 @@ class UTXO():
             self.read_from_db_time_total += time.time() - t
             if failed:
                 self.missed_failed = list(self.missed)
-            self.missed= deque()
+            self.missed= set()
         except:
             raise
 
