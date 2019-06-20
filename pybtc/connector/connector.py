@@ -562,7 +562,7 @@ class Connector:
 
     async def _block_as_transactions_batch(self, block):
         t, t2 = time.time(), 0
-        if self.sync_utxo:
+        if self.utxo_data:
             #
             #  utxo mode
             #  fetch information about destroyed coins
@@ -571,8 +571,8 @@ class Connector:
             for q in block["rawTx"]:
                 tx = block["rawTx"][q]
                 for i in tx["vOut"]:
-
-                    if "_s_" in tx["vOut"][i]: self.coins += 1
+                    if "_s_" in tx["vOut"][i]:
+                        self.coins += 1
                     else:
                         out = tx["vOut"][i]
                         if self.skip_opreturn and out["nType"] in (3, 8):
@@ -584,7 +584,8 @@ class Connector:
                             address = b"".join((bytes([out["nType"]]), out["addressHash"]))
                         except:
                             address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
-                        self.sync_utxo.set(b"".join((tx["txId"], int_to_bytes(i))), pointer, out["value"], address)
+                        self.sync_utxo.set(b"".join((tx["txId"], int_to_bytes(i))), pointer, out["value"],
+                                           address)
 
             c, ti, height = 0, 0, block["height"]
             stxo, missed = dict(), deque()
