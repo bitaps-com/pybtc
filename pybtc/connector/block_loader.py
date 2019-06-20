@@ -222,7 +222,7 @@ class BlockLoader:
                             self.parent.sync_utxo.checkpoints.append(i)
                             self.reached_height = i
                     else:
-                        self.parent.utxo.checkpoints.append(i)
+                        self.parent.sync_utxo.checkpoints.append(i)
 
             if msg_type == b'failed':
                 self.height = bytes_to_int(msg)
