@@ -371,7 +371,6 @@ class Connector:
                 self.log.info("connector watchdog terminated")
                 break
             except Exception as err:
-                self.log.error(str(traceback.format_exc()))
                 self.log.error("watchdog error %s " % err)
 
     async def get_next_block(self):
@@ -457,7 +456,6 @@ class Connector:
             return block
         except Exception:
             self.log.error("get block by hash %s FAILED" % hash)
-            self.log.error(str(traceback.format_exc()))
 
     async def _new_block(self, block):
         if not self.active: return
@@ -510,6 +508,8 @@ class Connector:
 
                 await self.fetch_block_transactions(block)
                 raise Exception("stop")
+
+
                 if self.block_handler:
                     await self.block_handler(block)
 
@@ -537,7 +537,6 @@ class Connector:
                 if not self.await_tx_future[i].done():
                     self.await_tx_future[i].cancel()
             self.await_tx_future = dict()
-            self.log.error(str(traceback.format_exc()))
             self.log.error("block error %s" % str(err))
         finally:
             if self.node_last_block > self.last_block_height:
@@ -811,7 +810,6 @@ class Connector:
                         self.loop.create_task(self._new_transaction(tx))
                 except Exception as err:
                     self.log.error("_get_missed exception %s " % str(err))
-                    self.log.error(str(traceback.format_exc()))
                     self.await_tx = set()
                     self.block_txs_request.cancel()
             self.get_missed_tx_threads -= 1
@@ -907,7 +905,6 @@ class Connector:
                         self.await_tx_future[i].cancel()
                 self.log.critical("new transaction error %s " % err)
             self.log.debug("new transaction error %s " % err)
-            self.log.debug(str(traceback.format_exc()))
         finally:
             self.tx_in_process.remove(tx["txId"])
 
