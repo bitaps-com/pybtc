@@ -178,7 +178,7 @@ synchronizes within 9 hours. Our application with transaction address map + hist
                                 PRIMARY KEY(outpoint))
 
 
-
+**address** - byte string [out_type |  1 byte][addess hash/script]
                                 
     connector_unconfirmed_stxo (outpoint BYTEA,
                                 sequence  INT,
