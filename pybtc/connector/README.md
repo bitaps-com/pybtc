@@ -107,7 +107,7 @@ An application built on top of this module should implement event handlers for t
 ## Synchronization
 
 Synchronization time for bitcoin mainnet depends on perfomance of connector handlers and server hardware. Connector without
-any handlers payload with bitcoind daemon installed on same server (CPU cores >= 8, SSD drives, RAM >=20 GB) 
+any handlers payload with bitcoind daemon installed on same server (CPU cores >= 8, SSD drives, RAM >=30 GB) 
 synchronizes within 9 hours. Our application with transaction address map + history and transaction table with merkle proofs
   synchronizes within 10 hours + about 1 hour to create table indexes. 
   
