@@ -110,6 +110,8 @@ any handlers payload with bitcoind daemon installed on same server (CPU cores >=
 synchronizes within 9 hours. Our application with transaction address map + history and transaction table with merkle proofs
   synchronizes within 10 hours + about 1 hour to create table indexes. 
   
+    Blocks 576694; tx/s rate: 11678.21; io/s rate 59808.43; Uptime 9:52:6 
+  
 
 ## Requirements
 
