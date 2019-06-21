@@ -59,7 +59,7 @@ The logic of the module:
   - _**last_block_height**_ this is the last blockchain block on which the application has stopped.
   - _**chain_tail**_ this is a chain of hashes of the last blockchain blocks.
   
-  _**chain_tail**_ it is recommended to maintain 100 blocks for the miner Bitcoin, which corresponds to coinbase maturirty.
+  _**chain_tail**_ it is recommended to maintain 100 blocks for the Bitcoin mainnet, which corresponds to coinbase maturity.
   In other words, this is the number of hashes that guarantee that after this blockchain blockchain can no longer be changed.
   _**chain_tail**_ used to determine the main chain when reorganizing blocks in the blockchain.
   
