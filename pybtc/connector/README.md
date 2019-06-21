@@ -29,7 +29,7 @@ The logic of the module:
           |                    |           |  force new blocks to app     |         |    app handler   |
           |                    |            ------------------------------           ==================
       ----------        ===============                                                       |
-     | Preload  |      |  Block batch  |                                              ==================
+     | Preload  |      |  Blocks batch |                                              ==================
      |  blocks  |----> | cache level 2 |                                             | After new block  |
      | worker 1 | |     ===============                                              |  app handler     |
      | + cache  | |            |  |  |                                                ==================
