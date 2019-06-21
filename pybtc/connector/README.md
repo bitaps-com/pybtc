@@ -180,6 +180,7 @@ synchronizes within 9 hours. Our application with transaction address map + hist
 
 
 
+
     outpoint = (block_height << 39)+(tx_index << 20)+(1 << 19) + out_number
     
 
