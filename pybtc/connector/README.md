@@ -172,7 +172,17 @@ synchronizes within 9 hours. Our application with transaction address map + hist
 **connector_utxo** this table contain all unspent outputs to get fast access for outputs related to address
 crate this index after synchronisation is completed
 
+    # simple index by address
+    CREATE INDEX IF NOT EXISTS utxo_address_map ON connector_utxo USING BTREE (address);
+    
+    # index map by address and amount
     CREATE INDEX IF NOT EXISTS utxo_address_map_amount ON connector_utxo USING BTREE (address, amount);
+    
+    # index map by address and blockchain position (confirmation coint)
+    CREATE INDEX IF NOT EXISTS utxo_address_map_pointer ON connector_utxo USING BTREE (address, pointer);
+
+
+**address** - byte string **[out_type |  1 byte][addess hash/script]**
 
                     
     connector_unconfirmed_utxo (outpoint BYTEA,
@@ -181,7 +191,7 @@ crate this index after synchronisation is completed
                                 PRIMARY KEY(outpoint))
 
 
-**address** - byte string **[out_type |  1 byte][addess hash/script]**
+
                                 
     connector_unconfirmed_stxo (outpoint BYTEA,
                                 sequence  INT,
