@@ -45,8 +45,8 @@ The logic of the module:
       ----------  |       ====================
      | Preload  | |                  |
      |  blocks  |-                   | 
-     | worker N |            --------------------
+     | worker N |            ====================
      | + cache  |           |   Synchronization  |
       ----------            |      completed     |
                             |     app handler    |
-                             --------------------
+                             ====================
