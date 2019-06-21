@@ -252,6 +252,12 @@ class Connector:
                                    """)
 
                 await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                          connector_block_state_change (height  INT,
+                                                                        data BYTEA,
+                                                                        PRIMARY KEY height);                                                      
+                                   """)
+
+                await conn.execute("""CREATE TABLE IF NOT EXISTS 
                                           connector_utxo_state (name VARCHAR,
                                                                 value BYTEA,
                                                                 PRIMARY KEY(name));

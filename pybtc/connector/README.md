@@ -184,4 +184,11 @@ synchronizes within 9 hours. Our application with transaction address map + hist
     outpoint = (block_height << 39)+(tx_index << 20)+(1 << 19) + out_number
     
 
-**_connector_unconfirmed_stxo_** this table contains unconfirmed spent transaction outputs
+**_connector_unconfirmed_stxo_** this table contains unconfirmed spent transaction outputs.
+**outpoint** + **sequence** pair is unique identificator for table records, where the sequence is
+the number of times a coin has been spent.
+
+
+    connector_block_state_change (height  INT,
+                                  data BYTEA,
+                                  PRIMARY KEY height);  
