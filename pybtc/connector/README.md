@@ -14,10 +14,10 @@ The logic of the module:
             --------------------                                              |      ================
                       |                                                       |
                       |                                                       |
-          ------------------------          ----------------------------      |       ================
-         |                        |        |   Zerro mq handlers        | ----|      | New transacion |
-         |   Is blockchain        |  Yes   |   wait and process         | ---------> |  app handler   |
-         |       synchronized?    | -----> |   new transactions and     |     |       ================
+          ------------------------          ----------------------------      |       =================
+         |                        |        |   Zerro mq handlers        | ----|      | New transaction |
+         |   Is blockchain        |  Yes   |   wait and process         | ---------> |  app handler    |
+         |       synchronized?    | -----> |   new transactions and     |     |       =================
          |                        |   |    |   blocks from bitcoin node | -------
           ------------------------    |     ----------------------------      |  |    ==================
                       |               |                                       |  |   | Before new block |
