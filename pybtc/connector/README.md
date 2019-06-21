@@ -190,8 +190,6 @@ crate this index after synchronisation is completed
                                 amount  BIGINT,
                                 PRIMARY KEY(outpoint))
 
-
-
                                 
     connector_unconfirmed_stxo (outpoint BYTEA,
                                 sequence  INT,
@@ -205,6 +203,9 @@ crate this index after synchronisation is completed
 the number of times a coin has been spent.
 
 
+
     connector_block_state_change (height  INT,
                                   data BYTEA,
                                   PRIMARY KEY height);  
+                                  
+**connector_block_state_change** this table contains information to restore blockchain state in case block removed
