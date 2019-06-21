@@ -167,9 +167,12 @@ synchronizes within 9 hours. Our application with transaction address map + hist
 
 **pointer**  - integer  **[block_height | 25 bit][tx_index | 19 bit][tx_type = 0/1 | 1 bit][out_number | 19 bit]**
 
-
     >> outpoint = (block_height << 39)+(tx_index << 20)+(1 << 19) + out_number
     
+**connector_utxo** this table contain all unspent outputs to get fast access for outputs related to address
+crate this index after synchronisation is completed
+
+    CREATE INDEX IF NOT EXISTS utxo_address_map_amount ON connector_utxo USING BTREE (address, amount);
 
                     
     connector_unconfirmed_utxo (outpoint BYTEA,
