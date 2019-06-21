@@ -60,7 +60,7 @@ The logic of the module:
   - _**chain_tail**_ this is a chain of hashes of the last blockchain blocks.
   
   _**chain_tail**_ it is recommended to maintain 100 blocks for the Bitcoin mainnet, which corresponds to coinbase maturity.
-  In other words, this is the number of hashes that guarantee that after this blockchain blockchain can no longer be changed.
+  In other words, this is the number of hashes that guarantee that after this chain blockchain can no longer be changed.
   _**chain_tail**_ used to determine the main chain when reorganizing blocks in the blockchain.
   
   Приложение построенное поверх данного модуля должно реализовать обработчики слудеющих событий:
