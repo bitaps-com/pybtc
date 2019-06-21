@@ -101,12 +101,12 @@ An application built on top of this module should implement event handlers for t
   In the connector there are 2 modes of operation. **Simple mode** - connector just provide transaction data to handlers.
   **UTXO mode** - connector handle utxo and each transaction inputs provided to handlers contains information about 
   address(script), coin amount and coin position in blockchain in case spending confirmed output. This mode required save
-  information about UTXO in database. Connector able works with 3 databases engine: postgresql, leveldb, rocksdb.
+  information about UTXO in database. Connector able to work with 3 database engines: postgresql, leveldb, rocksdb.
   
   
 ## Synchronization
 
-Synchronization time for bitcoin mainnet depends of perfomance of connector handlers and server hardware. Connector without
+Synchronization time for bitcoin mainnet depends on perfomance of connector handlers and server hardware. Connector without
 any handlers payload with bitcoind daemon installed on same server (CPU cores >= 8, SSD drives, RAM >=20 GB) 
 synchronizes within 9 hours. Our application with transaction address map + history and transaction table with merkle proofs
   synchronizes within 10 hours + about 1 hour to create table indexes. 
