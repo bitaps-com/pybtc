@@ -70,14 +70,39 @@ The logic of the module:
   
   - **before new block handler** (_**before_block_handler**_)  called by the connector during normal operation, when received new
   block but block not yet processed by connector and application. This is mean that not all block transactions may already
-  received and handled.
+  received and handled, in case handler raise exception connector reject block and will try add this block again
   
-   
+  - **new block handler** (_**block_handler**_)  called by the connector during normal operation, when received new
+  block and all block transactions already received and handled, in case handler raise exception connector 
+  reject block and will try add this block again all blockchain state changes will be reverted
   
-  In the connector there are 2 modes of operation.
+  - **after new block handler** (_**after_block_handler**_)  called by the connector during normal operation, 
+  when received new block and block already processed, in case handler raise exception connector ignore it 
+  all blockchain state changes already commited 
   
-##### Simple mode 
-  Конектор скаинурет блокчейн 
+  
+  - **remove last block** (_**orphan_handler**_) called during blockchain reorganization when last block no longer exist
+  in main chain, in case handler raise exception connector will try remove this block again 
+  all blockchain state changes will be reverted
+  
+  
+  - **new block as transaction batch**  (_**block_batch_handler**_) called during blockchain synchronization process all
+  block transaction provided as batch, in case handler raise exception connector will try add this block again 
+  all blockchain state changes will be reverted
+  
+  - **flush application caches** (**_flush_app_caches_handler_**) called once synchronization completed and application
+  implement synchronization cache in case handler raise exception connector stop working
+  
+  - **synchronization completed handler** (_**synchronization_completed_handler**_) called once synchronization completed 
+  and all caches is flushed, it may be used for apply indexes to tables and other post sync staff tasks.
+  
+  
+  In the connector there are 2 modes of operation. **Simple mode** - connector just provide transaction data to handlers.
+  **UTXO mode** - connector handle utxo and each transaction inputs provided to habdlers have information about 
+  address(script), coin amount and coin position in blockchain in case spending confirmed output.
+  
+  
+  
 
 ## Requirements
 
