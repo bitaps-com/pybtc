@@ -162,11 +162,23 @@ synchronizes within 9 hours. Our application with transaction address map + hist
                     address BYTEA,
                     amount  BIGINT,
                     PRIMARY KEY(outpoint))
+
+- **outpoint**  byte string **[transaction hash | 32 bytes][output number | little endian]**
+
+- **pointer**  this integer pointer to coin in blockchain **[block_height | 25 bit][tx_index | 19 bit][tx_type = 0/1 | 1 bit][out_number | 19 bit]**
+
+
+    outpoint = (block_height << 39)+(tx_index << 20)+(1 << 19) + out_number
+    
+
                     
     connector_unconfirmed_utxo (outpoint BYTEA,
                                 address BYTEA,
                                 amount  BIGINT,
                                 PRIMARY KEY(outpoint))
+
+
+
                                 
     connector_unconfirmed_stxo (outpoint BYTEA,
                                 sequence  INT,
@@ -174,15 +186,6 @@ synchronizes within 9 hours. Our application with transaction address map + hist
                                 input_index INT,
                                 PRIMARY KEY(outpoint, sequence))
                                 
-- **outpoint**  byte string **[transaction hash | 32 bytes][output number | little endian]**
-
-- **pointer**  this integer pointer to coin in blockchain **[block_height | 25 bit][tx_index | 19 bit][tx_type = 0/1 | 1 bit][out_number | 19 bit]**
-
-
-
-
-    outpoint = (block_height << 39)+(tx_index << 20)+(1 << 19) + out_number
-    
 
 **_connector_unconfirmed_stxo_** this table contains unconfirmed spent transaction outputs.
 **outpoint** + **sequence** pair is unique identificator for table records, where the sequence is
