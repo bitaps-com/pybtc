@@ -597,14 +597,12 @@ class Connector:
                                            out["value"],
                                            address)
 
-            c, ti = 0, 0
             stxo, missed = dict(), deque()
             for q in block["rawTx"]:
                 tx = block["rawTx"][q]
                 if not tx["coinbase"]:
                     if self.sync_utxo:
                         for i in tx["vIn"]:
-                            ti += 1
                             self.destroyed_coins += 1
                             inp = tx["vIn"][i]
                             try:
@@ -612,7 +610,6 @@ class Connector:
                                 tx["vIn"][i]["coin"] = inp["_a_"]
                                 self.preload_cached_annihilated += 1
                                 self.preload_cached_total += 1
-                                c += 1
                             except:
                                 try:
                                     # preloaded and should exist in cache
@@ -621,7 +618,6 @@ class Connector:
                                     self.preload_cached += 1
                                     outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                     self.sync_utxo.get(outpoint)
-                                    c += 1
                                 except:
                                     try:
                                         # coin was loaded from db on preload stage
@@ -630,13 +626,11 @@ class Connector:
                                         self.preload_cached += 1
                                         outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                         self.sync_utxo.deleted.append(outpoint)
-                                        c += 1
                                     except:
                                         outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                         r = self.sync_utxo.get(outpoint)
                                         if r:
                                             tx["vIn"][i]["coin"] = r
-                                            c += 1
                                         else:
                                             missed.append((outpoint,
                                                           (height<<39)+(q<<20)+(1<<19)+i,
@@ -658,10 +652,6 @@ class Connector:
                                 raise Exception("utxo get failed ")
                         else:
                             raise Exception("utxo get failed ")
-                    c += 1
-
-                if c != ti and not self.cache_loading:
-                    raise Exception("fatal error utxo get failed  %s" % height)
 
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])

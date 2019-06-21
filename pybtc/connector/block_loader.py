@@ -107,7 +107,9 @@ class BlockLoader:
                         self.rpc_batch_limit -= 40
                 except asyncio.CancelledError:
                     self.log.info("Loading task terminated")
-                    break
+                    [self.worker[p].terminate() for p in self.worker]
+                    for p in self.worker_busy: self.worker_busy[p] = False
+                    return
                 except Exception as err:
                     self.log.error("Loading task  error %s " % err)
             else:
@@ -116,7 +118,7 @@ class BlockLoader:
 
         self.watchdog_task.cancel()
         if self.parent.block_preload._store:
-            while next(reversed(self.parent.block_preload._store)) >= target_height:
+            while next(reversed(self.parent.block_preload._store)) < target_height:
                 await asyncio.sleep(1)
             self.log.info("block loader reached target block %s" % target_height)
             self.log.debug("    Cache first block %s; "
@@ -226,6 +228,7 @@ class BlockLoader:
 
             if msg_type == b'failed':
                 self.height = bytes_to_int(msg)
+                self.log.debug("failed load block %s" % self.height)
                 continue
 
 
@@ -257,11 +260,11 @@ class Worker:
         self.loop.run_forever()
 
     async def load_blocks(self, height, limit):
+        start_height = height
         try:
             x = None
             blocks = dict()
             missed =deque()
-            start_height = height
             t = 0
             e = height + limit
             limit = 40
@@ -355,19 +358,17 @@ class Worker:
                 for y in blocks[x]["rawTx"]:
                     for i in blocks[x]["rawTx"][y]["vOut"]:
                         try:
-                            pointer = (x << 39)+(y << 20)+(1 << 19) + i
-                            r = self.destroyed_coins.delete(pointer)
+                            r = self.destroyed_coins.delete((x<<39)+(y<<20)+(1<<19)+i)
                             blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                             assert r is not None
                         except: pass
 
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
-        except:
-            self.log.critical("load blocks error")
-            self.log.critical(str(traceback.format_exc()))
+        except Exception as err:
+            self.log.critical("load blocks error: %s" % str(err))
             await self.pipe_sent_msg(b'result', pickle.dumps([]))
-            await self.pipe_sent_msg(b'failed', pickle.dumps(height))
+            await self.pipe_sent_msg(b'failed', pickle.dumps(start_height))
 
 
     async def message_loop(self):
