@@ -165,7 +165,7 @@ synchronizes within 9 hours. Our application with transaction address map + hist
 
 **outpoint**  - byte string **[transaction hash | 32 bytes][output number | little endian]**
 
-**pointer**  - integer pointer to coin in blockchain **[block_height | 25 bit][tx_index | 19 bit][tx_type = 0/1 | 1 bit][out_number | 19 bit]**
+**pointer**  - integer  **[block_height | 25 bit][tx_index | 19 bit][tx_type = 0/1 | 1 bit][out_number | 19 bit]**
 
 
     >> outpoint = (block_height << 39)+(tx_index << 20)+(1 << 19) + out_number
@@ -178,7 +178,7 @@ synchronizes within 9 hours. Our application with transaction address map + hist
                                 PRIMARY KEY(outpoint))
 
 
-**address** - byte string [out_type |  1 byte][addess hash/script]
+**address** - byte string **[out_type |  1 byte][addess hash/script]**
                                 
     connector_unconfirmed_stxo (outpoint BYTEA,
                                 sequence  INT,
