@@ -176,8 +176,11 @@ synchronizes within 9 hours. Our application with transaction address map + hist
                                 
 - **outpoint**  byte string **[transaction hash | 32 bytes][output number | little endian]**
 
-- **pointer**  this integer pointer to coin in blockchain 
-**[block_height | 25 bit][tx_index | 19 bit][tx_type = 0/1 | 1 bit][out_number | 19 bit]**
+- **pointer**  this integer pointer to coin in blockchain **[block_height | 25 bit][tx_index | 19 bit][tx_type = 0/1 | 1 bit][out_number | 19 bit]**
+
 
 
     outpoint = (block_height << 39)+(tx_index << 20)+(1 << 19) + out_number
+    
+
+**_connector_unconfirmed_stxo_** this table contains unconfirmed spent transaction outputs
