@@ -83,8 +83,8 @@ An application built on top of this module should implement event handlers for t
   
   
   - **remove last block** (_**orphan_handler**_) called during blockchain reorganization when last block no longer exist
-  in main chain, in case handler raise exception connector will try remove this block again 
-  all blockchain state changes will be reverted
+  in main chain, in case handler raise exception all blockchain state changes will be reverted, connector  will 
+  try remove this block again
   
   
   - **new block as transaction batch**  (_**block_batch_handler**_) called during blockchain synchronization process all
