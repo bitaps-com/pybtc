@@ -47,12 +47,38 @@ The logic of the module:
       ----------  |       ====================
      | Preload  | |                  |
      |  blocks  |-                   | 
-     | worker N |            ====================
-     | + cache  |           |   Synchronization  |
-      ----------            |      completed     |
-                            |     app handler    |
-                             ====================
+     | worker N |            **====================**
+     | + cache  |           **|   Synchronization  |**
+      ----------            **|      completed     |**
+                            **|     app handler    |**
+                             **====================**
                              
+## Overview
+
+  The main starting parameters are last_block_height and chain_tail.
+  - last_block_height this is the last blockchain block on which the application has stopped.
+  - chain_tail this is a chain of hashes of the last blockchain blocks.
+  
+  chain_tail it is recommended to maintain 100 blocks for the miner Bitcoin, which corresponds to coinbase maturirty.
+  In other words, this is the number of hashes that guarantee that after this blockchain blockchain can no longer be changed.
+  chain_tail used to determine the main chain when reorganizing blocks in the blockchain.
+  
+  Приложение построенное поверх данного модуля должно реализовать обработчики слудеющих событий:
+  
+  - **new transaction** (tx_handler) called by the connector during normal operation after reaching the synchronization 
+  position of the processed application block relative to the blockchain blocks
+  
+  - **before new block handler** (before_block_handler)  called by the connector during normal operation, when received new
+  block but block not yet processed by connector and application. This is mean that not all block transactions may already
+  received and handled.
+  
+   
+  
+  In the connector there are 2 modes of operation.
+  
+##### Simple mode 
+  Конектор скаинурет блокчейн 
+
 ## Requirements
 
   - pyzmq
