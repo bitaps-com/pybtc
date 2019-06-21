@@ -55,20 +55,20 @@ The logic of the module:
                              
 ## Overview
 
-  The main starting parameters are _last_block_height_ and _chain_tail_.
-  - _last_block_height_ this is the last blockchain block on which the application has stopped.
-  - _chain_tail_ this is a chain of hashes of the last blockchain blocks.
+  The main starting parameters are _**last_block_height**_ and _**chain_tail**_.
+  - _**last_block_height**_ this is the last blockchain block on which the application has stopped.
+  - _**chain_tail**_ this is a chain of hashes of the last blockchain blocks.
   
-  _chain_tail_ it is recommended to maintain 100 blocks for the miner Bitcoin, which corresponds to coinbase maturirty.
+  _**chain_tail**_ it is recommended to maintain 100 blocks for the miner Bitcoin, which corresponds to coinbase maturirty.
   In other words, this is the number of hashes that guarantee that after this blockchain blockchain can no longer be changed.
-  _chain_tail_ used to determine the main chain when reorganizing blocks in the blockchain.
+  _**chain_tail**_ used to determine the main chain when reorganizing blocks in the blockchain.
   
   Приложение построенное поверх данного модуля должно реализовать обработчики слудеющих событий:
   
-  - **new transaction** (_tx_handler_) called by the connector during normal operation after reaching the synchronization 
+  - **new transaction** (_**tx_handler**_) called by the connector during normal operation after reaching the synchronization 
   position of the processed application block relative to the blockchain blocks
   
-  - **before new block handler** (_before_block_handler_)  called by the connector during normal operation, when received new
+  - **before new block handler** (_**before_block_handler**_)  called by the connector during normal operation, when received new
   block but block not yet processed by connector and application. This is mean that not all block transactions may already
   received and handled.
   
