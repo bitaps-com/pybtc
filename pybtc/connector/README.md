@@ -63,7 +63,8 @@ The logic of the module:
   In other words, this is the number of hashes that guarantee that after this chain blockchain can no longer be changed.
   _**chain_tail**_ used to determine the main chain when reorganizing blocks in the blockchain.
   
-  Приложение построенное поверх данного модуля должно реализовать обработчики слудеющих событий:
+
+An application built on top of this module should implement event handlers for the following events:
   
   - **new transaction** (_**tx_handler**_) called by the connector during normal operation after reaching the synchronization 
   position of the processed application block relative to the blockchain blocks
