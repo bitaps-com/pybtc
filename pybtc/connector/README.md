@@ -152,3 +152,30 @@ synchronizes within 9 hours. Our application with transaction address map + hist
                   db=None,
                   app_proc_title="Connector")
                   
+
+## UTXO database schema
+
+##### Postgresql
+
+    connector_utxo (outpoint BYTEA,
+                    pointer BIGINT,
+                    address BYTEA,
+                    amount  BIGINT,
+                    PRIMARY KEY(outpoint))
+                    
+    connector_unconfirmed_utxo (outpoint BYTEA,
+                                address BYTEA,
+                                amount  BIGINT,
+                                PRIMARY KEY(outpoint))
+                                
+    connector_unconfirmed_stxo (outpoint BYTEA,
+                                sequence  INT,
+                                tx_id BYTEA,
+                                input_index INT,
+                                PRIMARY KEY(outpoint, sequence))
+                                
+- **outpoint**  byte string **[transaction hash | 32 bytes][output number | little endian]**
+
+- **pointer**  this integer pointer to coin in blockchain 
+(block_height << 39)+(tx_index << 20)+(1 << 19) + out_number
+**[block_height | 25 bit][tx_index | 19 bit][tx_type = 0/1 | 1 bit][out_number | 19 bit]**

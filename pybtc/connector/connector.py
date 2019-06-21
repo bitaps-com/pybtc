@@ -149,7 +149,8 @@ class Connector:
         asyncio.ensure_future(self.start(), loop=self.loop)
 
     async def start(self):
-        await self.utxo_init()
+        if self.utxo_data:
+            await self.utxo_init()
 
         while True:
             self.log.info("Connector initialization")
@@ -210,82 +211,79 @@ class Connector:
         self.loop.create_task(self.get_next_block())
 
     async def utxo_init(self):
-        if self.utxo_data:
-            if self.db_type is None:
-                raise Exception("UTXO data required  db connection")
-            if self.db_type not in ("rocksdb", "leveldb", "postgresql"):
-                raise Exception("Connector supported database types is: rocksdb, leveldb, postgresql")
-            if self.db_type in ("rocksdb", "leveldb"):
-                # rocksdb and leveldb
-                lb = self.db.get(b"last_block")
+        if self.db_type is None:
+            raise Exception("UTXO data required  db connection")
+        if self.db_type not in ("rocksdb", "leveldb", "postgresql"):
+            raise Exception("Connector supported database types is: rocksdb, leveldb, postgresql")
+        if self.db_type in ("rocksdb", "leveldb"):
+            # rocksdb and leveldb
+            lb = self.db.get(b"last_block")
+            if lb is None:
+                lb = 0
+                self.db.put(b"last_block", int_to_bytes(0))
+                self.db.put(b"last_cached_block", int_to_bytes(0))
+            else:
+                lb = bytes_to_int(lb)
+            lc = bytes_to_int(self.db.get(b"last_cached_block"))
+        else:
+            # postgresql
+            self.db_pool = await asyncpg.create_pool(dsn=self.db, min_size=1, max_size=20)
+            async with self.db_pool.acquire() as conn:
+                await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                          connector_utxo (outpoint BYTEA,
+                                                          pointer BIGINT,
+                                                          address BYTEA,
+                                                          amount  BIGINT,
+                                                          PRIMARY KEY(outpoint));
+                                   """)
+                await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                          connector_unconfirmed_utxo (outpoint BYTEA,
+                                                                      address BYTEA,
+                                                                      amount  BIGINT,
+                                                                      PRIMARY KEY(outpoint));                                                      
+                                   """)
+                await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                          connector_unconfirmed_stxo (outpoint BYTEA,
+                                                                      sequence  INT,
+                                                                      tx_id BYTEA,
+                                                                      input_index INT,
+                                                                      PRIMARY KEY(outpoint,
+                                                                                  sequence));                                                      
+                                   """)
+
+                await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                          connector_utxo_state (name VARCHAR,
+                                                                value BYTEA,
+                                                                PRIMARY KEY(name));
+                                   """)
+                lb = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_block';")
+                lc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
                 if lb is None:
-                    lb = 0
-                    self.db.put(b"last_block", int_to_bytes(0))
-                    self.db.put(b"last_cached_block", int_to_bytes(0))
-                else:
-                    lb = bytes_to_int(lb)
-                lc = bytes_to_int(self.db.get(b"last_cached_block"))
-            else:
-                # postgresql
-                self.db_pool = await asyncpg.create_pool(dsn=self.db,
-                                                         min_size=1,
-                                                         max_size=10)
-                async with self.db_pool.acquire() as conn:
-                    await conn.execute("""CREATE TABLE IF NOT EXISTS 
-                                              connector_utxo (outpoint BYTEA,
-                                                              pointer BIGINT,
-                                                              address BYTEA,
-                                                              amount  BIGINT,
-                                                              PRIMARY KEY(outpoint));
-                                       """)
-                    await conn.execute("""CREATE TABLE IF NOT EXISTS 
-                                              connector_unconfirmed_utxo (outpoint BYTEA,
-                                                                          address BYTEA,
-                                                                          amount  BIGINT,
-                                                                          PRIMARY KEY(outpoint));                                                      
-                                       """)
-                    await conn.execute("""CREATE TABLE IF NOT EXISTS 
-                                              connector_unconfirmed_stxo (outpoint BYTEA,
-                                                                          sequence  INT,
-                                                                          tx_id BYTEA,
-                                                                          input_index INT,
-                                                                          PRIMARY KEY(outpoint,
-                                                                                      sequence));                                                      
-                                       """)
+                    lb = int_to_bytes(0)
+                    lc = int_to_bytes(0)
+                    await conn.execute("INSERT INTO connector_utxo_state (name, value) "
+                                       "VALUES ('last_block', $1);", lb)
+                    await conn.execute("INSERT INTO connector_utxo_state (name, value) "
+                                       "VALUES ('last_cached_block', $1);", lc)
+                    await conn.execute("INSERT INTO connector_utxo_state (name, value) "
+                                       "VALUES ('cache_restore', $1);", None)
 
-                    await conn.execute("""CREATE TABLE IF NOT EXISTS 
-                                              connector_utxo_state (name VARCHAR,
-                                                                    value BYTEA,
-                                                                    PRIMARY KEY(name));
-                                       """)
-                    lb = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_block';")
-                    lc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
-                    if lb is None:
-                        lb = int_to_bytes(0)
-                        lc = int_to_bytes(0)
-                        await conn.execute("INSERT INTO connector_utxo_state (name, value) "
-                                           "VALUES ('last_block', $1);", lb)
-                        await conn.execute("INSERT INTO connector_utxo_state (name, value) "
-                                           "VALUES ('last_cached_block', $1);", lc)
-                        await conn.execute("INSERT INTO connector_utxo_state (name, value) "
-                                           "VALUES ('cache_restore', $1);", None)
+        self.last_block_height = bytes_to_int(lb)
+        self.last_block_utxo_cached_height = bytes_to_int(lc)
+        if self.app_block_height_on_start:
+            if self.app_block_height_on_start < self.last_block_height:
+                self.log.critical("UTXO state last block %s app state last block %s " % (self.last_block_height,
+                                                                                         self.app_block_height_on_start))
+                raise Exception("App blockchain state behind connector blockchain state")
+            if self.app_block_height_on_start < self.last_block_height:
+                self.log.warning("Connector utxo height behind App height for %s blocks ..." %
+                                 (self.app_block_height_on_start - self.last_block_height,))
 
-            self.last_block_height = bytes_to_int(lb)
-            self.last_block_utxo_cached_height = bytes_to_int(lc)
-            if self.app_block_height_on_start:
-                if self.app_block_height_on_start < self.last_block_height:
-                    self.log.critical("UTXO state last block %s app state last block %s " % (self.last_block_height,
-                                                                                             self.app_block_height_on_start))
-                    raise Exception("App blockchain state behind connector blockchain state")
-                if self.app_block_height_on_start < self.last_block_height:
-                    self.log.warning("Connector utxo height behind App height for %s blocks ..." %
-                                     (self.app_block_height_on_start - self.last_block_height,))
-
-            else:
-                self.app_block_height_on_start = self.last_block_utxo_cached_height
-            self.app_last_block = self.app_block_height_on_start
-            if self.last_block_utxo_cached_height < self.app_block_height_on_start:
-                self.last_block_utxo_cached_height = self.app_block_height_on_start
+        else:
+            self.app_block_height_on_start = self.last_block_utxo_cached_height
+        self.app_last_block = self.app_block_height_on_start
+        if self.last_block_utxo_cached_height < self.app_block_height_on_start:
+            self.last_block_utxo_cached_height = self.app_block_height_on_start
 
 
     async def zeromq_handler(self):
@@ -424,13 +422,12 @@ class Connector:
                     if raw_block:
                         q = time.time()
                         block = loads(raw_block)
-                        block["hash"]
                         self.blocks_decode_time += time.time() - q
 
                 if not block:
                     h = await self.rpc.getblockhash(self.last_block_height + 1)
                     block = await self._get_block_by_hash(h)
-                    # block["checkpoint"] = self.last_block_height + 1
+                    block["checkpoint"] = self.last_block_height + 1
                     block["height"] = self.last_block_height + 1
 
                 self.loop.create_task(self._new_block(block))
@@ -499,8 +496,6 @@ class Connector:
                                         if self.sync_utxo.save_process:
                                             self.loop.create_task(self.sync_utxo.commit())
 
-
-
             else:
                 # call before block handler
                 if self.before_block_handler:
@@ -508,6 +503,7 @@ class Connector:
 
                 await self.fetch_block_transactions(block)
                 raise Exception("stop")
+
 
 
                 if self.block_handler:
@@ -747,8 +743,6 @@ class Connector:
                                                        round((self.sync_utxo._hit + self.preload_cached_annihilated)
                                                              / self.destroyed_coins, 4)))
         self.log.debug("---------------------")
-
-
 
     async def fetch_block_transactions(self, block):
         q = time.time()
