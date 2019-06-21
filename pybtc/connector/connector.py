@@ -1,4 +1,4 @@
-from pybtc.functions.tools import rh2s, s2rh
+from pybtc.functions.tools import rh2s
 from pybtc.connector.block_loader import BlockLoader
 from pybtc.connector.utxo import UTXO, UUTXO
 from pybtc.connector.utils import decode_block_tx
@@ -8,7 +8,7 @@ from pybtc.transaction import Transaction
 from pybtc import int_to_bytes, bytes_to_int
 from pybtc import MRU
 from collections import deque
-import traceback
+
 
 try:
     import aiojsonrpc
