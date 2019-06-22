@@ -163,7 +163,7 @@ synchronizes within 9 hours. Our application with transaction address map + hist
                     amount  BIGINT,
                     PRIMARY KEY(outpoint))
 
-**outpoint**  - byte string **[transaction hash | 32 bytes][output number | little endian]**
+**outpoint**  - byte string **[transaction hash | 32 bytes][output number | big endian]**
 
 **pointer**  - integer  **[block_height | 25 bit][tx_index | 19 bit][tx_type = 0/1 | 1 bit][out_number | 19 bit]**
 
@@ -182,10 +182,11 @@ crate this index after synchronisation is completed
     CREATE INDEX IF NOT EXISTS utxo_address_map_pointer ON connector_utxo USING BTREE (address, pointer);
 
 
-**address** - byte string **[out_type |  1 byte][addess hash/script]**
+**address** - byte string **[out_type | 1 byte][addess hash/script]**
 
                     
     connector_unconfirmed_utxo (outpoint BYTEA,
+                                out_tx_id BYTEA,
                                 address BYTEA,
                                 amount  BIGINT,
                                 PRIMARY KEY(outpoint))
@@ -193,6 +194,7 @@ crate this index after synchronisation is completed
                                 
     connector_unconfirmed_stxo (outpoint BYTEA,
                                 sequence  INT,
+                                out_tx_id BYTEA,
                                 tx_id BYTEA,
                                 input_index INT,
                                 PRIMARY KEY(outpoint, sequence))
@@ -204,8 +206,8 @@ the number of times a coin has been spent.
 
 
 
-    connector_block_state_change (height  INT,
-                                  data BYTEA,
-                                  PRIMARY KEY height);  
+    connector_block_state_checkpoint (height  INT,
+                                      data BYTEA,
+                                      PRIMARY KEY height);  
                                   
-**connector_block_state_change** this table contains information to restore blockchain state in case block removed
+**connector_block_state_checkpoint** this table contains information to restore blockchain state in case block removed

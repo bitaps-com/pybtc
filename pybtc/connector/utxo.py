@@ -8,6 +8,7 @@ from pybtc.functions.script import parse_script
 from collections import deque
 from pybtc  import MRU, LRU
 import time
+import pickle
 import asyncio
 
 
@@ -374,8 +375,6 @@ class UUTXO():
             break
         try:
             self.load_data_future = asyncio.Future()
-
-            t = time.time()
             if self.db_type == "postgresql":
                 load_utxo = set(self.load_buffer)
                 load_stxo = set(self.load_buffer)
@@ -484,4 +483,105 @@ class UUTXO():
                     commit_ustxo.remove((row["o"], row["s"], row["t"], row["i"]))
 
                 commit_ustxo = set((i[0], i[1] + 1, i[2], i[3]) for i in commit_ustxo)
+
+    async def apply_block_changes(self, txs, h):
+        if self.db_type == "postgresql":
+            async with self.db.acquire() as conn:
+                async with conn.transaction():
+                    # handle block new coins
+                    # remove all block created coins from connector_unconfirmed_utxo table
+                    # add new coins to connector_utxo table
+
+                    rows = await conn.fetch("DELETE FROM connector_unconfirmed_utxo  "
+                                            "WHERE out_tx_id = ANY($1) "
+                                            "RETURNING  outpoint, "
+                                            "           out_tx_id as t,"
+                                            "           address, "
+                                            "           amount;", txs)
+                    utxo = deque()
+                    uutxo = deque()
+                    for r in rows:
+                        utxo.append((r["outpoint"],
+                                     (h << 39) + (txs.index(r["t"]) << 20) + (1 << 19) + bytes_to_int(r[32:]),
+                                     r["address"], r["amount"]))
+                        uutxo.append((r["outpoint"], r["t"], r["address"], r["amount"]))
+
+                    await conn.copy_records_to_table('connector_utxo',
+                                                     columns=["outpoint", "pointer",
+                                                              "address", "amount"], records=utxo)
+
+                    # handle block destroyed coins
+                    # remove all destroy records from  connector_unconfirmed_stxo
+
+                    rows = await conn.fetch("DELETE FROM connector_unconfirmed_stxo "
+                                            "WHERE out_tx_id = ANY($1) "
+                                            "RETURNING outpoint,"
+                                            "          sequence,"
+                                            "          out_tx_id,"
+                                            "          tx_id,"
+                                            "          input_index as i;", txs)
+                    stxo = deque()
+                    outpoints = set()
+                    for r in rows:
+                        stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"]))
+                        outpoints.add(r["outpoint"])
+
+                    #    delete dbs records
+
+                    dbs_stxo = deque()
+                    dbs_uutxo = deque()
+
+                    rows = await conn.fetch("DELETE FROM connector_unconfirmed_stxo "
+                                            "WHERE outpoint = ANY($1) "
+                                            "RETURNING outpoint,"
+                                            "          sequence,"
+                                            "          out_tx_id,"
+                                            "          tx_id,"
+                                            "          input_index as i;", outpoints)
+                    invalid_txs = set()
+                    for r in rows:
+                        dbs_stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"]))
+                        invalid_txs.add(r["tx_id"])
+
+                    # handle invalid transactions while invalid transactions list not empty
+                    #    remove coins for transactions list from connector_unconfirmed_utxo
+                    #    remove destroy records for transactions list from connector_unconfirmed_stxo
+                    #        get new invalid transactions list from deleted records
+
+                    block_invalid_txs = set()
+
+                    while invalid_txs:
+                        block_invalid_txs = block_invalid_txs | invalid_txs
+
+                        rows = await conn.fetch("DELETE FROM connector_unconfirmed_utxo  "
+                                                "WHERE out_tx_id = ANY($1) "
+                                                "RETURNING  outpoint, "
+                                                "           out_tx_id as t,"
+                                                "           address, "
+                                                "           amount;", invalid_txs)
+                        outpoints = set()
+                        for r in rows:
+                            dbs_uutxo.append((r["outpoint"], r["t"], r["address"], r["amount"]))
+                            outpoints.add(r["outpoint"])
+
+                        rows = await conn.fetch("DELETE FROM connector_unconfirmed_stxo "
+                                                "WHERE outpoint = ANY($1) "
+                                                "RETURNING outpoint,"
+                                                "          sequence,"
+                                                "          out_tx_id,"
+                                                "          tx_id,"
+                                                "          input_index as i;", outpoints)
+                        invalid_txs = set()
+                        for r in rows:
+                            dbs_stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"]))
+                            invalid_txs.add(r["tx_id"])
+
+                    await conn.execute("INSERT INTO connector_block_state_checkpoint (height, data) "
+                                       "VALUES ($1, $2);", h, pickle.dumps({"uutxo": uutxo,
+                                                                            "stxo": stxo,
+                                                                            "dbs_uutxo": dbs_uutxo,
+                                                                            "dbs_stxo": dbs_stxo,
+                                                                            "invalid_txs": block_invalid_txs}))
+
+                    return {"dbs_uutxo": dbs_uutxo, "dbs_stxo": dbs_stxo, "invalid_txs": block_invalid_txs}
 

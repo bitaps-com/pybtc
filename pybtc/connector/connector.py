@@ -1,4 +1,4 @@
-from pybtc.functions.tools import rh2s
+from pybtc.functions.tools import rh2s, s2rh
 from pybtc.connector.block_loader import BlockLoader
 from pybtc.connector.utxo import UTXO, UUTXO
 from pybtc.connector.utils import decode_block_tx
@@ -238,23 +238,24 @@ class Connector:
                                    """)
                 await conn.execute("""CREATE TABLE IF NOT EXISTS 
                                           connector_unconfirmed_utxo (outpoint BYTEA,
+                                                                      out_tx_id BYTEA,
                                                                       address BYTEA,
                                                                       amount  BIGINT,
-                                                                      PRIMARY KEY(outpoint));                                                      
+                                                                      PRIMARY KEY (outpoint));                                                      
                                    """)
                 await conn.execute("""CREATE TABLE IF NOT EXISTS 
-                                          connector_unconfirmed_stxo (outpoint BYTEA,
+                                          connector_unconfirmed_stxo (outpoint BYTEA, 
                                                                       sequence  INT,
+                                                                      out_tx_id BYTEA,
                                                                       tx_id BYTEA,
                                                                       input_index INT,
-                                                                      PRIMARY KEY(outpoint,
-                                                                                  sequence));                                                      
+                                                                      PRIMARY KEY(outpoint, sequence));                                                      
                                    """)
 
                 await conn.execute("""CREATE TABLE IF NOT EXISTS 
-                                          connector_block_state_change (height  INT,
-                                                                        data BYTEA,
-                                                                        PRIMARY KEY height);                                                      
+                                          connector_block_state_checkpoint (height  INT,
+                                                                            data BYTEA,
+                                                                            PRIMARY KEY (height));                                                      
                                    """)
 
                 await conn.execute("""CREATE TABLE IF NOT EXISTS 
@@ -508,16 +509,19 @@ class Connector:
                     await self.before_block_handler(block)
 
                 await self.fetch_block_transactions(block)
-                raise Exception("stop")
+                # raise Exception("stop")
 
+                if self.utxo_data:
+                    data = await  self.uutxo.apply_block_changes([s2rh(h) for h in block["tx"]],
+                                                                                block["height"])
+                    block["mempoolInvalid"] = {"tx": data["invalid_txs"],
+                                               "inputs": data["dbs_stxo"],
+                                               "outputs": data["dbs_uutxo"]}
 
 
                 if self.block_handler:
                     await self.block_handler(block)
 
-                # add to  utxo
-                # remover from uutxo and
-                # save checkpoint
 
 
             self.block_headers_cache.set(block["hash"], block["height"])
