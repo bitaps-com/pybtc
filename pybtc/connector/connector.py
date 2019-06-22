@@ -555,12 +555,9 @@ class Connector:
 
 
     async def verify_block_position(self, block):
-        if "previousblockhash" not in block :
-            return
-        if self.block_headers_cache.len() == 0:
-            return
+        if "previousblockhash" not in block : return
+        if self.block_headers_cache.len() == 0: return
 
-        lb = self.block_headers_cache.get_last_key()
         if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
             if self.block_headers_cache.get(block["previousblockhash"]) is None and self.last_block_height:
                 self.log.critical("Connector error! Node out of sync "
@@ -568,7 +565,14 @@ class Connector:
                 raise Exception("Node out of sync")
 
             if self.orphan_handler:
-                await self.orphan_handler(self.last_block_height)
+                if self.utxo_data:
+                    if self.db_type == "postgres":
+                        async with self.db.acquire() as conn:
+                            async with conn.transaction():
+                                data = await self.uutxo.rollback_block(conn)
+                                await self.orphan_handler(data, conn)
+                else:
+                    await self.orphan_handler(self.last_block_height, None)
             self.block_headers_cache.pop_last()
             self.last_block_height -= 1
             raise Exception("Sidebranch block removed")

@@ -498,17 +498,17 @@ class UUTXO():
                                             "           out_tx_id as t,"
                                             "           address, "
                                             "           amount;", txs)
-                    utxo = deque()
+                    batch = deque()
                     uutxo = deque()
                     for r in rows:
-                        utxo.append((r["outpoint"],
+                        batch.append((r["outpoint"],
                                      (h << 39) + (txs.index(r["t"]) << 20) + (1 << 19) + bytes_to_int(r[32:]),
                                      r["address"], r["amount"]))
                         uutxo.append((r["outpoint"], r["t"], r["address"], r["amount"]))
 
                     await conn.copy_records_to_table('connector_utxo',
                                                      columns=["outpoint", "pointer",
-                                                              "address", "amount"], records=utxo)
+                                                              "address", "amount"], records=batch)
 
                     # handle block destroyed coins
                     # remove all destroy records from  connector_unconfirmed_stxo
@@ -525,6 +525,11 @@ class UUTXO():
                     for r in rows:
                         stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"]))
                         outpoints.add(r["outpoint"])
+
+                    rows = await conn.fetch("DELETE FROM connector_utxo WHERE outpoint = ANY($1) "
+                                            "RETURNING outpoint, pointer, address, amount;")
+                    utxo = deque((r["outpoint"], r["pointer"], r["address"], r["amount"]) for r in rows)
+
 
                     #    delete dbs records
 
@@ -577,7 +582,8 @@ class UUTXO():
                             invalid_txs.add(r["tx_id"])
 
                     await conn.execute("INSERT INTO connector_block_state_checkpoint (height, data) "
-                                       "VALUES ($1, $2);", h, pickle.dumps({"uutxo": uutxo,
+                                       "VALUES ($1, $2);", h, pickle.dumps({"utxo": utxo,
+                                                                            "uutxo": uutxo,
                                                                             "stxo": stxo,
                                                                             "dbs_uutxo": dbs_uutxo,
                                                                             "dbs_stxo": dbs_stxo,
@@ -585,3 +591,28 @@ class UUTXO():
 
                     return {"dbs_uutxo": dbs_uutxo, "dbs_stxo": dbs_stxo, "invalid_txs": block_invalid_txs}
 
+    async def rollback_block(self, conn):
+        row = await conn.fetchrow("DELETE FROM connector_block_state_checkpoint "
+                                  "WHERE height in "
+                                  "(SELECT height FROM connector_block_state_checkpoint"
+                                  " ORDER BY height DESC LIMIT 1) RETURNING "
+                                  "height, data;")
+
+        data = pickle.loads(row["data"])
+
+        outpoints = deque(r["outpoint"] for r in data["uutxo"])
+        await conn("DELETE FROM connector_utxo WHERE outpoint = ANY($1);", outpoints)
+
+        await conn.copy_records_to_table('connector_utxo',
+                                         columns=["outpoint", "pointer",
+                                                  "address", "amount"], records=data["utxo"])
+        await conn.copy_records_to_table('connector_unconfirmed_utxo',
+                                         columns=["outpoint", "out_tx_id",
+                                                  "address", "amount"], records=data["uutxo"])
+        await conn.copy_records_to_table('connector_unconfirmed_stxo',
+                                         columns=["outpoint", "sequence",
+                                                  "out_tx_id", "tx_id", "input_index"], records=data["uutxo"])
+        return {"height": row["height"],
+                "mempool": {"tx": data["invalid_txs"],
+                            "inputs": data["dbs_uutxo"],
+                            "outputs": data["dbs_stxo"]}}
