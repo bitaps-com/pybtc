@@ -544,6 +544,8 @@ class Connector:
                     self.await_tx_future[i].cancel()
             self.await_tx_future = dict()
             self.log.error("block error %s" % str(err))
+            import traceback
+            print(traceback.format_exc())
         finally:
             if self.node_last_block > self.last_block_height:
                 self.get_next_block_mutex = True
