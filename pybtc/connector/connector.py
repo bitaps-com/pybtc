@@ -543,7 +543,7 @@ class Connector:
                 if not self.await_tx_future[i].done():
                     self.await_tx_future[i].cancel()
             self.await_tx_future = dict()
-            self.log.error("block error %s" % str(err))
+            self.log.error("block %s error %s" % (block["height"], str(err)))
             import traceback
             print(traceback.format_exc())
         finally:
