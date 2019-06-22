@@ -659,7 +659,7 @@ class Connector:
                             if height > self.app_block_height_on_start:
                                 raise Exception("utxo get failed ")
                         else:
-                            raise Exception("utxo get failed %s" % rh2s(block["rawTx"][q]["vIn"]["txId"]))
+                            raise Exception("utxo get failed %s" % rh2s(block["rawTx"][q]["vIn"][i]["txId"]))
 
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])
