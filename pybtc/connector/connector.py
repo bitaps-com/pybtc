@@ -415,7 +415,7 @@ class Connector:
                                 self.log.info("wait for utxo cache flush ...")
                                 await self.sync_utxo.commit()
                                 await asyncio.sleep(10)
-                            self.sync_utxo.create_checkpoint(self.app_last_block)
+                            self.sync_utxo.create_checkpoint(self.last_block_height, self.app_last_block)
                             await self.sync_utxo.commit()
                             self.log.info("Flush utxo cache completed")
 
