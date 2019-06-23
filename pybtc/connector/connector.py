@@ -515,7 +515,7 @@ class Connector:
 
                 if self.utxo_data:
                     if self.db_type == "postgresql":
-                        async with self.db.acquire() as conn:
+                        async with self.db_pool.acquire() as conn:
                             async with conn.transaction():
                                 data = await  self.uutxo.apply_block_changes([s2rh(h) for h in block["tx"]],
                                                                              block["height"], conn)
