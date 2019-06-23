@@ -535,7 +535,6 @@ class Connector:
                                 if self.block_handler:
                                     await self.block_handler(block, conn)
 
-
                 elif self.block_handler:
                     await self.block_handler(block, None)
 
