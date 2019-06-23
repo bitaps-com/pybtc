@@ -621,3 +621,10 @@ class UUTXO():
                 "mempool": {"tx": data["invalid_txs"],
                             "inputs": data["dbs_uutxo"],
                             "outputs": data["dbs_stxo"]}}
+
+    async def flush_mempool(self):
+        if self.db_type == "postgresql":
+            async with self.db.acquire() as conn:
+                async with conn.transaction():
+                    await conn.execute("truncate table  connector_unconfirmed_stxo;")
+                    await conn.execute("truncate table  connector_unconfirmed_utxo;")

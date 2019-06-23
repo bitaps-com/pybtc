@@ -269,14 +269,13 @@ class Connector:
                     lb = int_to_bytes(0)
                     lc = int_to_bytes(0)
                     await conn.execute("INSERT INTO connector_utxo_state (name, value) "
-                                       "VALUES ('last_block', $1);", lb)
+                                       "VALUES ('last_block', $1);", int_to_bytes(0))
                     await conn.execute("INSERT INTO connector_utxo_state (name, value) "
-                                       "VALUES ('last_cached_block', $1);", lc)
-                    await conn.execute("INSERT INTO connector_utxo_state (name, value) "
-                                       "VALUES ('cache_restore', $1);", None)
+                                       "VALUES ('last_cached_block', $1);", int_to_bytes(0))
 
         self.last_block_height = bytes_to_int(lb)
         self.last_block_utxo_cached_height = bytes_to_int(lc)
+
         if self.app_block_height_on_start:
             if self.app_block_height_on_start < self.last_block_height:
                 self.log.critical("UTXO state last block %s app state last block %s " % (self.last_block_height,
@@ -395,7 +394,8 @@ class Connector:
                 if d > self.deep_sync_limit:
                     if not self.deep_synchronization:
                         self.log.info("Deep synchronization mode")
-                        self.deep_synchronization = True
+                        if self.utxo_data:
+                            await self.uutxo.flush_mempool()
                 else:
                     if self.deep_synchronization:
                         self.log.info("Switch from deep synchronization mode")
@@ -782,11 +782,8 @@ class Connector:
                         missed.remove(rh2s(row["tx_id"]))
                     coinbase = await conn.fetchval("SELECT   out_tx_id FROM connector_unconfirmed_utxo "
                                               "WHERE out_tx_id  = $1 LIMIT 1;", s2rh(block["tx"][0]))
-                    print(">>", block["tx"][0])
-                    print(">>", coinbase)
                     if coinbase:
                         missed.remove(block["tx"][0])
-                    print(missed)
         self.log.debug("Block missed transactions  %s from %s" % (len(missed), tx_count))
 
         if missed:
