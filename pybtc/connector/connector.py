@@ -774,7 +774,7 @@ class Connector:
                 missed.add(h)
         if self.utxo_data:
             if self.db_type == "postgresql":
-                async with self.db.acquire() as conn:
+                async with self.db_pool.acquire() as conn:
                     rows = await conn.fetch("SELECT tx_id FROM  connector_unconfirmed_stxo "
                                             "WHERE tx_id = ANY($1);", (s2rh(t) for t in missed))
 
