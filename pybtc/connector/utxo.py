@@ -471,22 +471,24 @@ class UUTXO():
 
             while commit_ustxo:
                 rows = await conn.fetch("INSERT  INTO connector_unconfirmed_stxo "
-                                        "(outpoint, sequence, tx_id, input_index) "
+                                        "(outpoint, sequence, out_tx_id, tx_id, input_index) "
                                         " (SELECT r.outpoint,"
                                         "         r.sequence,"
+                                        "         r.out_tx_id,"
                                         "         r.tx_id,"
                                         "         r.input_index "
                                         "FROM unnest($1::connector_unconfirmed_stxo[]) as r ) "
                                         "ON CONFLICT (outpoint, sequence) DO NOTHING "
                                         "            RETURNING outpoint as o,"
                                         "                      sequence as s,"
+                                        "                      out_tx_id as ot,"
                                         "                      tx_id as t,"
                                         "                      input_index as i;" , commit_ustxo)
 
                 for row in rows:
-                    commit_ustxo.remove((row["o"], row["s"], row["t"], row["i"]))
+                    commit_ustxo.remove((row["o"], row["s"], row["ot"], row["t"], row["i"]))
 
-                commit_ustxo = set((i[0], i[1] + 1, i[2], i[3]) for i in commit_ustxo)
+                commit_ustxo = set((i[0], i[1] + 1, i[2], i[3], i[4] ) for i in commit_ustxo)
 
     async def apply_block_changes(self, txs, h):
         if self.db_type == "postgresql":

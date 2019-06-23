@@ -857,7 +857,7 @@ class Connector:
                     self.destroyed_coins += 1
                     tx["vIn"][i]["outpoint"] = b"".join((tx["vIn"][i]["txId"], int_to_bytes(tx["vIn"][i]["vOut"])))
                     self.uutxo.load_buffer.append(tx["vIn"][i]["outpoint"])
-                    commit_ustxo_buffer.add((tx["vIn"][i]["outpoint"], 0, tx["txId"], i))
+                    commit_ustxo_buffer.add((tx["vIn"][i]["outpoint"], 0, tx["vIn"][i]["txId"], tx["txId"], i))
 
                 await self.uutxo.load_utxo_data()
 
