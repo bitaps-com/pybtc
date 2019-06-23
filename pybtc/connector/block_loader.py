@@ -405,7 +405,7 @@ class Worker:
             await asyncio.wait(self.msg_loop)
         except:
             pass
-        sys.exit(0)
+        self.loop.stop()
 
 
     async def get_pipe_reader(self, fd_reader):
