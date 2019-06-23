@@ -776,7 +776,7 @@ class Connector:
             if self.db_type == "postgresql":
                 async with self.db_pool.acquire() as conn:
                     rows = await conn.fetch("SELECT tx_id FROM  connector_unconfirmed_stxo "
-                                            "WHERE tx_id = ANY($1);", (s2rh(t) for t in missed))
+                                            "WHERE tx_id = ANY($1);", set(s2rh(t) for t in missed))
 
                     for row in rows:
                         missed.remove(row["tx_id"])
