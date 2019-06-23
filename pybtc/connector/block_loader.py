@@ -396,6 +396,10 @@ class Worker:
 
 
     def terminate(self,a,b):
+        self.loop.create_task(self.terminate_coroutine())
+
+
+    async def terminate_coroutine(self):
         try:
             self.msg_loop.cancel()
             await asyncio.wait(self.msg_loop)
