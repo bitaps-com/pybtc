@@ -463,6 +463,7 @@ class UUTXO():
             if commit_uutxo:
                 await conn.copy_records_to_table('connector_unconfirmed_utxo',
                                                  columns=["outpoint",
+                                                          "out_tx_id",
                                                           "address",
                                                           "amount"],
                                                  records=commit_uutxo)

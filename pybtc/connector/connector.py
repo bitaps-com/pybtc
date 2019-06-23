@@ -893,6 +893,7 @@ class Connector:
                         address = b"".join((bytes([tx["vOut"][i]["nType"]]), tx["vOut"][i]["scriptPubKey"]))
 
                     commit_uutxo_buffer.add((b"".join((tx["txId"],int_to_bytes(i))),
+                                             tx["txId"],
                                              address,
                                              tx["vOut"][i]["value"]))
                 async with self.db_pool.acquire() as conn:
