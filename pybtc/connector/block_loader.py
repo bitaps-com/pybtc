@@ -400,12 +400,14 @@ class Worker:
 
 
     async def terminate_coroutine(self):
-        try:
-            self.msg_loop.cancel()
-            await asyncio.wait(self.msg_loop)
-        except:
-            pass
         self.loop.stop()
+        pending = asyncio.Task.all_tasks()
+        for task in pending:
+            task.cancel()
+        if pending:
+            self.loop.run_until_complete(asyncio.wait(pending))
+        self.loop.close()
+        sys.exit(0)
 
 
     async def get_pipe_reader(self, fd_reader):
