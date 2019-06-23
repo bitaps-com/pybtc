@@ -569,7 +569,7 @@ class Connector:
 
             if self.orphan_handler:
                 if self.utxo_data:
-                    if self.db_type == "postgres":
+                    if self.db_type == "postgresql":
                         async with self.db.acquire() as conn:
                             async with conn.transaction():
                                 data = await self.uutxo.rollback_block(conn)
@@ -773,11 +773,11 @@ class Connector:
             except:
                 missed.add(h)
         if self.utxo_data:
-            if self.db_type == "postgres":
+            if self.db_type == "postgresql":
                 async with self.db.acquire() as conn:
                     rows = await conn.fetch("SELECT tx_id FROM  connector_unconfirmed_stxo "
                                             "WHERE tx_id = ANY($1);", (s2rh(t) for t in missed))
-                    print(len(rows))
+
                     for row in rows:
                         missed.remove(row["tx_id"])
                     coinbase = await conn.fetchval("SELECT out_tx_id FROM connector_unconfirmed_utxo "
