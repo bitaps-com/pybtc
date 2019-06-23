@@ -777,6 +777,7 @@ class Connector:
                 async with self.db.acquire() as conn:
                     rows = await conn.fetch("SELECT tx_id FROM  connector_unconfirmed_stxo "
                                             "WHERE tx_id = ANY($1);", (s2rh(t) for t in missed))
+                    print(len(rows))
                     for row in rows:
                         missed.remove(row["tx_id"])
                     coinbase = await conn.fetchval("SELECT out_tx_id FROM connector_unconfirmed_utxo "
