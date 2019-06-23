@@ -880,7 +880,7 @@ class Connector:
                     commit_uutxo_buffer.add((b"".join((tx["txId"],int_to_bytes(i))),
                                              tx["vOut"][i]["value"],
                                              address))
-                async with self.db.acquire() as conn:
+                async with self.db_pool.acquire() as conn:
                     async with conn.transaction():
                         await self.uutxo.commit(commit_uutxo_buffer, commit_ustxo_buffer, conn)
 
