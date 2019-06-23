@@ -832,6 +832,7 @@ class Connector:
                 if tx["vIn"][i]["txId"] in self.await_tx_future:
                     if not self.await_tx_future[tx["vIn"][i]["txId"]].done():
                         await self.await_tx_future[tx["vIn"][i]["txId"]]
+                        break
             else:
                 break
 
