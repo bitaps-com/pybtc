@@ -413,7 +413,7 @@ class UUTXO():
                                             "       tx_id "
                                             "FROM connector_unconfirmed_stxo "
                                             "WHERE outpoint = ANY($1);", load_stxo)
-                print(len(rows), len(load_stxo) )
+
                 for row in rows:
                     try:
                         self.loaded_ustxo[row["outpoint"]].append((row["tx_id"],
