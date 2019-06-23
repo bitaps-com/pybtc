@@ -905,7 +905,7 @@ class Connector:
                         self.block_txs_request.set_result(True)
             except:
                 pass
-
+            print(tx_hash, "ok")
         except Exception as err:
             if tx_hash in self.await_tx:
                 self.await_tx = set()
