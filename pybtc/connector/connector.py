@@ -522,10 +522,6 @@ class Connector:
                                 block["mempoolInvalid"] = {"tx": data["invalid_txs"],
                                                            "inputs": data["dbs_stxo"],
                                                            "outputs": data["dbs_uutxo"]}
-                                r = await conn.fetchval("select count(*) from connector_unconfirmed_utxo;")
-                                s = await conn.fetchval("select count(*) from connector_unconfirmed_stxo;")
-                                print("stopped before commit", r, s)
-                                await asyncio.sleep(60000)
                                 if self.block_handler:
                                     await self.block_handler(block, conn)
 
