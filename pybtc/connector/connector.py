@@ -263,6 +263,16 @@ class Connector:
                                                                 value BYTEA,
                                                                 PRIMARY KEY(name));
                                    """)
+
+                await conn.execute("""CREATE INDEX IF NOT EXISTS uutxo_out_tx_id
+                                      ON connector_unconfirmed_utxo USING BTREE (out_tx_id);
+                                   """)
+                await conn.execute("""CREATE INDEX IF NOT EXISTS sutxo_out_tx_id
+                                      ON connector_unconfirmed_stxo USING BTREE (out_tx_id);
+                                   """)
+                await conn.execute("""CREATE INDEX IF NOT EXISTS sutxo_tx_id
+                                      ON connector_unconfirmed_stxo USING BTREE (tx_id);
+                                   """)
                 lb = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_block';")
                 lc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
                 if lb is None:
