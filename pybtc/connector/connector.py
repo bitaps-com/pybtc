@@ -782,10 +782,11 @@ class Connector:
                         missed.remove(rh2s(row["tx_id"]))
                     coinbase = await conn.fetchval("SELECT   out_tx_id FROM connector_unconfirmed_utxo "
                                               "WHERE out_tx_id  = $1 LIMIT 1;", s2rh(block["tx"][0]))
-                    print(">>", s2rh(block["tx"][0]))
+                    print(">>", block["tx"][0])
                     print(">>", coinbase)
                     if coinbase:
                         missed.remove(block["tx"][0])
+                    print(missed)
         self.log.debug("Block missed transactions  %s from %s" % (len(missed), tx_count))
 
         if missed:
