@@ -530,7 +530,7 @@ class UUTXO():
                 outpoints.add(r["outpoint"])
 
             rows = await conn.fetch("DELETE FROM connector_utxo WHERE outpoint = ANY($1) "
-                                    "RETURNING outpoint, pointer, address, amount;")
+                                    "RETURNING outpoint, pointer, address, amount;", outpoints)
             utxo = deque((r["outpoint"], r["pointer"], r["address"], r["amount"]) for r in rows)
 
 
