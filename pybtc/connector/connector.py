@@ -898,6 +898,7 @@ class Connector:
             try:
                 if self.await_tx:
                     self.await_tx.remove(tx_hash)
+                    print(len(self.await_tx))
                     if not self.await_tx_future[tx_hash].done():
                         self.await_tx_future[tx_hash].set_result(True)
                     if not self.await_tx:
