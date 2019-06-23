@@ -403,7 +403,9 @@ class UUTXO():
                     self.loaded_utxo[row["outpoint"]] = (None,
                                                          row["amount"],
                                                          row["address"])
-                    self.load_buffer.remove(row["outpoint"])
+                    if row["outpoint"] in self.load_buffer:
+                        self.load_buffer.remove(row["outpoint"])
+
                 print(len(rows), len(load_utxo) )
                 for r in load_utxo:
                     print(rh2s(r[:32]))
