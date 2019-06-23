@@ -249,14 +249,14 @@ class Worker:
         policy.set_event_loop(policy.new_event_loop())
         self.loop = asyncio.get_event_loop()
         self.log = logging.getLogger("Block loader")
-        self.log.setLevel(logging.DEBUG)
+        self.log.setLevel(logging.INFO)
         self.loop.set_default_executor(ThreadPoolExecutor(20))
         self.out_writer = out_writer
         self.in_reader = in_reader
         self.coins = MRU(500000)
         self.destroyed_coins = MRU(1000000)
         signal.signal(signal.SIGTERM, self.terminate)
-        self.loop.create_task(self.message_loop())
+        self.msg_loop = self.loop.create_task(self.message_loop())
         self.loop.run_forever()
 
     async def load_blocks(self, height, limit):
@@ -366,7 +366,7 @@ class Worker:
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except Exception as err:
-            self.log.critical("load blocks error: %s" % str(err))
+            self.log.debug("load blocks error: %s" % str(err))
             await self.pipe_sent_msg(b'result', pickle.dumps([]))
             await self.pipe_sent_msg(b'failed', pickle.dumps(start_height))
 
@@ -396,6 +396,11 @@ class Worker:
 
 
     def terminate(self,a,b):
+        try:
+            self.msg_loop.cancel()
+            await asyncio.wait(self.msg_loop)
+        except:
+            pass
         sys.exit(0)
 
 
