@@ -512,6 +512,7 @@ class Connector:
 
                 await self.fetch_block_transactions(block)
                 # raise Exception("stop")
+                await asyncio.sleep(60000)
 
                 if self.utxo_data:
                     data = await  self.uutxo.apply_block_changes([s2rh(h) for h in block["tx"]],
