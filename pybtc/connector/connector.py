@@ -776,7 +776,6 @@ class Connector:
             self.await_tx = set(missed)
             self.await_tx_future = {s2rh(i): asyncio.Future() for i in missed}
             self.block_txs_request = asyncio.Future()
-            print(self.await_tx_future)
             self.loop.create_task(self._get_missed())
             try:
                 await asyncio.wait_for(self.block_txs_request, timeout=self.block_timeout)
