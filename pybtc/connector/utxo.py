@@ -517,39 +517,42 @@ class UUTXO():
             # remove all destroy records from  connector_unconfirmed_stxo
 
             rows = await conn.fetch("DELETE FROM connector_unconfirmed_stxo "
-                                    "WHERE out_tx_id = ANY($1) "
+                                    "WHERE tx_id = ANY($1) "
                                     "RETURNING outpoint,"
                                     "          sequence,"
                                     "          out_tx_id,"
                                     "          tx_id,"
                                     "          input_index as i;", txs)
             stxo = deque()
+            utxo = deque()
             outpoints = set()
             for r in rows:
                 stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"]))
                 outpoints.add(r["outpoint"])
 
-            rows = await conn.fetch("DELETE FROM connector_utxo WHERE outpoint = ANY($1) "
-                                    "RETURNING outpoint, pointer, address, amount;", outpoints)
-            utxo = deque((r["outpoint"], r["pointer"], r["address"], r["amount"]) for r in rows)
+            if outpoints:
+                rows = await conn.fetch("DELETE FROM connector_utxo WHERE outpoint = ANY($1) "
+                                        "RETURNING outpoint, pointer, address, amount;", outpoints)
+                utxo = deque((r["outpoint"], r["pointer"], r["address"], r["amount"]) for r in rows)
 
 
             #    delete dbs records
 
             dbs_stxo = deque()
             dbs_uutxo = deque()
-
-            rows = await conn.fetch("DELETE FROM connector_unconfirmed_stxo "
-                                    "WHERE outpoint = ANY($1) "
-                                    "RETURNING outpoint,"
-                                    "          sequence,"
-                                    "          out_tx_id,"
-                                    "          tx_id,"
-                                    "          input_index as i;", outpoints)
             invalid_txs = set()
-            for r in rows:
-                dbs_stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"]))
-                invalid_txs.add(r["tx_id"])
+
+            if outpoints:
+                rows = await conn.fetch("DELETE FROM connector_unconfirmed_stxo "
+                                        "WHERE outpoint = ANY($1) "
+                                        "RETURNING outpoint,"
+                                        "          sequence,"
+                                        "          out_tx_id,"
+                                        "          tx_id,"
+                                        "          input_index as i;", outpoints)
+                for r in rows:
+                    dbs_stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"]))
+                    invalid_txs.add(r["tx_id"])
 
             # handle invalid transactions while invalid transactions list not empty
             #    remove coins for transactions list from connector_unconfirmed_utxo
