@@ -527,7 +527,7 @@ class Connector:
 
 
                 elif self.block_handler:
-                    await self.block_handler(block)
+                    await self.block_handler(block, None)
 
 
 
