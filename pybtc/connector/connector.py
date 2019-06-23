@@ -775,12 +775,12 @@ class Connector:
         if self.utxo_data:
             if self.db_type == "postgresql":
                 async with self.db_pool.acquire() as conn:
-                    rows = await conn.fetch("SELECT tx_id FROM  connector_unconfirmed_stxo "
+                    rows = await conn.fetch("SELECT distinct tx_id FROM  connector_unconfirmed_stxo "
                                             "WHERE tx_id = ANY($1);", set(s2rh(t) for t in missed))
 
                     for row in rows:
                         missed.remove(rh2s(row["tx_id"]))
-                    coinbase = await conn.fetchval("SELECT out_tx_id FROM connector_unconfirmed_utxo "
+                    coinbase = await conn.fetchval("SELECT   out_tx_id FROM connector_unconfirmed_utxo "
                                               "WHERE out_tx_id  = $1 LIMIT 1;", s2rh(block["tx"][0]))
                     if coinbase:
                         missed.remove(block["tx"][0])
