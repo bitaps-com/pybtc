@@ -882,7 +882,7 @@ class Connector:
                                              address))
                 async with self.db_pool.acquire() as conn:
                     async with conn.transaction():
-                        await self.uutxo.commit(commit_uutxo_buffer, commit_ustxo_buffer, conn)
+                        await self.uutxo.commit_tx(commit_uutxo_buffer, commit_ustxo_buffer, conn)
 
                         if self.tx_handler:
                             await self.tx_handler(tx, conn)
