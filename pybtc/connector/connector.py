@@ -894,7 +894,7 @@ class Connector:
 
 
 
-            self.tx_cache.set(tx_hash, True)
+            self.tx_cache[tx_hash] = True
 
             try:
                 if self.await_tx:
