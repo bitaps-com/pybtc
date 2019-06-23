@@ -394,11 +394,11 @@ class Connector:
                 if d > self.deep_sync_limit:
                     if not self.deep_synchronization:
                         self.log.info("Deep synchronization mode")
-                        if self.utxo_data:
-                            await self.uutxo.flush_mempool()
                 else:
                     if self.deep_synchronization:
                         self.log.info("Switch from deep synchronization mode")
+                        if self.utxo_data:
+                            await self.uutxo.flush_mempool()
                         if self.flush_app_caches_handler:
                             await self.flush_app_caches_handler(self.last_block_height)
                         # clear preload caches
@@ -512,17 +512,23 @@ class Connector:
 
                 await self.fetch_block_transactions(block)
                 # raise Exception("stop")
-                await asyncio.sleep(60000)
 
                 if self.utxo_data:
-                    data = await  self.uutxo.apply_block_changes([s2rh(h) for h in block["tx"]],
-                                                                                block["height"])
-                    block["mempoolInvalid"] = {"tx": data["invalid_txs"],
-                                               "inputs": data["dbs_stxo"],
-                                               "outputs": data["dbs_uutxo"]}
+                    if self.db_type == "postgresql":
+                        async with self.db.acquire() as conn:
+                            async with conn.transaction():
+                                data = await  self.uutxo.apply_block_changes([s2rh(h) for h in block["tx"]],
+                                                                             block["height"], conn)
+                                block["mempoolInvalid"] = {"tx": data["invalid_txs"],
+                                                           "inputs": data["dbs_stxo"],
+                                                           "outputs": data["dbs_uutxo"]}
+                                print("stopped before commit")
+                                await asyncio.sleep(60000)
+                                if self.block_handler:
+                                    await self.block_handler(block, conn)
 
 
-                if self.block_handler:
+                elif self.block_handler:
                     await self.block_handler(block)
 
 
