@@ -765,13 +765,20 @@ class Connector:
 
     async def fetch_block_transactions(self, block):
         q = time.time()
-        missed = deque()
+        missed = set()
         tx_count = len(block["tx"])
         for h in block["tx"]:
             try:
                 self.tx_cache[h]
             except:
-                missed.append(h)
+                missed.add(h)
+        if self.utxo_data:
+            if self.db_type == "postgres":
+                async with self.db.acquire() as conn:
+                    rows = await conn.fetch("SELECT tx_id FROM  connector_unconfirmed_stxo "
+                                            "WHERE tx_id = ANY($1);", (s2rh(t) for t in missed))
+                    for row in rows:
+                        missed.remove(row["tx_id"])
         self.log.debug("Block missed transactions  %s from %s" % (len(missed), tx_count))
 
         if missed:
