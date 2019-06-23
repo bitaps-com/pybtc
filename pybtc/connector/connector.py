@@ -915,6 +915,8 @@ class Connector:
                         self.await_tx_future[i].cancel()
                 self.log.critical("new transaction error %s " % err)
             self.log.debug("new transaction error %s " % err)
+            import traceback
+            print(traceback.format_exc())
         finally:
             self.tx_in_process.remove(tx["txId"])
 
