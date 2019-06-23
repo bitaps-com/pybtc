@@ -405,7 +405,7 @@ class UUTXO():
                                                          row["address"])
                     self.load_buffer.remove(row["outpoint"])
                     load_utxo.remove(row["outpoint"])
-                print(self.loaded_utxo)
+                print(len(rows), len(load_utxo) )
                 async with self.db.acquire() as conn:
                     rows = await conn.fetch("SELECT outpoint, "
                                             "       sequence,"
