@@ -828,8 +828,9 @@ class Connector:
     async def wait_block_dependences(self, tx):
         while self.await_tx_future:
             for i in tx["vIn"]:
-                if not self.await_tx_future[tx["vIn"][i]["txId"]].done():
-                    await self.await_tx_future[tx["vIn"][i]["txId"]]
+                if tx["vIn"][i]["txId"] in self.await_tx_future:
+                    if not self.await_tx_future[tx["vIn"][i]["txId"]].done():
+                        await self.await_tx_future[tx["vIn"][i]["txId"]]
             else:
                 break
 
