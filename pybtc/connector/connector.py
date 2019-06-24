@@ -804,6 +804,7 @@ class Connector:
             self.await_tx = set(missed)
             self.await_tx_future = {s2rh(i): asyncio.Future() for i in missed}
             self.block_txs_request = asyncio.Future()
+            self.block_timestamp = block["time"]
             self.loop.create_task(self._get_missed())
             try:
                 await asyncio.wait_for(self.block_txs_request, timeout=self.block_timeout)
@@ -844,7 +845,7 @@ class Connector:
                         except:
                             self.log.error("Transaction decode failed: %s" % r["result"])
                             raise Exception("Transaction decode failed")
-                        self.loop.create_task(self._new_transaction(tx))
+                        self.loop.create_task(self._new_transaction(tx, self.block_timestamp))
                 except Exception as err:
                     self.log.error("_get_missed exception %s " % str(err))
                     self.await_tx = set()
@@ -862,7 +863,7 @@ class Connector:
             else:
                 break
 
-    async def _new_transaction(self, tx):
+    async def _new_transaction(self, tx, timestamp):
         tx_hash = rh2s(tx["txId"])
 
         if tx_hash in self.tx_in_process or self.tx_cache.has_key(tx_hash):
@@ -911,10 +912,10 @@ class Connector:
                         await self.uutxo.commit_tx(commit_uutxo_buffer, commit_ustxo_buffer, conn)
 
                         if self.tx_handler:
-                            await self.tx_handler(tx, conn)
+                            await self.tx_handler(tx, timestamp, conn)
             else:
                 if self.tx_handler:
-                    await self.tx_handler(tx, None)
+                    await self.tx_handler(tx, timestamp, None)
 
 
 
