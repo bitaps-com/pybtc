@@ -322,7 +322,6 @@ class Connector:
                             self.last_zmq_msg = int(time.time())
                             if self.deep_synchronization:
                                 continue
-                            continue
                             hash = body.hex()
                             self.log.warning("New block %s" % hash)
                             self.loop.create_task(self._get_block_by_hash(hash))
@@ -331,9 +330,9 @@ class Connector:
                             self.last_zmq_msg = int(time.time())
                             if self.deep_synchronization or not self.mempool_tx:
                                 continue
-                            continue
                             try:
-                                self.loop.create_task(self._new_transaction(Transaction(body, format="raw")))
+                                self.loop.create_task(self._new_transaction(Transaction(body, format="raw"),
+                                                                            int(time.time())))
                             except:
                                 self.log.critical("Transaction decode failed: %s" % body.hex())
 
