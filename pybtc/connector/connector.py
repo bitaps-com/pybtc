@@ -785,7 +785,7 @@ class Connector:
                 self.tx_cache[h]
             except:
                 missed.add(h)
-        print(">>", len(missed))
+
         if self.utxo_data:
             if self.db_type == "postgresql":
                 async with self.db_pool.acquire() as conn:
@@ -794,10 +794,13 @@ class Connector:
 
                     for row in rows:
                         missed.remove(rh2s(row["tx_id"]))
-                    coinbase = await conn.fetchval("SELECT   out_tx_id FROM connector_unconfirmed_utxo "
-                                              "WHERE out_tx_id  = $1 LIMIT 1;", s2rh(block["tx"][0]))
-                    if coinbase:
-                        missed.remove(block["tx"][0])
+                    if missed:
+                        coinbase = await conn.fetchval("SELECT   out_tx_id FROM connector_unconfirmed_utxo "
+                                                  "WHERE out_tx_id  = $1 LIMIT 1;", s2rh(block["tx"][0]))
+                        if coinbase:
+                            if block["tx"][0] in missed:
+                                missed.remove(block["tx"][0])
+
         self.log.debug("Block missed transactions  %s from %s" % (len(missed), tx_count))
 
         if missed:
