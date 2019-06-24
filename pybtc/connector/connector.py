@@ -275,6 +275,8 @@ class Connector:
                                    """)
                 lb = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_block';")
                 lc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
+                lb = 582204
+                lc = 582204
                 if lb is None:
                     lb = int_to_bytes(0)
                     lc = int_to_bytes(0)
