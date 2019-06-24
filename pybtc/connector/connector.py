@@ -213,8 +213,10 @@ class Connector:
     async def utxo_init(self):
         if self.db_type is None:
             raise Exception("UTXO data required  db connection")
-        if self.db_type not in ("rocksdb", "leveldb", "postgresql"):
-            raise Exception("Connector supported database types is: rocksdb, leveldb, postgresql")
+        if self.db_type != "postgresql":
+            raise Exception("Connector supported database engine is: postgresql")
+        # if self.db_type not in ("rocksdb", "leveldb", "postgresql"):
+        #     raise Exception("Connector supported database types is: rocksdb, leveldb, postgresql")
         if self.db_type in ("rocksdb", "leveldb"):
             # rocksdb and leveldb
             lb = self.db.get(b"last_block")
