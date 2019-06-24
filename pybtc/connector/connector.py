@@ -555,6 +555,7 @@ class Connector:
                         pass
             if not self.deep_synchronization:
                 self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"],len(block["tx"])))
+
         except Exception as err:
             if self.await_tx:
                 self.await_tx = set()
