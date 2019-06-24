@@ -1,5 +1,3 @@
-from secp256k1 import lib
-import random
 import os
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -49,24 +47,6 @@ TESTNET_PRIVATE_KEY_BYTE_PREFIX = b'\xef'
 MAINNET_SEGWIT_ADDRESS_PREFIX = 'bc'
 TESTNET_SEGWIT_ADDRESS_PREFIX = 'tb'
 
-
-EC_COMPRESSED = lib.SECP256K1_EC_COMPRESSED
-EC_UNCOMPRESSED = lib.SECP256K1_EC_UNCOMPRESSED
-
-FLAG_SIGN = lib.SECP256K1_CONTEXT_SIGN
-FLAG_VERIFY = lib.SECP256K1_CONTEXT_VERIFY
-ALL_FLAGS = FLAG_SIGN | FLAG_VERIFY
-NO_FLAGS = lib.SECP256K1_CONTEXT_NONE
-
-HAS_RECOVERABLE = hasattr(lib, 'secp256k1_ecdsa_sign_recoverable')
-HAS_SCHNORR = hasattr(lib, 'secp256k1_schnorr_sign')
-HAS_ECDH = hasattr(lib, 'secp256k1_ecdh')
-
-ECDSA_CONTEXT_SIGN = lib.secp256k1_context_create(FLAG_SIGN)
-ECDSA_CONTEXT_VERIFY = lib.secp256k1_context_create(FLAG_VERIFY)
-ECDSA_CONTEXT_ALL = lib.secp256k1_context_create(ALL_FLAGS)
-lib.secp256k1_context_randomize(ECDSA_CONTEXT_SIGN,
-                                random.SystemRandom().randint(0, ECDSA_SEC256K1_ORDER).to_bytes(32, byteorder="big"))
 
 SCRIPT_TYPES = {"P2PKH":        0,
                 "P2SH":         1,

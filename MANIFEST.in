@@ -1,0 +1,2 @@
+include setup_tools.py
+graft libsecp256k1

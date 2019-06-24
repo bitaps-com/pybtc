@@ -1,12 +1,11 @@
 from struct import pack
-from secp256k1 import ffi, lib
 from pybtc.functions.key import private_to_public_key, private_key_to_wif
 from pybtc.functions.hash import hmac_sha512, double_sha256, hash160
 from pybtc.functions.encode import (encode_base58,
                                     decode_base58_with_checksum,
                                     encode_base58_with_checksum)
 from pybtc.constants import *
-
+from pybtc.crypto import __secp256k1_ec_pubkey_tweak_add__
 
 def create_master_xprivate_key(seed, testnet=False, base58=True, hex=False):
     """
@@ -36,7 +35,7 @@ def create_master_xprivate_key(seed, testnet=False, base58=True, hex=False):
         key = b"".join([key, double_sha256(key)[:4]])
         return encode_base58(key)
     else:
-        return key
+        return key if not hex else key.hex()
 
 
 def xprivate_to_xpublic_key(xprivate_key, base58=True, hex=False):
@@ -145,17 +144,10 @@ def derive_child_xpublic_key(xpublic_key, i):
     s = hmac_sha512(c, k + pack(">L", i))
     if int.from_bytes(s[:32], byteorder='big') >= ECDSA_SEC256K1_ORDER:
         return None
-    pubkey_ptr = ffi.new('secp256k1_pubkey *')
-    if not lib.secp256k1_ec_pubkey_parse(ECDSA_CONTEXT_VERIFY, pubkey_ptr, k, len(k)):
-        raise RuntimeError("secp256k1 parse public key operation failed")
-    if not lib.secp256k1_ec_pubkey_tweak_add(ECDSA_CONTEXT_ALL, pubkey_ptr, s[:32]):
-        raise RuntimeError("secp256k1 parse tweak addition operation failed")
-    pubkey = ffi.new('char [%d]' % 33)
-    outlen = ffi.new('size_t *', 33)
-    if not lib.secp256k1_ec_pubkey_serialize(ECDSA_CONTEXT_VERIFY, pubkey, outlen, pubkey_ptr, EC_COMPRESSED):
-        raise RuntimeError("secp256k1 serialize public key operation failed")
-    pk = bytes(ffi.buffer(pubkey, 33))
-    print(len(pk))
+
+    pk = __secp256k1_ec_pubkey_tweak_add__(k, s[:32])
+    if isinstance(pk, int):
+        raise RuntimeError("pubkey_tweak_add error %s" %pk)
     return b"".join([xpublic_key[:4],
                      bytes([depth]),
                      fingerprint,

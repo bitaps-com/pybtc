@@ -53,9 +53,8 @@ class PrivateKey():
                 self.hex = self.key.hex()
                 self.wif = private_key_to_wif(self.key, compressed, testnet)
                 return
-            if not isinstance(key, str) or not is_wif_valid(key):
+            if not isinstance(key, str):
                 raise TypeError("private key invalid")
-
             self.key = wif_to_private_key(key, hex=False)
             self.hex = self.key.hex()
             if key[0] in (MAINNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX,
@@ -63,12 +62,10 @@ class PrivateKey():
                 self.compressed = False
             else:
                 self.compressed = True
-            if key[0] in (TESTNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX,
-                          TESTNET_PRIVATE_KEY_COMPRESSED_PREFIX):
-                self.testnet = True
-            else:
-                self.testnet = False
-            self.wif = private_key_to_wif(self.key, self.compressed, self.testnet)
+            self.testnet = True if key[0] in (TESTNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX,
+                                              TESTNET_PRIVATE_KEY_COMPRESSED_PREFIX) else False
+
+            self.wif = key
 
     def __str__(self):
         return self.wif
@@ -102,8 +99,7 @@ class PublicKey():
             try:
                 key = bytes_from_hex(key)
             except:
-                if is_wif_valid(key):
-                    key = PrivateKey(key)
+                key = PrivateKey(key)
 
         if isinstance(key, bytes):
             if len(key) == 32:
@@ -121,8 +117,8 @@ class PublicKey():
             #: flag for compressed type of corresponding public key (boolean)
             self.compressed = key.compressed
             public_key = private_to_public_key(key.key,
-                                        compressed=key.compressed,
-                                        hex=False)
+                                               compressed=key.compressed,
+                                               hex=False)
 
         #: public key in  bytes (bytes)
         self.key = public_key

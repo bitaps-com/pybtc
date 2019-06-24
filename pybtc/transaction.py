@@ -17,7 +17,7 @@ from pybtc.functions.script import public_key_recovery, delete_from_script
 from pybtc.functions.hash import hash160, sha256, double_sha256
 from pybtc.functions.address import  hash_to_address, address_net_type, address_to_script
 from pybtc.address import  PrivateKey, Address, ScriptAddress, PublicKey
-
+from collections import deque
 
 
 class Transaction(dict):
@@ -35,7 +35,8 @@ class Transaction(dict):
     :param boolean testnet: address type for "decoded" transaction representation.
 
     """
-    def __init__(self, raw_tx=None, format="decoded", version=1, lock_time=0, testnet=False, auto_commit=True):
+    def __init__(self, raw_tx=None, format="decoded", version=1,
+                 lock_time=0, testnet=False, auto_commit=True, keep_raw_tx=False):
         if format not in ("decoded", "raw"):
             raise ValueError("format error, raw or decoded allowed")
         self.auto_commit = auto_commit
@@ -64,38 +65,57 @@ class Transaction(dict):
         if raw_tx is None:
             return
 
+        self["rawTx"] = deque()
+        rtx = self["rawTx"].append
         self["amount"] = 0
         sw = sw_len = 0
         stream = self.get_stream(raw_tx)
         start = stream.tell()
         read = stream.read
         tell = stream.tell
-        seek = stream.seek
         # start deserialization
-        self["version"] = unpack('<L', read(4))[0]
+        t = read(4)
+        rtx(t)
+        self["version"] = unpack('<L', t)[0]
         n = read_var_int(stream)
-
+        rtx(n)
         if n == b'\x00':
             # segwit format
             sw = 1
             self["flag"] = read(1)
+            rtx(self["flag"])
             n = read_var_int(stream)
-
+            rtx(n)
         # inputs
         ic = var_int_to_int(n)
+
         for k in range(ic):
             self["vIn"][k] = dict()
             self["vIn"][k]["txId"] = read(32)
-            self["vIn"][k]["vOut"] = unpack('<L', read(4))[0]
-            self["vIn"][k]["scriptSig"] = read(var_int_to_int(read_var_int(stream)))
-            self["vIn"][k]["sequence"] = unpack('<L', read(4))[0]
-
+            rtx(self["vIn"][k]["txId"])
+            t = read(4)
+            rtx(t)
+            self["vIn"][k]["vOut"] = unpack('<L', t)[0]
+            t = read_var_int(stream)
+            rtx(t)
+            self["vIn"][k]["scriptSig"] = read(var_int_to_int(t))
+            rtx(self["vIn"][k]["scriptSig"])
+            t = read(4)
+            rtx(t)
+            self["vIn"][k]["sequence"] = unpack('<L', t)[0]
         # outputs
-        for k in range(var_int_to_int(read_var_int(stream))):
+        t = read_var_int(stream)
+        rtx(t)
+        for k in range(var_int_to_int(t)):
             self["vOut"][k] = dict()
-            self["vOut"][k]["value"] = unpack('<Q', read(8))[0]
+            t = read(8)
+            self["vOut"][k]["value"] = unpack('<Q', t)[0]
+            rtx(t)
             self["amount"] += self["vOut"][k]["value"]
-            self["vOut"][k]["scriptPubKey"] = read(var_int_to_int(read_var_int(stream)))
+            t = read_var_int(stream)
+            self["vOut"][k]["scriptPubKey"] = read(var_int_to_int(t))
+            rtx(t)
+            rtx(self["vOut"][k]["scriptPubKey"])
             s = parse_script(self["vOut"][k]["scriptPubKey"])
             self["vOut"][k]["nType"] = s["nType"]
             self["vOut"][k]["type"] = s["type"]
@@ -110,16 +130,23 @@ class Transaction(dict):
         if sw:
             sw = tell() - start
             for k in range(ic):
-                self["vIn"][k]["txInWitness"] = [read(var_int_to_int(read_var_int(stream))) \
-                                                 for c in range(var_int_to_int(read_var_int(stream)))]
-            sw_len = (stream.tell() - start) - sw + 2
+                self["vIn"][k]["txInWitness"] = []
+                t = read_var_int(stream)
+                rtx(t)
+                for c in range(var_int_to_int(t)):
+                    l = read_var_int(stream)
+                    rtx(l)
+                    d = read(var_int_to_int(l))
+                    rtx(d)
+                    self["vIn"][k]["txInWitness"].append(d)
 
-        self["lockTime"] = unpack('<L', read(4))[0]
+            sw_len = (stream.tell() - start) - sw + 2
+        t = read(4)
+        rtx(t)
+        self["lockTime"] = unpack('<L', t)[0]
 
         end = tell()
-        seek(start)
-        b = read(end - start)
-        self["rawTx"] = b
+        self["rawTx"] = b"".join(self["rawTx"])
         self["size"] = end - start
         self["bSize"] = end - start - sw_len
         self["weight"] = self["bSize"] * 3 + self["size"]
@@ -132,12 +159,15 @@ class Transaction(dict):
             self["coinbase"] = False
         if sw:
             self["segwit"] = True
-            self["hash"] = double_sha256(b)
-            self["txId"] = double_sha256(b"%s%s%s" % (b[:4], b[6:sw],b[-4:]))
+            self["hash"] = double_sha256(self["rawTx"])
+            self["txId"] = double_sha256(b"".join((self["rawTx"][:4], self["rawTx"][6:sw], self["rawTx"][-4:])))
         else:
             self["segwit"] = False
-            self["txId"] = double_sha256(b)
+            self["txId"] = double_sha256(self["rawTx"])
             self["hash"] = self["txId"]
+        if not keep_raw_tx:
+            self["rawTx"] = None
+
         if self["format"] == "decoded":
             self.decode()
 

@@ -3,6 +3,7 @@ import time
 import hashlib
 from pybtc.functions.hash import sha256
 from pybtc.functions.tools import int_from_bytes
+import random
 
 def generate_entropy(strength=256, hex=True):
     """

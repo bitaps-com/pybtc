@@ -1,23 +1,13 @@
 from struct import unpack
-
-from secp256k1 import ffi, lib
-secp256k1_ecdsa_signature_parse_der = lib.secp256k1_ecdsa_signature_parse_der
-secp256k1_ec_pubkey_parse = lib.secp256k1_ec_pubkey_parse
-secp256k1_ecdsa_verify = lib.secp256k1_ecdsa_verify
-secp256k1_ecdsa_sign = lib.secp256k1_ecdsa_sign
-secp256k1_ecdsa_signature_serialize_der = lib.secp256k1_ecdsa_signature_serialize_der
-secp256k1_ecdsa_signature_serialize_compact = lib.secp256k1_ecdsa_signature_serialize_compact
-secp256k1_ecdsa_recoverable_signature_parse_compact = lib.secp256k1_ecdsa_recoverable_signature_parse_compact
-secp256k1_ecdsa_recover = lib.secp256k1_ecdsa_recover
-secp256k1_ec_pubkey_serialize = lib.secp256k1_ec_pubkey_serialize
-
 from pybtc.opcodes import *
-from pybtc.constants import *
 
 from pybtc.functions.tools import bytes_from_hex, int_to_bytes, get_stream
 from pybtc.functions.hash import hash160, sha256
 from pybtc.functions.address import hash_to_address
 from pybtc.functions.key import is_wif_valid, wif_to_private_key
+from pybtc.crypto import __secp256k1_ecdsa_verify__
+from pybtc.crypto import __secp256k1_ecdsa_sign__
+from pybtc.crypto import __secp256k1_ecdsa_recover__
 
 
 def public_key_to_pubkey_script(key, hex=True):
@@ -48,8 +38,7 @@ def parse_script(script, segwit=True):
         try:
             script = bytes_from_hex(script)
         except:
-            pass
-        assert isinstance(script, bytes)
+            raise ValueError("hex encoded string required")
     l = len(script)
     if segwit:
         if l == 22 and script[0] == 0:
@@ -188,6 +177,7 @@ def decode_script(script, asm=False):
         while l - s > 0:
             if script[s] < 0x4c and script[s]:
                 if asm:
+                    append("OP_PUSHBYTES[%s]" % script[s] )
                     append(script[s + 1:s + 1 + script[s]].hex())
                 else:
                     append('[%s]' % script[s])
@@ -197,7 +187,8 @@ def decode_script(script, asm=False):
             if script[s] == OPCODE["OP_PUSHDATA1"]:
                 if asm:
                     ld = script[s + 1]
-                    append(script[s + 1:s + 1 + ld].hex())
+                    append("OP_PUSHDATA1[%s]" % ld)
+                    append(script[s + 2:s + 2 + ld].hex())
                 else:
                     append(RAW_OPCODE[script[s]])
                     ld = script[s + 1]
@@ -205,8 +196,10 @@ def decode_script(script, asm=False):
                 s += 1 + script[s + 1] + 1
             elif script[s] == OPCODE["OP_PUSHDATA2"]:
                 if asm:
+
                     ld = unpack('<H', script[s + 1: s + 3])[0]
-                    append(script[s + 1:s + 1 + ld].hex())
+                    append("OP_PUSHDATA2[%s]" % ld)
+                    append(script[s + 3:s + 3 + ld].hex())
                 else:
                     ld = unpack('<H', script[s + 1: s + 3])[0]
                     append(RAW_OPCODE[script[s]])
@@ -215,7 +208,8 @@ def decode_script(script, asm=False):
             elif script[s] == OPCODE["OP_PUSHDATA4"]:
                 if asm:
                     ld = unpack('<L', script[s + 1: s + 5])[0]
-                    append(script[s + 1:s + 1 + ld].hex())
+                    append("OP_PUSHDATA4[%s]" % ld)
+                    append(script[s + 5:s + 5 + ld].hex())
                 else:
                     ld = unpack('<L', script[s + 1: s + 5])[0]
                     append(RAW_OPCODE[script[s]])
@@ -390,61 +384,49 @@ def verify_signature(sig, pub_key, msg):
             msg = bytes.fromhex(msg)
         else:
             raise TypeError("message must be a bytes or hex encoded string")
-
-    raw_sig = ffi.new('secp256k1_ecdsa_signature *')
-    raw_pubkey = ffi.new('secp256k1_pubkey *')
-    if not secp256k1_ecdsa_signature_parse_der(ECDSA_CONTEXT_VERIFY, raw_sig, sig, len(sig)):
-        raise TypeError("signature must be DER encoded")
-    if not secp256k1_ec_pubkey_parse(ECDSA_CONTEXT_VERIFY, raw_pubkey, pub_key, len(pub_key)):
+    r = __secp256k1_ecdsa_verify__(sig, pub_key, msg)
+    if r == 1:
+        return True
+    elif r == 0:
+        return False
+    elif r == -1:
+        raise TypeError("DER signature format decode failed")
+    else:
         raise TypeError("public key format error")
-    result = secp256k1_ecdsa_verify(ECDSA_CONTEXT_VERIFY, raw_sig, msg, raw_pubkey)
-    return True if result else False
 
 
 def sign_message(msg, private_key, hex=True):
-    """
-    Sign message
+        """
+        Sign message
 
-    :param msg:  message to sign  bytes or HEX encoded string.
-    :param private_key:  private key (bytes, hex encoded string or WIF format)
-    :param hex:  (optional) If set to True return key in HEX format, by default is True.
-    :return:  DER encoded signature in bytes or HEX encoded string.  
-    """
-    if isinstance(msg, bytearray):
-        msg = bytes(msg)
-    if isinstance(msg, str):
-        try:
-            msg = bytes_from_hex(msg)
-        except:
-            pass
-    if not isinstance(msg, bytes):
-        raise TypeError("message must be a bytes or hex encoded string")
+        :param msg:  message to sign  bytes or HEX encoded string.
+        :param private_key:  private key (bytes, hex encoded string or WIF format)
+        :param hex:  (optional) If set to True return key in HEX format, by default is True.
+        :return:  DER encoded signature in bytes or HEX encoded string.
+        """
+        if isinstance(msg, bytearray):
+            msg = bytes(msg)
+        if isinstance(msg, str):
+            try:
+                msg = bytes_from_hex(msg)
+            except:
+                pass
+        if not isinstance(msg, bytes):
+            raise TypeError("message must be a bytes or hex encoded string")
 
-    if isinstance(private_key, bytearray):
-        private_key = bytes(private_key)
-    if isinstance(private_key, str):
-        try:
-            private_key = bytes_from_hex(private_key)
-        except:
-            if is_wif_valid(private_key):
-                private_key = wif_to_private_key(private_key, hex=False)
-    if not isinstance(private_key, bytes):
-        raise TypeError("private key must be a bytes, hex encoded string or in WIF format")
+        if isinstance(private_key, bytearray):
+            private_key = bytes(private_key)
+        if isinstance(private_key, str):
+            try:
+                private_key = bytes_from_hex(private_key)
+            except:
+                if is_wif_valid(private_key):
+                    private_key = wif_to_private_key(private_key, hex=False)
+        if not isinstance(private_key, bytes):
+            raise TypeError("private key must be a bytes, hex encoded string or in WIF format")
 
-    raw_sig = ffi.new('secp256k1_ecdsa_signature *')
-    signed = secp256k1_ecdsa_sign(ECDSA_CONTEXT_SIGN, raw_sig, msg,
-                                            private_key, ffi.NULL, ffi.NULL)
-    if not signed:
-        raise RuntimeError("secp256k1 error")
-    len_sig = 74
-    output = ffi.new('unsigned char[%d]' % len_sig)
-    outputlen = ffi.new('size_t *', len_sig)
-    res = secp256k1_ecdsa_signature_serialize_der(ECDSA_CONTEXT_SIGN,
-                                                            output, outputlen, raw_sig)
-    if not res:
-        raise RuntimeError("secp256k1 error")
-    signature = bytes(ffi.buffer(output, outputlen[0]))
-    return signature.hex() if hex else signature
+        signature = __secp256k1_ecdsa_sign__(msg, private_key)
+        return signature.hex() if hex else signature
 
 
 def public_key_recovery(signature, messsage, rec_id, compressed=True, hex=True):
@@ -452,37 +434,13 @@ def public_key_recovery(signature, messsage, rec_id, compressed=True, hex=True):
         signature = bytes_from_hex(signature)
     if isinstance(messsage, str):
         messsage = bytes_from_hex(messsage)
-    raw_sig = ffi.new('secp256k1_ecdsa_signature *')
-    r = secp256k1_ecdsa_signature_parse_der(ECDSA_CONTEXT_SIGN, raw_sig,
-                                            signature, len(signature))
-    if not r:
-        raise RuntimeError("secp256k1 error")
-    compact_sig = ffi.new('unsigned char[%d]' % 64)
-    r = secp256k1_ecdsa_signature_serialize_compact(ECDSA_CONTEXT_VERIFY,
-                                                              compact_sig,
-                                                              raw_sig)
-    if not r:
-        raise RuntimeError("secp256k1 error")
 
-    recover_sig = ffi.new('secp256k1_ecdsa_recoverable_signature *')
-    t = secp256k1_ecdsa_recoverable_signature_parse_compact(
-        ECDSA_CONTEXT_ALL, recover_sig, compact_sig, rec_id)
-    if not r:
-        raise RuntimeError("secp256k1 error")
-
-    pubkey_ptr = ffi.new('secp256k1_pubkey *')
-    t = secp256k1_ecdsa_recover(
-        ECDSA_CONTEXT_ALL, pubkey_ptr, recover_sig, messsage)
-    len_key = 33 if compressed else 65
-    pubkey = ffi.new('char [%d]' % len_key)
-    outlen = ffi.new('size_t *', len_key)
-    compflag = EC_COMPRESSED if compressed else EC_UNCOMPRESSED
-    if bytes(ffi.buffer(pubkey_ptr.data, 64)) == b"\x00" * 64:
-        return None
-    r = secp256k1_ec_pubkey_serialize(ECDSA_CONTEXT_VERIFY, pubkey, outlen, pubkey_ptr, compflag)
-    if not r:
-        raise RuntimeError("secp256k1 error")
-    pub = bytes(ffi.buffer(pubkey, len_key))
+    pub = __secp256k1_ecdsa_recover__(signature, messsage, rec_id, compressed)
+    if isinstance(pub, int):
+        if pub == 0:
+            return None
+        else:
+            raise RuntimeError("signature recovery error %s" % pub)
     return pub.hex() if hex else pub
 
 
@@ -552,4 +510,73 @@ def is_valid_signature_encoding(sig):
     if (len_s > 1) and (sig[len_r + 6] == 0x00) and (not sig[len_r + 7] & 0x80):
         return False
     return True
+
+def parse_signature(sig):
+    """
+    Check is valid signature encoded in DER format
+
+    :param sig:  signature in bytes or HEX encoded string.
+    :return:  boolean.
+    """
+    # Format: 0x30 [total-length] 0x02 [R-length] [R] 0x02 [S-length] [S] [sighash]
+    # * total-length: 1-byte length descriptor of everything that follows,
+    #   excluding the sighash byte.
+    # * R-length: 1-byte length descriptor of the R value that follows.
+    # * R: arbitrary-length big-endian encoded R value. It must use the shortest
+    #   possible encoding for a positive integers (which means no null bytes at
+    #   the start, except a single one when the next byte has its highest bit set).
+    # * S-length: 1-byte length descriptor of the S value that follows.
+    # * S: arbitrary-length big-endian encoded S value. The same rules apply.
+    # * sighash: 1-byte value indicating what data is hashed (not part of the DER
+    #   signature)
+    length = len(sig)
+    # Minimum and maximum size constraints.
+    if (length < 9) or (length > 73):
+        raise ValueError("invalid signature")
+    # A signature is of type 0x30 (compound).
+    if sig[0] != 0x30:
+        raise ValueError("invalid signature")
+    # Make sure the length covers the entire signature.
+    if sig[1] != (length - 3):
+        raise ValueError("invalid signature")
+    # Extract the length of the R element.
+    len_r = sig[3]
+    # Make sure the length of the S element is still inside the signature.
+    if (5 + len_r) >= length:
+        raise ValueError("invalid signature")
+    r =  sig[5:4+ len_r]
+    # Extract the length of the S element.
+    len_s = sig[5 + len_r]
+    # Verify that the length of the signature matches the sum of the length
+    # of the elements.
+    if (len_r + len_s + 7) != length:
+        raise ValueError("invalid signature")
+    s = sig[len_r + 6:-1]
+    # Check whether the R element is an integer.
+    if sig[2] != 0x02:
+        raise ValueError("invalid signature")
+    # Zero-length integers are not allowed for R.
+    if len_r == 0:
+        raise ValueError("invalid signature")
+    # Negative numbers are not allowed for R.
+    if sig[4] & 0x80:
+        raise ValueError("invalid signature")
+    # Null bytes at the start of R are not allowed, unless R would
+    # otherwise be interpreted as a negative number.
+    if (len_r > 1) and (sig[4] == 0x00) and (not sig[5] & 0x80):
+        raise ValueError("invalid signature")
+    # Check whether the S element is an integer.
+    if sig[len_r + 4] != 0x02:
+        raise ValueError("invalid signature")
+    # Zero-length integers are not allowed for S.
+    if len_s == 0:
+        raise ValueError("invalid signature")
+    # Negative numbers are not allowed for S.
+    if sig[len_r + 6] & 0x80:
+        raise ValueError("invalid signature")
+    # Null bytes at the start of S are not allowed, unless S would otherwise be
+    # interpreted as a negative number.
+    if (len_s > 1) and (sig[len_r + 6] == 0x00) and (not sig[len_r + 7] & 0x80):
+        raise ValueError("invalid signature")
+    return r, s
 
