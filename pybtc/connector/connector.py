@@ -552,7 +552,7 @@ class Connector:
                         await self.after_block_handler(block)
                     except:
                         pass
-
+            self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"],len(block["tx"])))
         except Exception as err:
             if self.await_tx:
                 self.await_tx = set()
