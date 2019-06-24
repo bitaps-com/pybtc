@@ -534,6 +534,11 @@ class Connector:
                                                            "outputs": data["dbs_uutxo"]}
                                 if self.block_handler:
                                     await self.block_handler(block, conn)
+                                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
+                                                   "WHERE name = 'last_block';", int_to_bytes(block["height"]))
+                                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
+                                                   "WHERE name = 'last_cached_block';", int_to_bytes(block["height"]))
+
 
                 elif self.block_handler:
                     await self.block_handler(block, None)
