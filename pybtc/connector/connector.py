@@ -785,6 +785,7 @@ class Connector:
                 self.tx_cache[h]
             except:
                 missed.add(h)
+        print(">>", len(missed))
         if self.utxo_data:
             if self.db_type == "postgresql":
                 async with self.db_pool.acquire() as conn:
