@@ -285,8 +285,6 @@ class Connector:
 
         self.last_block_height = bytes_to_int(lb)
         self.last_block_utxo_cached_height = bytes_to_int(lc)
-        self.last_block_height = 582204
-        self.last_block_utxo_cached_height = 582204
         if self.app_block_height_on_start:
             if self.app_block_height_on_start < self.last_block_height:
                 self.log.critical("UTXO state last block %s app state last block %s " % (self.last_block_height,
