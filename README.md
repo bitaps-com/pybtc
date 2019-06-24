@@ -2,7 +2,7 @@
 
 ## Python bitcoin library
 
-Current version is 2.0
+Current version is 2.2
 
 
 ### Feature Support
@@ -25,7 +25,6 @@ To install pybtc, simply use pip
 ### Dependencies
 
 * Python 3.3.3+
-* secp256k1
 
 
 ### Documentation
