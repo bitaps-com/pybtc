@@ -542,6 +542,7 @@ class Connector:
 
             self.block_headers_cache.set(block["hash"], block["height"])
             self.last_block_height = block["height"]
+            self.app_last_block = block["height"]
             self.blocks_processed_count += 1
 
             # after block added handler
