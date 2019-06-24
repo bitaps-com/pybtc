@@ -275,8 +275,6 @@ class Connector:
                                    """)
                 lb = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_block';")
                 lc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
-                lb = 582204
-                lc = 582204
                 if lb is None:
                     lb = int_to_bytes(0)
                     lc = int_to_bytes(0)
@@ -287,7 +285,8 @@ class Connector:
 
         self.last_block_height = bytes_to_int(lb)
         self.last_block_utxo_cached_height = bytes_to_int(lc)
-
+        self.last_block_height = 582204
+        self.last_block_utxo_cached_height = 582204
         if self.app_block_height_on_start:
             if self.app_block_height_on_start < self.last_block_height:
                 self.log.critical("UTXO state last block %s app state last block %s " % (self.last_block_height,
