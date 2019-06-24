@@ -331,9 +331,9 @@ class UTXO():
                                                              "amount"],
                                                     records=self.utxo_records)
                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-                                  "WHERE name = 'last_block';", int_to_bytes(self.checkpoint))
+                                  "WHERE name = 'last_block';", self.checkpoint)
                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-                                  "WHERE name = 'last_cached_block';", int_to_bytes(self.last_block))
+                                  "WHERE name = 'last_cached_block';", self.last_block)
 
 
     def len(self):

@@ -260,7 +260,7 @@ class Connector:
 
                 await conn.execute("""CREATE TABLE IF NOT EXISTS 
                                           connector_utxo_state (name VARCHAR,
-                                                                value BYTEA,
+                                                                value BIGINT,
                                                                 PRIMARY KEY(name));
                                    """)
 
@@ -276,15 +276,12 @@ class Connector:
                 lb = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_block';")
                 lc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
                 if lb is None:
-                    lb = int_to_bytes(0)
-                    lc = int_to_bytes(0)
-                    await conn.execute("INSERT INTO connector_utxo_state (name, value) "
-                                       "VALUES ('last_block', $1);", int_to_bytes(0))
-                    await conn.execute("INSERT INTO connector_utxo_state (name, value) "
-                                       "VALUES ('last_cached_block', $1);", int_to_bytes(0))
+                    lb = lc = 0
+                    await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_block', 0);")
+                    await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_cached_block', 0);")
 
-        self.last_block_height = bytes_to_int(lb)
-        self.last_block_utxo_cached_height = bytes_to_int(lc)
+        self.last_block_height = lb
+        self.last_block_utxo_cached_height = lc
         if self.app_block_height_on_start:
             if self.app_block_height_on_start < self.last_block_height:
                 self.log.critical("UTXO state last block %s app state last block %s " % (self.last_block_height,
@@ -329,7 +326,6 @@ class Connector:
                             self.last_zmq_msg = int(time.time())
                             if self.deep_synchronization or not self.mempool_tx:
                                 continue
-                            continue
                             try:
                                 self.loop.create_task(self._new_transaction(Transaction(body, format="raw"),
                                                                             int(time.time())))
@@ -520,7 +516,6 @@ class Connector:
                     await self.before_block_handler(block)
 
                 await self.fetch_block_transactions(block)
-                # raise Exception("stop")
 
                 if self.utxo_data:
                     if self.db_type == "postgresql":
@@ -534,9 +529,9 @@ class Connector:
                                 if self.block_handler:
                                     await self.block_handler(block, conn)
                                 await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-                                                   "WHERE name = 'last_block';", int_to_bytes(block["height"]))
+                                                   "WHERE name = 'last_block';", block["height"])
                                 await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-                                                   "WHERE name = 'last_cached_block';", int_to_bytes(block["height"]))
+                                                   "WHERE name = 'last_cached_block';", block["height"])
 
 
                 elif self.block_handler:
@@ -592,6 +587,12 @@ class Connector:
                             async with conn.transaction():
                                 data = await self.uutxo.rollback_block(conn)
                                 await self.orphan_handler(data, conn)
+                                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
+                                                   "WHERE name = 'last_block';",
+                                                   self.last_block_height - 1)
+                                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
+                                                   "WHERE name = 'last_cached_block';",
+                                                   self.last_block_height - 1)
                 else:
                     await self.orphan_handler(self.last_block_height, None)
             self.block_headers_cache.pop_last()
