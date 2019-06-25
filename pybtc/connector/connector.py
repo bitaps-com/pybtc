@@ -409,7 +409,7 @@ class Connector:
                         if self.flush_app_caches_handler:
                             await self.flush_app_caches_handler(self.last_block_height)
                         # clear preload caches
-                        if len(self.sync_utxo.cache):
+                        if self.utxo_data and len(self.sync_utxo.cache):
                             self.log.info("Flush utxo cache ...")
                             while self.app_last_block < self.last_block_height:
                                 self.log.debug("Waiting app ... Last block %s; "
@@ -418,6 +418,7 @@ class Connector:
                                 await asyncio.sleep(5)
 
                             self.log.info("Last block %s" % self.last_block_height)
+
                             self.sync_utxo.checkpoints=[self.last_block_height]
                             self.sync_utxo.size_limit = 0
                             while  self.sync_utxo.save_process:
@@ -862,6 +863,8 @@ class Connector:
                         self.loop.create_task(self._new_transaction(tx, self.block_timestamp))
                 except Exception as err:
                     self.log.error("_get_missed exception %s " % str(err))
+                    import traceback
+                    print(traceback.format_exc())
                     self.await_tx = set()
                     self.block_txs_request.cancel()
             self.get_missed_tx_threads -= 1
@@ -884,7 +887,7 @@ class Connector:
             return
 
         try:
-            self.tx_in_process.add(tx["txId"])
+            self.tx_in_process.add(tx_hash)
             if not tx["coinbase"]:
                 await self.wait_block_dependences(tx)
 
@@ -967,7 +970,7 @@ class Connector:
                 self.log.critical("new transaction error %s " % err)
             self.log.debug("new transaction error %s " % err)
         finally:
-            self.tx_in_process.remove(tx["txId"])
+            self.tx_in_process.remove(tx_hash)
 
 
 
