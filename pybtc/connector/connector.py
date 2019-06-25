@@ -773,19 +773,19 @@ class Connector:
             self.sync_utxo.read_from_db_time = 0
             self.sync_utxo.read_from_db_count = 0
 
-        # coins stat
-        self.log.debug("- Coins ---------------")
-        self.log.debug("    Coins %s; destroyed %s; "
-                       "unspent %s; op_return %s;" % (self.coins,
-                                                      self.destroyed_coins,
-                                                      self.coins - self.destroyed_coins,
-                                                      self.op_return))
-        self.log.debug("    Coins destroyed in cache %s; "
-                       "cache efficiency  %s [%s];" % (self.sync_utxo._hit,
-                                                       round(self.sync_utxo._hit / self.destroyed_coins, 4),
-                                                       round((self.sync_utxo._hit + self.preload_cached_annihilated)
-                                                             / self.destroyed_coins, 4)))
-        self.log.debug("---------------------")
+            # coins stat
+            self.log.debug("- Coins ---------------")
+            self.log.debug("    Coins %s; destroyed %s; "
+                           "unspent %s; op_return %s;" % (self.coins,
+                                                          self.destroyed_coins,
+                                                          self.coins - self.destroyed_coins,
+                                                          self.op_return))
+            self.log.debug("    Coins destroyed in cache %s; "
+                           "cache efficiency  %s [%s];" % (self.sync_utxo._hit,
+                                                           round(self.sync_utxo._hit / self.destroyed_coins, 4),
+                                                           round((self.sync_utxo._hit + self.preload_cached_annihilated)
+                                                                 / self.destroyed_coins, 4)))
+            self.log.debug("---------------------")
 
     async def fetch_block_transactions(self, block):
         q = time.time()
