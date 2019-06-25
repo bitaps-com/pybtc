@@ -292,7 +292,7 @@ class Worker:
                 for x, y in zip(h, result):
                     if y["result"] is not None:
                         block = decode_block_tx(y["result"])
-                        if self.utxo_data
+                        if self.utxo_data:
                             for z in block["rawTx"]:
                                 for i in block["rawTx"][z]["vOut"]:
                                     o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
