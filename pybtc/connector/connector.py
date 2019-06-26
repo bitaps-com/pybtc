@@ -318,7 +318,6 @@ class Connector:
                         body = msg[1]
 
                         if topic == b"hashblock":
-                            continue
                             self.last_zmq_msg = int(time.time())
                             if self.deep_synchronization:
                                 continue
@@ -327,7 +326,6 @@ class Connector:
                             self.loop.create_task(self._get_block_by_hash(hash))
 
                         elif topic == b"rawtx":
-                            continue
                             self.last_zmq_msg = int(time.time())
                             if self.deep_synchronization or not self.mempool_tx:
                                 continue
@@ -366,14 +364,15 @@ class Connector:
             try:
                 while True:
                     await asyncio.sleep(20)
-                    if int(time.time()) - self.last_zmq_msg > 300 and self.zmqContext:
-                        self.log.error("ZerroMQ no messages about 5 minutes")
-                        try:
-                            self.zeromq_task.cancel()
-                            await asyncio.wait([self.zeromq_task])
-                            self.zeromq_task(self.loop.create_task(self.zeromq_handler()))
-                        except:
-                            pass
+                    if self.mempool_tx:
+                        if int(time.time()) - self.last_zmq_msg > 300 and self.zmqContext:
+                            self.log.error("ZerroMQ no messages about 5 minutes")
+                            try:
+                                self.zeromq_task.cancel()
+                                await asyncio.wait([self.zeromq_task])
+                                self.zeromq_task(self.loop.create_task(self.zeromq_handler()))
+                            except:
+                                pass
                     if not self.get_next_block_mutex:
                         self.get_next_block_mutex = True
                         self.loop.create_task(self.get_next_block())
