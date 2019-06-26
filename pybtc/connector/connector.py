@@ -963,9 +963,10 @@ class Connector:
                         self.block_txs_request.set_result(True)
                         self.await_tx_future = dict()
 
+
             except:
-                pass
-            self.log.debug("tx - %s" % tx_hash)
+                self.log.debug("tx - %s" % tx_hash)
+
         except asyncio.CancelledError:
             pass
 
