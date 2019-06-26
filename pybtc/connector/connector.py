@@ -1025,6 +1025,8 @@ class Connector:
 
         finally:
             print(len(self.await_tx))
+            if len(self.await_tx) == 1:
+                print(self.await_tx)
             # in case recently added transaction
             # in dependency list for orphaned transactions
             # try add orphaned again
