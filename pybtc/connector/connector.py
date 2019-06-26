@@ -962,7 +962,8 @@ class Connector:
                     if not self.await_tx:
                         self.block_txs_request.set_result(True)
                         self.await_tx_future = dict()
-
+                else:
+                    self.log.debug("tx - %s" % tx_hash)
 
             except:
                 self.log.debug("tx - %s" % tx_hash)
@@ -980,7 +981,7 @@ class Connector:
                         self.await_tx_future[i].cancel()
                 self.log.critical("new transaction error %s" % err)
             self.log.debug("failed tx - %s" % tx_hash)
-            print(err)
+            print(err[:32])
         finally:
             self.tx_in_process.remove(tx_hash)
 
