@@ -982,8 +982,8 @@ class Connector:
             except:
                 self.tx_orphan_buffer[rh2s(err.args[0][:32])] = [tx]
             self.log.debug("tx orphaned %s" % tx_hash)
-            self.loop.create_task(self._get_transaction(tx_hash))
-            self.log.debug("requested %s" % tx_hash)
+            self.loop.create_task(self._get_transaction(rh2s(err.args[0][:32])))
+            self.log.debug("requested %s" % rh2s(err.args[0][:32]))
 
 
         except Exception as err:
