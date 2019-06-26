@@ -141,6 +141,7 @@ class Connector:
         self.await_tx_future = dict()
         self.add_tx_future = dict()
         self.get_missed_tx_threads = 0
+        self.synchronized = False
         self.get_missed_tx_threads_limit = rpc_threads_limit
         self.tx_in_process = set()
         self.zmqContext = None
@@ -395,10 +396,13 @@ class Connector:
                 if self.node_last_block <= self.last_block_height + self.backlog:
                     d = await self.rpc.getblockcount()
                     if d == self.node_last_block:
-                        self.log.debug("Blockchain is synchronized with backlog %s" % self.backlog)
+                        if not self.synchronized:
+                            self.log.debug("Blockchain is synchronized with backlog %s" % self.backlog)
+                            self.synchronized = True
                         return
                     else:
                         self.node_last_block = d
+                self.synchronized = False
                 d = self.node_last_block - self.last_block_height
 
                 if d > self.deep_sync_limit:
