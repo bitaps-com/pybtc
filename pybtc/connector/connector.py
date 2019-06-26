@@ -44,7 +44,7 @@ class Connector:
                  rpc_batch_limit=50, rpc_threads_limit=100, rpc_timeout=100,
                  utxo_data=False,
                  utxo_cache_size=1000000,
-                 tx_orphan_buffer_limit=10000,
+                 tx_orphan_buffer_limit=1000,
                  skip_opreturn=True,
                  block_cache_workers= 4,
                  block_preload_cache_limit= 1000 * 1000000,
@@ -328,7 +328,7 @@ class Connector:
                                 continue
                             hash = body.hex()
                             self.log.warning("New block %s" % hash)
-                            self.loop.create_task(self._get_block_by_hash(hash))
+                            self.loop.create_task(self.get_next_block())
 
                         elif topic == b"rawtx":
                             self.last_zmq_msg = int(time.time())
