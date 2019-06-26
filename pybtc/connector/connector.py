@@ -1000,15 +1000,16 @@ class Connector:
                 print("xx")
                 if err.detail.find("already exists") != -1:
                     print("already exists")
-                    if self.await_tx and tx_hash in self.await_tx:
-                        self.await_tx.remove(tx_hash)
-                        try:
-                            self.await_tx_future[tx["txId"]].set_result(True)
-                        except:
-                            pass
-                        if not self.await_tx:
-                            self.block_txs_request.set_result(True)
-                            self.await_tx_future = dict()
+                    if self.await_tx:
+                        if tx_hash in self.await_tx:
+                            self.await_tx.remove(tx_hash)
+                            try:
+                                self.await_tx_future[tx["txId"]].set_result(True)
+                            except:
+                                pass
+                            if not self.await_tx:
+                                self.block_txs_request.set_result(True)
+                                self.await_tx_future = dict()
                     return
             except:
                 pass
@@ -1023,8 +1024,7 @@ class Connector:
             self.log.critical("failed tx - %s [%s]" % (tx_hash, str(err)))
 
         finally:
-            self.tx_in_process.remove(tx_hash)
-
+            print(len(self.await_tx))
             # in case recently added transaction
             # in dependency list for orphaned transactions
             # try add orphaned again
@@ -1048,6 +1048,8 @@ class Connector:
                         for i in self.await_tx_future:
                             if not self.await_tx_future[i].done():
                                 self.await_tx_future[i].cancel()
+
+            self.tx_in_process.remove(tx_hash)
 
 
 
