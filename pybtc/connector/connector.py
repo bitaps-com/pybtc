@@ -317,6 +317,7 @@ class Connector:
                         body = msg[1]
 
                         if topic == b"hashblock":
+                            continue
                             self.last_zmq_msg = int(time.time())
                             if self.deep_synchronization:
                                 continue
@@ -325,6 +326,7 @@ class Connector:
                             self.loop.create_task(self._get_block_by_hash(hash))
 
                         elif topic == b"rawtx":
+                            continue
                             self.last_zmq_msg = int(time.time())
                             if self.deep_synchronization or not self.mempool_tx:
                                 continue
@@ -951,6 +953,8 @@ class Connector:
 
                     if not self.await_tx:
                         self.block_txs_request.set_result(True)
+                        self.await_tx_future = dict()
+
             except:
                 pass
 
