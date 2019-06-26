@@ -151,6 +151,8 @@ class Connector:
     async def start(self):
         if self.utxo_data:
             await self.utxo_init()
+        else:
+            self.last_block_height = self.app_block_height_on_start
 
         while True:
             self.log.info("Connector initialization")
