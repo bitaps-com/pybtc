@@ -997,7 +997,9 @@ class Connector:
         except Exception as err:
             try:
                 # check if transaction already exist
+                print("xx")
                 if err.detail.find("already exists") != -1:
+                    print("already exists")
                     if self.await_tx and tx_hash in self.await_tx:
                         self.await_tx.remove(tx_hash)
                         try:
