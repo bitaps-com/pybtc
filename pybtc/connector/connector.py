@@ -569,7 +569,8 @@ class Connector:
                         pass
             if not self.deep_synchronization:
                 self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"],len(block["tx"])))
-
+                if self.mempool_tx:
+                    self.log.debug("Mempool orphaned transactions: %s " % len(self.tx_orphan_buffer))
         except Exception as err:
             if self.await_tx:
                 self.await_tx = set()
@@ -850,6 +851,7 @@ class Connector:
         self.total_received_tx_time += time.time() - q
         rate = round(self.total_received_tx/self.total_received_tx_time)
         self.log.debug("Transactions received: %s [%s] received tx rate tx/s ->> %s <<" % (tx_count, time.time() - q, rate))
+
 
     async def _get_transaction(self, tx_hash):
         try:
