@@ -88,16 +88,19 @@ class BlockLoader:
             new_requests = 0
             if self.parent.block_preload._store_size < self.parent.block_preload_cache_limit:
                 try:
-                    for i in self.worker_busy:
-                        if not self.worker_busy[i]:
-                            self.worker_busy[i] = True
-                            if self.height <= self.parent.last_block_height:
-                                self.height = self.parent.last_block_height + 1
-                            await self.pipe_sent_msg(self.worker[i].writer, b'rpc_batch_limit',
-                                                     int_to_bytes(self.rpc_batch_limit))
-                            await self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(self.height))
-                            self.height += self.rpc_batch_limit
-                            new_requests += 1
+                    if self.height + self.rpc_batch_limit > target_height:
+                        self.height = target_height
+                    else:
+                        for i in self.worker_busy:
+                            if not self.worker_busy[i]:
+                                self.worker_busy[i] = True
+                                if self.height <= self.parent.last_block_height:
+                                    self.height = self.parent.last_block_height + 1
+                                await self.pipe_sent_msg(self.worker[i].writer, b'rpc_batch_limit',
+                                                         int_to_bytes(self.rpc_batch_limit))
+                                await self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(self.height))
+                                self.height += self.rpc_batch_limit
+                                new_requests += 1
                     if not new_requests:
                         await asyncio.sleep(1)
                         continue
