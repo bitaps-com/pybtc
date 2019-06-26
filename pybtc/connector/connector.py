@@ -972,14 +972,15 @@ class Connector:
 
         except Exception as err:
             if tx_hash in self.await_tx:
-                self.log.critical("new transaction error %s " % err)
+                self.log.critical("new transaction error %s" % err)
                 self.await_tx = set()
                 self.block_txs_request.cancel()
                 for i in self.await_tx_future:
                     if not self.await_tx_future[i].done():
                         self.await_tx_future[i].cancel()
-                self.log.critical("new transaction error %s " % err)
-            self.log.debug("failed tx - %s" % tx_hash )
+                self.log.critical("new transaction error %s" % err)
+            self.log.debug("failed tx - %s" % tx_hash)
+            print(err)
         finally:
             self.tx_in_process.remove(tx_hash)
 
