@@ -1000,6 +1000,10 @@ class Connector:
                         self.await_tx_future[i].cancel()
             self.log.critical("failed tx - %s [%s]" % (tx_hash, err.args))
             print(dir(err))
+            print(err.sqlstate)
+            print(err.detail)
+            print(err.message)
+            print(err.as_dict)
 
         finally:
             self.tx_in_process.remove(tx_hash)
