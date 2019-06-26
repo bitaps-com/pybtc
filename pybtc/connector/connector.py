@@ -5,7 +5,7 @@ from pybtc.connector.utils import decode_block_tx
 from pybtc.connector.utils import Cache
 from pybtc.connector.utils import seconds_to_age
 from pybtc.transaction import Transaction
-from pybtc import int_to_bytes, bytes_to_int
+from pybtc import int_to_bytes, bytes_to_int, bytes_from_hex
 from pybtc import MRU
 from collections import deque
 
@@ -472,7 +472,7 @@ class Connector:
                 block = await self.rpc.getblock(hash)
                 self.blocks_download_time += time.time() - q
             header = await self.rpc.getblockheader(hash, False)
-            block["header"] = header
+            block["header"] = bytes_from_hex(header)
             return block
         except Exception:
             self.log.error("get block by hash %s FAILED" % hash)
