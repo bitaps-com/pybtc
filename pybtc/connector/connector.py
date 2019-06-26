@@ -44,7 +44,7 @@ class Connector:
                  rpc_batch_limit=50, rpc_threads_limit=100, rpc_timeout=100,
                  utxo_data=False,
                  utxo_cache_size=1000000,
-                 tx_orphan_buffer=10000,
+                 tx_orphan_buffer_limit=10000,
                  skip_opreturn=True,
                  block_cache_workers= 4,
                  block_preload_cache_limit= 1000 * 1000000,
@@ -76,7 +76,7 @@ class Connector:
         self.deep_sync_limit = deep_sync_limit
         self.backlog = backlog
         self.mempool_tx = mempool_tx
-        self.tx_orphan_buffer = tx_orphan_buffer
+        self.tx_orphan_buffer_limit = tx_orphan_buffer_limit
         self.db_type = db_type
         self.db = db
         self.utxo_cache_size = utxo_cache_size
@@ -133,7 +133,7 @@ class Connector:
         self.block_hashes = Cache(max_size=self.block_hashes_cache_limit)
         self.block_hashes_preload_mutex = False
         self.tx_cache = MRU(self.tx_cache_limit)
-        self.tx_orphan_buffer = MRU(self.tx_orphan_buffer)
+        self.tx_orphan_buffer = MRU()
         self.block_headers_cache = Cache(max_size=self.block_headers_cache_limit)
 
         self.block_txs_request = None
@@ -851,6 +851,13 @@ class Connector:
         rate = round(self.total_received_tx/self.total_received_tx_time)
         self.log.debug("Transactions received: %s [%s] received tx rate tx/s ->> %s <<" % (tx_count, time.time() - q, rate))
 
+    async def _get_transaction(self, tx_hash):
+        try:
+            raw_tx = await self.rpc.getrawtransaction([tx_hash])
+            tx = Transaction(raw_tx, format="raw")
+            self.loop.create_task(self._new_transaction(tx, int(time.time())))
+        except Exception as err:
+            self.log.error("get transaction failed: %s" % str(err))
 
     async def _get_missed(self):
         if self.get_missed_tx_threads <= self.get_missed_tx_threads_limit:
@@ -876,8 +883,6 @@ class Connector:
                         self.loop.create_task(self._new_transaction(tx, self.block_timestamp))
                 except Exception as err:
                     self.log.error("_get_missed exception %s " % str(err))
-                    import traceback
-                    print(traceback.format_exc())
                     self.await_tx = set()
                     self.block_txs_request.cancel()
             self.get_missed_tx_threads -= 1
@@ -947,45 +952,37 @@ class Connector:
                 if self.tx_handler:
                     await self.tx_handler(tx, timestamp, None)
 
-
-
-
-
             self.tx_cache[tx_hash] = True
 
-            try:
-                if self.await_tx:
-                    self.await_tx.remove(tx_hash)
 
+            if self.await_tx:
+                try:
+                    self.await_tx.remove(tx_hash)
                     try:
                         self.await_tx_future[tx["txId"]].set_result(True)
                     except:
                         pass
-
                     if not self.await_tx:
                         self.block_txs_request.set_result(True)
                         self.await_tx_future = dict()
-                else:
+                except:
                     self.log.debug("tx - %s" % tx_hash)
-
-            except:
+            else:
                 self.log.debug("tx - %s" % tx_hash)
+
+
 
         except asyncio.CancelledError:
             pass
 
         except KeyError as err:
-            if tx_hash in self.await_tx:
-                self.log.critical("new transaction error %s" % err)
-                self.await_tx = set()
-                self.block_txs_request.cancel()
-                for i in self.await_tx_future:
-                    if not self.await_tx_future[i].done():
-                        self.await_tx_future[i].cancel()
-                self.log.critical("new transaction error %s" % err)
+            # transaction orphaned
+            try:
+                self.tx_orphan_buffer[rh2s(err.args[0][:32])].append(tx)
+            except:
+                self.tx_orphan_buffer[rh2s(err.args[0][:32])] = [tx]
+            self.log.debug("tx orphaned %s" % tx_hash)
 
-            self.log.debug("tx ?? %s" % tx_hash)
-            print(err.args[0][:32])
 
         except Exception as err:
             if tx_hash in self.await_tx:
@@ -1000,6 +997,30 @@ class Connector:
 
         finally:
             self.tx_in_process.remove(tx_hash)
+
+            # in case recently added transaction
+            # in dependency list for orphaned transactions
+            # try add orphaned again
+            try:
+                rows = self.tx_orphan_buffer.delete(tx_hash)
+                for row in rows:
+                    self.loop.create_task(self._new_transaction(row, int(time.time())))
+                    self.log.debug("tx try again %s" % rh2s(row["txId"]))
+            except:
+                pass
+
+            # clear orphaned transactions buffer over limit
+            while len(self.tx_orphan_buffer) > self.tx_orphan_buffer_limit:
+                key, value = self.tx_orphan_buffer.pop()
+                for t in value:
+                    self.log.critical("orphaned tx failed %s" % rh2s(t["txId"]))
+                    if tx_hash in self.await_tx:
+                        self.await_tx = set()
+                        self.block_txs_request.cancel()
+                        for i in self.await_tx_future:
+                            if not self.await_tx_future[i].done():
+                                self.await_tx_future[i].cancel()
+
 
 
 
