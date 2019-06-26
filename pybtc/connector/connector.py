@@ -328,8 +328,9 @@ class Connector:
                                 continue
                             hash = body.hex()
                             self.log.warning("New block %s" % hash)
-                            self.get_next_block_mutex = True
-                            self.loop.create_task(self.get_next_block())
+                            if not self.get_next_block_mutex:
+                                self.get_next_block_mutex = True
+                                self.loop.create_task(self.get_next_block())
 
                         elif topic == b"rawtx":
                             self.last_zmq_msg = int(time.time())
