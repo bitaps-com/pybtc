@@ -979,7 +979,7 @@ class Connector:
                     if not self.await_tx_future[i].done():
                         self.await_tx_future[i].cancel()
                 self.log.critical("new transaction error %s " % err)
-            self.log.debug("failed tx - %s [%s]" % (tx_hash, err) )
+            self.log.debug("failed tx - %s" % tx_hash )
         finally:
             self.tx_in_process.remove(tx_hash)
 
