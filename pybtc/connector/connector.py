@@ -991,6 +991,21 @@ class Connector:
 
 
         except Exception as err:
+            try:
+                # check if transaction already exist
+                if err.detail.find("already exists") != -1:
+                    self.await_tx.remove(tx_hash)
+                    try:
+                        self.await_tx_future[tx["txId"]].set_result(True)
+                    except:
+                        pass
+                    if not self.await_tx:
+                        self.block_txs_request.set_result(True)
+                        self.await_tx_future = dict()
+                    return
+            except:
+                pass
+
             if tx_hash in self.await_tx:
                 self.log.critical("new transaction error %s" % err)
                 self.await_tx = set()
@@ -998,12 +1013,7 @@ class Connector:
                 for i in self.await_tx_future:
                     if not self.await_tx_future[i].done():
                         self.await_tx_future[i].cancel()
-            self.log.critical("failed tx - %s [%s]" % (tx_hash, err.args))
-            print(dir(err))
-            print(err.sqlstate)
-            print(err.detail)
-            print(err.message)
-            print(err.as_dict)
+            self.log.critical("failed tx - %s [%s]" % (tx_hash, str(err)))
 
         finally:
             self.tx_in_process.remove(tx_hash)
