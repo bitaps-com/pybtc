@@ -853,7 +853,7 @@ class Connector:
 
     async def _get_transaction(self, tx_hash):
         try:
-            raw_tx = await self.rpc.getrawtransaction([tx_hash])
+            raw_tx = await self.rpc.getrawtransaction(tx_hash)
             tx = Transaction(raw_tx, format="raw")
             self.loop.create_task(self._new_transaction(tx, int(time.time())))
         except Exception as err:
