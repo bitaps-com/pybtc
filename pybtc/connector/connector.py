@@ -994,14 +994,15 @@ class Connector:
             try:
                 # check if transaction already exist
                 if err.detail.find("already exists") != -1:
-                    self.await_tx.remove(tx_hash)
-                    try:
-                        self.await_tx_future[tx["txId"]].set_result(True)
-                    except:
-                        pass
-                    if not self.await_tx:
-                        self.block_txs_request.set_result(True)
-                        self.await_tx_future = dict()
+                    if self.await_tx and tx_hash in self.await_tx:
+                        self.await_tx.remove(tx_hash)
+                        try:
+                            self.await_tx_future[tx["txId"]].set_result(True)
+                        except:
+                            pass
+                        if not self.await_tx:
+                            self.block_txs_request.set_result(True)
+                            self.await_tx_future = dict()
                     return
             except:
                 pass
