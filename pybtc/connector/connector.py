@@ -998,7 +998,7 @@ class Connector:
                 for i in self.await_tx_future:
                     if not self.await_tx_future[i].done():
                         self.await_tx_future[i].cancel()
-            self.log.critical("failed tx - %s [%s]" % (tx_hash, err))
+            self.log.critical("failed tx - %s [%s]" % (tx_hash, err.args))
 
         finally:
             self.tx_in_process.remove(tx_hash)
