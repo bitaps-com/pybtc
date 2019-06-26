@@ -134,6 +134,7 @@ class Connector:
         self.block_hashes_preload_mutex = False
         self.tx_cache = MRU(self.tx_cache_limit)
         self.tx_orphan_buffer = MRU()
+        self.tx_orphan_resolved = 0
         self.block_headers_cache = Cache(max_size=self.block_headers_cache_limit)
 
         self.block_txs_request = None
@@ -570,7 +571,8 @@ class Connector:
             if not self.deep_synchronization:
                 self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"],len(block["tx"])))
                 if self.mempool_tx:
-                    self.log.debug("Mempool orphaned transactions: %s " % len(self.tx_orphan_buffer))
+                    self.log.debug("Mempool orphaned transactions: %s; "
+                                   "resolved orphans %s" % (len(self.tx_orphan_buffer), self.tx_orphan_resolved))
         except Exception as err:
             if self.await_tx:
                 self.await_tx = set()
@@ -1024,6 +1026,7 @@ class Connector:
             # try add orphaned again
             try:
                 rows = self.tx_orphan_buffer.delete(tx_hash)
+                self.tx_orphan_resolved += 1
                 for row in rows:
                     self.loop.create_task(self._new_transaction(row, int(time.time())))
                     # self.log.debug("tx try again %s" % rh2s(row["txId"]))
