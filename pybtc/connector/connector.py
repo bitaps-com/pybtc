@@ -205,8 +205,7 @@ class Connector:
             self.block_loader = BlockLoader(self, workers=self.block_cache_workers, dsn = self.db)
         else:
             self.block_loader = BlockLoader(self,workers = self.block_cache_workers)
-
-        self.tasks.append(self.loop.create_task(self.zeromq_handler()))
+        self.zeromq_task = self.loop.create_task(self.zeromq_handler())
         self.tasks.append(self.loop.create_task(self.watchdog()))
         self.connected.set_result(True)
         self.get_next_block_mutex = True
@@ -370,8 +369,9 @@ class Connector:
                     if int(time.time()) - self.last_zmq_msg > 300 and self.zmqContext:
                         self.log.error("ZerroMQ no messages about 5 minutes")
                         try:
-                            self.zmqContext.destroy()
-                            self.zmqContext = None
+                            self.zeromq_task.cancel()
+                            await asyncio.wait([self.zeromq_task])
+                            self.zeromq_task(self.loop.create_task(self.zeromq_handler()))
                         except:
                             pass
                     if not self.get_next_block_mutex:
@@ -423,7 +423,6 @@ class Connector:
 
                             self.log.info("Last block %s App last block %s" % (self.last_block_height,
                                                                                self.app_last_block))
-                            print(self.sync_utxo.checkpoints)
 
                             self.sync_utxo.checkpoints=[self.last_block_height]
                             self.sync_utxo.size_limit = 0
@@ -989,6 +988,11 @@ class Connector:
         self.log.warning("Stopping node connector ...")
         [task.cancel() for task in self.tasks]
         await asyncio.wait(self.tasks)
+        try:
+            self.zeromq_task.cancel()
+            await asyncio.wait([self.zeromq_task])
+        except:
+            pass
         if not self.active_block.done():
             self.log.warning("Waiting active block task ...")
             await self.active_block
