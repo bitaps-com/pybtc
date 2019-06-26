@@ -44,6 +44,7 @@ class Connector:
                  rpc_batch_limit=50, rpc_threads_limit=100, rpc_timeout=100,
                  utxo_data=False,
                  utxo_cache_size=1000000,
+                 tx_orphan_buffer=10000,
                  skip_opreturn=True,
                  block_cache_workers= 4,
                  block_preload_cache_limit= 1000 * 1000000,
@@ -75,6 +76,7 @@ class Connector:
         self.deep_sync_limit = deep_sync_limit
         self.backlog = backlog
         self.mempool_tx = mempool_tx
+        self.tx_orphan_buffer = tx_orphan_buffer
         self.db_type = db_type
         self.db = db
         self.utxo_cache_size = utxo_cache_size
@@ -131,6 +133,7 @@ class Connector:
         self.block_hashes = Cache(max_size=self.block_hashes_cache_limit)
         self.block_hashes_preload_mutex = False
         self.tx_cache = MRU(self.tx_cache_limit)
+        self.tx_orphan_buffer = MRU(self.tx_orphan_buffer)
         self.block_headers_cache = Cache(max_size=self.block_headers_cache_limit)
 
         self.block_txs_request = None
@@ -971,6 +974,19 @@ class Connector:
         except asyncio.CancelledError:
             pass
 
+        except KeyError as err:
+            if tx_hash in self.await_tx:
+                self.log.critical("new transaction error %s" % err)
+                self.await_tx = set()
+                self.block_txs_request.cancel()
+                for i in self.await_tx_future:
+                    if not self.await_tx_future[i].done():
+                        self.await_tx_future[i].cancel()
+                self.log.critical("new transaction error %s" % err)
+
+            self.log.debug("tx ?? %s" % tx_hash)
+            print(err.args[0][:32])
+
         except Exception as err:
             if tx_hash in self.await_tx:
                 self.log.critical("new transaction error %s" % err)
@@ -980,8 +996,8 @@ class Connector:
                     if not self.await_tx_future[i].done():
                         self.await_tx_future[i].cancel()
                 self.log.critical("new transaction error %s" % err)
-            self.log.debug("failed tx - %s" % tx_hash)
-            print(err.args[0][:32])
+            self.log.debug("failed tx - %s [%s]" % (tx_hash, err))
+
         finally:
             self.tx_in_process.remove(tx_hash)
 
