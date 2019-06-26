@@ -395,7 +395,7 @@ class Connector:
                 if self.node_last_block <= self.last_block_height + self.backlog:
                     d = await self.rpc.getblockcount()
                     if d == self.node_last_block:
-                        self.log.info("Blockchain is synchronized with backlog %s" % self.backlog)
+                        self.log.debug("Blockchain is synchronized with backlog %s" % self.backlog)
                         return
                     else:
                         self.node_last_block = d
@@ -471,6 +471,8 @@ class Connector:
                 q = time.time()
                 block = await self.rpc.getblock(hash)
                 self.blocks_download_time += time.time() - q
+            header = await self.rpc.getblockheader(hash, False)
+            block["header"] = header
             return block
         except Exception:
             self.log.error("get block by hash %s FAILED" % hash)
