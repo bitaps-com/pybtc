@@ -918,7 +918,7 @@ class Connector:
 
     async def _new_transaction(self, tx, timestamp):
         tx_hash = rh2s(tx["txId"])
-
+        print("new", tx_hash)
         if tx_hash in self.tx_in_process or self.tx_cache.has_key(tx_hash):
             return
 
