@@ -8,7 +8,7 @@ from pybtc.transaction import Transaction
 from pybtc import int_to_bytes, bytes_to_int, bytes_from_hex
 from pybtc import MRU
 from collections import deque
-
+import traceback
 
 try:
     import aiojsonrpc
@@ -1006,13 +1006,13 @@ class Connector:
                             try:
                                 self.await_tx_future[tx["txId"]].set_result(True)
                             except:
-                                pass
+                                print(traceback.format_exc())
                             if not self.await_tx:
                                 self.block_txs_request.set_result(True)
                                 self.await_tx_future = dict()
                     return
             except:
-                pass
+                print(traceback.format_exc())
 
             if tx_hash in self.await_tx:
                 self.log.critical("new transaction error %s" % err)
@@ -1037,7 +1037,7 @@ class Connector:
                     self.loop.create_task(self._new_transaction(row, int(time.time())))
                     # self.log.debug("tx try again %s" % rh2s(row["txId"]))
             except:
-                pass
+                print(traceback.format_exc())
 
             # clear orphaned transactions buffer over limit
             while len(self.tx_orphan_buffer) > self.tx_orphan_buffer_limit:
