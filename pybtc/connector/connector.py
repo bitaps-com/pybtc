@@ -817,16 +817,19 @@ class Connector:
         q = time.time()
         missed = set()
         tx_count = len(block["tx"])
+
+        self.block_txs_request = asyncio.Future()
+        if not self.unconfirmed_tx_processing.done():
+            await self.unconfirmed_tx_processing
+        print("start block transactions request")
+
         for h in block["tx"]:
             try:
                 self.tx_cache[h]
             except:
                 missed.add(h)
 
-        self.block_txs_request = asyncio.Future()
-        if not self.unconfirmed_tx_processing.done():
-            await self.unconfirmed_tx_processing
-        print("start block transactions request")
+
 
         if self.utxo_data:
             if self.db_type == "postgresql":
