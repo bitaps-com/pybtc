@@ -1017,6 +1017,7 @@ class Connector:
                     if block_tx:
                         self.await_tx.remove(tx_hash)
                         self.await_tx_future[tx["txId"]].set_result(True)
+                return
             except:
                 pass
 
