@@ -996,8 +996,7 @@ class Connector:
                 self.await_tx.remove(tx_hash)
                 self.await_tx_future[tx["txId"]].set_result(True)
                 print("block tx", tx_hash, "left", len(self.await_tx))
-            else:
-                print("tx", tx_hash)
+
 
             # in case recently added transaction
             # in dependency list for orphaned transactions
