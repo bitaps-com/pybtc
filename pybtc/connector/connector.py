@@ -862,6 +862,8 @@ class Connector:
                 except:
                     pass
                 raise RuntimeError("block transaction request timeout")
+        else:
+            self.block_txs_request.set_result(True)
 
         self.total_received_tx += tx_count
         self.total_received_tx_last += tx_count
