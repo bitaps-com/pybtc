@@ -918,7 +918,7 @@ class Connector:
 
         if not priority:
             if not self.block_txs_request.done():
-                await self.block_txs_request
+                return
 
 
 
