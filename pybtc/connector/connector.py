@@ -332,7 +332,6 @@ class Connector:
                                 continue
                             hash = body.hex()
                             self.log.warning("New block %s" % hash)
-                            print(self.get_next_block_mutex)
                             if not self.get_next_block_mutex:
                                 self.log.warning("New block %s" % hash)
                                 self.get_next_block_mutex = True
@@ -591,8 +590,6 @@ class Connector:
                     self.await_tx_future[i].cancel()
             self.await_tx_future = dict()
             self.log.error("block %s error %s" % (block["height"], str(err)))
-            import traceback
-            print(traceback.format_exc())
         finally:
             if self.node_last_block > self.last_block_height:
                 self.get_next_block_mutex = True
@@ -821,7 +818,7 @@ class Connector:
         self.block_txs_request = asyncio.Future()
         if not self.unconfirmed_tx_processing.done():
             await self.unconfirmed_tx_processing
-        print("start block transactions request")
+        self.log.debug("Request block transactions ...")
 
         for h in block["tx"]:
             try:
@@ -843,7 +840,6 @@ class Connector:
                         coinbase = await conn.fetchval("SELECT   out_tx_id FROM connector_unconfirmed_utxo "
                                                   "WHERE out_tx_id  = $1 LIMIT 1;", s2rh(block["tx"][0]))
                         if coinbase:
-                            print("coinbase exist", rh2s(coinbase))
                             if block["tx"][0] in missed:
                                 missed.remove(block["tx"][0])
 
@@ -927,16 +923,12 @@ class Connector:
 
     async def _new_transaction(self, tx, timestamp, block_tx = False):
         tx_hash = rh2s(tx["txId"])
-        if block_tx: print(">", tx_hash)
         if tx_hash in self.tx_in_process: return
-        if block_tx: print(">>", tx_hash)
         if self.tx_cache.has_key(tx_hash):
             if block_tx:
                 self.await_tx.remove(tx_hash)
                 self.await_tx_future[tx["txId"]].set_result(True)
-                print("block tx>", tx_hash, "left", len(self.await_tx))
             return
-        if block_tx: print(">>>", tx_hash)
         self.tx_in_process.add(tx_hash)
 
         try:
@@ -995,8 +987,7 @@ class Connector:
             if block_tx:
                 self.await_tx.remove(tx_hash)
                 self.await_tx_future[tx["txId"]].set_result(True)
-                print("block tx", tx_hash, "left", len(self.await_tx))
-
+                self.log.debug("block tx %s; left %s" % (tx_hash, len(self.await_tx)))
 
             # in case recently added transaction
             # in dependency list for orphaned transactions
@@ -1052,7 +1043,7 @@ class Connector:
                 if not self.block_txs_request.done():
                     if not self.await_tx:
                         self.block_txs_request.set_result(True)
-                        print("block transactions request completed")
+                        self.log.debug("Block transactions request completed")
             else:
                 if not self.tx_in_process:
                     if not self.unconfirmed_tx_processing.done():
