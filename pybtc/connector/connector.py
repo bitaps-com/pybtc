@@ -150,6 +150,10 @@ class Connector:
         self.tx_in_process = set()
         self.zmqContext = None
         self.tasks = list()
+        self.x1 = 0
+        self.x2 = 0
+        self.x3 = 0
+        self.x4 = 0
         self.log.info("Node connector started")
         asyncio.ensure_future(self.start(), loop=self.loop)
 
@@ -866,6 +870,7 @@ class Connector:
             self.log.error("get transaction failed: %s" % str(err))
 
     async def _get_missed(self):
+        self.x1 = self.x2 = self.x3 = self.x4 = 0
         if self.get_missed_tx_threads <= self.get_missed_tx_threads_limit:
             self.get_missed_tx_threads += 1
             # start more threads
@@ -895,6 +900,7 @@ class Connector:
 
 
     async def wait_block_dependences(self, tx):
+        self.x1 += 1
         while self.await_tx_future:
             for i in tx["vIn"]:
                 if tx["vIn"][i]["txId"] in self.await_tx_future:
@@ -903,6 +909,8 @@ class Connector:
                         break
             else:
                 break
+        self.x2 += 1
+
 
     async def _new_transaction(self, tx, timestamp):
         tx_hash = rh2s(tx["txId"])
@@ -919,6 +927,8 @@ class Connector:
         if not priority:
             if not self.block_txs_request.done():
                 return
+        else:
+            self.x3 += 1
 
 
 
@@ -1024,7 +1034,9 @@ class Connector:
             self.log.critical("failed tx - %s [%s]" % (tx_hash, str(err)))
 
         finally:
-            print(len(self.await_tx))
+            if priority:
+                self.x4 += 1
+            print(len(self.await_tx), self.x1, self.x2, self.x3, self.x4)
             if len(self.await_tx) == 1:
                 print(self.await_tx)
 
