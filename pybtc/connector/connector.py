@@ -910,8 +910,20 @@ class Connector:
         if tx_hash in self.tx_in_process or self.tx_cache.has_key(tx_hash):
             return
 
+        self.tx_in_process.add(tx_hash)
+        priority = 0
+        if self.await_tx:
+            if tx_hash in self.await_tx:
+                priority = 1
+
+        if not priority:
+            if not self.block_txs_request.done():
+                await self.block_txs_request
+
+
+
         try:
-            self.tx_in_process.add(tx_hash)
+
             if not tx["coinbase"]:
                 await self.wait_block_dependences(tx)
 
@@ -960,24 +972,18 @@ class Connector:
 
             self.tx_cache[tx_hash] = True
 
+            if priority:
+              self.await_tx.remove(tx_hash)
+              self.await_tx_future[tx["txId"]].set_result(True)
 
-            if self.await_tx:
-                try:
-                    self.await_tx.remove(tx_hash)
-                    try:
-                        self.await_tx_future[tx["txId"]].set_result(True)
-                    except:
-                        pass
-                    if not self.await_tx:
-                        self.block_txs_request.set_result(True)
-                        self.await_tx_future = dict()
-                except:
-                    pass
-                    # self.log.debug("tx - %s" % tx_hash)
-            else:
-                pass
-                # self.log.debug("tx - %s" % tx_hash)
-
+            # in case recently added transaction
+            # in dependency list for orphaned transactions
+            # try add orphaned again
+            if tx_hash in self.tx_orphan_buffer:
+                rows = self.tx_orphan_buffer.delete(tx_hash)
+                self.tx_orphan_resolved += 1
+                for row in rows:
+                    self.loop.create_task(self._new_transaction(row, int(time.time())))
 
 
         except asyncio.CancelledError:
@@ -992,27 +998,21 @@ class Connector:
             # self.log.debug("tx orphaned %s" % tx_hash)
             self.loop.create_task(self._get_transaction(rh2s(err.args[0][:32])))
             # self.log.debug("requested %s" % rh2s(err.args[0][:32]))
-
+            # clear orphaned transactions buffer over limit
+            while len(self.tx_orphan_buffer) > self.tx_orphan_buffer_limit:
+                key, value = self.tx_orphan_buffer.pop()
+                for t in value:
+                    self.log.critical("orphaned tx failed %s" % rh2s(t["txId"]))
 
         except Exception as err:
             try:
                 # check if transaction already exist
-                print("xx")
                 if err.detail.find("already exists") != -1:
-                    print("already exists")
-                    if self.await_tx:
-                        if tx_hash in self.await_tx:
-                            self.await_tx.remove(tx_hash)
-                            try:
-                                self.await_tx_future[tx["txId"]].set_result(True)
-                            except:
-                                print(traceback.format_exc())
-                            if not self.await_tx:
-                                self.block_txs_request.set_result(True)
-                                self.await_tx_future = dict()
-                    return
+                    if priority:
+                        self.await_tx.remove(tx_hash)
+                        self.await_tx_future[tx["txId"]].set_result(True)
             except:
-                print(traceback.format_exc())
+                pass
 
             if tx_hash in self.await_tx:
                 self.log.critical("new transaction error %s" % err)
@@ -1027,29 +1027,10 @@ class Connector:
             print(len(self.await_tx))
             if len(self.await_tx) == 1:
                 print(self.await_tx)
-            # in case recently added transaction
-            # in dependency list for orphaned transactions
-            # try add orphaned again
-            try:
-                rows = self.tx_orphan_buffer.delete(tx_hash)
-                self.tx_orphan_resolved += 1
-                for row in rows:
-                    self.loop.create_task(self._new_transaction(row, int(time.time())))
-                    # self.log.debug("tx try again %s" % rh2s(row["txId"]))
-            except:
-                print(traceback.format_exc())
 
-            # clear orphaned transactions buffer over limit
-            while len(self.tx_orphan_buffer) > self.tx_orphan_buffer_limit:
-                key, value = self.tx_orphan_buffer.pop()
-                for t in value:
-                    self.log.critical("orphaned tx failed %s" % rh2s(t["txId"]))
-                    if tx_hash in self.await_tx:
-                        self.await_tx = set()
-                        self.block_txs_request.cancel()
-                        for i in self.await_tx_future:
-                            if not self.await_tx_future[i].done():
-                                self.await_tx_future[i].cancel()
+            if not self.block_txs_request.done():
+                if not self.await_tx:
+                    self.block_txs_request.set_result(True)
 
             self.tx_in_process.remove(tx_hash)
 
