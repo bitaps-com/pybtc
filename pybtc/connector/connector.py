@@ -838,6 +838,7 @@ class Connector:
                         coinbase = await conn.fetchval("SELECT   out_tx_id FROM connector_unconfirmed_utxo "
                                                   "WHERE out_tx_id  = $1 LIMIT 1;", s2rh(block["tx"][0]))
                         if coinbase:
+                            print("coinbase exist", rh2s(coinbase))
                             if block["tx"][0] in missed:
                                 missed.remove(block["tx"][0])
 
