@@ -824,6 +824,7 @@ class Connector:
         self.block_txs_request = asyncio.Future()
         if not self.unconfirmed_tx_processing.done():
             await self.unconfirmed_tx_processing
+        print("start block transactions request")
 
         if self.utxo_data:
             if self.db_type == "postgresql":
@@ -976,8 +977,9 @@ class Connector:
             self.tx_cache[tx_hash] = True
 
             if block_tx:
-              self.await_tx.remove(tx_hash)
-              self.await_tx_future[tx["txId"]].set_result(True)
+                self.await_tx.remove(tx_hash)
+                self.await_tx_future[tx["txId"]].set_result(True)
+                print("block tx", tx_hash, "left", len(self.await_tx))
 
             # in case recently added transaction
             # in dependency list for orphaned transactions
@@ -1026,13 +1028,14 @@ class Connector:
             self.log.critical("failed tx - %s [%s]" % (tx_hash, str(err)))
 
         finally:
+            self.tx_in_process.remove(tx_hash)
+
             if block_tx:
                 if not self.block_txs_request.done():
                     if not self.await_tx:
                         self.block_txs_request.set_result(True)
-            self.tx_in_process.remove(tx_hash)
-
-            if not block_tx:
+                        print("block transactions request completed")
+            else:
                 if not self.tx_in_process:
                     if not self.unconfirmed_tx_processing.done():
                         self.unconfirmed_tx_processing.set_result(True)
