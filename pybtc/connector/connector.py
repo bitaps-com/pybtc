@@ -905,7 +905,9 @@ class Connector:
             for i in tx["vIn"]:
                 if tx["vIn"][i]["txId"] in self.await_tx_future:
                     if not self.await_tx_future[tx["vIn"][i]["txId"]].done():
+                        print("wait", rh2s(tx["vIn"][i]["txId"]))
                         await self.await_tx_future[tx["vIn"][i]["txId"]]
+                        print("ready", rh2s(tx["vIn"][i]["txId"]))
                         break
             else:
                 break
