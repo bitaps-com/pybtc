@@ -924,8 +924,16 @@ class Connector:
 
     async def _new_transaction(self, tx, timestamp, block_tx = False):
         tx_hash = rh2s(tx["txId"])
+        if block_tx: print(">", tx_hash)
         if tx_hash in self.tx_in_process: return
-        if self.tx_cache.has_key(tx_hash): return
+        if block_tx: print(">>", tx_hash)
+        if self.tx_cache.has_key(tx_hash):
+            if block_tx:
+                self.await_tx.remove(tx_hash)
+                self.await_tx_future[tx["txId"]].set_result(True)
+                print("block tx>", tx_hash, "left", len(self.await_tx))
+            return
+        if block_tx: print(">>>", tx_hash)
         self.tx_in_process.add(tx_hash)
 
         try:
