@@ -137,7 +137,8 @@ class Connector:
         self.tx_orphan_resolved = 0
         self.block_headers_cache = Cache(max_size=self.block_headers_cache_limit)
 
-        self.block_txs_request = None
+        self.block_txs_request = asyncio.Future()
+        self.block_txs_request.set_result(True)
 
         self.connected = asyncio.Future()
         self.await_tx = list()
