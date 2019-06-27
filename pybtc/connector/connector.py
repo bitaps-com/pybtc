@@ -331,6 +331,8 @@ class Connector:
                             if self.deep_synchronization:
                                 continue
                             hash = body.hex()
+                            self.log.warning("New block %s" % hash)
+                            print(self.get_next_block_mutex)
                             if not self.get_next_block_mutex:
                                 self.log.warning("New block %s" % hash)
                                 self.get_next_block_mutex = True
