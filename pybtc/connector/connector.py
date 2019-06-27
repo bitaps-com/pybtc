@@ -939,7 +939,7 @@ class Connector:
 
         try:
 
-            if not tx["coinbase"]:
+            if not tx["coinbase"] and priority:
                 await self.wait_block_dependences(tx)
 
             if self.utxo_data:
