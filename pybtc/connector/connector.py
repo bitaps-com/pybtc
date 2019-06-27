@@ -150,10 +150,9 @@ class Connector:
         self.tx_in_process = set()
         self.zmqContext = None
         self.tasks = list()
-        self.x1 = 0
-        self.x2 = 0
-        self.x3 = 0
-        self.x4 = 0
+        self.unconfirmed_tx_processing = asyncio.Future()
+        self.unconfirmed_tx_processing.set_result(True)
+
         self.log.info("Node connector started")
         asyncio.ensure_future(self.start(), loop=self.loop)
 
@@ -331,8 +330,8 @@ class Connector:
                             if self.deep_synchronization:
                                 continue
                             hash = body.hex()
-                            self.log.warning("New block %s" % hash)
                             if not self.get_next_block_mutex:
+                                self.log.warning("New block %s" % hash)
                                 self.get_next_block_mutex = True
                                 self.loop.create_task(self.get_next_block())
 
@@ -341,6 +340,8 @@ class Connector:
                             if self.deep_synchronization or not self.mempool_tx:
                                 continue
                             try:
+                                if not self.block_txs_request.done():
+                                    await self.block_txs_request
                                 self.loop.create_task(self._new_transaction(Transaction(body, format="raw"),
                                                                             int(time.time())))
                             except:
@@ -819,6 +820,10 @@ class Connector:
             except:
                 missed.add(h)
 
+        self.block_txs_request = asyncio.Future()
+        if not self.unconfirmed_tx_processing.done():
+            await self.unconfirmed_tx_processing
+
         if self.utxo_data:
             if self.db_type == "postgresql":
                 async with self.db_pool.acquire() as conn:
@@ -840,7 +845,6 @@ class Connector:
             self.missed_tx = set(missed)
             self.await_tx = set(missed)
             self.await_tx_future = {s2rh(i): asyncio.Future() for i in missed}
-            self.block_txs_request = asyncio.Future()
             self.block_timestamp = block["time"]
             self.loop.create_task(self._get_missed())
             try:
@@ -869,8 +873,8 @@ class Connector:
         except Exception as err:
             self.log.error("get transaction failed: %s" % str(err))
 
+
     async def _get_missed(self):
-        self.x1 = self.x2 = self.x3 = self.x4 = 0
         if self.get_missed_tx_threads <= self.get_missed_tx_threads_limit:
             self.get_missed_tx_threads += 1
             # start more threads
@@ -882,7 +886,6 @@ class Connector:
                     batch = list()
                     while self.missed_tx:
                         h = self.missed_tx.pop()
-                        print("requested", h)
                         batch.append(["getrawtransaction", h])
                         if len(batch) >= self.rpc_batch_limit:
                             break
@@ -893,8 +896,7 @@ class Connector:
                         except:
                             self.log.error("Transaction decode failed: %s" % r["result"])
                             raise Exception("Transaction decode failed")
-                        print("new", rh2s(tx["txId"]))
-                        self.loop.create_task(self._new_transaction(tx, self.block_timestamp))
+                        self.loop.create_task(self._new_transaction(tx, self.block_timestamp, True))
                 except Exception as err:
                     self.log.error("_get_missed exception %s " % str(err))
                     self.await_tx = set()
@@ -903,49 +905,29 @@ class Connector:
 
 
     async def wait_block_dependences(self, tx):
-        self.x1 += 1
         while self.await_tx_future:
             for i in tx["vIn"]:
                 if tx["vIn"][i]["txId"] in self.await_tx_future:
                     if not self.await_tx_future[tx["vIn"][i]["txId"]].done():
-                        print("wait", rh2s(tx["vIn"][i]["txId"]))
                         await self.await_tx_future[tx["vIn"][i]["txId"]]
-                        print("ready", rh2s(tx["vIn"][i]["txId"]))
                         break
             else:
                 break
-        self.x2 += 1
 
 
-    async def _new_transaction(self, tx, timestamp):
+    async def _new_transaction(self, tx, timestamp, block_tx = False):
         tx_hash = rh2s(tx["txId"])
-
         if tx_hash in self.tx_in_process: return
-
-        if self.tx_cache.has_key(tx_hash):
-            if tx_hash in self.await_tx:
-                self.await_tx.remove(tx_hash)
-                self.await_tx_future[tx["txId"]].set_result(True)
-            return
-
+        if self.tx_cache.has_key(tx_hash): return
         self.tx_in_process.add(tx_hash)
-        priority = 0
-        if self.await_tx:
-            if tx_hash in self.await_tx:
-                priority = 1
-
-        if not priority:
-            if not self.block_txs_request.done():
-                return
-        else:
-            self.x3 += 1
-
-
 
         try:
 
-            if not tx["coinbase"] and priority:
+            if block_tx and not tx["coinbase"]:
                 await self.wait_block_dependences(tx)
+            else:
+                if self.unconfirmed_tx_processing.done():
+                    self.unconfirmed_tx_processing = asyncio.Future()
 
             if self.utxo_data:
                 tx["double_spent"] = False
@@ -992,7 +974,7 @@ class Connector:
 
             self.tx_cache[tx_hash] = True
 
-            if priority:
+            if block_tx:
               self.await_tx.remove(tx_hash)
               self.await_tx_future[tx["txId"]].set_result(True)
 
@@ -1004,7 +986,6 @@ class Connector:
                 self.tx_orphan_resolved += 1
                 for row in rows:
                     self.loop.create_task(self._new_transaction(row, int(time.time())))
-
 
         except asyncio.CancelledError:
             pass
@@ -1028,13 +1009,13 @@ class Connector:
             try:
                 # check if transaction already exist
                 if err.detail.find("already exists") != -1:
-                    if priority:
+                    if block_tx:
                         self.await_tx.remove(tx_hash)
                         self.await_tx_future[tx["txId"]].set_result(True)
             except:
                 pass
 
-            if tx_hash in self.await_tx:
+            if block_tx:
                 self.log.critical("new transaction error %s" % err)
                 self.await_tx = set()
                 self.block_txs_request.cancel()
@@ -1044,17 +1025,16 @@ class Connector:
             self.log.critical("failed tx - %s [%s]" % (tx_hash, str(err)))
 
         finally:
-            if priority:
-                self.x4 += 1
-            print(len(self.await_tx), self.x1, self.x2, self.x3, self.x4)
-            if len(self.await_tx) == 1:
-                print(self.await_tx)
-
-            if not self.block_txs_request.done():
-                if not self.await_tx:
-                    self.block_txs_request.set_result(True)
-
+            if block_tx:
+                if not self.block_txs_request.done():
+                    if not self.await_tx:
+                        self.block_txs_request.set_result(True)
             self.tx_in_process.remove(tx_hash)
+
+            if not block_tx:
+                if not self.tx_in_process:
+                    if not self.unconfirmed_tx_processing.done():
+                        self.unconfirmed_tx_processing.set_result(True)
 
 
 
