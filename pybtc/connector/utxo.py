@@ -624,7 +624,7 @@ class UUTXO():
                             "outputs": data["dbs_stxo"]}}
 
     async def flush_mempool(self):
-        self.log.info("flushing mempool ...")
+        self.log.info("Flushing mempool ...")
         if self.db_type == "postgresql":
             async with self.db.acquire() as conn:
                 async with conn.transaction():

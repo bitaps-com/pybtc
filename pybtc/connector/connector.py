@@ -5,10 +5,9 @@ from pybtc.connector.utils import decode_block_tx
 from pybtc.connector.utils import Cache
 from pybtc.connector.utils import seconds_to_age
 from pybtc.transaction import Transaction
-from pybtc import int_to_bytes, bytes_to_int
+from pybtc import int_to_bytes, bytes_to_int, bytes_from_hex
 from pybtc import MRU
 from collections import deque
-
 
 try:
     import aiojsonrpc
@@ -44,6 +43,7 @@ class Connector:
                  rpc_batch_limit=50, rpc_threads_limit=100, rpc_timeout=100,
                  utxo_data=False,
                  utxo_cache_size=1000000,
+                 tx_orphan_buffer_limit=1000,
                  skip_opreturn=True,
                  block_cache_workers= 4,
                  block_preload_cache_limit= 1000 * 1000000,
@@ -75,6 +75,7 @@ class Connector:
         self.deep_sync_limit = deep_sync_limit
         self.backlog = backlog
         self.mempool_tx = mempool_tx
+        self.tx_orphan_buffer_limit = tx_orphan_buffer_limit
         self.db_type = db_type
         self.db = db
         self.utxo_cache_size = utxo_cache_size
@@ -131,9 +132,12 @@ class Connector:
         self.block_hashes = Cache(max_size=self.block_hashes_cache_limit)
         self.block_hashes_preload_mutex = False
         self.tx_cache = MRU(self.tx_cache_limit)
+        self.tx_orphan_buffer = MRU()
+        self.tx_orphan_resolved = 0
         self.block_headers_cache = Cache(max_size=self.block_headers_cache_limit)
 
-        self.block_txs_request = None
+        self.block_txs_request = asyncio.Future()
+        self.block_txs_request.set_result(True)
 
         self.connected = asyncio.Future()
         self.await_tx = list()
@@ -141,16 +145,22 @@ class Connector:
         self.await_tx_future = dict()
         self.add_tx_future = dict()
         self.get_missed_tx_threads = 0
+        self.synchronized = False
         self.get_missed_tx_threads_limit = rpc_threads_limit
         self.tx_in_process = set()
         self.zmqContext = None
         self.tasks = list()
+        self.unconfirmed_tx_processing = asyncio.Future()
+        self.unconfirmed_tx_processing.set_result(True)
+
         self.log.info("Node connector started")
         asyncio.ensure_future(self.start(), loop=self.loop)
 
     async def start(self):
         if self.utxo_data:
             await self.utxo_init()
+        else:
+            self.last_block_height = self.app_block_height_on_start
 
         while True:
             self.log.info("Connector initialization")
@@ -203,8 +213,7 @@ class Connector:
             self.block_loader = BlockLoader(self, workers=self.block_cache_workers, dsn = self.db)
         else:
             self.block_loader = BlockLoader(self,workers = self.block_cache_workers)
-
-        self.tasks.append(self.loop.create_task(self.zeromq_handler()))
+        self.zeromq_task = self.loop.create_task(self.zeromq_handler())
         self.tasks.append(self.loop.create_task(self.watchdog()))
         self.connected.set_result(True)
         self.get_next_block_mutex = True
@@ -313,22 +322,24 @@ class Connector:
                 while True:
                     try:
                         msg = await self.zmqSubSocket.recv_multipart()
-                        topic = msg[0]
-                        body = msg[1]
-
+                        topic, body= msg[0], msg[1]
                         if topic == b"hashblock":
                             self.last_zmq_msg = int(time.time())
-                            if self.deep_synchronization:
-                                continue
+                            if self.deep_synchronization: continue
                             hash = body.hex()
                             self.log.warning("New block %s" % hash)
-                            self.loop.create_task(self._get_block_by_hash(hash))
+                            if not self.get_next_block_mutex:
+                                self.log.warning("New block %s" % hash)
+                                self.get_next_block_mutex = True
+                                self.loop.create_task(self.get_next_block())
 
                         elif topic == b"rawtx":
                             self.last_zmq_msg = int(time.time())
                             if self.deep_synchronization or not self.mempool_tx:
                                 continue
                             try:
+                                if not self.block_txs_request.done():
+                                    await self.block_txs_request
                                 self.loop.create_task(self._new_transaction(Transaction(body, format="raw"),
                                                                             int(time.time())))
                             except:
@@ -363,13 +374,15 @@ class Connector:
             try:
                 while True:
                     await asyncio.sleep(20)
-                    if int(time.time()) - self.last_zmq_msg > 300 and self.zmqContext:
-                        self.log.error("ZerroMQ no messages about 5 minutes")
-                        try:
-                            self.zmqContext.destroy()
-                            self.zmqContext = None
-                        except:
-                            pass
+                    if self.mempool_tx:
+                        if int(time.time()) - self.last_zmq_msg > 300 and self.zmqContext:
+                            self.log.error("ZerroMQ no messages about 5 minutes")
+                            try:
+                                self.zeromq_task.cancel()
+                                await asyncio.wait([self.zeromq_task])
+                                self.zeromq_task(self.loop.create_task(self.zeromq_handler()))
+                            except:
+                                pass
                     if not self.get_next_block_mutex:
                         self.get_next_block_mutex = True
                         self.loop.create_task(self.get_next_block())
@@ -392,10 +405,13 @@ class Connector:
                 if self.node_last_block <= self.last_block_height + self.backlog:
                     d = await self.rpc.getblockcount()
                     if d == self.node_last_block:
-                        self.log.info("Blockchain is synchronized with backlog %s" % self.backlog)
+                        if not self.synchronized:
+                            self.log.debug("Blockchain is synchronized with backlog %s" % self.backlog)
+                            self.synchronized = True
                         return
                     else:
                         self.node_last_block = d
+                self.synchronized = False
                 d = self.node_last_block - self.last_block_height
 
                 if d > self.deep_sync_limit:
@@ -409,7 +425,7 @@ class Connector:
                         if self.flush_app_caches_handler:
                             await self.flush_app_caches_handler(self.last_block_height)
                         # clear preload caches
-                        if len(self.sync_utxo.cache):
+                        if self.utxo_data and len(self.sync_utxo.cache):
                             self.log.info("Flush utxo cache ...")
                             while self.app_last_block < self.last_block_height:
                                 self.log.debug("Waiting app ... Last block %s; "
@@ -417,7 +433,9 @@ class Connector:
                                                                        self.app_last_block))
                                 await asyncio.sleep(5)
 
-                            self.log.info("Last block %s" % self.last_block_height)
+                            self.log.info("Last block %s App last block %s" % (self.last_block_height,
+                                                                               self.app_last_block))
+
                             self.sync_utxo.checkpoints=[self.last_block_height]
                             self.sync_utxo.size_limit = 0
                             while  self.sync_utxo.save_process:
@@ -466,6 +484,8 @@ class Connector:
                 q = time.time()
                 block = await self.rpc.getblock(hash)
                 self.blocks_download_time += time.time() - q
+            header = await self.rpc.getblockheader(hash, False)
+            block["header"] = bytes_from_hex(header)
             return block
         except Exception:
             self.log.error("get block by hash %s FAILED" % hash)
@@ -482,12 +502,10 @@ class Connector:
             self.active_block = asyncio.Future()
 
             if self.last_block_height < self.last_block_utxo_cached_height:
-                if not self.cache_loading:
-                    self.log.info("Bootstrap UTXO cache ...")
+                if not self.cache_loading: self.log.info("Bootstrap UTXO cache ...")
                 self.cache_loading = True
             else:
-                if self.cache_loading:
-                    self.log.info("UTXO Cache bootstrap completed")
+                if self.cache_loading: self.log.info("UTXO Cache bootstrap completed")
                 self.cache_loading = False
 
             await self.verify_block_position(block)
@@ -516,7 +534,6 @@ class Connector:
                 # call before block handler
                 if self.before_block_handler:
                     await self.before_block_handler(block)
-
                 await self.fetch_block_transactions(block)
 
                 if self.utxo_data:
@@ -534,12 +551,8 @@ class Connector:
                                                    "WHERE name = 'last_block';", block["height"])
                                 await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                                    "WHERE name = 'last_cached_block';", block["height"])
-
-
                 elif self.block_handler:
                     await self.block_handler(block, None)
-
-
 
             self.block_headers_cache.set(block["hash"], block["height"])
             self.last_block_height = block["height"]
@@ -555,7 +568,9 @@ class Connector:
                         pass
             if not self.deep_synchronization:
                 self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"],len(block["tx"])))
-
+                if self.mempool_tx:
+                    self.log.debug("Mempool orphaned transactions: %s; "
+                                   "resolved orphans %s" % (len(self.tx_orphan_buffer), self.tx_orphan_resolved))
         except Exception as err:
             if self.await_tx:
                 self.await_tx = set()
@@ -564,8 +579,6 @@ class Connector:
                     self.await_tx_future[i].cancel()
             self.await_tx_future = dict()
             self.log.error("block %s error %s" % (block["height"], str(err)))
-            import traceback
-            print(traceback.format_exc())
         finally:
             if self.node_last_block > self.last_block_height:
                 self.get_next_block_mutex = True
@@ -772,29 +785,36 @@ class Connector:
             self.sync_utxo.read_from_db_time = 0
             self.sync_utxo.read_from_db_count = 0
 
-        # coins stat
-        self.log.debug("- Coins ---------------")
-        self.log.debug("    Coins %s; destroyed %s; "
-                       "unspent %s; op_return %s;" % (self.coins,
-                                                      self.destroyed_coins,
-                                                      self.coins - self.destroyed_coins,
-                                                      self.op_return))
-        self.log.debug("    Coins destroyed in cache %s; "
-                       "cache efficiency  %s [%s];" % (self.sync_utxo._hit,
-                                                       round(self.sync_utxo._hit / self.destroyed_coins, 4),
-                                                       round((self.sync_utxo._hit + self.preload_cached_annihilated)
-                                                             / self.destroyed_coins, 4)))
-        self.log.debug("---------------------")
+            # coins stat
+            self.log.debug("- Coins ---------------")
+            self.log.debug("    Coins %s; destroyed %s; "
+                           "unspent %s; op_return %s;" % (self.coins,
+                                                          self.destroyed_coins,
+                                                          self.coins - self.destroyed_coins,
+                                                          self.op_return))
+            self.log.debug("    Coins destroyed in cache %s; "
+                           "cache efficiency  %s [%s];" % (self.sync_utxo._hit,
+                                                           round(self.sync_utxo._hit / self.destroyed_coins, 4),
+                                                           round((self.sync_utxo._hit + self.preload_cached_annihilated)
+                                                                 / self.destroyed_coins, 4)))
+            self.log.debug("---------------------")
 
     async def fetch_block_transactions(self, block):
         q = time.time()
         missed = set()
         tx_count = len(block["tx"])
+
+        self.block_txs_request = asyncio.Future()
+        if not self.unconfirmed_tx_processing.done():
+            await self.unconfirmed_tx_processing
+
         for h in block["tx"]:
             try:
                 self.tx_cache[h]
             except:
                 missed.add(h)
+
+
 
         if self.utxo_data:
             if self.db_type == "postgresql":
@@ -817,7 +837,6 @@ class Connector:
             self.missed_tx = set(missed)
             self.await_tx = set(missed)
             self.await_tx_future = {s2rh(i): asyncio.Future() for i in missed}
-            self.block_txs_request = asyncio.Future()
             self.block_timestamp = block["time"]
             self.loop.create_task(self._get_missed())
             try:
@@ -830,12 +849,23 @@ class Connector:
                 except:
                     pass
                 raise RuntimeError("block transaction request timeout")
+        else:
+            self.block_txs_request.set_result(True)
 
         self.total_received_tx += tx_count
         self.total_received_tx_last += tx_count
         self.total_received_tx_time += time.time() - q
         rate = round(self.total_received_tx/self.total_received_tx_time)
         self.log.debug("Transactions received: %s [%s] received tx rate tx/s ->> %s <<" % (tx_count, time.time() - q, rate))
+
+
+    async def _get_transaction(self, tx_hash):
+        try:
+            raw_tx = await self.rpc.getrawtransaction(tx_hash)
+            tx = Transaction(raw_tx, format="raw")
+            self.loop.create_task(self._new_transaction(tx, int(time.time())))
+        except Exception as err:
+            self.log.error("get transaction failed: %s" % str(err))
 
 
     async def _get_missed(self):
@@ -849,7 +879,8 @@ class Connector:
                 try:
                     batch = list()
                     while self.missed_tx:
-                        batch.append(["getrawtransaction", self.missed_tx.pop()])
+                        h = self.missed_tx.pop()
+                        batch.append(["getrawtransaction", h])
                         if len(batch) >= self.rpc_batch_limit:
                             break
                     result = await self.rpc.batch(batch)
@@ -859,7 +890,7 @@ class Connector:
                         except:
                             self.log.error("Transaction decode failed: %s" % r["result"])
                             raise Exception("Transaction decode failed")
-                        self.loop.create_task(self._new_transaction(tx, self.block_timestamp))
+                        self.loop.create_task(self._new_transaction(tx, self.block_timestamp, True))
                 except Exception as err:
                     self.log.error("_get_missed exception %s " % str(err))
                     self.await_tx = set()
@@ -877,16 +908,20 @@ class Connector:
             else:
                 break
 
-    async def _new_transaction(self, tx, timestamp):
-        tx_hash = rh2s(tx["txId"])
 
-        if tx_hash in self.tx_in_process or self.tx_cache.has_key(tx_hash):
-            return
+    async def _new_transaction(self, tx, timestamp, block_tx = False):
+        tx_hash = rh2s(tx["txId"])
+        if tx_hash in self.tx_in_process: return
+        if self.tx_cache.has_key(tx_hash): return
+        self.tx_in_process.add(tx_hash)
 
         try:
-            self.tx_in_process.add(tx["txId"])
-            if not tx["coinbase"]:
+
+            if block_tx and not tx["coinbase"]:
                 await self.wait_block_dependences(tx)
+            else:
+                if self.unconfirmed_tx_processing.done():
+                    self.unconfirmed_tx_processing = asyncio.Future()
 
             if self.utxo_data:
                 tx["double_spent"] = False
@@ -931,40 +966,68 @@ class Connector:
                 if self.tx_handler:
                     await self.tx_handler(tx, timestamp, None)
 
-
-
-
-
             self.tx_cache[tx_hash] = True
 
-            try:
-                if self.await_tx:
-                    self.await_tx.remove(tx_hash)
+            if block_tx:
+                self.await_tx.remove(tx_hash)
+                self.await_tx_future[tx["txId"]].set_result(True)
 
-                    try:
-                        self.await_tx_future[tx["txId"]].set_result(True)
-                    except:
-                        pass
-
-                    if not self.await_tx:
-                        self.block_txs_request.set_result(True)
-            except:
-                pass
+            # in case recently added transaction
+            # in dependency list for orphaned transactions
+            # try add orphaned again
+            if tx_hash in self.tx_orphan_buffer:
+                rows = self.tx_orphan_buffer.delete(tx_hash)
+                self.tx_orphan_resolved += 1
+                for row in rows:
+                    self.loop.create_task(self._new_transaction(row, int(time.time())))
 
         except asyncio.CancelledError:
             pass
 
+        except KeyError as err:
+            # transaction orphaned
+            try:
+                self.tx_orphan_buffer[rh2s(err.args[0][:32])].append(tx)
+            except:
+                self.tx_orphan_buffer[rh2s(err.args[0][:32])] = [tx]
+            self.loop.create_task(self._get_transaction(rh2s(err.args[0][:32])))
+
+            # clear orphaned transactions buffer over limit
+            while len(self.tx_orphan_buffer) > self.tx_orphan_buffer_limit:
+                key, value = self.tx_orphan_buffer.pop()
+
         except Exception as err:
-            if tx_hash in self.await_tx:
+            try:
+                # check if transaction already exist
+                if err.detail.find("already exists") != -1:
+                    if block_tx:
+                        self.await_tx.remove(tx_hash)
+                        self.await_tx_future[tx["txId"]].set_result(True)
+                return
+            except:
+                pass
+
+            if block_tx:
+                self.log.critical("new transaction error %s" % err)
                 self.await_tx = set()
                 self.block_txs_request.cancel()
                 for i in self.await_tx_future:
                     if not self.await_tx_future[i].done():
                         self.await_tx_future[i].cancel()
-                self.log.critical("new transaction error %s " % err)
-            self.log.debug("new transaction error %s " % err)
+            self.log.critical("failed tx - %s [%s]" % (tx_hash, str(err)))
+
         finally:
-            self.tx_in_process.remove(tx["txId"])
+            self.tx_in_process.remove(tx_hash)
+
+            if block_tx:
+                if not self.block_txs_request.done():
+                    if not self.await_tx:
+                        self.block_txs_request.set_result(True)
+            else:
+                if not self.tx_in_process:
+                    if not self.unconfirmed_tx_processing.done():
+                        self.unconfirmed_tx_processing.set_result(True)
+
 
 
 
@@ -975,6 +1038,11 @@ class Connector:
         self.log.warning("Stopping node connector ...")
         [task.cancel() for task in self.tasks]
         await asyncio.wait(self.tasks)
+        try:
+            self.zeromq_task.cancel()
+            await asyncio.wait([self.zeromq_task])
+        except:
+            pass
         if not self.active_block.done():
             self.log.warning("Waiting active block task ...")
             await self.active_block

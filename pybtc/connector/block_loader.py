@@ -88,16 +88,19 @@ class BlockLoader:
             new_requests = 0
             if self.parent.block_preload._store_size < self.parent.block_preload_cache_limit:
                 try:
-                    for i in self.worker_busy:
-                        if not self.worker_busy[i]:
-                            self.worker_busy[i] = True
-                            if self.height <= self.parent.last_block_height:
-                                self.height = self.parent.last_block_height + 1
-                            await self.pipe_sent_msg(self.worker[i].writer, b'rpc_batch_limit',
-                                                     int_to_bytes(self.rpc_batch_limit))
-                            await self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(self.height))
-                            self.height += self.rpc_batch_limit
-                            new_requests += 1
+                    if self.height + self.rpc_batch_limit > target_height:
+                        self.height = target_height
+                    else:
+                        for i in self.worker_busy:
+                            if not self.worker_busy[i]:
+                                self.worker_busy[i] = True
+                                if self.height <= self.parent.last_block_height:
+                                    self.height = self.parent.last_block_height + 1
+                                await self.pipe_sent_msg(self.worker[i].writer, b'rpc_batch_limit',
+                                                         int_to_bytes(self.rpc_batch_limit))
+                                await self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(self.height))
+                                self.height += self.rpc_batch_limit
+                                new_requests += 1
                     if not new_requests:
                         await asyncio.sleep(1)
                         continue
@@ -140,7 +143,7 @@ class BlockLoader:
         # create new process
         worker = Process(target=Worker, args=(index, in_reader, in_writer, out_reader, out_writer,
                                               self.rpc_url, self.rpc_timeout, self.rpc_batch_limit,
-                                              self.dsn, self.parent.app_proc_title))
+                                              self.dsn, self.parent.app_proc_title, self.parent.utxo_data))
         worker.start()
         in_reader.close()
         out_writer.close()
@@ -219,12 +222,13 @@ class BlockLoader:
                 for i in blocks:
                     self.parent.block_preload.set(i, blocks[i])
                 if blocks:
-                    if  self.parent.sync_utxo.checkpoints:
-                        if self.parent.sync_utxo.checkpoints[-1] < i:
+                    if self.parent.utxo_data:
+                        if  self.parent.sync_utxo.checkpoints:
+                            if self.parent.sync_utxo.checkpoints[-1] < i:
+                                self.parent.sync_utxo.checkpoints.append(i)
+                                self.reached_height = i
+                        else:
                             self.parent.sync_utxo.checkpoints.append(i)
-                            self.reached_height = i
-                    else:
-                        self.parent.sync_utxo.checkpoints.append(i)
 
             if msg_type == b'failed':
                 self.height = bytes_to_int(msg)
@@ -235,11 +239,12 @@ class BlockLoader:
 class Worker:
 
     def __init__(self, name , in_reader, in_writer, out_reader, out_writer,
-                 rpc_url, rpc_timeout, rpc_batch_limit, dsn, app_proc_title):
+                 rpc_url, rpc_timeout, rpc_batch_limit, dsn, app_proc_title, utxo_data):
         setproctitle('%s: blocks preload worker %s' % (app_proc_title, name))
         self.rpc_url = rpc_url
         self.rpc_timeout = rpc_timeout
         self.rpc_batch_limit = rpc_batch_limit
+        self.utxo_data = utxo_data
         self.name = name
         self.dsn = dsn
         self.db = None
@@ -290,35 +295,36 @@ class Worker:
                 for x, y in zip(h, result):
                     if y["result"] is not None:
                         block = decode_block_tx(y["result"])
-                        for z in block["rawTx"]:
-                            for i in block["rawTx"][z]["vOut"]:
-                                o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
-                                pointer = (x << 39)+(z << 20)+(1 << 19) + i
-                                try:
-                                    address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
-                                                               block["rawTx"][z]["vOut"][i]["addressHash"]))
-                                except:
-                                    address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
-                                                        block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
-                                self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
-
-
-                            if not block["rawTx"][z]["coinbase"]:
-                                for i  in block["rawTx"][z]["vIn"]:
-                                    inp = block["rawTx"][z]["vIn"][i]
-                                    outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
+                        if self.utxo_data:
+                            for z in block["rawTx"]:
+                                for i in block["rawTx"][z]["vOut"]:
+                                    o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
+                                    pointer = (x << 39)+(z << 20)+(1 << 19) + i
                                     try:
-                                       r = self.coins.delete(outpoint)
-                                       if r[0] >> 39 >= start_height and r[0] >> 39 < height:
-                                           block["rawTx"][z]["vIn"][i]["_a_"] = r
-                                       else:
-                                           block["rawTx"][z]["vIn"][i]["_c_"] = r
-                                       t += 1
-                                       self.destroyed_coins[r[0]] = True
-                                       assert r is not None
+                                        address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
+                                                                   block["rawTx"][z]["vOut"][i]["addressHash"]))
                                     except:
-                                        if self.dsn:
-                                            missed.append(outpoint)
+                                        address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
+                                                            block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
+                                    self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
+
+
+                                if not block["rawTx"][z]["coinbase"]:
+                                    for i  in block["rawTx"][z]["vIn"]:
+                                        inp = block["rawTx"][z]["vIn"][i]
+                                        outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
+                                        try:
+                                           r = self.coins.delete(outpoint)
+                                           if r[0] >> 39 >= start_height and r[0] >> 39 < height:
+                                               block["rawTx"][z]["vIn"][i]["_a_"] = r
+                                           else:
+                                               block["rawTx"][z]["vIn"][i]["_c_"] = r
+                                           t += 1
+                                           self.destroyed_coins[r[0]] = True
+                                           assert r is not None
+                                        except:
+                                            if self.dsn:
+                                                missed.append(outpoint)
 
                         blocks[x] = block
 
@@ -326,7 +332,7 @@ class Worker:
 
             m = 0
             n = 0
-            if missed and self.dsn:
+            if self.utxo_data and missed and self.dsn:
                if self.dsn:
                    async with self.db.acquire() as conn:
                        rows = await conn.fetch("SELECT outpoint, "
@@ -352,16 +358,17 @@ class Worker:
                                        n += 1
                                    except:
                                        pass
-            if blocks:
+            if self.utxo_data and blocks:
                 blocks[x]["checkpoint"] = x
             for x in blocks:
-                for y in blocks[x]["rawTx"]:
-                    for i in blocks[x]["rawTx"][y]["vOut"]:
-                        try:
-                            r = self.destroyed_coins.delete((x<<39)+(y<<20)+(1<<19)+i)
-                            blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
-                            assert r is not None
-                        except: pass
+                if self.utxo_data:
+                    for y in blocks[x]["rawTx"]:
+                        for i in blocks[x]["rawTx"][y]["vOut"]:
+                            try:
+                                r = self.destroyed_coins.delete((x<<39)+(y<<20)+(1<<19)+i)
+                                blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
+                                assert r is not None
+                            except: pass
 
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
