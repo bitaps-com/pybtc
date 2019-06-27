@@ -919,10 +919,12 @@ class Connector:
 
     async def _new_transaction(self, tx, timestamp):
         tx_hash = rh2s(tx["txId"])
-        print(0, tx_hash)
+        if tx_hash in self.await_tx:
+            print(0, tx_hash)
         if tx_hash in self.tx_in_process or self.tx_cache.has_key(tx_hash):
             return
-        print(2, tx_hash)
+        if tx_hash in self.await_tx:
+            print(2, tx_hash)
         self.tx_in_process.add(tx_hash)
         priority = 0
         if self.await_tx:
