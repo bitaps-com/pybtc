@@ -351,6 +351,7 @@ class Connector:
                                 if self.new_tx_handler.done():
                                     self.new_tx_handler = self.loop.create_task(self.new_tx_handler())
                             except:
+                                print(traceback.format_exc())
                                 self.log.critical("Transaction decode failed: %s" % body.hex())
 
                         if not self.active:
