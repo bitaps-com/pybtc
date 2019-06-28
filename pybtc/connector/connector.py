@@ -348,9 +348,8 @@ class Connector:
                                 tx = Transaction(body, format="raw")
                                 self.new_tx[tx["txId"]] = (tx, int(time.time()))
                                 if self.new_tx_handler is None or self.new_tx_handler.done():
-                                    self.new_tx_handler = self.loop.create_task(self.new_tx_handler())
+                                    self.new_tx_handler = self.loop.create_task(self.handle_new_tx())
                             except:
-                                print(traceback.format_exc())
                                 self.log.critical("Transaction decode failed: %s" % body.hex())
 
                         if not self.active:
