@@ -825,7 +825,7 @@ class Connector:
         tx_count = len(block["tx"])
 
         self.block_txs_request = asyncio.Future()
-        self.log.debug("Wait unconfirmed tx tasks  %s" % (self.new_tx_tasks, len(self.tx_in_process)))
+        self.log.debug("Wait unconfirmed tx tasks  %s" % len(self.tx_in_process))
         if not self.unconfirmed_tx_processing.done():
             await self.unconfirmed_tx_processing
 
