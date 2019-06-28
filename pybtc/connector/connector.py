@@ -374,16 +374,13 @@ class Connector:
                 break
 
     async def handle_new_tx(self):
-        self.new_tx_handler = True
-        try:
-            while self.new_tx:
-                if not self.block_txs_request.done():
-                    await self.block_txs_request
-                h, v = self.new_tx.pop()
-                self.new_tx_tasks += 1
-                self.loop.create_task(self._new_transaction(v[0], v[1]))
-        finally:
-            self.new_tx_handler = False
+        while self.new_tx:
+            if not self.block_txs_request.done():
+                await self.block_txs_request
+            h, v = self.new_tx.pop()
+            self.new_tx_tasks += 1
+            self.loop.create_task(self._new_transaction(v[0], v[1]))
+
 
 
 
