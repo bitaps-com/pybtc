@@ -335,6 +335,7 @@ class Connector:
                                 continue
                             hash = body.hex()
                             self.log.warning("New block %s" % hash)
+                            print(self.get_next_block_mutex)
                             if not self.get_next_block_mutex:
                                 self.log.warning("New block %s" % hash)
                                 self.get_next_block_mutex = True
@@ -350,7 +351,6 @@ class Connector:
                                 if self.new_tx_handler is None or self.new_tx_handler.done():
                                     self.new_tx_handler = self.loop.create_task(self.handle_new_tx())
                             except:
-                                print(traceback.format_exc())
                                 self.log.critical("Transaction decode failed: %s" % body.hex())
 
                         if not self.active:
