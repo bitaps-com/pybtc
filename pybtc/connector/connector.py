@@ -419,6 +419,7 @@ class Connector:
                 self.log.error("watchdog error %s " % err)
 
     async def get_next_block(self):
+        print("get_next_block")
         if self.active and self.active_block.done() and self.get_next_block_mutex:
             try:
                 if self.node_last_block <= self.last_block_height + self.backlog:
