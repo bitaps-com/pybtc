@@ -140,8 +140,7 @@ class Connector:
 
         self.block_txs_request = asyncio.Future()
         self.block_txs_request.set_result(True)
-        self.new_tx_handler = asyncio.Future()
-        self.new_tx_handler.set_result(True)
+        self.new_tx_handler = None
         self.new_tx_tasks = 0
 
         self.connected = asyncio.Future()
@@ -348,10 +347,9 @@ class Connector:
                             try:
                                 tx = Transaction(body, format="raw")
                                 self.new_tx[tx["txId"]] = (tx, int(time.time()))
-                                if self.new_tx_handler.done():
+                                if self.new_tx_handler is None or self.new_tx_handler.done():
                                     self.new_tx_handler = self.loop.create_task(self.new_tx_handler())
                             except:
-                                print(traceback.format_exc())
                                 self.log.critical("Transaction decode failed: %s" % body.hex())
 
                         if not self.active:
