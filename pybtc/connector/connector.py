@@ -134,11 +134,15 @@ class Connector:
         self.block_hashes_preload_mutex = False
         self.tx_cache = MRU(self.tx_cache_limit)
         self.tx_orphan_buffer = MRU()
+        self.new_tx = MRU()
         self.tx_orphan_resolved = 0
         self.block_headers_cache = Cache(max_size=self.block_headers_cache_limit)
 
         self.block_txs_request = asyncio.Future()
         self.block_txs_request.set_result(True)
+        self.new_tx_handler = asyncio.Future()
+        self.new_tx_handler.set_result(True)
+        self.new_tx_tasks = 0
 
         self.connected = asyncio.Future()
         self.await_tx = list()
@@ -332,7 +336,6 @@ class Connector:
                                 continue
                             hash = body.hex()
                             self.log.warning("New block %s" % hash)
-                            print(self.get_next_block_mutex)
                             if not self.get_next_block_mutex:
                                 self.log.warning("New block %s" % hash)
                                 self.get_next_block_mutex = True
@@ -343,10 +346,10 @@ class Connector:
                             if self.deep_synchronization or not self.mempool_tx:
                                 continue
                             try:
-                                if not self.block_txs_request.done():
-                                    await self.block_txs_request
-                                self.loop.create_task(self._new_transaction(Transaction(body, format="raw"),
-                                                                            int(time.time())))
+                                tx = Transaction(body, format="raw")
+                                self.new_tx[tx["txId"]] = (tx, int(time.time()))
+                                if self.new_tx_handler.done():
+                                    self.new_tx_handler = self.loop.create_task(self.new_tx_handler())
                             except:
                                 self.log.critical("Transaction decode failed: %s" % body.hex())
 
@@ -369,6 +372,20 @@ class Connector:
             if not self.active:
                 self.log.warning("Zeromq handler terminated")
                 break
+
+    async def handle_new_tx(self):
+        self.new_tx_handler = True
+        try:
+            while self.new_tx:
+                if not self.block_txs_request.done():
+                    await self.block_txs_request
+                h, v = self.new_tx.pop()
+                self.new_tx_tasks += 1
+                self.loop.create_task(self._new_transaction(v[0], v[1]))
+        finally:
+            self.new_tx_handler = False
+
+
 
     async def watchdog(self):
         """
@@ -591,8 +608,6 @@ class Connector:
                     self.await_tx_future[i].cancel()
             self.await_tx_future = dict()
             self.log.error("block %s error %s" % (block["height"], str(err)))
-            import traceback
-            print(traceback.format_exc())
         finally:
             if self.node_last_block > self.last_block_height:
                 self.get_next_block_mutex = True
@@ -997,7 +1012,7 @@ class Connector:
             if block_tx:
                 self.await_tx.remove(tx_hash)
                 self.await_tx_future[tx["txId"]].set_result(True)
-                print("block tx", tx_hash, "left", len(self.await_tx))
+                self.log.debug("tx %s; left %s" % (tx_hash, len(self.await_tx)))
 
 
             # in case recently added transaction
@@ -1024,8 +1039,6 @@ class Connector:
             # clear orphaned transactions buffer over limit
             while len(self.tx_orphan_buffer) > self.tx_orphan_buffer_limit:
                 key, value = self.tx_orphan_buffer.pop()
-                for t in value:
-                    self.log.critical("orphaned tx failed %s" % rh2s(t["txId"]))
 
         except Exception as err:
             try:
@@ -1054,9 +1067,10 @@ class Connector:
                 if not self.block_txs_request.done():
                     if not self.await_tx:
                         self.block_txs_request.set_result(True)
-                        print("block transactions request completed")
+                        print("block transactions request completed %s" % self.new_tx_tasks)
             else:
-                if not self.tx_in_process:
+                self.new_tx_tasks -= 1
+                if self.new_tx_tasks < 1:
                     if not self.unconfirmed_tx_processing.done():
                         self.unconfirmed_tx_processing.set_result(True)
 
