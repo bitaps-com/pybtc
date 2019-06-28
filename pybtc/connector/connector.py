@@ -487,6 +487,7 @@ class Connector:
             except Exception as err:
                 self.log.error("get next block failed %s" % str(err))
             finally:
+                print("get_next_block exit")
                 self.get_next_block_mutex = False
 
     async def _get_block_by_hash(self, hash):
@@ -610,8 +611,7 @@ class Connector:
             if self.node_last_block > self.last_block_height:
                 self.get_next_block_mutex = True
                 self.loop.create_task(self.get_next_block())
-            else:
-                self.get_next_block_mutex = False
+
             self.blocks_processing_time += time.time() - tq
             self.active_block.set_result(True)
 
