@@ -334,8 +334,6 @@ class Connector:
                             if self.deep_synchronization:
                                 continue
                             hash = body.hex()
-                            self.log.warning("New block %s" % hash)
-
                             if not self.get_next_block_mutex:
                                 self.log.warning("New block %s" % hash)
                                 self.get_next_block_mutex = True
@@ -419,7 +417,6 @@ class Connector:
                 self.log.error("watchdog error %s " % err)
 
     async def get_next_block(self):
-        self.log.debug("get_next_block")
         if self.active and self.active_block.done() and self.get_next_block_mutex:
             try:
                 if self.node_last_block <= self.last_block_height + self.backlog:
@@ -488,7 +485,6 @@ class Connector:
             except Exception as err:
                 self.log.error("get next block failed %s" % str(err))
             finally:
-                self.log.debug("get_next_block exit")
                 self.get_next_block_mutex = False
 
     async def _get_block_by_hash(self, hash):
@@ -512,7 +508,6 @@ class Connector:
             self.log.error("get block by hash %s FAILED" % hash)
 
     async def _new_block(self, block):
-        self.log.debug("new_block")
         if not self.active: return
         tq = time.time()
         if self.block_headers_cache.get(block["hash"]) is not None: return
@@ -604,11 +599,9 @@ class Connector:
             self.await_tx_future = dict()
             self.log.error("block %s error %s" % (block["height"], str(err)))
         finally:
-            self.log.debug("finishing block %s %s" % (self.node_last_block, self.last_block_height))
             if self.node_last_block > self.last_block_height:
                 self.get_next_block_mutex = True
                 self.loop.create_task(self.get_next_block())
-                self.log.debug("call get next block")
 
             self.blocks_processing_time += time.time() - tq
             self.active_block.set_result(True)
@@ -827,17 +820,14 @@ class Connector:
             self.log.debug("---------------------")
 
     async def fetch_block_transactions(self, block):
-        self.log.debug("fetch_block_transactions %s %s" % (self.new_tx_tasks, len(self.tx_in_process)))
         q = time.time()
         missed = set()
         tx_count = len(block["tx"])
 
         self.block_txs_request = asyncio.Future()
-        self.log.debug("Wait unconfirmed tx tasks utx -> %s:%s" % (self.new_tx_tasks, len(self.tx_in_process)))
+        self.log.debug("Wait unconfirmed tx tasks  %s" % (self.new_tx_tasks, len(self.tx_in_process)))
         if not self.unconfirmed_tx_processing.done():
             await self.unconfirmed_tx_processing
-        self.log.debug("Start fetch block transactions utx -> %s:%s" % (self.new_tx_tasks, len(self.tx_in_process)))
-
 
         for h in block["tx"]:
             try:
