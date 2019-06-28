@@ -843,6 +843,7 @@ class Connector:
         self.block_txs_request = asyncio.Future()
         if not self.unconfirmed_tx_processing.done():
             await self.unconfirmed_tx_processing
+        self.log.debug("fetch_block_transactions %s %s" % (self.new_tx_tasks, len(self.tx_in_process)))
         print("start block transactions request")
 
         for h in block["tx"]:
