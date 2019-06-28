@@ -335,7 +335,7 @@ class Connector:
                                 continue
                             hash = body.hex()
                             self.log.warning("New block %s" % hash)
-                            print(self.get_next_block_mutex)
+
                             if not self.get_next_block_mutex:
                                 self.log.warning("New block %s" % hash)
                                 self.get_next_block_mutex = True
@@ -841,11 +841,11 @@ class Connector:
         tx_count = len(block["tx"])
 
         self.block_txs_request = asyncio.Future()
-        self.log.debug("fetch_block_transactions %s %s" % (self.new_tx_tasks, len(self.tx_in_process)))
+        self.log.debug("Wait unconfirmed tx tasks utx -> %s:%s" % (self.new_tx_tasks, len(self.tx_in_process)))
         if not self.unconfirmed_tx_processing.done():
             await self.unconfirmed_tx_processing
-        self.log.debug("fetch_block_transactions %s %s" % (self.new_tx_tasks, len(self.tx_in_process)))
-        print("start block transactions request")
+        self.log.debug("Start fetch block transactions utx -> %s:%s" % (self.new_tx_tasks, len(self.tx_in_process)))
+
 
         for h in block["tx"]:
             try:
@@ -867,7 +867,6 @@ class Connector:
                         coinbase = await conn.fetchval("SELECT   out_tx_id FROM connector_unconfirmed_utxo "
                                                   "WHERE out_tx_id  = $1 LIMIT 1;", s2rh(block["tx"][0]))
                         if coinbase:
-                            print("coinbase exist", rh2s(coinbase))
                             if block["tx"][0] in missed:
                                 missed.remove(block["tx"][0])
 
@@ -952,25 +951,19 @@ class Connector:
     async def _new_transaction(self, tx, timestamp, block_tx = False):
         tx_hash = rh2s(tx["txId"])
 
-        if block_tx: print(">", tx_hash)
         if tx_hash in self.tx_in_process:
             if not block_tx:
                 self.new_tx_tasks -= 1
             return
 
-        if block_tx: print(">>", tx_hash)
         if self.tx_cache.has_key(tx_hash):
-            if block_tx:
-                self.await_tx.remove(tx_hash)
-                self.await_tx_future[tx["txId"]].set_result(True)
-                print("block tx>", tx_hash, "left", len(self.await_tx))
-            else:
-                self.new_tx_tasks -= 1
+            # if block_tx:
+            #     self.await_tx.remove(tx_hash)
+            #     self.await_tx_future[tx["txId"]].set_result(True)
+            #     print("block tx>", tx_hash, "left", len(self.await_tx))
+            # else:
+            self.new_tx_tasks -= 1
             return
-
-        if block_tx: print(">>>", tx_hash)
-
-
 
         try:
             self.tx_in_process.add(tx_hash)
