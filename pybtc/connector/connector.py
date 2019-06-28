@@ -534,9 +534,9 @@ class Connector:
                 if self.cache_loading:
                     self.log.info("UTXO Cache bootstrap completed")
                 self.cache_loading = False
-
+            self.log.debug("5")
             await self.verify_block_position(block)
-
+            self.log.debug("6")
             if self.deep_synchronization:
                 await self._block_as_transactions_batch(block)
 
@@ -584,7 +584,7 @@ class Connector:
                 elif self.block_handler:
                     await self.block_handler(block, None)
 
-
+            self.log.debug("7")
 
             self.block_headers_cache.set(block["hash"], block["height"])
             self.last_block_height = block["height"]
