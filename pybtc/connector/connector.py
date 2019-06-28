@@ -903,7 +903,7 @@ class Connector:
         try:
             raw_tx = await self.rpc.getrawtransaction(tx_hash)
             tx = Transaction(raw_tx, format="raw")
-            self.loop.create_task(self._new_transaction(tx, int(time.time())))
+            self.new_tx[tx["txId"]] = (tx, int(time.time()))
         except Exception as err:
             self.log.error("get transaction failed: %s" % str(err))
 
