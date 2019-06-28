@@ -419,7 +419,7 @@ class Connector:
                 self.log.error("watchdog error %s " % err)
 
     async def get_next_block(self):
-        print("get_next_block")
+        self.log.debug("get_next_block")
         if self.active and self.active_block.done() and self.get_next_block_mutex:
             try:
                 if self.node_last_block <= self.last_block_height + self.backlog:
@@ -488,7 +488,7 @@ class Connector:
             except Exception as err:
                 self.log.error("get next block failed %s" % str(err))
             finally:
-                print("get_next_block exit")
+                self.log.debug("get_next_block exit")
                 self.get_next_block_mutex = False
 
     async def _get_block_by_hash(self, hash):
@@ -512,7 +512,7 @@ class Connector:
             self.log.error("get block by hash %s FAILED" % hash)
 
     async def _new_block(self, block):
-        print(1)
+        self.log.debug("new_block")
         if not self.active: return
         tq = time.time()
         if self.block_headers_cache.get(block["hash"]) is not None: return
@@ -609,9 +609,11 @@ class Connector:
             self.await_tx_future = dict()
             self.log.error("block %s error %s" % (block["height"], str(err)))
         finally:
+            self.log.debug("finishing block %s %s" % (self.node_last_block, self.last_block_height))
             if self.node_last_block > self.last_block_height:
                 self.get_next_block_mutex = True
                 self.loop.create_task(self.get_next_block())
+                self.log.debug("call get next block")
 
             self.blocks_processing_time += time.time() - tq
             self.active_block.set_result(True)
@@ -1076,7 +1078,7 @@ class Connector:
                 if not self.block_txs_request.done():
                     if not self.await_tx:
                         self.block_txs_request.set_result(True)
-                        print("block transactions request completed %s" % self.new_tx_tasks)
+                        self.log.debug("block transactions request completed %s" % self.new_tx_tasks)
             else:
                 self.new_tx_tasks -= 1
                 if self.new_tx_tasks < 1:
