@@ -841,6 +841,7 @@ class Connector:
         tx_count = len(block["tx"])
 
         self.block_txs_request = asyncio.Future()
+        self.log.debug("fetch_block_transactions %s %s" % (self.new_tx_tasks, len(self.tx_in_process)))
         if not self.unconfirmed_tx_processing.done():
             await self.unconfirmed_tx_processing
         self.log.debug("fetch_block_transactions %s %s" % (self.new_tx_tasks, len(self.tx_in_process)))
@@ -1086,7 +1087,7 @@ class Connector:
                         self.log.debug("block transactions request completed %s" % self.new_tx_tasks)
             else:
                 self.new_tx_tasks -= 1
-                if self.new_tx_tasks < 1:
+                if self.new_tx_tasks < 1 and not self.tx_in_process:
                     if not self.unconfirmed_tx_processing.done():
                         self.unconfirmed_tx_processing.set_result(True)
 
