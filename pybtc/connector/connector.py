@@ -586,10 +586,10 @@ class Connector:
                     except:
                         pass
             if not self.deep_synchronization:
-                self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"],len(block["tx"])))
                 if self.mempool_tx:
                     self.log.debug("Mempool orphaned transactions: %s; "
                                    "resolved orphans %s" % (len(self.tx_orphan_buffer), self.tx_orphan_resolved))
+                self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"],len(block["tx"])))
         except Exception as err:
             if self.await_tx:
                 self.await_tx = set()
