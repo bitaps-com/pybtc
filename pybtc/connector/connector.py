@@ -1060,7 +1060,7 @@ class Connector:
                 if not self.block_txs_request.done():
                     if not self.await_tx:
                         self.block_txs_request.set_result(True)
-                        self.log.debug("block transactions request completed %s" % self.new_tx_tasks)
+                        self.log.debug("Block transactions request completed ")
             else:
                 self.new_tx_tasks -= 1
                 if self.new_tx_tasks < 1 and not self.tx_in_process:
