@@ -972,8 +972,9 @@ class Connector:
 
         try:
             self.tx_in_process.add(tx_hash)
-            if block_tx and not tx["coinbase"]:
-                await self.wait_block_dependences(tx)
+            if block_tx:
+                if not tx["coinbase"]:
+                    await self.wait_block_dependences(tx)
             else:
                 if self.unconfirmed_tx_processing.done():
                     self.unconfirmed_tx_processing = asyncio.Future()
