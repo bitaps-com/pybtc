@@ -835,7 +835,7 @@ class Connector:
             self.log.debug("---------------------")
 
     async def fetch_block_transactions(self, block):
-        print("fetch_block_transactions", self.new_tx_tasks)
+        self.log.debug("fetch_block_transactions %s %s" % (self.new_tx_tasks, len(self.tx_in_process)))
         q = time.time()
         missed = set()
         tx_count = len(block["tx"])
