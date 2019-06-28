@@ -410,6 +410,14 @@ class Connector:
                                 self.loop.create_task(self.get_next_block())
                     except:
                         pass
+                    if int(time.time()) % 600:
+                        if self.utxo_data:
+                            if self.db_type == "postresql":
+                                async with self.db_pool.acquire() as conn:
+                                    utx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "
+                                                                   "FROM connector_unconfirmed_utxo;")
+                                    self.log.info("Mempool transactions %s" % utx_count)
+
 
             except asyncio.CancelledError:
                 self.log.info("connector watchdog terminated")
