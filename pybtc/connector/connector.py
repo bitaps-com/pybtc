@@ -1039,7 +1039,7 @@ class Connector:
                 rows = self.tx_orphan_buffer.delete(tx_hash)
                 self.tx_orphan_resolved += 1
                 for row in rows:
-                    self.loop.create_task(self._new_transaction(row, int(time.time())))
+                    self.new_tx[tx["txId"]] = (row, int(time.time()))
 
         except asyncio.CancelledError:
             pass
