@@ -515,14 +515,10 @@ class Connector:
         self.log.debug("new_block")
         if not self.active: return
         tq = time.time()
-        self.log.debug("1")
         if self.block_headers_cache.get(block["hash"]) is not None: return
-        self.log.debug("2")
         if self.deep_synchronization:  block["height"] = self.last_block_height + 1
         if self.last_block_height >= block["height"]:  return
-        self.log.debug("3")
         if not self.active_block.done():  return
-        self.log.debug("4")
         try:
             self.active_block = asyncio.Future()
 
@@ -534,9 +530,7 @@ class Connector:
                 if self.cache_loading:
                     self.log.info("UTXO Cache bootstrap completed")
                 self.cache_loading = False
-            self.log.debug("5")
             await self.verify_block_position(block)
-            self.log.debug("6")
             if self.deep_synchronization:
                 await self._block_as_transactions_batch(block)
 
@@ -583,8 +577,6 @@ class Connector:
 
                 elif self.block_handler:
                     await self.block_handler(block, None)
-
-            self.log.debug("7")
 
             self.block_headers_cache.set(block["hash"], block["height"])
             self.last_block_height = block["height"]
