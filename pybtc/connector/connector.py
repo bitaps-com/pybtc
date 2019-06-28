@@ -410,6 +410,7 @@ class Connector:
                                 self.loop.create_task(self.get_next_block())
                     except:
                         pass
+
             except asyncio.CancelledError:
                 self.log.info("connector watchdog terminated")
                 break
