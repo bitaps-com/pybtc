@@ -8,6 +8,7 @@ from pybtc.transaction import Transaction
 from pybtc import int_to_bytes, bytes_to_int, bytes_from_hex
 from pybtc import MRU
 from collections import deque
+import traceback
 
 try:
     import aiojsonrpc
@@ -133,11 +134,14 @@ class Connector:
         self.block_hashes_preload_mutex = False
         self.tx_cache = MRU(self.tx_cache_limit)
         self.tx_orphan_buffer = MRU()
+        self.new_tx = MRU()
         self.tx_orphan_resolved = 0
         self.block_headers_cache = Cache(max_size=self.block_headers_cache_limit)
 
         self.block_txs_request = asyncio.Future()
         self.block_txs_request.set_result(True)
+        self.new_tx_handler = None
+        self.new_tx_tasks = 0
 
         self.connected = asyncio.Future()
         self.await_tx = list()
@@ -322,12 +326,14 @@ class Connector:
                 while True:
                     try:
                         msg = await self.zmqSubSocket.recv_multipart()
-                        topic, body= msg[0], msg[1]
+                        topic = msg[0]
+                        body = msg[1]
+
                         if topic == b"hashblock":
                             self.last_zmq_msg = int(time.time())
-                            if self.deep_synchronization: continue
+                            if self.deep_synchronization:
+                                continue
                             hash = body.hex()
-                            self.log.warning("New block %s" % hash)
                             if not self.get_next_block_mutex:
                                 self.log.warning("New block %s" % hash)
                                 self.get_next_block_mutex = True
@@ -338,10 +344,10 @@ class Connector:
                             if self.deep_synchronization or not self.mempool_tx:
                                 continue
                             try:
-                                if not self.block_txs_request.done():
-                                    await self.block_txs_request
-                                self.loop.create_task(self._new_transaction(Transaction(body, format="raw"),
-                                                                            int(time.time())))
+                                tx = Transaction(body, format="raw")
+                                self.new_tx[tx["txId"]] = (tx, int(time.time()))
+                                if self.new_tx_handler is None or self.new_tx_handler.done():
+                                    self.new_tx_handler = self.loop.create_task(self.handle_new_tx())
                             except:
                                 self.log.critical("Transaction decode failed: %s" % body.hex())
 
@@ -365,6 +371,17 @@ class Connector:
                 self.log.warning("Zeromq handler terminated")
                 break
 
+    async def handle_new_tx(self):
+        while self.new_tx:
+            if not self.block_txs_request.done():
+                await self.block_txs_request
+            h, v = self.new_tx.pop()
+            self.new_tx_tasks += 1
+            self.loop.create_task(self._new_transaction(v[0], v[1]))
+
+
+
+
     async def watchdog(self):
         """
         backup synchronization option
@@ -383,16 +400,17 @@ class Connector:
                                 self.zeromq_task(self.loop.create_task(self.zeromq_handler()))
                             except:
                                 pass
-                    if not self.get_next_block_mutex:
-                        self.get_next_block_mutex = True
-                        self.loop.create_task(self.get_next_block())
                     try:
                         h = await self.rpc.getblockcount()
                         if self.node_last_block < h:
                             self.node_last_block = h
                             self.log.info("watchdog -> bitcoind node last block %s" % h)
+                            if not self.get_next_block_mutex:
+                                self.get_next_block_mutex = True
+                                self.loop.create_task(self.get_next_block())
                     except:
                         pass
+
             except asyncio.CancelledError:
                 self.log.info("connector watchdog terminated")
                 break
@@ -497,19 +515,18 @@ class Connector:
         if self.deep_synchronization:  block["height"] = self.last_block_height + 1
         if self.last_block_height >= block["height"]:  return
         if not self.active_block.done():  return
-
         try:
             self.active_block = asyncio.Future()
 
             if self.last_block_height < self.last_block_utxo_cached_height:
-                if not self.cache_loading: self.log.info("Bootstrap UTXO cache ...")
+                if not self.cache_loading:
+                    self.log.info("Bootstrap UTXO cache ...")
                 self.cache_loading = True
             else:
-                if self.cache_loading: self.log.info("UTXO Cache bootstrap completed")
+                if self.cache_loading:
+                    self.log.info("UTXO Cache bootstrap completed")
                 self.cache_loading = False
-
             await self.verify_block_position(block)
-
             if self.deep_synchronization:
                 await self._block_as_transactions_batch(block)
 
@@ -534,6 +551,7 @@ class Connector:
                 # call before block handler
                 if self.before_block_handler:
                     await self.before_block_handler(block)
+
                 await self.fetch_block_transactions(block)
 
                 if self.utxo_data:
@@ -551,6 +569,8 @@ class Connector:
                                                    "WHERE name = 'last_block';", block["height"])
                                 await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                                    "WHERE name = 'last_cached_block';", block["height"])
+
+
                 elif self.block_handler:
                     await self.block_handler(block, None)
 
@@ -567,10 +587,10 @@ class Connector:
                     except:
                         pass
             if not self.deep_synchronization:
-                self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"],len(block["tx"])))
                 if self.mempool_tx:
                     self.log.debug("Mempool orphaned transactions: %s; "
                                    "resolved orphans %s" % (len(self.tx_orphan_buffer), self.tx_orphan_resolved))
+                self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"],len(block["tx"])))
         except Exception as err:
             if self.await_tx:
                 self.await_tx = set()
@@ -583,6 +603,7 @@ class Connector:
             if self.node_last_block > self.last_block_height:
                 self.get_next_block_mutex = True
                 self.loop.create_task(self.get_next_block())
+
             self.blocks_processing_time += time.time() - tq
             self.active_block.set_result(True)
 
@@ -805,6 +826,7 @@ class Connector:
         tx_count = len(block["tx"])
 
         self.block_txs_request = asyncio.Future()
+        self.log.debug("Wait unconfirmed tx tasks  %s" % len(self.tx_in_process))
         if not self.unconfirmed_tx_processing.done():
             await self.unconfirmed_tx_processing
 
@@ -863,7 +885,7 @@ class Connector:
         try:
             raw_tx = await self.rpc.getrawtransaction(tx_hash)
             tx = Transaction(raw_tx, format="raw")
-            self.loop.create_task(self._new_transaction(tx, int(time.time())))
+            self.new_tx[tx["txId"]] = (tx, int(time.time()))
         except Exception as err:
             self.log.error("get transaction failed: %s" % str(err))
 
@@ -911,14 +933,26 @@ class Connector:
 
     async def _new_transaction(self, tx, timestamp, block_tx = False):
         tx_hash = rh2s(tx["txId"])
-        if tx_hash in self.tx_in_process: return
-        if self.tx_cache.has_key(tx_hash): return
-        self.tx_in_process.add(tx_hash)
+
+        if tx_hash in self.tx_in_process:
+            if not block_tx:
+                self.new_tx_tasks -= 1
+            return
+
+        if self.tx_cache.has_key(tx_hash):
+            # if block_tx:
+            #     self.await_tx.remove(tx_hash)
+            #     self.await_tx_future[tx["txId"]].set_result(True)
+            #     print("block tx>", tx_hash, "left", len(self.await_tx))
+            # else:
+            self.new_tx_tasks -= 1
+            return
 
         try:
-
-            if block_tx and not tx["coinbase"]:
-                await self.wait_block_dependences(tx)
+            self.tx_in_process.add(tx_hash)
+            if block_tx:
+                if not tx["coinbase"]:
+                    await self.wait_block_dependences(tx)
             else:
                 if self.unconfirmed_tx_processing.done():
                     self.unconfirmed_tx_processing = asyncio.Future()
@@ -971,6 +1005,8 @@ class Connector:
             if block_tx:
                 self.await_tx.remove(tx_hash)
                 self.await_tx_future[tx["txId"]].set_result(True)
+                # self.log.debug("tx %s; left %s" % (tx_hash, len(self.await_tx)))
+
 
             # in case recently added transaction
             # in dependency list for orphaned transactions
@@ -979,7 +1015,7 @@ class Connector:
                 rows = self.tx_orphan_buffer.delete(tx_hash)
                 self.tx_orphan_resolved += 1
                 for row in rows:
-                    self.loop.create_task(self._new_transaction(row, int(time.time())))
+                    self.new_tx[tx["txId"]] = (row, int(time.time()))
 
         except asyncio.CancelledError:
             pass
@@ -990,8 +1026,9 @@ class Connector:
                 self.tx_orphan_buffer[rh2s(err.args[0][:32])].append(tx)
             except:
                 self.tx_orphan_buffer[rh2s(err.args[0][:32])] = [tx]
+            # self.log.debug("tx orphaned %s" % tx_hash)
             self.loop.create_task(self._get_transaction(rh2s(err.args[0][:32])))
-
+            # self.log.debug("requested %s" % rh2s(err.args[0][:32]))
             # clear orphaned transactions buffer over limit
             while len(self.tx_orphan_buffer) > self.tx_orphan_buffer_limit:
                 key, value = self.tx_orphan_buffer.pop()
@@ -1023,8 +1060,10 @@ class Connector:
                 if not self.block_txs_request.done():
                     if not self.await_tx:
                         self.block_txs_request.set_result(True)
+                        self.log.debug("Block transactions request completed ")
             else:
-                if not self.tx_in_process:
+                self.new_tx_tasks -= 1
+                if self.new_tx_tasks < 1 and not self.tx_in_process:
                     if not self.unconfirmed_tx_processing.done():
                         self.unconfirmed_tx_processing.set_result(True)
 
