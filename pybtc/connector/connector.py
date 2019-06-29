@@ -411,7 +411,7 @@ class Connector:
                                 self.loop.create_task(self.get_next_block())
                     except:
                         pass
-                    if int(time.time()) - t  > 600:
+                    if int(time.time()) - t  > 60:
                         t = int(time.time())
                         if self.utxo_data:
                             if self.db_type == "postresql":
