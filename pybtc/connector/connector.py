@@ -620,8 +620,12 @@ class Connector:
 
 
     async def verify_block_position(self, block):
-        if "previousblockhash" not in block : return
-        if self.block_headers_cache.len() == 0: return
+        if "previousblockhash" not in block :
+            print(1)
+            return
+        if self.block_headers_cache.len() == 0:
+            print(2)
+            return
 
         # if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
         if self.tt :
