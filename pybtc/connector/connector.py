@@ -137,6 +137,8 @@ class Connector:
         self.new_tx = MRU()
         self.tx_orphan_resolved = 0
         self.block_headers_cache = Cache(max_size=self.block_headers_cache_limit)
+        self.mempool_tx_count = 0
+
 
         self.block_txs_request = asyncio.Future()
         self.block_txs_request.set_result(True)
@@ -295,6 +297,9 @@ class Connector:
                     await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_block', 0);")
                     await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_cached_block', 0);")
 
+                self.mempool_tx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "
+                                                            "FROM connector_unconfirmed_utxo;")
+
         self.last_block_height = lb
         self.last_block_utxo_cached_height = lc
         if self.app_block_height_on_start:
@@ -387,7 +392,6 @@ class Connector:
         backup synchronization option
         in case zeromq failed
         """
-        t = int(time.time())
         while True:
             try:
                 while True:
@@ -411,15 +415,6 @@ class Connector:
                                 self.loop.create_task(self.get_next_block())
                     except:
                         pass
-
-                    if int(time.time()) - t  > 60:
-                        t = int(time.time())
-                        if self.utxo_data:
-                            if self.db_type == "postgresql":
-                                async with self.db_pool.acquire() as conn:
-                                    utx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "
-                                                                   "FROM connector_unconfirmed_utxo;")
-                                    self.log.info("Mempool transactions %s" % utx_count)
 
 
             except asyncio.CancelledError:
@@ -599,8 +594,12 @@ class Connector:
                         pass
             if not self.deep_synchronization:
                 if self.mempool_tx:
-                    self.log.debug("Mempool orphaned transactions: %s; "
-                                   "resolved orphans %s" % (len(self.tx_orphan_buffer), self.tx_orphan_resolved))
+                    self.mempool_tx_count -= len(block["tx"]) + len(block["mempoolInvalid"]["tx"])
+                    self.log.debug("Mempool transactions %s; "
+                                   "orphaned transactions: %s; "
+                                   "resolved orphans %s" % (self.mempool_tx_count,
+                                                            len(self.tx_orphan_buffer),
+                                                            self.tx_orphan_resolved))
                 self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"],len(block["tx"])))
         except Exception as err:
             if self.await_tx:
@@ -635,6 +634,8 @@ class Connector:
                         async with self.db.acquire() as conn:
                             async with conn.transaction():
                                 data = await self.uutxo.rollback_block(conn)
+                                if self.mempool_tx:
+                                    self.mempool_tx_count += data["block_tx_count"] + len(data["mempool"]["tx"])
                                 await self.orphan_handler(data, conn)
                                 await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                                    "WHERE name = 'last_block';",
@@ -1027,6 +1028,7 @@ class Connector:
                 self.tx_orphan_resolved += 1
                 for row in rows:
                     self.new_tx[tx["txId"]] = (row, int(time.time()))
+            self.mempool_tx_count += 1
 
         except asyncio.CancelledError:
             pass

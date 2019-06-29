@@ -608,7 +608,7 @@ class UUTXO():
 
         outpoints = deque(r["outpoint"] for r in data["uutxo"])
         await conn("DELETE FROM connector_utxo WHERE outpoint = ANY($1);", outpoints)
-
+        tx = set(r["outpoint"][:32] for r in data["uutxo"])
         await conn.copy_records_to_table('connector_utxo',
                                          columns=["outpoint", "pointer",
                                                   "address", "amount"], records=data["utxo"])
@@ -621,7 +621,8 @@ class UUTXO():
         return {"height": row["height"],
                 "mempool": {"tx": data["invalid_txs"],
                             "inputs": data["dbs_uutxo"],
-                            "outputs": data["dbs_stxo"]}}
+                            "outputs": data["dbs_stxo"]},
+                "block_tx_count": len(tx)}
 
     async def flush_mempool(self):
         self.log.info("Flushing mempool ...")
