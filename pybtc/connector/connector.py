@@ -387,6 +387,7 @@ class Connector:
         backup synchronization option
         in case zeromq failed
         """
+        t = int(time.time())
         while True:
             try:
                 while True:
@@ -410,7 +411,8 @@ class Connector:
                                 self.loop.create_task(self.get_next_block())
                     except:
                         pass
-                    if int(time.time()) % 600:
+                    if int(time.time()) - t  > 600:
+                        t = int(time.time())
                         if self.utxo_data:
                             if self.db_type == "postresql":
                                 async with self.db_pool.acquire() as conn:
