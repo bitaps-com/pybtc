@@ -411,6 +411,7 @@ class Connector:
                                 self.loop.create_task(self.get_next_block())
                     except:
                         pass
+                    print(1)
                     if int(time.time()) - t  > 60:
                         t = int(time.time())
                         if self.utxo_data:
