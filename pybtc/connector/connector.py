@@ -657,7 +657,8 @@ class Connector:
                     await self.orphan_handler(self.last_block_height, None)
             self.block_headers_cache.pop_last()
             self.last_block_height -= 1
-            raise Exception("Sidebranch block removed")
+            self.app_last_block -= 1
+            raise Exception("Sidebranch block removed %s" % (self.last_block_height + 1))
 
 
     async def _block_as_transactions_batch(self, block):
