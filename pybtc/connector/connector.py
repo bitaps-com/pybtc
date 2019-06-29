@@ -138,7 +138,7 @@ class Connector:
         self.tx_orphan_resolved = 0
         self.block_headers_cache = Cache(max_size=self.block_headers_cache_limit)
         self.mempool_tx_count = 0
-
+        self.tt = 9
 
         self.block_txs_request = asyncio.Future()
         self.block_txs_request.set_result(True)
@@ -346,6 +346,7 @@ class Connector:
 
                         elif topic == b"rawtx":
                             self.last_zmq_msg = int(time.time())
+                            continue
                             if self.deep_synchronization or not self.mempool_tx:
                                 continue
                             try:
@@ -622,7 +623,11 @@ class Connector:
         if "previousblockhash" not in block : return
         if self.block_headers_cache.len() == 0: return
 
-        if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
+        # if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
+        if self.tt :
+            self.tt -= 1
+            print("test orphan")
+            await asyncio.sleep(30)
             if self.block_headers_cache.get(block["previousblockhash"]) is None and self.last_block_height:
                 self.log.critical("Connector error! Node out of sync "
                                   "no parent block in chain tail %s" % block["previousblockhash"])
