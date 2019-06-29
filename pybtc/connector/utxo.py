@@ -612,12 +612,19 @@ class UUTXO():
         await conn.copy_records_to_table('connector_utxo',
                                          columns=["outpoint", "pointer",
                                                   "address", "amount"], records=data["utxo"])
+
         await conn.copy_records_to_table('connector_unconfirmed_utxo',
                                          columns=["outpoint", "out_tx_id",
                                                   "address", "amount"], records=data["uutxo"])
+        await conn.copy_records_to_table('connector_unconfirmed_utxo',
+                                         columns=["outpoint", "out_tx_id",
+                                                  "address", "amount"], records=data["dbs_uutxo"])
         await conn.copy_records_to_table('connector_unconfirmed_stxo',
                                          columns=["outpoint", "sequence",
-                                                  "out_tx_id", "tx_id", "input_index"], records=data["uutxo"])
+                                                  "out_tx_id", "tx_id", "input_index"], records=data["stxo"])
+        await conn.copy_records_to_table('connector_unconfirmed_stxo',
+                                         columns=["outpoint", "sequence",
+                                                  "out_tx_id", "tx_id", "input_index"], records=data["dbs_stxo"])
         return {"height": row["height"],
                 "mempool": {"tx": data["invalid_txs"],
                             "inputs": data["dbs_uutxo"],
