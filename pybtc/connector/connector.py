@@ -640,7 +640,7 @@ class Connector:
             if self.orphan_handler:
                 if self.utxo_data:
                     if self.db_type == "postgresql":
-                        async with self.db.acquire() as conn:
+                        async with self.db_pool.acquire() as conn:
                             async with conn.transaction():
                                 data = await self.uutxo.rollback_block(conn)
                                 if self.mempool_tx:
