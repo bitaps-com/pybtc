@@ -616,6 +616,7 @@ class UUTXO():
         await conn.copy_records_to_table('connector_unconfirmed_utxo',
                                          columns=["outpoint", "out_tx_id",
                                                   "address", "amount"], records=data["uutxo"])
+
         await conn.copy_records_to_table('connector_unconfirmed_utxo',
                                          columns=["outpoint", "out_tx_id",
                                                   "address", "amount"], records=data["dbs_uutxo"])
