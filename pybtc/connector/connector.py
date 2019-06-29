@@ -622,14 +622,14 @@ class Connector:
 
     async def verify_block_position(self, block):
         if "previousblockhash" not in block :
-            print(1)
+            print(11)
             return
         if self.block_headers_cache.len() == 0:
             print(2)
             return
 
         # if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
-        if self.tt and 0 :
+        if self.tt :
             self.tt -= 1
             print("test orphan")
             await asyncio.sleep(30)
