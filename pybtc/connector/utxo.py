@@ -606,9 +606,9 @@ class UUTXO():
 
         data = pickle.loads(row["data"])
 
-        outpoints = deque(r["outpoint"] for r in data["uutxo"])
+        outpoints = deque(r[0] for r in data["uutxo"])
         await conn("DELETE FROM connector_utxo WHERE outpoint = ANY($1);", outpoints)
-        tx = set(r["outpoint"][:32] for r in data["uutxo"])
+        tx = set(r[0][:32] for r in data["uutxo"])
         await conn.copy_records_to_table('connector_utxo',
                                          columns=["outpoint", "pointer",
                                                   "address", "amount"], records=data["utxo"])
