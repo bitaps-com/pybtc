@@ -411,11 +411,11 @@ class Connector:
                                 self.loop.create_task(self.get_next_block())
                     except:
                         pass
-                    print(1)
+
                     if int(time.time()) - t  > 60:
                         t = int(time.time())
                         if self.utxo_data:
-                            if self.db_type == "postresql":
+                            if self.db_type == "postgresql":
                                 async with self.db_pool.acquire() as conn:
                                     utx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "
                                                                    "FROM connector_unconfirmed_utxo;")
