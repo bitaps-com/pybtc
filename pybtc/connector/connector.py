@@ -621,9 +621,15 @@ class Connector:
 
 
     async def verify_block_position(self, block):
-        if "previousblockhash" not in block :
-            print(11)
-            return
+        try:
+            previousblockhash = block["previousBlockHash"]
+        except:
+            try:
+                previousblockhash = block["previousblockhash"]
+                block["previousBlockHash"] = previousblockhash
+            except:
+                return
+
         if self.block_headers_cache.len() == 0:
             print(2)
             return
