@@ -520,6 +520,7 @@ class Connector:
             self.log.error("get block by hash %s FAILED" % hash)
 
     async def _new_block(self, block):
+        print("_new_block", block["height"])
         if not self.active: return
         tq = time.time()
         if self.block_headers_cache.get(block["hash"]) is not None: return
