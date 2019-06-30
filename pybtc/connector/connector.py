@@ -525,7 +525,9 @@ class Connector:
         if not self.active: return
         print(11)
         tq = time.time()
-        if self.block_headers_cache.get(block["hash"]) is not None: return
+        if not self.cache_loading:
+            if self.block_headers_cache.get(block["hash"]) is not None:
+                return
         print(12)
         if self.deep_synchronization:  block["height"] = self.last_block_height + 1
         if self.last_block_height >= block["height"]:  return
