@@ -520,6 +520,7 @@ class Connector:
         tq = time.time()
         if not self.cache_loading:
             if self.block_headers_cache.get(block["hash"]) is not None:
+                print("dublicate ",block["hash"])
                 return
         if self.deep_synchronization:  block["height"] = self.last_block_height + 1
         if self.last_block_height >= block["height"]:  return
