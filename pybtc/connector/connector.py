@@ -473,7 +473,8 @@ class Connector:
                         if self.synchronization_completed_handler:
                             await self.synchronization_completed_handler()
                         self.deep_synchronization = False
-
+                        self.total_received_tx = 0
+                        self.total_received_tx_time = 0
                 block = None
                 if self.deep_synchronization:
                     raw_block = self.block_preload.pop(self.last_block_height + 1)
