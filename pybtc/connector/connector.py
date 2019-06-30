@@ -530,7 +530,7 @@ class Connector:
                     self.log.info("Bootstrap UTXO cache ...")
                 self.cache_loading = True
             else:
-                if self.cache_loading:
+                if self.cache_loading and self.deep_synchronization:
                     self.log.info("UTXO Cache bootstrap completed")
                 self.cache_loading = False
             await self.verify_block_position(block)
@@ -629,7 +629,7 @@ class Connector:
             return
 
         # if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
-        if self.tt :
+        if self.tt and 0 :
             self.tt -= 1
             print("test orphan")
             await asyncio.sleep(30)
