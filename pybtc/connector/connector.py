@@ -582,7 +582,7 @@ class Connector:
 
                 elif self.block_handler:
                     await self.block_handler(block, None)
-
+            print(8)
             self.block_headers_cache.set(block["hash"], block["height"])
             self.last_block_height = block["height"]
             self.app_last_block = block["height"]
@@ -604,6 +604,7 @@ class Connector:
                                                             len(self.tx_orphan_buffer),
                                                             self.tx_orphan_resolved))
                 self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"],len(block["tx"])))
+            print(9)
         except Exception as err:
             if self.await_tx:
                 self.await_tx = set()
@@ -620,6 +621,7 @@ class Connector:
 
             self.blocks_processing_time += time.time() - tq
             self.active_block.set_result(True)
+            print(10)
 
 
     async def verify_block_position(self, block):
