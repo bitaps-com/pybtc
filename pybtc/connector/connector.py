@@ -521,6 +521,7 @@ class Connector:
 
     async def _new_block(self, block):
         print("_new_block", self.last_block_height + 1)
+        print("block", block["hash"])
         if not self.active: return
         print(11)
         tq = time.time()
