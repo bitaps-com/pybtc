@@ -534,17 +534,14 @@ class Connector:
                     self.log.info("UTXO Cache bootstrap completed")
                 self.cache_loading = False
             await self.verify_block_position(block)
-            print(4)
+
             if self.deep_synchronization:
-                print(5)
                 await self._block_as_transactions_batch(block)
-                print(6)
                 if not self.cache_loading or block["height"] > self.app_block_height_on_start:
                     if self.block_batch_handler:
                         t = time.time()
                         await self.block_batch_handler(block)
                         self.batch_handler += time.time() - t
-                print(7)
                 if self.total_received_tx - self.total_received_tx_stat > 100000:
                     self.report_sync_process(block["height"])
                     if self.utxo_data:
@@ -582,7 +579,6 @@ class Connector:
 
                 elif self.block_handler:
                     await self.block_handler(block, None)
-            print(8)
             self.block_headers_cache.set(block["hash"], block["height"])
             self.last_block_height = block["height"]
             self.app_last_block = block["height"]
@@ -604,7 +600,6 @@ class Connector:
                                                             len(self.tx_orphan_buffer),
                                                             self.tx_orphan_resolved))
                 self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"],len(block["tx"])))
-            print(9)
         except Exception as err:
             if self.await_tx:
                 self.await_tx = set()
@@ -621,7 +616,8 @@ class Connector:
 
             self.blocks_processing_time += time.time() - tq
             self.active_block.set_result(True)
-            print(10)
+            print("new_block", self.node_last_block, self.last_block_height)
+
 
 
     async def verify_block_position(self, block):
