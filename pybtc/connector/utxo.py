@@ -536,7 +536,7 @@ class UUTXO():
                                         "RETURNING outpoint, pointer, address, amount;", outpoints)
                 utxo = deque((r["outpoint"], r["pointer"], r["address"], r["amount"]) for r in rows)
                 for r in rows:
-                    print("-", r["outpoint"])
+                    print("-", rh2s(r["outpoint"]))
 
 
             #    delete dbs records
