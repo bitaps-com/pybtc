@@ -423,9 +423,7 @@ class Connector:
                 self.log.error("watchdog error %s " % err)
 
     async def get_next_block(self):
-        print("get_next_block")
         if self.active and self.active_block.done() and self.get_next_block_mutex:
-            print("get_next_block 2")
             try:
                 if self.node_last_block <= self.last_block_height + self.backlog:
                     d = await self.rpc.getblockcount()
@@ -437,7 +435,6 @@ class Connector:
                     else:
                         self.node_last_block = d
 
-                print(3)
                 self.synchronized = False
                 d = self.node_last_block - self.last_block_height
 
@@ -477,7 +474,6 @@ class Connector:
                             await self.synchronization_completed_handler()
                         self.deep_synchronization = False
 
-                print(4)
                 block = None
                 if self.deep_synchronization:
                     raw_block = self.block_preload.pop(self.last_block_height + 1)
@@ -493,7 +489,7 @@ class Connector:
                     block["height"] = self.last_block_height + 1
 
                 self.loop.create_task(self._new_block(block))
-                print(6)
+
             except Exception as err:
                 self.log.error("get next block failed %s" % str(err))
             finally:
@@ -520,20 +516,14 @@ class Connector:
             self.log.error("get block by hash %s FAILED" % hash)
 
     async def _new_block(self, block):
-        print("_new_block", self.last_block_height + 1)
-        print("block", block["hash"])
         if not self.active: return
-        print(11)
         tq = time.time()
         if not self.cache_loading:
             if self.block_headers_cache.get(block["hash"]) is not None:
                 return
-        print(12)
         if self.deep_synchronization:  block["height"] = self.last_block_height + 1
         if self.last_block_height >= block["height"]:  return
-        print(13)
         if not self.active_block.done():  return
-        print(14)
         try:
             self.active_block = asyncio.Future()
 
@@ -628,7 +618,6 @@ class Connector:
 
             self.blocks_processing_time += time.time() - tq
             self.active_block.set_result(True)
-            print("new_block", self.node_last_block, self.last_block_height)
 
 
 
