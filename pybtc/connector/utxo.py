@@ -535,6 +535,8 @@ class UUTXO():
                 rows = await conn.fetch("DELETE FROM connector_utxo WHERE outpoint = ANY($1) "
                                         "RETURNING outpoint, pointer, address, amount;", outpoints)
                 utxo = deque((r["outpoint"], r["pointer"], r["address"], r["amount"]) for r in rows)
+                for r in rows:
+                    print("-", r["outpoint"])
 
 
             #    delete dbs records
@@ -598,6 +600,7 @@ class UUTXO():
 
             return {"dbs_uutxo": dbs_uutxo, "dbs_stxo": dbs_stxo, "invalid_txs": block_invalid_txs}
 
+
     async def rollback_block(self, conn):
         row = await conn.fetchrow("DELETE FROM connector_block_state_checkpoint "
                                   "WHERE height in "
@@ -608,10 +611,13 @@ class UUTXO():
         data = pickle.loads(row["data"])
 
         outpoints = deque(r[0] for r in data["uutxo"])
-        await conn.execute("DELETE FROM connector_utxo WHERE outpoint = ANY($1);", outpoints)
+        rows = await conn.fetch("DELETE FROM connector_utxo WHERE outpoint = ANY($1) "
+                         "RETURNING outpoint;", outpoints)
         tx = set(r[0][:32] for r in data["uutxo"])
         for r in data["uutxo"]:
             print("-", rh2s(r[0]))
+        for r in rows:
+            print("--", rh2s(r["outpoint"]))
         await conn.copy_records_to_table('connector_utxo',
                                          columns=["outpoint", "pointer",
                                                   "address", "amount"], records=data["utxo"])
