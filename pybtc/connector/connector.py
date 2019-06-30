@@ -638,8 +638,8 @@ class Connector:
             return
 
         # if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
-        if self.tt and 0 :
-            self.tt -= 1
+        if self.tt :
+            self.tt = 0
             print("test orphan")
             await asyncio.sleep(30)
             if self.block_headers_cache.get(block["previousBlockHash"]) is None and self.last_block_height:
