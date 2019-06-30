@@ -641,7 +641,7 @@ class Connector:
         if self.tt == 2:
 
             print("test orphan", self.last_block_height)
-            await asyncio.sleep(30)
+            await asyncio.sleep(10)
             if self.block_headers_cache.get(block["previousBlockHash"]) is None and self.last_block_height:
                 self.log.critical("Connector error! Node out of sync "
                                   "no parent block in chain tail %s" % block["previousblockhash"])
@@ -663,7 +663,7 @@ class Connector:
                                                    "WHERE name = 'last_cached_block';",
                                                    self.last_block_height - 1)
                                 print("...")
-                                await asyncio.sleep(900000)
+                                await asyncio.sleep(10)
                 else:
                     await self.orphan_handler(self.last_block_height, None)
             self.block_headers_cache.pop_last()
