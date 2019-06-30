@@ -508,6 +508,7 @@ class UUTXO():
                              (h << 39) + (txs.index(r["t"]) << 20) + (1 << 19) + bytes_to_int(r[32:]),
                              r["address"], r["amount"]))
                 uutxo.append((r["outpoint"], r["t"], r["address"], r["amount"]))
+                print(rh2s(r["outpoint"]))
 
             await conn.copy_records_to_table('connector_utxo',
                                              columns=["outpoint", "pointer",
@@ -609,6 +610,8 @@ class UUTXO():
         outpoints = deque(r[0] for r in data["uutxo"])
         await conn.execute("DELETE FROM connector_utxo WHERE outpoint = ANY($1);", outpoints)
         tx = set(r[0][:32] for r in data["uutxo"])
+        for r in data["uutxo"]:
+            print("-", rh2s(r[0]))
         await conn.copy_records_to_table('connector_utxo',
                                          columns=["outpoint", "pointer",
                                                   "address", "amount"], records=data["utxo"])
