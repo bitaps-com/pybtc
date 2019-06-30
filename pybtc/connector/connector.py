@@ -534,15 +534,17 @@ class Connector:
                     self.log.info("UTXO Cache bootstrap completed")
                 self.cache_loading = False
             await self.verify_block_position(block)
+            print(4)
             if self.deep_synchronization:
+                print(5)
                 await self._block_as_transactions_batch(block)
-
+                print(6)
                 if not self.cache_loading or block["height"] > self.app_block_height_on_start:
                     if self.block_batch_handler:
                         t = time.time()
                         await self.block_batch_handler(block)
                         self.batch_handler += time.time() - t
-
+                print(7)
                 if self.total_received_tx - self.total_received_tx_stat > 100000:
                     self.report_sync_process(block["height"])
                     if self.utxo_data:
