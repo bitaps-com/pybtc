@@ -636,10 +636,10 @@ class Connector:
         if self.block_headers_cache.len() == 0:
             print(2)
             return
-
+        self.tt += 1
         # if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
-        if self.tt == 1:
-            self.tt +=1
+        if self.tt == 2:
+
             print("test orphan")
             await asyncio.sleep(30)
             if self.block_headers_cache.get(block["previousBlockHash"]) is None and self.last_block_height:
@@ -662,6 +662,8 @@ class Connector:
                                 await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                                    "WHERE name = 'last_cached_block';",
                                                    self.last_block_height - 1)
+                                print("...")
+                                await asyncio.sleep(900000)
                 else:
                     await self.orphan_handler(self.last_block_height, None)
             self.block_headers_cache.pop_last()
