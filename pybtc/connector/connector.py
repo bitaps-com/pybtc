@@ -639,7 +639,7 @@ class Connector:
             self.tt -= 1
             print("test orphan")
             await asyncio.sleep(30)
-            if self.block_headers_cache.get(block["previousblockhash"]) is None and self.last_block_height:
+            if self.block_headers_cache.get(block["previousBlockHash"]) is None and self.last_block_height:
                 self.log.critical("Connector error! Node out of sync "
                                   "no parent block in chain tail %s" % block["previousblockhash"])
                 raise Exception("Node out of sync")
