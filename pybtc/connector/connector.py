@@ -518,7 +518,7 @@ class Connector:
     async def _new_block(self, block):
         if not self.active: return
         tq = time.time()
-        if not self.cache_loading:
+        if not self.deep_synchronization:
             if self.block_headers_cache.get(block["hash"]) is not None:
                 print("dublicate ",block["hash"])
                 return
