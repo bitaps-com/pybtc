@@ -386,8 +386,6 @@ class Connector:
             self.loop.create_task(self._new_transaction(v[0], v[1]))
 
 
-
-
     async def watchdog(self):
         """
         backup synchronization option
@@ -425,7 +423,9 @@ class Connector:
                 self.log.error("watchdog error %s " % err)
 
     async def get_next_block(self):
+        print("get_next_block")
         if self.active and self.active_block.done() and self.get_next_block_mutex:
+            print("get_next_block 2")
             try:
                 if self.node_last_block <= self.last_block_height + self.backlog:
                     d = await self.rpc.getblockcount()
@@ -436,6 +436,8 @@ class Connector:
                         return
                     else:
                         self.node_last_block = d
+
+                print(3)
                 self.synchronized = False
                 d = self.node_last_block - self.last_block_height
 
@@ -475,6 +477,7 @@ class Connector:
                             await self.synchronization_completed_handler()
                         self.deep_synchronization = False
 
+                print(4)
                 block = None
                 if self.deep_synchronization:
                     raw_block = self.block_preload.pop(self.last_block_height + 1)
@@ -490,6 +493,7 @@ class Connector:
                     block["height"] = self.last_block_height + 1
 
                 self.loop.create_task(self._new_block(block))
+                print(6)
             except Exception as err:
                 self.log.error("get next block failed %s" % str(err))
             finally:
