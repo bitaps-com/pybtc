@@ -537,7 +537,9 @@ class Connector:
                 if self.cache_loading and self.deep_synchronization:
                     self.log.info("UTXO Cache bootstrap completed")
                 self.cache_loading = False
-            await self.verify_block_position(block)
+            mount_point_exist = await self.verify_block_position(block)
+            if not mount_point_exist:
+                return
 
             if self.deep_synchronization:
                 await self._block_as_transactions_batch(block)
@@ -612,7 +614,6 @@ class Connector:
                     self.await_tx_future[i].cancel()
             self.await_tx_future = dict()
             self.log.error("block %s error %s" % (block["height"], str(err)))
-            print(traceback.format_exc())
         finally:
             if self.node_last_block > self.last_block_height:
                 self.get_next_block_mutex = True
@@ -638,7 +639,7 @@ class Connector:
             return
         self.tt += 1
         # if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
-        if self.tt == 2:
+        if self.tt < 5:
 
             if self.block_headers_cache.get(block["previousBlockHash"]) is None and self.last_block_height:
                 self.log.critical("Connector error! Node out of sync "
@@ -660,13 +661,23 @@ class Connector:
                                 await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                                    "WHERE name = 'last_cached_block';",
                                                    self.last_block_height - 1)
+                            self.mempool_tx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "
+                                                                        "FROM connector_unconfirmed_utxo;")
+                            self.log.debug("Mempool transactions %s; "
+                                           "orphaned transactions: %s; "
+                                           "resolved orphans %s" % (self.mempool_tx_count,
+                                                                    len(self.tx_orphan_buffer),
+                                                                    self.tx_orphan_resolved))
+
 
                 else:
                     await self.orphan_handler(self.last_block_height, None)
-            self.block_headers_cache.pop_last()
+            h = self.block_headers_cache.pop_last()
             self.last_block_height -= 1
             self.app_last_block -= 1
-            raise Exception("Sidebranch block removed %s" % (self.last_block_height + 1))
+            self.log.warning("Removed orphaned block %s %s" % (self.last_block_height + 1, h))
+            return False
+        return True
 
 
     async def _block_as_transactions_batch(self, block):
