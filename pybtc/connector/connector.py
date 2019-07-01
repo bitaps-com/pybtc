@@ -40,7 +40,7 @@ class Connector:
                  flush_app_caches_handler=None,
                  synchronization_completed_handler=None,
                  block_timeout=30,
-                 deep_sync_limit=20, backlog=0, mempool_tx=True,
+                 deep_sync_limit=100, backlog=0, mempool_tx=True,
                  rpc_batch_limit=50, rpc_threads_limit=100, rpc_timeout=100,
                  utxo_data=False,
                  utxo_cache_size=1000000,
@@ -137,6 +137,8 @@ class Connector:
         self.new_tx = MRU()
         self.tx_orphan_resolved = 0
         self.block_headers_cache = Cache(max_size=self.block_headers_cache_limit)
+        self.chain_tail_start_len = len(chain_tail)
+        self.mempool_tx_count = 0
 
         self.block_txs_request = asyncio.Future()
         self.block_txs_request.set_result(True)
@@ -295,6 +297,9 @@ class Connector:
                     await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_block', 0);")
                     await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_cached_block', 0);")
 
+                self.mempool_tx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "
+                                                            "FROM connector_unconfirmed_utxo;")
+
         self.last_block_height = lb
         self.last_block_utxo_cached_height = lc
         if self.app_block_height_on_start:
@@ -335,9 +340,10 @@ class Connector:
                                 continue
                             hash = body.hex()
                             if not self.get_next_block_mutex:
-                                self.log.warning("New block %s" % hash)
-                                self.get_next_block_mutex = True
-                                self.loop.create_task(self.get_next_block())
+                                if self.active_block.done():
+                                    self.log.warning("New block %s" % hash)
+                                    self.get_next_block_mutex = True
+                                    self.loop.create_task(self.get_next_block())
 
                         elif topic == b"rawtx":
                             self.last_zmq_msg = int(time.time())
@@ -372,14 +378,12 @@ class Connector:
                 break
 
     async def handle_new_tx(self):
-        while self.new_tx:
+        while self.new_tx and self.synchronized:
             if not self.block_txs_request.done():
                 await self.block_txs_request
             h, v = self.new_tx.pop()
             self.new_tx_tasks += 1
             self.loop.create_task(self._new_transaction(v[0], v[1]))
-
-
 
 
     async def watchdog(self):
@@ -410,6 +414,16 @@ class Connector:
                                 self.loop.create_task(self.get_next_block())
                     except:
                         pass
+                    try:
+                        if self.last_block_height > self.deep_sync_limit:
+                            async with self.db_pool.acquire() as conn:
+                                async with conn.transaction():
+                                    await conn.execute("DELETE FROM connector_block_state_checkpoint "
+                                                       "WHERE height < $1;",
+                                                       self.last_block_height - self.deep_sync_limit)
+                    except:
+                        pass
+
 
             except asyncio.CancelledError:
                 self.log.info("connector watchdog terminated")
@@ -429,6 +443,7 @@ class Connector:
                         return
                     else:
                         self.node_last_block = d
+
                 self.synchronized = False
                 d = self.node_last_block - self.last_block_height
 
@@ -467,7 +482,8 @@ class Connector:
                         if self.synchronization_completed_handler:
                             await self.synchronization_completed_handler()
                         self.deep_synchronization = False
-
+                        self.total_received_tx = 0
+                        self.total_received_tx_time = 0
                 block = None
                 if self.deep_synchronization:
                     raw_block = self.block_preload.pop(self.last_block_height + 1)
@@ -483,6 +499,7 @@ class Connector:
                     block["height"] = self.last_block_height + 1
 
                 self.loop.create_task(self._new_block(block))
+
             except Exception as err:
                 self.log.error("get next block failed %s" % str(err))
             finally:
@@ -511,31 +528,36 @@ class Connector:
     async def _new_block(self, block):
         if not self.active: return
         tq = time.time()
-        if self.block_headers_cache.get(block["hash"]) is not None: return
         if self.deep_synchronization:  block["height"] = self.last_block_height + 1
         if self.last_block_height >= block["height"]:  return
         if not self.active_block.done():  return
         try:
             self.active_block = asyncio.Future()
 
-            if self.last_block_height < self.last_block_utxo_cached_height:
-                if not self.cache_loading:
-                    self.log.info("Bootstrap UTXO cache ...")
-                self.cache_loading = True
+            if self.deep_synchronization:
+                if self.last_block_height < self.last_block_utxo_cached_height:
+                    if not self.cache_loading:
+                        self.log.info("Bootstrap UTXO cache ...")
+                    self.cache_loading = True
+                else:
+                    if self.cache_loading and self.deep_synchronization:
+                        self.log.info("UTXO Cache bootstrap completed")
+                    self.cache_loading = False
             else:
-                if self.cache_loading:
-                    self.log.info("UTXO Cache bootstrap completed")
-                self.cache_loading = False
-            await self.verify_block_position(block)
+                if self.block_headers_cache.get(block["hash"]) is not None:
+                    return
+
+            mount_point_exist = await self.verify_block_position(block)
+            if not mount_point_exist:
+                return
+
             if self.deep_synchronization:
                 await self._block_as_transactions_batch(block)
-
                 if not self.cache_loading or block["height"] > self.app_block_height_on_start:
                     if self.block_batch_handler:
                         t = time.time()
                         await self.block_batch_handler(block)
                         self.batch_handler += time.time() - t
-
                 if self.total_received_tx - self.total_received_tx_stat > 100000:
                     self.report_sync_process(block["height"])
                     if self.utxo_data:
@@ -573,7 +595,6 @@ class Connector:
 
                 elif self.block_handler:
                     await self.block_handler(block, None)
-
             self.block_headers_cache.set(block["hash"], block["height"])
             self.last_block_height = block["height"]
             self.app_last_block = block["height"]
@@ -588,9 +609,14 @@ class Connector:
                         pass
             if not self.deep_synchronization:
                 if self.mempool_tx:
-                    self.log.debug("Mempool orphaned transactions: %s; "
-                                   "resolved orphans %s" % (len(self.tx_orphan_buffer), self.tx_orphan_resolved))
+                    self.mempool_tx_count -= len(block["tx"]) + len(block["mempoolInvalid"]["tx"])
+                    self.log.debug("Mempool transactions %s; "
+                                   "orphaned transactions: %s; "
+                                   "resolved orphans %s" % (self.mempool_tx_count,
+                                                            len(self.tx_orphan_buffer),
+                                                            self.tx_orphan_resolved))
                 self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"],len(block["tx"])))
+
         except Exception as err:
             if self.await_tx:
                 self.await_tx = set()
@@ -599,31 +625,50 @@ class Connector:
                     self.await_tx_future[i].cancel()
             self.await_tx_future = dict()
             self.log.error("block %s error %s" % (block["height"], str(err)))
+
         finally:
             if self.node_last_block > self.last_block_height:
                 self.get_next_block_mutex = True
+
                 self.loop.create_task(self.get_next_block())
+            else:
+                self.synchronized = True
 
             self.blocks_processing_time += time.time() - tq
             self.active_block.set_result(True)
 
 
-    async def verify_block_position(self, block):
-        if "previousblockhash" not in block : return
-        if self.block_headers_cache.len() == 0: return
 
-        if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
-            if self.block_headers_cache.get(block["previousblockhash"]) is None and self.last_block_height:
+    async def verify_block_position(self, block):
+        try:
+            previousblockhash = block["previousBlockHash"]
+            block["previousblockhash"] = previousblockhash
+        except:
+            try:
+                previousblockhash = block["previousblockhash"]
+                block["previousBlockHash"] = previousblockhash
+            except:
+                return
+
+        if self.block_headers_cache.len() == 0:
+            if self.chain_tail_start_len and self.last_block_height:
                 self.log.critical("Connector error! Node out of sync "
                                   "no parent block in chain tail %s" % block["previousblockhash"])
+                await asyncio.sleep(30)
                 raise Exception("Node out of sync")
+            else:
+                return True
+
+        if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
 
             if self.orphan_handler:
                 if self.utxo_data:
                     if self.db_type == "postgresql":
-                        async with self.db.acquire() as conn:
+                        async with self.db_pool.acquire() as conn:
                             async with conn.transaction():
                                 data = await self.uutxo.rollback_block(conn)
+                                if self.mempool_tx:
+                                    self.mempool_tx_count += data["block_tx_count"] + len(data["mempool"]["tx"])
                                 await self.orphan_handler(data, conn)
                                 await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                                    "WHERE name = 'last_block';",
@@ -631,11 +676,24 @@ class Connector:
                                 await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                                    "WHERE name = 'last_cached_block';",
                                                    self.last_block_height - 1)
+                            self.mempool_tx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "
+                                                                        "FROM connector_unconfirmed_utxo;")
+                            self.log.debug("Mempool transactions %s; "
+                                           "orphaned transactions: %s; "
+                                           "resolved orphans %s" % (self.mempool_tx_count,
+                                                                    len(self.tx_orphan_buffer),
+                                                                    self.tx_orphan_resolved))
+
+
                 else:
                     await self.orphan_handler(self.last_block_height, None)
-            self.block_headers_cache.pop_last()
+            b_hash, _ = self.block_headers_cache.pop_last()
+
             self.last_block_height -= 1
-            raise Exception("Sidebranch block removed")
+            self.app_last_block -= 1
+            self.log.warning("Removed orphaned block %s %s" % (self.last_block_height + 1, b_hash))
+            return False
+        return True
 
 
     async def _block_as_transactions_batch(self, block):
@@ -1016,6 +1074,7 @@ class Connector:
                 self.tx_orphan_resolved += 1
                 for row in rows:
                     self.new_tx[tx["txId"]] = (row, int(time.time()))
+            self.mempool_tx_count += 1
 
         except asyncio.CancelledError:
             pass
