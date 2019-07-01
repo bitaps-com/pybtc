@@ -670,6 +670,7 @@ class Connector:
                 else:
                     await self.orphan_handler(self.last_block_height, None)
             h = self.block_headers_cache.pop_last()
+            print(self.block_headers_cache)
             print(h)
             self.last_block_height -= 1
             self.app_last_block -= 1
