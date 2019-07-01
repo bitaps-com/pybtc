@@ -621,6 +621,8 @@ class Connector:
                 self.get_next_block_mutex = True
 
                 self.loop.create_task(self.get_next_block())
+            else:
+                self.synchronized = True
 
             self.blocks_processing_time += time.time() - tq
             self.active_block.set_result(True)
