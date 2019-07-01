@@ -619,7 +619,7 @@ class Connector:
         finally:
             if self.node_last_block > self.last_block_height:
                 self.get_next_block_mutex = True
-                print("next?")
+
                 self.loop.create_task(self.get_next_block())
 
             self.blocks_processing_time += time.time() - tq
