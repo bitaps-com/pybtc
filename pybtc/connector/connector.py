@@ -414,6 +414,15 @@ class Connector:
                                 self.loop.create_task(self.get_next_block())
                     except:
                         pass
+                    try:
+                        if self.last_block_height > self.deep_sync_limit:
+                            async with self.db_pool.acquire() as conn:
+                                async with conn.transaction():
+                                    await conn.execute("DELETE FROM connector_block_state_checkpoint "
+                                                       "WHERE height < $1;",
+                                                       self.last_block_height - self.deep_sync_limit)
+                    except:
+                        pass
 
 
             except asyncio.CancelledError:
