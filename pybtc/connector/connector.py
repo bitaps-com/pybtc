@@ -529,15 +529,15 @@ class Connector:
         if not self.active_block.done():  return
         try:
             self.active_block = asyncio.Future()
-
-            if self.last_block_height < self.last_block_utxo_cached_height:
-                if not self.cache_loading:
-                    self.log.info("Bootstrap UTXO cache ...")
-                self.cache_loading = True
-            else:
-                if self.cache_loading and self.deep_synchronization:
-                    self.log.info("UTXO Cache bootstrap completed")
-                self.cache_loading = False
+            if self.deep_synchronization:
+                if self.last_block_height < self.last_block_utxo_cached_height:
+                    if not self.cache_loading:
+                        self.log.info("Bootstrap UTXO cache ...")
+                    self.cache_loading = True
+                else:
+                    if self.cache_loading and self.deep_synchronization:
+                        self.log.info("UTXO Cache bootstrap completed")
+                    self.cache_loading = False
             mount_point_exist = await self.verify_block_position(block)
             if not mount_point_exist:
                 return
