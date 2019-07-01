@@ -630,6 +630,7 @@ class Connector:
     async def verify_block_position(self, block):
         try:
             previousblockhash = block["previousBlockHash"]
+            block["previousBlockHash"] = previousblockhash
         except:
             try:
                 previousblockhash = block["previousblockhash"]
