@@ -517,6 +517,8 @@ class Connector:
             self.log.error("get block by hash %s FAILED" % hash)
 
     async def _new_block(self, block):
+        print("new_block")
+        await asyncio.sleep(30)
         if not self.active: return
         tq = time.time()
         if not self.deep_synchronization:
