@@ -618,7 +618,7 @@ class UUTXO():
 
         outpoints = deque(r[0] for r in data["uutxo"])
         rows = await conn.fetch("DELETE FROM connector_utxo WHERE outpoint = ANY($1) "
-                         "RETURNING outpoint;", outpoints)
+                         "RETURNING outpoint , pointer;", outpoints)
         tx = set(r[0][:32] for r in data["uutxo"])
         for r in data["uutxo"]:
             print("-", rh2s(r[0]))
