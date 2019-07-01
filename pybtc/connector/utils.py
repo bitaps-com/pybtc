@@ -121,7 +121,7 @@ class Cache():
             data = self._store[i]
             del self._store[i]
             self._store_size -= sys.getsizeof(data) + sys.getsizeof(i)
-            return data
+            return i, data
         except:
             return None
 

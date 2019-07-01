@@ -509,6 +509,7 @@ class UUTXO():
                              r["address"], r["amount"]))
                 uutxo.append((r["outpoint"], r["t"], r["address"], r["amount"]))
 
+
             await conn.copy_records_to_table('connector_utxo',
                                              columns=["outpoint", "pointer",
                                                       "address", "amount"], records=batch)
