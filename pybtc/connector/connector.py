@@ -639,7 +639,7 @@ class Connector:
             return
         self.tt += 1
         # if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
-        if self.tt < 5:
+        if self.tt < 20:
 
             if self.block_headers_cache.get(block["previousBlockHash"]) is None and self.last_block_height:
                 self.log.critical("Connector error! Node out of sync "
