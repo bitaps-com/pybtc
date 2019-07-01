@@ -378,7 +378,7 @@ class Connector:
                 break
 
     async def handle_new_tx(self):
-        while self.new_tx:
+        while self.new_tx and self.synchronized:
             if not self.block_txs_request.done():
                 await self.block_txs_request
             h, v = self.new_tx.pop()
