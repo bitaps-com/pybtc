@@ -626,7 +626,6 @@ class Connector:
 
 
     async def verify_block_position(self, block):
-        print(4)
         try:
             previousblockhash = block["previousBlockHash"]
         except:
@@ -634,13 +633,10 @@ class Connector:
                 previousblockhash = block["previousblockhash"]
                 block["previousBlockHash"] = previousblockhash
             except:
-                print(3)
                 return
 
         if self.block_headers_cache.len() == 0:
-            print(2)
             return
-        print(1)
         if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
             if self.block_headers_cache.get(block["previousBlockHash"]) is None and self.last_block_height:
                 self.log.critical("Connector error! Node out of sync "
