@@ -621,7 +621,7 @@ class UUTXO():
         for r in data["uutxo"]:
             print("-", rh2s(r[0]))
         for r in rows:
-            print("--", rh2s(r["outpoint"]))
+            print("--", r["pointer"] >> 39, rh2s(r["outpoint"]))
         await conn.copy_records_to_table('connector_utxo',
                                          columns=["outpoint", "pointer",
                                                   "address", "amount"], records=data["utxo"])
