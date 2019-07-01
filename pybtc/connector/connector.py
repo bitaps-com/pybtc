@@ -138,7 +138,6 @@ class Connector:
         self.tx_orphan_resolved = 0
         self.block_headers_cache = Cache(max_size=self.block_headers_cache_limit)
         self.mempool_tx_count = 0
-        self.tt = 0
 
         self.block_txs_request = asyncio.Future()
         self.block_txs_request.set_result(True)
@@ -347,7 +346,6 @@ class Connector:
 
                         elif topic == b"rawtx":
                             self.last_zmq_msg = int(time.time())
-                            continue
                             if self.deep_synchronization or not self.mempool_tx:
                                 continue
                             try:
@@ -520,15 +518,12 @@ class Connector:
     async def _new_block(self, block):
         if not self.active: return
         tq = time.time()
-        if not self.deep_synchronization:
-            if self.block_headers_cache.get(block["hash"]) is not None:
-                print("dublicate ",block["hash"])
-                return
         if self.deep_synchronization:  block["height"] = self.last_block_height + 1
         if self.last_block_height >= block["height"]:  return
         if not self.active_block.done():  return
         try:
             self.active_block = asyncio.Future()
+
             if self.deep_synchronization:
                 if self.last_block_height < self.last_block_utxo_cached_height:
                     if not self.cache_loading:
@@ -538,6 +533,10 @@ class Connector:
                     if self.cache_loading and self.deep_synchronization:
                         self.log.info("UTXO Cache bootstrap completed")
                     self.cache_loading = False
+            else:
+                if self.block_headers_cache.get(block["hash"]) is not None:
+                    return
+
             mount_point_exist = await self.verify_block_position(block)
             if not mount_point_exist:
                 return
@@ -636,12 +635,9 @@ class Connector:
                 return
 
         if self.block_headers_cache.len() == 0:
-            print(2)
             return
-        self.tt += 1
-        # if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
-        if self.tt < 20:
 
+        if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
             if self.block_headers_cache.get(block["previousBlockHash"]) is None and self.last_block_height:
                 self.log.critical("Connector error! Node out of sync "
                                   "no parent block in chain tail %s" % block["previousblockhash"])
