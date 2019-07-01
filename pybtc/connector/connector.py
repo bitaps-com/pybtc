@@ -137,6 +137,7 @@ class Connector:
         self.new_tx = MRU()
         self.tx_orphan_resolved = 0
         self.block_headers_cache = Cache(max_size=self.block_headers_cache_limit)
+        self.chain_tail_start_len = len(chain_tail)
         self.mempool_tx_count = 0
 
         self.block_txs_request = asyncio.Future()
@@ -636,12 +637,15 @@ class Connector:
                 return
 
         if self.block_headers_cache.len() == 0:
-            return
-        if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
-            if self.block_headers_cache.get(block["previousBlockHash"]) is None and self.last_block_height:
+            if self.chain_tail_start_len and self.last_block_height:
                 self.log.critical("Connector error! Node out of sync "
                                   "no parent block in chain tail %s" % block["previousblockhash"])
+                await asyncio.sleep(30)
                 raise Exception("Node out of sync")
+            else:
+                return True
+
+        if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
 
             if self.orphan_handler:
                 if self.utxo_data:
