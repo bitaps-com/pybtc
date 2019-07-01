@@ -607,6 +607,7 @@ class Connector:
                                                             len(self.tx_orphan_buffer),
                                                             self.tx_orphan_resolved))
                 self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"],len(block["tx"])))
+
         except Exception as err:
             if self.await_tx:
                 self.await_tx = set()
@@ -615,7 +616,7 @@ class Connector:
                     self.await_tx_future[i].cancel()
             self.await_tx_future = dict()
             self.log.error("block %s error %s" % (block["height"], str(err)))
-            print(traceback.format_exc())
+
         finally:
             if self.node_last_block > self.last_block_height:
                 self.get_next_block_mutex = True
