@@ -538,7 +538,7 @@ class UUTXO():
                     # save deleted utxo except utxo created in recent block
                     if r["pointer"] >> 39 < h:
                         utxo.append((r["outpoint"], r["pointer"], r["address"], r["amount"]))
-                for r in rows
+                for r in rows:
                     if r["pointer"] >> 39 < h:
                         print("-x", rh2s(r["outpoint"]))
                     else:
