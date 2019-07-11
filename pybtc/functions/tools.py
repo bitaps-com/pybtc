@@ -259,6 +259,30 @@ def c_int_to_int(b, base_bytes=1):
     return n
 
 
+def read_c_int(stream, base_bytes=1):
+    """
+    Read compressed integer from io.BytesIO stream to bytes
+
+    :param stream: io.BytesIO stream.
+    :return: bytes.
+    """
+    b = bytearray(stream.read(1))
+    byte_length = f = 0
+    while True:
+        v = b[f]
+        if v == 0xff:
+            byte_length += 8
+            f += 1
+            b += stream.read(1)
+            continue
+        while v & 0b10000000:
+            byte_length += 1
+            v = v << 1
+        break
+    b += stream.read(byte_length+base_bytes - f)
+    return b
+
+
 # generic big endian MPI format
 def bn_bytes(v, have_ext=False):
     ext = 0

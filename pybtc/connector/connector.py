@@ -8,19 +8,11 @@ from pybtc.transaction import Transaction
 from pybtc import int_to_bytes, bytes_to_int, bytes_from_hex
 from pybtc import MRU
 from collections import deque
-import traceback
 
-try:
-    import aiojsonrpc
-except:
-    raise Exception("required module https://github.com/bitaps-com/aiojsonrpc")
 
-try:
-    import zmq
-except:
-    raise Exception("required module pyzmq")
 
-import zmq.asyncio
+
+
 import asyncio
 import time
 from _pickle import loads
@@ -53,6 +45,18 @@ class Connector:
                  db_type=None,
                  db=None,
                  app_proc_title="Connector"):
+
+        try:
+            import aiojsonrpc
+        except:
+            raise Exception("required module https://github.com/bitaps-com/aiojsonrpc")
+
+        try:
+            import zmq
+            import zmq.asyncio
+        except:
+            raise Exception("required module pyzmq")
+
         self.loop = asyncio.get_event_loop()
 
         # settings
