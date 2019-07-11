@@ -18,6 +18,17 @@ import time
 from _pickle import loads
 
 try:
+    import aiojsonrpc
+except:
+    pass
+
+try:
+    import zmq
+    import zmq.asyncio
+except:
+    pass
+
+try:
     import asyncpg
 except:
     pass
@@ -46,16 +57,7 @@ class Connector:
                  db=None,
                  app_proc_title="Connector"):
 
-        try:
-            import aiojsonrpc
-        except:
-            raise Exception("required module https://github.com/bitaps-com/aiojsonrpc")
 
-        try:
-            import zmq
-            import zmq.asyncio
-        except:
-            raise Exception("required module pyzmq")
 
         self.loop = asyncio.get_event_loop()
 
