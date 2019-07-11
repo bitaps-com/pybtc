@@ -14,25 +14,26 @@ from collections import deque
 import pickle
 
 
-try:
-    import asyncpg
-except:
-    pass
 
-try:
-    from setproctitle import setproctitle
-except:
-    raise Exception("required module setproctitle")
-
-try:
-    import aiojsonrpc
-except:
-    raise Exception("required module aiojsonrpc")
 
 
 
 class BlockLoader:
     def __init__(self, parent, workers=4, dsn = None):
+        try:
+            import asyncpg
+        except:
+            pass
+
+        try:
+            from setproctitle import setproctitle
+        except:
+            raise Exception("required module setproctitle")
+
+        try:
+            import aiojsonrpc
+        except:
+            raise Exception("required module aiojsonrpc")
         self.worker_limit = workers
         self.worker = dict()
         self.worker_tasks = list()
