@@ -279,7 +279,7 @@ def read_c_int(stream, base_bytes=1):
             byte_length += 1
             v = v << 1
         break
-    b += stream.read(byte_length+base_bytes - f)
+    b += stream.read(byte_length+base_bytes - f - 1)
     return b
 
 
