@@ -8,7 +8,7 @@ from pybtc.transaction import Transaction
 from pybtc import int_to_bytes, bytes_to_int, bytes_from_hex
 from pybtc import MRU
 from collections import deque
-
+import traceback
 
 
 
@@ -631,6 +631,7 @@ class Connector:
                     self.await_tx_future[i].cancel()
             self.await_tx_future = dict()
             self.log.error("block %s error %s" % (block["height"], str(err)))
+            print(traceback.format_exc())
 
         finally:
             if self.node_last_block > self.last_block_height:
