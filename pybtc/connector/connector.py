@@ -423,10 +423,20 @@ class Connector:
                     try:
                         if self.last_block_height > self.deep_sync_limit:
                             async with self.db_pool.acquire() as conn:
-                                async with conn.transaction():
-                                    await conn.execute("DELETE FROM connector_block_state_checkpoint "
-                                                       "WHERE height < $1;",
-                                                       self.last_block_height - self.deep_sync_limit)
+                                await conn.execute("DELETE FROM connector_block_state_checkpoint "
+                                                   "WHERE height < $1;",
+                                                   self.last_block_height - self.deep_sync_limit)
+                        async with self.db_pool.acquire() as conn:
+                            d = await conn.fetchval("SELECT n_dead_tup FROM pg_stat_user_tables "
+                                                    "WHERE relname = 'connector_utxo' LIMIT 1;")
+                            if d > 10000000:
+                                self.log.info("Maintenance connector_utxo table ...")
+                                t = time.time()
+                                await conn.execute("VACUUM FULL connector_utxo;")
+                                await conn.execute("ANALYZE connector_utxo;")
+                                self.log.info("Maintenance connector_utxo table completed %s",
+                                              round(time.time() - t, 2))
+
                     except:
                         pass
 
