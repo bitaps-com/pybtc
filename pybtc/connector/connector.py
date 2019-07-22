@@ -436,7 +436,6 @@ class Connector:
                                 await conn.execute("ANALYZE connector_utxo;")
                                 self.log.info("Maintenance connector_utxo table completed %s",
                                               round(time.time() - t, 2))
-
                     except:
                         pass
 
