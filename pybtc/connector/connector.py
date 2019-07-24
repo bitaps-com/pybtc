@@ -562,7 +562,7 @@ class Connector:
                 if self.block_headers_cache.get(block["hash"]) is not None:
                     return
 
-            if self.deep_synchronization:
+            if not self.deep_synchronization:
                 mount_point_exist = await self.verify_block_position(block)
                 if not mount_point_exist:
                     return
