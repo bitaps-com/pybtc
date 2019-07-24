@@ -562,9 +562,10 @@ class Connector:
                 if self.block_headers_cache.get(block["hash"]) is not None:
                     return
 
-            mount_point_exist = await self.verify_block_position(block)
-            if not mount_point_exist:
-                return
+            if self.deep_synchronization:
+                mount_point_exist = await self.verify_block_position(block)
+                if not mount_point_exist:
+                    return
 
             if self.deep_synchronization:
                 await self._block_as_transactions_batch(block)
@@ -674,7 +675,7 @@ class Connector:
                 raise Exception("Node out of sync")
             else:
                 return True
-        print(self.block_headers_cache.get_last_key(), block["previousblockhash"])
+
         if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
             if self.orphan_handler:
                 if self.utxo_data:
