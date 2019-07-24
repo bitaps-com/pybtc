@@ -674,9 +674,8 @@ class Connector:
                 raise Exception("Node out of sync")
             else:
                 return True
-
+        print(self.block_headers_cache.get_last_key(), block["previousblockhash"])
         if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
-
             if self.orphan_handler:
                 if self.utxo_data:
                     if self.db_type == "postgresql":
