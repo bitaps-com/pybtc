@@ -59,6 +59,16 @@ SCRIPT_TYPES = {"P2PKH":        0,
                 "NULL_DATA_NON_STANDARD": 8
                 }
 
+SCRIPT_N_TYPES = {0: "P2PKH",
+                  1: "P2SH",
+                  2: "PUBKEY",
+                  3: "NULL_DATA",
+                  4: "MULTISIG",
+                  5: "P2WPKH",
+                  6: "P2WSH",
+                  7: "NON_STANDARD",
+                  8: "NULL_DATA_NON_STANDARD"
+                }
 
 # CONSTANTS hierarchical deterministic wallets (HD Wallets)
 MAINNET_XPRIVATE_KEY_PREFIX = b'\x04\x88\xAD\xE4'
