@@ -150,10 +150,6 @@ def script_to_address(script, testnet=False):
                                script_hash=script_hash, witness_version=witness_version)
     return None
 
-
-
-
-
 def decode_script(script, asm=False):
     """
     Decode script to ASM format or to human readable OPCODES string.
