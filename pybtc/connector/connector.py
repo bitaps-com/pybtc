@@ -656,7 +656,7 @@ class Connector:
                     self.await_tx_future[i].cancel()
             self.await_tx_future = dict()
             self.log.error("block %s error %s" % (block["height"], str(err)))
-            print(traceback.format_exc())
+
 
         finally:
             if self.node_last_block > self.last_block_height:
@@ -777,7 +777,7 @@ class Connector:
                                     tx["vIn"][i]["coin"] = inp["_c_"]
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
-                                    self.sync_utxo.get(outpoint
+                                    self.sync_utxo.get(outpoint)
                                 except:
                                     try:
                                         # coin was loaded from db on preload stage
