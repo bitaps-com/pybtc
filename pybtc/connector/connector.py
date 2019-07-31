@@ -715,6 +715,8 @@ class Connector:
     async def _block_as_transactions_batch(self, block):
         t, t2 = time.time(), 0
         height = block["height"]
+        block["txMap"] = deque()
+        tx_map_append = block["txMap"].append
         if self.utxo_data:
             #
             #  utxo mode
@@ -724,6 +726,12 @@ class Connector:
             for q in block["rawTx"]:
                 tx = block["rawTx"][q]
                 for i in tx["vOut"]:
+                    try:
+                        address = b"".join((bytes([out["nType"]]), out["addressHash"]))
+                    except:
+                        address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
+
+                    pointer = (height<<39)+(q<<20)+(1<<19)+i
                     if "_s_" in tx["vOut"][i]:
                         self.coins += 1
                     else:
@@ -733,14 +741,13 @@ class Connector:
                             continue
                         self.coins += 1
 
-                        try:
-                            address = b"".join((bytes([out["nType"]]), out["addressHash"]))
-                        except:
-                            address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
+                        # try:
+                        #     address = b"".join((bytes([out["nType"]]), out["addressHash"]))
+                        # except:
+                        #     address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
                         self.sync_utxo.set(b"".join((tx["txId"], int_to_bytes(i))),
-                                           (height<<39)+(q<<20)+(1<<19)+i,
-                                           out["value"],
-                                           address)
+                                           pointer,  out["value"], address)
+                    tx_map_append((pointer, address, out["value"]))
 
             stxo, missed = dict(), deque()
             for q in block["rawTx"]:
@@ -755,6 +762,9 @@ class Connector:
                                 tx["vIn"][i]["coin"] = inp["_a_"]
                                 self.preload_cached_annihilated += 1
                                 self.preload_cached_total += 1
+                                tx_map_append(((height<<39)+(q<<20)+(1<<19)+i,
+                                               tx["vIn"][i]["coin"][2],
+                                               tx["vIn"][i]["coin"][1]))
                             except:
                                 try:
                                     # preloaded and should exist in cache
@@ -763,6 +773,9 @@ class Connector:
                                     self.preload_cached += 1
                                     outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                     self.sync_utxo.get(outpoint)
+                                    tx_map_append(((height<<39)+(q<<20)+(1<<19)+i,
+                                                   tx["vIn"][i]["coin"][2],
+                                                   tx["vIn"][i]["coin"][1]))
                                 except:
                                     try:
                                         # coin was loaded from db on preload stage
@@ -771,6 +784,9 @@ class Connector:
                                         self.preload_cached += 1
                                         outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                         self.sync_utxo.deleted.append(outpoint)
+                                        tx_map_append(((height << 39) + (q << 20) + (1 << 19) + i,
+                                                       tx["vIn"][i]["coin"][2],
+                                                       tx["vIn"][i]["coin"][1]))
                                     except:
                                         outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                         r = self.sync_utxo.get(outpoint)
@@ -797,7 +813,9 @@ class Connector:
                                 raise Exception("utxo get failed ")
                         else:
                             raise Exception("utxo get failed %s" % rh2s(block["rawTx"][q]["vIn"][i]["txId"]))
-
+                    tx_map_append(((height << 39) + (q << 20) + (1 << 19) + i,
+                                   block["rawTx"][q]["vIn"][i]["coin"][2],
+                                   block["rawTx"][q]["vIn"][i]["coin"][1]))
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])
         self.batch_parsing += (time.time() - t) - t2
