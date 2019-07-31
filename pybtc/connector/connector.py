@@ -1,5 +1,6 @@
 from pybtc.functions.tools import rh2s, s2rh
 from pybtc.connector.block_loader import BlockLoader
+from pybtc.functions.block import merkle_tree, merkle_proof
 from pybtc.connector.utxo import UTXO, UUTXO
 from pybtc.connector.utils import decode_block_tx
 from pybtc.connector.utils import Cache
@@ -513,10 +514,12 @@ class Connector:
                     block["checkpoint"] = self.last_block_height + 1
                     block["height"] = self.last_block_height + 1
                     block["txMap"] = deque()
+                    m_tree = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
                     for t in block["rawTx"]:
                         tx = block["rawTx"][t]
-                        # # get inputs
+                        block["rawTx"][z]["merkleProof"] = b''.join(merkle_proof(m_tree, t, return_hex=False))
 
+                        # # get inputs
                         for i in tx["vOut"]:
                             out = tx["vOut"][i]
                             if out["nType"] not in (8, 3):
