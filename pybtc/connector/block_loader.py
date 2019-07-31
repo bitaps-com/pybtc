@@ -1,5 +1,6 @@
 from pybtc.functions.tools import bytes_to_int
 from pybtc.functions.tools import int_to_bytes
+from pybtc.functions.block import merkle_tree, merkle_proof
 from pybtc.connector.utils import decode_block_tx
 from pybtc import MRU
 import asyncio
@@ -297,9 +298,10 @@ class Worker:
                         block = decode_block_tx(y["result"])
                         block["txMap"] = deque()
                         block["stxo"] = deque()
+                        m_tree = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
                         if self.utxo_data:
                             for z in block["rawTx"]:
-
+                                block["rawTx"][z]["merkleProof"] = b''.join(merkle_proof(m_tree, t, return_hex=False))
                                 for i in block["rawTx"][z]["vOut"]:
                                     o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
                                     pointer = (x << 39)+(z << 20)+(1 << 19) + i
