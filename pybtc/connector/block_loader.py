@@ -388,7 +388,7 @@ class Worker:
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except Exception as err:
-            self.log.debug("load blocks error: %s" % str(err))
+            print("load blocks error: %s" % str(err))
             await self.pipe_sent_msg(b'result', pickle.dumps([]))
             await self.pipe_sent_msg(b'failed', pickle.dumps(start_height))
 
