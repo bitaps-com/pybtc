@@ -512,6 +512,20 @@ class Connector:
                     block = await self._get_block_by_hash(h)
                     block["checkpoint"] = self.last_block_height + 1
                     block["height"] = self.last_block_height + 1
+                    block["txMap"] = deque()
+                    for t in block["rawTx"]:
+                        tx = block["rawTx"][t]
+                        # # get inputs
+
+                        for i in tx["vOut"]:
+                            out = tx["vOut"][i]
+                            if out["nType"] not in (8, 3):
+                                if "addressHash" not in out:
+                                    address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
+                                else:
+                                    address = b"".join((bytes([out["nType"]]), out["addressHash"]))
+                                block["txMap"].append(((block["height"]<<39)+(t<<20)+(1<<19)+i,
+                                                       address, out["value"]))
 
                 self.loop.create_task(self._new_block(block))
 
