@@ -322,6 +322,8 @@ class Worker:
                                                block["rawTx"][z]["vIn"][i]["_a_"] = r
                                            else:
                                                block["rawTx"][z]["vIn"][i]["_c_"] = r
+                                           block["txMap"].append(((height << 39) + (z << 20) + (0 << 19) + i,
+                                                                  r[2], r[1]))
                                            t += 1
                                            self.destroyed_coins[r[0]] = True
                                            assert r is not None
@@ -356,6 +358,8 @@ class Worker:
                                    outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                    try:
                                        blocks[block]["rawTx"][z]["vIn"][i]["_l_"] = p[outpoint]
+                                       block["txMap"].append(((height<<39)+(z<<20)+(0<<19)+i,
+                                                              p[outpoint][2], p[outpoint][1]))
                                        assert p[outpoint] is not None
                                        t += 1
                                        n += 1
