@@ -292,10 +292,10 @@ class Worker:
 
                 result = await self.rpc.batch(batch)
 
-
                 for x, y in zip(h, result):
                     if y["result"] is not None:
                         block = decode_block_tx(y["result"])
+                        block["txMap"] = deque()
                         if self.utxo_data:
                             for z in block["rawTx"]:
                                 for i in block["rawTx"][z]["vOut"]:
@@ -308,7 +308,7 @@ class Worker:
                                         address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
                                                             block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
                                     self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
-
+                                    block["txMap"].append((pointer, address, block["rawTx"][z]["vOut"][i]["value"]))
 
                                 if not block["rawTx"][z]["coinbase"]:
                                     for i  in block["rawTx"][z]["vIn"]:
