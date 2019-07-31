@@ -819,9 +819,9 @@ class Connector:
                                 raise Exception("utxo get failed ")
                         else:
                             raise Exception("utxo get failed %s" % rh2s(block["rawTx"][q]["vIn"][i]["txId"]))
-                    tx_map_append(((height << 39)+(q<<20)+(0<<19)+i,
-                                   block["rawTx"][q]["vIn"][i]["coin"][2],
-                                   block["rawTx"][q]["vIn"][i]["coin"][1]))
+                    # tx_map_append(((height << 39)+(q<<20)+(0<<19)+i,
+                    #                block["rawTx"][q]["vIn"][i]["coin"][2],
+                    #                block["rawTx"][q]["vIn"][i]["coin"][1]))
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])
         self.batch_parsing += (time.time() - t) - t2
