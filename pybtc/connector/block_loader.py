@@ -307,6 +307,7 @@ class Worker:
                                     except:
                                         address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
                                                             block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
+                                    block["rawTx"][z]["vOut"][i]["_address"] = address
                                     self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
                                     block["txMap"].append((pointer, address, block["rawTx"][z]["vOut"][i]["value"]))
 

@@ -526,6 +526,7 @@ class Connector:
                                     address = b"".join((bytes([out["nType"]]), out["addressHash"]))
                                 block["txMap"].append(((block["height"]<<39)+(t<<20)+(1<<19)+i,
                                                        address, out["value"]))
+                                block["rawTx"][t]["vOut"][i]["_address"] = address
 
                 self.loop.create_task(self._new_block(block))
 
@@ -748,13 +749,10 @@ class Connector:
                             continue
                         self.coins += 1
 
-                        try:
-                            address = b"".join((bytes([out["nType"]]), out["addressHash"]))
-                        except:
-                            address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
                         self.sync_utxo.set(b"".join((tx["txId"], int_to_bytes(i))),
                                            (height << 39) + (q << 20) + (1 << 19) + i,
-                                           out["value"], address)
+                                           out["value"],
+                                           out["_address"])
 
             stxo, missed = dict(), deque()
             for q in block["rawTx"]:
