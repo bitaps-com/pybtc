@@ -301,7 +301,7 @@ class Worker:
                         m_tree = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
                         if self.utxo_data:
                             for z in block["rawTx"]:
-                                block["rawTx"][z]["merkleProof"] = b''.join(merkle_proof(m_tree, t, return_hex=False))
+                                block["rawTx"][z]["merkleProof"] = b''.join(merkle_proof(m_tree, z, return_hex=False))
                                 for i in block["rawTx"][z]["vOut"]:
                                     o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
                                     pointer = (x << 39)+(z << 20)+(1 << 19) + i
