@@ -322,7 +322,7 @@ class Worker:
                                                block["rawTx"][z]["vIn"][i]["_a_"] = r
                                            else:
                                                block["rawTx"][z]["vIn"][i]["_c_"] = r
-                                           block["txMap"].append(((height << 39) + (z << 20) + (0 << 19) + i,
+                                           block["txMap"].append(((x << 39) + (z << 20) + (0 << 19) + i,
                                                                   r[2], r[1]))
                                            t += 1
                                            self.destroyed_coins[r[0]] = True
