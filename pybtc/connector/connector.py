@@ -514,6 +514,7 @@ class Connector:
                     block["checkpoint"] = self.last_block_height + 1
                     block["height"] = self.last_block_height + 1
                     block["txMap"] = deque()
+                    block["stxo"] = deque()
                     m_tree = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
                     for t in block["rawTx"]:
                         tx = block["rawTx"][t]
