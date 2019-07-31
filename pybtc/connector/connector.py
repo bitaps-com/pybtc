@@ -767,9 +767,6 @@ class Connector:
                                 tx["vIn"][i]["coin"] = inp["_a_"]
                                 self.preload_cached_annihilated += 1
                                 self.preload_cached_total += 1
-                                # tx_map_append(((height<<39)+(q<<20)+(0<<19)+i,
-                                #                tx["vIn"][i]["coin"][2],
-                                #                tx["vIn"][i]["coin"][1]))
                             except:
                                 try:
                                     outpoint = inp["vOut"]["_outpoint"]
@@ -780,10 +777,7 @@ class Connector:
                                     tx["vIn"][i]["coin"] = inp["_c_"]
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
-                                    self.sync_utxo.get(outpoint)
-                                    # tx_map_append(((height<<39)+(q<<20)+(0<<19)+i,
-                                    #                tx["vIn"][i]["coin"][2],
-                                    #                tx["vIn"][i]["coin"][1]))
+                                    self.sync_utxo.get(outpoint
                                 except:
                                     try:
                                         # coin was loaded from db on preload stage
@@ -791,9 +785,6 @@ class Connector:
                                         self.preload_cached_total += 1
                                         self.preload_cached += 1
                                         self.sync_utxo.deleted.append(outpoint)
-                                        # tx_map_append(((height<<39)+(q<<20)+(0<<19) + i,
-                                        #                tx["vIn"][i]["coin"][2],
-                                        #                tx["vIn"][i]["coin"][1]))
                                     except:
                                         r = self.sync_utxo.get(outpoint)
                                         if r:
@@ -822,6 +813,8 @@ class Connector:
                     tx_map_append(((height << 39)+(q<<20)+(0<<19)+i,
                                    block["rawTx"][q]["vIn"][i]["coin"][2],
                                    block["rawTx"][q]["vIn"][i]["coin"][1]))
+                    block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
+                                         (height << 39)+(q<<20)+(0<<19)+i))
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])
         self.batch_parsing += (time.time() - t) - t2

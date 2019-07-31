@@ -296,8 +296,10 @@ class Worker:
                     if y["result"] is not None:
                         block = decode_block_tx(y["result"])
                         block["txMap"] = deque()
+                        block["stxo"] = deque()
                         if self.utxo_data:
                             for z in block["rawTx"]:
+
                                 for i in block["rawTx"][z]["vOut"]:
                                     o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
                                     pointer = (x << 39)+(z << 20)+(1 << 19) + i
@@ -314,6 +316,7 @@ class Worker:
                                 if not block["rawTx"][z]["coinbase"]:
                                     for i  in block["rawTx"][z]["vIn"]:
                                         inp = block["rawTx"][z]["vIn"][i]
+
                                         outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                         block["rawTx"][z]["vIn"][i]["_outpoint"] = outpoint
                                         try:
@@ -324,6 +327,7 @@ class Worker:
                                                block["rawTx"][z]["vIn"][i]["_c_"] = r
                                            block["txMap"].append(((x << 39) + (z << 20) + (0 << 19) + i,
                                                                   r[2], r[1]))
+                                           block["stxo"].append((r[0], (x << 39) + (z << 20) + (0 << 19) + i))
                                            t += 1
                                            self.destroyed_coins[r[0]] = True
                                            assert r is not None
@@ -360,6 +364,8 @@ class Worker:
                                        blocks[block]["rawTx"][z]["vIn"][i]["_l_"] = p[outpoint]
                                        block["txMap"].append(((height<<39)+(z<<20)+(0<<19)+i,
                                                               p[outpoint][2], p[outpoint][1]))
+                                       block["stxo"].append((p[outpoint][0],
+                                                            (height << 39) + (z << 20) + (0 << 19) + i))
                                        assert p[outpoint] is not None
                                        t += 1
                                        n += 1
