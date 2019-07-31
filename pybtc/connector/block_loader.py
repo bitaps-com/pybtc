@@ -315,6 +315,7 @@ class Worker:
                                     for i  in block["rawTx"][z]["vIn"]:
                                         inp = block["rawTx"][z]["vIn"][i]
                                         outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
+                                        block["rawTx"][z]["vIn"][i]["_outpoint"] = outpoint
                                         try:
                                            r = self.coins.delete(outpoint)
                                            if r[0] >> 39 >= start_height and r[0] >> 39 < height:

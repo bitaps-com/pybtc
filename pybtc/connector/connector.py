@@ -772,11 +772,14 @@ class Connector:
                                                tx["vIn"][i]["coin"][1]))
                             except:
                                 try:
+                                    outpoint = inp["vOut"]["_outpoint"]
+                                except:
+                                    outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
+                                try:
                                     # preloaded and should exist in cache
                                     tx["vIn"][i]["coin"] = inp["_c_"]
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
-                                    outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                     self.sync_utxo.get(outpoint)
                                     tx_map_append(((height<<39)+(q<<20)+(0<<19)+i,
                                                    tx["vIn"][i]["coin"][2],
@@ -787,13 +790,11 @@ class Connector:
                                         tx["vIn"][i]["coin"] = inp["_l_"]
                                         self.preload_cached_total += 1
                                         self.preload_cached += 1
-                                        outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                         self.sync_utxo.deleted.append(outpoint)
                                         tx_map_append(((height<<39)+(q<<20)+(0<<19) + i,
                                                        tx["vIn"][i]["coin"][2],
                                                        tx["vIn"][i]["coin"][1]))
                                     except:
-                                        outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                         r = self.sync_utxo.get(outpoint)
                                         if r:
                                             tx["vIn"][i]["coin"] = r
