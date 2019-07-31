@@ -726,6 +726,7 @@ class Connector:
             for q in block["rawTx"]:
                 tx = block["rawTx"][q]
                 for i in tx["vOut"]:
+                    out = tx["vOut"][i]
                     try:
                         address = b"".join((bytes([out["nType"]]), out["addressHash"]))
                     except:
@@ -735,7 +736,6 @@ class Connector:
                     if "_s_" in tx["vOut"][i]:
                         self.coins += 1
                     else:
-                        out = tx["vOut"][i]
                         if self.skip_opreturn and out["nType"] in (3, 8):
                             self.op_return += 1
                             continue
