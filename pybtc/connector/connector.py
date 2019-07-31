@@ -517,7 +517,7 @@ class Connector:
                     m_tree = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
                     for t in block["rawTx"]:
                         tx = block["rawTx"][t]
-                        block["rawTx"][z]["merkleProof"] = b''.join(merkle_proof(m_tree, t, return_hex=False))
+                        block["rawTx"][t]["merkleProof"] = b''.join(merkle_proof(m_tree, t, return_hex=False))
 
                         # # get inputs
                         for i in tx["vOut"]:
