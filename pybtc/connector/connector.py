@@ -52,6 +52,7 @@ class Connector:
                  skip_opreturn=True,
                  merkle_proof=False,
                  tx_map=False,
+                 analytica=False,
                  block_cache_workers= 4,
                  block_preload_cache_limit= 1000 * 1000000,
                  block_preload_batch_size_limit = 200000000,

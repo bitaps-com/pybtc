@@ -146,7 +146,8 @@ class BlockLoader:
         worker = Process(target=Worker, args=(index, in_reader, in_writer, out_reader, out_writer,
                                               self.rpc_url, self.rpc_timeout, self.rpc_batch_limit,
                                               self.dsn, self.parent.app_proc_title, self.parent.utxo_data,
-                                              self.parent.option_tx_map, self.parent.option_merkle_proof))
+                                              self.parent.option_tx_map,
+                                              self.parent.option_merkle_proof))
         worker.start()
         in_reader.close()
         out_writer.close()
@@ -320,7 +321,8 @@ class Worker:
                                                             block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
                                     block["rawTx"][z]["vOut"][i]["_address"] = address
                                     self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
-                                    block["txMap"].append((pointer, address, block["rawTx"][z]["vOut"][i]["value"]))
+                                    if self.option_tx_map:
+                                        block["txMap"].append((pointer, address, block["rawTx"][z]["vOut"][i]["value"]))
 
                                 if not block["rawTx"][z]["coinbase"]:
                                     for i  in block["rawTx"][z]["vIn"]:
