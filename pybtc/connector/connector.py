@@ -76,7 +76,7 @@ class Connector:
         self.tx_handler = tx_handler
         self.skip_opreturn = skip_opreturn
         self.option_merkle_proof = merkle_proof
-        self.option_tx_map = merkle_proof
+        self.option_tx_map = tx_map
         self.before_block_handler = before_block_handler
         self.block_handler = block_handler
         self.after_block_handler = after_block_handler
