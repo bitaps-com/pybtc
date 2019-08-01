@@ -50,6 +50,8 @@ class Connector:
                  utxo_cache_size=1000000,
                  tx_orphan_buffer_limit=1000,
                  skip_opreturn=True,
+                 merkle_proof=False,
+                 tx_map=False,
                  block_cache_workers= 4,
                  block_preload_cache_limit= 1000 * 1000000,
                  block_preload_batch_size_limit = 200000000,
@@ -73,6 +75,8 @@ class Connector:
         self.block_timeout = block_timeout
         self.tx_handler = tx_handler
         self.skip_opreturn = skip_opreturn
+        self.option_merkle_proof = merkle_proof
+        self.option_tx_map = merkle_proof
         self.before_block_handler = before_block_handler
         self.block_handler = block_handler
         self.after_block_handler = after_block_handler
@@ -485,7 +489,7 @@ class Connector:
                             self.log.info("Last block %s App last block %s" % (self.last_block_height,
                                                                                self.app_last_block))
 
-                            self.sync_utxo.checkpoints=[self.last_block_height]
+                            self.sync_utxo.checkpoints=deque([self.last_block_height])
                             self.sync_utxo.size_limit = 0
                             while  self.sync_utxo.save_process:
                                 self.log.info("wait for utxo cache flush ...")
@@ -513,12 +517,15 @@ class Connector:
                     block = await self._get_block_by_hash(h)
                     block["checkpoint"] = self.last_block_height + 1
                     block["height"] = self.last_block_height + 1
-                    block["txMap"] = deque()
-                    block["stxo"] = deque()
-                    m_tree = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
+                    if self.option_tx_map:
+                        block["txMap"] = deque()
+                        block["stxo"] = deque()
+                    if self.option_merkle_proof:
+                        m_tree = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
                     for t in block["rawTx"]:
                         tx = block["rawTx"][t]
-                        block["rawTx"][t]["merkleProof"] = b''.join(merkle_proof(m_tree, t, return_hex=False))
+                        if self.option_merkle_proof:
+                            block["rawTx"][t]["merkleProof"] = b''.join(merkle_proof(m_tree, t, return_hex=False))
 
                         # # get inputs
                         for i in tx["vOut"]:
@@ -528,8 +535,9 @@ class Connector:
                                     address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
                                 else:
                                     address = b"".join((bytes([out["nType"]]), out["addressHash"]))
-                                block["txMap"].append(((block["height"]<<39)+(t<<20)+(1<<19)+i,
-                                                       address, out["value"]))
+                                if self.option_tx_map:
+                                    block["txMap"].append(((block["height"]<<39)+(t<<20)+(1<<19)+i,
+                                                           address, out["value"]))
                                 block["rawTx"][t]["vOut"][i]["_address"] = address
 
                 self.loop.create_task(self._new_block(block))
@@ -735,7 +743,8 @@ class Connector:
     async def _block_as_transactions_batch(self, block):
         t, t2 = time.time(), 0
         height = block["height"]
-        tx_map_append = block["txMap"].append
+        if self.option_tx_map:
+            tx_map_append = block["txMap"].append
         if self.utxo_data:
             #
             #  utxo mode
@@ -815,11 +824,12 @@ class Connector:
                                 raise Exception("utxo get failed ")
                         else:
                             raise Exception("utxo get failed %s" % rh2s(block["rawTx"][q]["vIn"][i]["txId"]))
-                    tx_map_append(((height << 39)+(q<<20)+(0<<19)+i,
-                                   block["rawTx"][q]["vIn"][i]["coin"][2],
-                                   block["rawTx"][q]["vIn"][i]["coin"][1]))
-                    block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
-                                         (height << 39)+(q<<20)+(0<<19)+i))
+                    if self.option_tx_map:
+                        tx_map_append(((height << 39)+(q<<20)+(0<<19)+i,
+                                       block["rawTx"][q]["vIn"][i]["coin"][2],
+                                       block["rawTx"][q]["vIn"][i]["coin"][1]))
+                        block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
+                                             (height << 39)+(q<<20)+(0<<19)+i))
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])
         self.batch_parsing += (time.time() - t) - t2

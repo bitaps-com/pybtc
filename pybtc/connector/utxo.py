@@ -37,7 +37,7 @@ class UTXO():
 
 
         self.checkpoint = 0
-        self.checkpoints = list()
+        self.checkpoints = deque()
         self.log = log
 
 

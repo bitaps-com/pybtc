@@ -145,7 +145,8 @@ class BlockLoader:
         # create new process
         worker = Process(target=Worker, args=(index, in_reader, in_writer, out_reader, out_writer,
                                               self.rpc_url, self.rpc_timeout, self.rpc_batch_limit,
-                                              self.dsn, self.parent.app_proc_title, self.parent.utxo_data))
+                                              self.dsn, self.parent.app_proc_title, self.parent.utxo_data,
+                                              self.parent.option_tx_map, self.parent.option_merkle_proof))
         worker.start()
         in_reader.close()
         out_writer.close()
@@ -241,7 +242,8 @@ class BlockLoader:
 class Worker:
 
     def __init__(self, name , in_reader, in_writer, out_reader, out_writer,
-                 rpc_url, rpc_timeout, rpc_batch_limit, dsn, app_proc_title, utxo_data):
+                 rpc_url, rpc_timeout, rpc_batch_limit, dsn, app_proc_title, utxo_data,
+                 option_tx_map, option_merkle_proof):
         setproctitle('%s: blocks preload worker %s' % (app_proc_title, name))
         self.rpc_url = rpc_url
         self.rpc_timeout = rpc_timeout
@@ -250,6 +252,8 @@ class Worker:
         self.name = name
         self.dsn = dsn
         self.db = None
+        self.option_tx_map = option_tx_map
+        self.option_merkle_proof = option_merkle_proof
         in_writer.close()
         out_reader.close()
         policy = asyncio.get_event_loop_policy()
@@ -296,12 +300,15 @@ class Worker:
                 for x, y in zip(h, result):
                     if y["result"] is not None:
                         block = decode_block_tx(y["result"])
-                        block["txMap"] = deque()
-                        block["stxo"] = deque()
-                        m_tree = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
+                        if self.option_tx_map:
+                            block["txMap"] = deque()
+                            block["stxo"] = deque()
+                        if self.option_merkle_proof:
+                            m_tree = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
                         if self.utxo_data:
                             for z in block["rawTx"]:
-                                block["rawTx"][z]["merkleProof"] = b''.join(merkle_proof(m_tree, z, return_hex=False))
+                                if self.option_merkle_proof:
+                                    block["rawTx"][z]["merkleProof"] = b''.join(merkle_proof(m_tree, z, return_hex=False))
                                 for i in block["rawTx"][z]["vOut"]:
                                     o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
                                     pointer = (x << 39)+(z << 20)+(1 << 19) + i
@@ -327,9 +334,10 @@ class Worker:
                                                block["rawTx"][z]["vIn"][i]["_a_"] = r
                                            else:
                                                block["rawTx"][z]["vIn"][i]["_c_"] = r
-                                           block["txMap"].append(((x << 39) + (z << 20) + (0 << 19) + i,
-                                                                  r[2], r[1]))
-                                           block["stxo"].append((r[0], (x << 39) + (z << 20) + (0 << 19) + i))
+                                           if self.option_tx_map:
+                                               block["txMap"].append(((x << 39) + (z << 20) + (0 << 19) + i,
+                                                                      r[2], r[1]))
+                                               block["stxo"].append((r[0], (x << 39) + (z << 20) + (0 << 19) + i))
                                            t += 1
                                            self.destroyed_coins[r[0]] = True
                                            assert r is not None
@@ -364,11 +372,11 @@ class Worker:
                                    outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                    try:
                                        blocks[block]["rawTx"][z]["vIn"][i]["_l_"] = p[outpoint]
-                                       block["txMap"].append(((height<<39)+(z<<20)+(0<<19)+i,
-                                                              p[outpoint][2], p[outpoint][1]))
-                                       block["stxo"].append((p[outpoint][0],
-                                                            (height << 39) + (z << 20) + (0 << 19) + i))
-                                       assert p[outpoint] is not None
+                                       if self.option_tx_map:
+                                           block["txMap"].append(((height<<39)+(z<<20)+(0<<19)+i,
+                                                                  p[outpoint][2], p[outpoint][1]))
+                                           block["stxo"].append((p[outpoint][0],
+                                                                (height << 39) + (z << 20) + (0 << 19) + i))
                                        t += 1
                                        n += 1
                                    except:
