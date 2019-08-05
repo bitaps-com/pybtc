@@ -613,7 +613,7 @@ class Worker:
                            block = blocks[b]
                            for z in block["rawTx"]:
                                tx = block["rawTx"][z]
-                               pointer = (block["height"] << 19) + z
+                               pointer = (b << 19) + z
                                amount = tx["amount"]
                                size = tx["size"]
                                amount_key = str(floor(log10(amount))) if amount else "null"
