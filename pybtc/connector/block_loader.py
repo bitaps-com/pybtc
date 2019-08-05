@@ -609,9 +609,10 @@ class Worker:
                                        pass
 
                    if self.option_analytica:
-                       for block in blocks:
-                           for z in blocks[block]["rawTx"]:
-                               tx = blocks[block]["rawTx"][z]
+                       for b in blocks:
+                           block = block[b]
+                           for z in block["rawTx"]:
+                               tx = block["rawTx"][z]
                                pointer = (block["height"] << 19) + z
                                amount = tx["amount"]
                                size = tx["size"]
