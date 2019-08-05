@@ -498,7 +498,7 @@ class Worker:
 
                                 if self.option_analytica:
                                     tx = block["rawTx"][z]
-                                    pointer = (block["height"] << 19) + z
+                                    pointer = (x << 19) + z
                                     amount = tx["amount"]
                                     size = tx["size"]
                                     amount_key = str(floor(log10(amount))) if amount else "null"

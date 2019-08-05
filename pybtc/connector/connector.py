@@ -523,8 +523,7 @@ class Connector:
 
                     if self.option_tx_map:
                         block["txMap"], block["stxo"] = deque(), deque()
-                        print("map")
-                    print( self.option_tx_map)
+
                     if self.option_merkle_proof:
                         mt = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
                     if self.option_analytica:
