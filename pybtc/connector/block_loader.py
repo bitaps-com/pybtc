@@ -610,7 +610,7 @@ class Worker:
 
                    if self.option_analytica:
                        for b in blocks:
-                           block = block[b]
+                           block = blocks[b]
                            for z in block["rawTx"]:
                                tx = block["rawTx"][z]
                                pointer = (block["height"] << 19) + z
