@@ -2,7 +2,7 @@ from pybtc.functions.tools import bytes_to_int
 from pybtc.functions.tools import int_to_bytes
 from pybtc.functions.block import merkle_tree, merkle_proof
 from pybtc.connector.utils import decode_block_tx
-from pybtc import MRU
+from pybtc import MRU, parse_script, rh2s
 import asyncio
 import os
 from multiprocessing import Process
@@ -13,6 +13,7 @@ import sys
 import traceback
 from collections import deque
 import pickle
+from math import *
 
 try:
     import asyncpg
@@ -147,7 +148,8 @@ class BlockLoader:
                                               self.rpc_url, self.rpc_timeout, self.rpc_batch_limit,
                                               self.dsn, self.parent.app_proc_title, self.parent.utxo_data,
                                               self.parent.option_tx_map,
-                                              self.parent.option_merkle_proof))
+                                              self.parent.option_merkle_proof,
+                                              self.parent.option_analytica))
         worker.start()
         in_reader.close()
         out_writer.close()
@@ -244,7 +246,7 @@ class Worker:
 
     def __init__(self, name , in_reader, in_writer, out_reader, out_writer,
                  rpc_url, rpc_timeout, rpc_batch_limit, dsn, app_proc_title, utxo_data,
-                 option_tx_map, option_merkle_proof):
+                 option_tx_map, option_merkle_proof, option_analytica):
         setproctitle('%s: blocks preload worker %s' % (app_proc_title, name))
         self.rpc_url = rpc_url
         self.rpc_timeout = rpc_timeout
@@ -255,6 +257,7 @@ class Worker:
         self.db = None
         self.option_tx_map = option_tx_map
         self.option_merkle_proof = option_merkle_proof
+        self.option_analytica = option_analytica
         in_writer.close()
         out_reader.close()
         policy = asyncio.get_event_loop_policy()
@@ -274,14 +277,10 @@ class Worker:
     async def load_blocks(self, height, limit):
         start_height = height
         try:
-            x = None
-            blocks = dict()
-            missed =deque()
-            t = 0
-            e = height + limit
-            limit = 40
-            while height < e:
+            blocks, missed = dict(), deque()
+            e, t, limit = height + limit, 0, 40
 
+            while height < e:
                 batch, h_list = list(), list()
                 while len(batch) < limit and height < e:
                     batch.append(["getblockhash", height])
@@ -301,60 +300,239 @@ class Worker:
                 for x, y in zip(h, result):
                     if y["result"] is not None:
                         block = decode_block_tx(y["result"])
+
                         if self.option_tx_map:
-                            block["txMap"] = deque()
-                            block["stxo"] = deque()
+                            block["txMap"], block["stxo"] = deque(), deque()
+
                         if self.option_merkle_proof:
-                            m_tree = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
+                            mt = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
+
+                        if self.option_analytica:
+                            block["stat"] = {
+                                "oCountTotal": 0,
+                                "oAmountMinPointer": 0,
+                                "oAmountMinValue": 0,
+                                "oAmountMaxPointer": 0,
+                                "oAmountMaxValue": 0,
+                                "oAmountTotal": 0,
+                                "oAmountMapCount": dict(),
+                                "oAmountMapAmount": dict(),
+                                "oTypeMapCount": dict(),
+                                "oTypeMapAmount": dict(),
+                                "oTypeMapSize": dict(),
+
+                                "iCountTotal": 0,
+                                "iAmountMinPointer": 0,
+                                "iAmountMinValue": 0,
+                                "iAmountMaxPointer": 0,
+                                "iAmountMaxValue": 0,
+                                "iAmountTotal": 0,
+                                "iAmountMapCount": dict(),
+                                "iAmountMapAmount": dict(),
+                                "iTypeMapCount": dict(),
+                                "iTypeMapAmount": dict(),
+                                "iP2SHtypeMapCount": dict(),
+                                "iP2SHtypeMapAmount": dict(),
+                                "iP2WSHtypeMapCount": dict(),
+                                "iP2WSHtypeMapAmount": dict(),
+
+
+                                "txCountTotal": 0,
+                                "txAmountMinPointer": 0,
+                                "txAmountMinValue": 0,
+                                "txAmountMaxPointer": 0,
+                                "txAmountMaxValue": 0,
+                                "txAmountMapCount": dict(),
+                                "txAmountMapAmount": dict(),
+                                "txAmountMapSize": dict(),
+                                "txAmountTotal": 0,
+                                "txSizeMinPointer": 0,
+                                "txSizeMinValue": 0,
+                                "txSizeMaxPointer": 0,
+                                "txSizeMaxValue": 0,
+                                "txSizeTotal": 0,
+                                "txBSizeTotal": 0,
+                                "txVSizeTotal": 0,
+                                "txSizeMapCount": dict(),
+                                "txSizeMapAmount": dict(),
+                                "txTypeMapCount": dict(),
+                                "txTypeMapSize": dict(),
+                                "txTypeMapAmount": dict(),
+                                "txFeeMinPointer": 0,
+                                "txFeeMinValue": 0,
+                                "txFeeMaxPointer": 0,
+                                "txFeeMaxValue": 0,
+                                "txFeeTotal": 0,
+                                "txFeeRateMinPointer": 0,
+                                "txFeeRateMinValue": 0,
+                                "txFeeRateMaxPointer": 0,
+                                "txFeeRateMaxValue": 0,
+                                "txFeeRateTotal": 0,
+                                "txFeeRateMapCount": dict(),
+                                "txFeeRateMapAmount": dict(),
+                                "txFeeRateMapSize": dict(),
+                                "txVFeeRateMinPointer": 0,
+                                "txVFeeRateMinValue": 0,
+                                "txVFeeRateMaxPointer": 0,
+                                "txVFeeRateMaxValue": 0,
+                                "txVFeeRateTotal": 0,
+                                "txVFeeRateMapCount": dict(),
+                                "txVFeeRateMapAmount": dict(),
+                                "txVFeeRateMapSize": dict()
+                            }
+
                         if self.utxo_data:
                             for z in block["rawTx"]:
                                 if self.option_merkle_proof:
-                                    block["rawTx"][z]["merkleProof"] = b''.join(merkle_proof(m_tree, z, return_hex=False))
+                                    block["rawTx"][z]["merkleProof"] = b''.join(merkle_proof(mt, z, return_hex=False))
+                                if self.option_analytica:
+                                    bip69, rbf = True, False
+                                    hp, op = None, None
+                                    block["rawTx"][z]["inputsAmount"] = 0
+
                                 for i in block["rawTx"][z]["vOut"]:
                                     o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
                                     pointer = (x << 39)+(z << 20)+(1 << 19) + i
-                                    try:
-                                        address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
+
+                                    try: address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
                                                                    block["rawTx"][z]["vOut"][i]["addressHash"]))
-                                    except:
-                                        address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
-                                                            block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
+                                    except: address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
+                                                                block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
+
                                     block["rawTx"][z]["vOut"][i]["_address"] = address
                                     self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
+
                                     if self.option_tx_map:
                                         block["txMap"].append((pointer, address, block["rawTx"][z]["vOut"][i]["value"]))
+
+                                    if self.option_analytica:
+                                        amount = block["rawTx"][z]["vOut"][i]["value"]
+                                        block["stat"]["oCountTotal"] += 1
+                                        block["stat"]["oAmountTotal"] += amount
+                                        if block["stat"]["oAmountMinPointer"] == 0 or \
+                                                block["stat"]["oAmountMinValue"] > amount:
+                                            block["stat"]["oAmountMinPointer"] = pointer
+                                            block["stat"]["oAmountMinPointer"] = amount
+                                        if block["stat"]["oAmountMaxValue"] < amount:
+                                            block["stat"]["oAmountMaxPointer"] = pointer
+                                            block["stat"]["oAmountMaxValue"] = amount
+                                        amount_key = str(floor(log10(amount))) if amount else "null"
+                                        try: block["stat"]["oAmountMapCount"][amount_key] += 1
+                                        except: block["stat"]["oAmountMapCount"][amount_key] = 1
+                                        try: block["stat"]["oAmountMapAmount"][amount_key] += amount
+                                        except: block["stat"]["oAmountMapAmount"][amount_key] = amount
+
 
                                 if not block["rawTx"][z]["coinbase"]:
                                     for i  in block["rawTx"][z]["vIn"]:
                                         inp = block["rawTx"][z]["vIn"][i]
-
                                         outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                         block["rawTx"][z]["vIn"][i]["_outpoint"] = outpoint
+
+                                        if self.option_analytica:
+                                            if not rbf and inp["sequence"] < 0xfffffffe:  rbf = True
+                                            if bip69:
+                                                h = rh2s(inp["txId"])
+                                                if hp is not None:
+                                                    if hp > h: bip69 = False
+                                                    elif hp == h and op > inp["vOut"]: bip69 = False
+                                                hp, op = h, inp["vOut"]
+
                                         try:
                                            r = self.coins.delete(outpoint)
-                                           if r[0] >> 39 >= start_height and r[0] >> 39 < height:
-                                               block["rawTx"][z]["vIn"][i]["_a_"] = r
-                                           else:
-                                               block["rawTx"][z]["vIn"][i]["_c_"] = r
-                                           if self.option_tx_map:
-                                               block["txMap"].append(((x << 39) + (z << 20) + (0 << 19) + i,
-                                                                      r[2], r[1]))
-                                               block["stxo"].append((r[0], (x << 39) + (z << 20) + (0 << 19) + i))
-                                           t += 1
-                                           self.destroyed_coins[r[0]] = True
-                                           assert r is not None
+                                           try:
+                                               if r[0] >> 39 >= start_height and r[0] >> 39 < height:
+                                                   block["rawTx"][z]["vIn"][i]["_a_"] = r
+                                               else:
+                                                   block["rawTx"][z]["vIn"][i]["_c_"] = r
+                                               if self.option_tx_map:
+                                                   block["txMap"].append(((x << 39) + (z << 20) + (0 << 19) + i,
+                                                                          r[2], r[1]))
+                                                   block["stxo"].append((r[0], (x << 39) + (z << 20) + (0 << 19) + i))
+                                               t += 1
+                                               self.destroyed_coins[r[0]] = True
+
+                                               if self.option_analytica:
+                                                   amount = r[1]
+                                                   block["rawTx"][z]["inputsAmount"] += amount
+                                                   pointer = (x << 39) + (z << 20) + (0 << 19) + i
+                                                   type = r[2][0]
+                                                   block["stat"]["iCountTotal"] += 1
+                                                   block["stat"]["iAmountTotal"] += amount
+                                                   if block["stat"]["iAmountMinPointer"] == 0 or \
+                                                           block["stat"]["iAmountMinValue"] > amount:
+                                                       block["stat"]["iAmountMinPointer"] = pointer
+                                                       block["stat"]["iAmountMinValue"] = amount
+                                                   if block["stat"]["iAmountMaxValue"] < amount:
+                                                       block["stat"]["iAmountMaxPointer"] = pointer
+                                                       block["stat"]["iAmountMaxValue"] = amount
+                                                   amount_key = str(floor(log10(amount))) if amount else "null"
+                                                   try: block["stat"]["iAmountMapCount"][amount_key] += 1
+                                                   except: block["stat"]["iAmountMapCount"][amount_key] = 1
+                                                   try: block["stat"]["iAmountMapAmount"][amount_key] += amount
+                                                   except: block["stat"]["iAmountMapAmount"][amount_key] = amount
+                                                   try: block["stat"]["iTypeMapCount"][type] += 1
+                                                   except: block["stat"]["iTypeMapCount"][type] = 1
+                                                   try: block["stat"]["iTypeMapAmount"][type] += amount
+                                                   except: block["stat"]["iTypeMapAmount"][type] = amount
+
+                                                   if type == 1 or type == 6:
+                                                       s = parse_script(r[2][1:])
+                                                       st = s["type"]
+                                                       if st == "MULTISIG":
+                                                            st += "_%s/%s" % (s["reqSigs"], s["pubKeys"])
+                                                            if type == 1:
+                                                                try: block["stat"]["iP2SHtypeMapCount"][st] += 1
+                                                                except: block["stat"]["iP2SHtypeMapCount"][st] = 1
+                                                                try: block["stat"]["iP2SHtypeMapAmount"][st] += amount
+                                                                except: block["stat"]["iP2SHtypeMapAmount"][st] = amount
+                                                            else:
+                                                                try: block["stat"]["iP2WSHtypeMapCount"][st] += 1
+                                                                except: block["stat"]["iP2WSHtypeMapCount"][st] = 1
+                                                                try: block["stat"]["iP2WSHtypeMapAmount"][st] += amount
+                                                                except: block["stat"]["iP2WSHtypeMapAmount"][st] = amount
+                                           except:
+                                               print(traceback.format_exc())
                                         except:
-                                            if self.dsn:
-                                                missed.append(outpoint)
+                                            if self.dsn: missed.append(outpoint)
+
+                                if self.option_analytica:
+                                    tx = block["rawTx"][z]
+                                    pointer = (block["height"] << 19) + z
+                                    amount = tx["amount"]
+                                    size = tx["size"]
+                                    amount_key = str(floor(log10(amount))) if amount else "null"
+                                    block["stat"]["txCountTotal"] += 1
+                                    if block["stat"]["txAmountMinPointer"] == 0 or \
+                                            block["stat"]["txAmountMinValue"] > amount:
+                                        block["stat"]["txAmountMinPointer"] = pointer
+                                        block["stat"]["txAmountMinValue"] = amount
+
+                                    if block["stat"]["txAmountMaxValue"] < amount:
+                                        block["stat"]["txAmountMaxPointer"] = pointer
+                                        block["stat"]["txAmountMaxValue"] = amount
+
+                                    try:
+                                        block["stat"]["txAmountMapAmount"][amount_key] += amount
+                                    except:
+                                        block["stat"]["txAmountMapAmount"][amount_key] = amount
+                                    try:
+                                        block["stat"]["txAmountMapCount"][amount_key] += 1
+                                    except:
+                                        block["stat"]["txAmountMapCount"][amount_key] = 1
+
+                                    try:
+                                        block["stat"]["txAmountMapSize"][amount_key] += size
+                                    except:
+                                        block["stat"]["txAmountMapSize"][amount_key] = size
 
                         blocks[x] = block
 
 
 
-            m = 0
-            n = 0
+            m, n = 0, 0
             if self.utxo_data and missed and self.dsn:
-               if self.dsn:
+                if self.dsn:
                    async with self.db.acquire() as conn:
                        rows = await conn.fetch("SELECT outpoint, "
                                                "       pointer,"
@@ -381,8 +559,180 @@ class Worker:
                                                                 (height << 39) + (z << 20) + (0 << 19) + i))
                                        t += 1
                                        n += 1
+
+                                       if self.option_analytica:
+                                           r = p[outpoint]
+                                           amount = r[1]
+                                           type = r[2][0]
+                                           block["stat"]["rawTx"][z]["inputsAmount"] += amount
+                                           pointer = (height<<39)+(z<<20)+(0<<19)+i
+
+                                           block["stat"]["iCountTotal"] += 1
+                                           block["stat"]["iAmountTotal"] += amount
+                                           if block["stat"]["iAmountMinPointer"] == 0 or \
+                                                   block["stat"]["iAmountMinValue"] > amount:
+                                               block["stat"]["iAmountMinPointer"] = pointer
+                                               block["stat"]["iAmountMinValue"] = amount
+                                           if block["stat"]["iAmountMaxValue"] < amount:
+                                               block["stat"]["iAmountMaxPointer"] = pointer
+                                               block["stat"]["iAmountMaxValue"] = amount
+                                           amount_key = str(floor(log10(amount))) if amount else "null"
+                                           try: block["stat"]["iAmountMapCount"][amount_key] += 1
+                                           except: block["stat"]["iAmountMapCount"][amount_key] = 1
+                                           try: block["stat"]["iAmountMapAmount"][amount_key] += amount
+                                           except: block["stat"]["iAmountMapAmount"][amount_key] = amount
+
+                                           try: block["stat"]["iTypeMapCount"][type] += 1
+                                           except: block["stat"]["iTypeMapCount"][type] = 1
+
+                                           try: block["stat"]["iTypeMapAmount"][type] += amount
+                                           except: block["stat"]["iTypeMapAmount"][type] = amount
+
+                                           if type == 1 or type == 6:
+                                               s = parse_script(r[2][1:])
+                                               st = s["type"]
+                                               if st == "MULTISIG":
+                                                   st += "_%s/%s" % (s["reqSigs"], s["pubKeys"])
+                                                   if type == 1:
+                                                       try: block["stat"]["iP2SHtypeMapCount"][st] += 1
+                                                       except: block["stat"]["iP2SHtypeMapCount"][st] = 1
+                                                       try: block["stat"]["iP2SHtypeMapAmount"][st] += amount
+                                                       except: block["stat"]["iP2SHtypeMapAmount"][st] = amount
+                                                   else:
+                                                       try: block["stat"]["iP2WSHtypeMapCount"][st] += 1
+                                                       except: block["stat"]["iP2WSHtypeMapCount"][st] = 1
+                                                       try: block["stat"]["iP2WSHtypeMapAmount"][st] += amount
+                                                       except: block["stat"]["iP2WSHtypeMapAmount"][st] = amount
+
+
                                    except:
                                        pass
+
+                   if self.option_analytica:
+                       for block in blocks:
+                           for z in blocks[block]["rawTx"]:
+                               tx = blocks[block]["rawTx"][z]
+                               pointer = (block["height"] << 19) + z
+                               amount = tx["amount"]
+                               size = tx["size"]
+                               amount_key = str(floor(log10(amount))) if amount else "null"
+                               block["stat"]["txCountTotal"] += 1
+                               if block["stat"]["txAmountMinPointer"] == 0 or \
+                                       block["stat"]["txAmountMinValue"] > amount:
+                                   block["stat"]["txAmountMinPointer"] = pointer
+                                   block["stat"]["txAmountMinValue"] = amount
+
+                               if block["stat"]["txAmountMaxValue"] < amount:
+                                   block["stat"]["txAmountMaxPointer"] = pointer
+                                   block["stat"]["txAmountMaxValue"] = amount
+
+                               try: block["stat"]["txAmountMapAmount"][amount_key] += amount
+                               except: block["stat"]["txAmountMapAmount"][amount_key] = amount
+                               try: block["stat"]["txAmountMapCount"][amount_key] += 1
+                               except: block["stat"]["txAmountMapCount"][amount_key] = 1
+
+                               try: block["stat"]["txAmountMapSize"][amount_key] += size
+                               except: block["stat"]["txAmountMapSize"][amount_key] = size
+
+                               # fee = tx["inputsAmount"] - amount
+                               # fee_rate = int((fee / size) * 100)
+                               # v_fee_rate = int((fee / size) * 100)
+                               # fee_rate_key = int(floor(fee_rate / 10))
+                               # v_fee_rate_key = int(floor(v_fee_rate / 10))
+                               if size < 1000:
+                                   size_key = str(floor(size / 100))
+                               else:
+                                   size_key = "%sK" % floor(size / 1000)
+
+                               block["stat"]["txSizeTotal"] += size
+                               block["stat"]["txVSizeTotal"] += tx["vSize"]
+                               block["stat"]["txBSizeTotal"] += tx["bSize"]
+
+                               if block["stat"]["txSizeMinPointer"] == 0 or \
+                                       block["stat"]["txSizeMinValue"] > size:
+                                   block["stat"]["txSizeMinPointer"] = pointer
+                                   block["stat"]["txSizeMinValue"] = size
+
+                               if block["stat"]["txSizeMaxValue"] < size:
+                                   block["stat"]["txSizeMaxPointer"] = pointer
+                                   block["stat"]["txSizeMaxValue"] = size
+
+                               try: block["stat"]["txSizeMapCount"][size_key] += 1
+                               except: block["stat"]["txSizeMapCount"][size_key] = 1
+
+                               try: block["stat"]["txSizeMapAmount"][size_key] += 1
+                               except: block["stat"]["txSizeMapAmount"][size_key] = 1
+                               t_list = []
+                               if tx["segwit"]:  t_list.append("segwit")
+                               if bip69:  t_list.append("bip69")
+                               if rbf:  t_list.append("rbf")
+
+
+                               for ttp in t_list:
+                                   try: block["stat"]["txTypeMapCount"][ttp] += 1
+                                   except: block["stat"]["txTypeMapCount"][ttp] = 1
+
+                                   try: block["stat"]["txTypeMapAmount"][ttp] += amount
+                                   except: block["stat"]["txTypeMapAmount"][ttp] = amount
+
+                                   try: block["stat"]["txTypeMapSize"][ttp] += size
+                                   except: block["stat"]["txTypeMapSize"][ttp] = size
+
+                                   # if block["stat"]["txFeeMinPointer"] == 0 or \
+                                   #         block["stat"]["txFeeMinValue"] > fee:
+                                   #     block["stat"]["txFeeMinPointer"] = pointer
+                                   #     block["stat"]["txFeeMinValue"] = fee
+                                   #
+                                   # if block["stat"]["txFeeMaxValue"] < fee:
+                                   #     block["stat"]["txFeeMaxPointer"] = pointer
+                                   #     block["stat"]["txFeeMaxValue"] = fee
+                                   #
+                                   # block["stat"]["txFeeTotal"] += fee
+                                   #
+                                   # if block_stat["txFeeRateMinPointer"] == 0 or \
+                                   #          block_stat["txFeeRateMinValue"] > fee_rate:
+                                   #     block_stat["txFeeRateMinPointer"] = pointer
+                                   #     block_stat["txFeeRateMinValue"] = fee_rate
+                                   # if block_stat["txFeeRateMaxValue"] < fee_rate:
+                                   #     block_stat["txFeeRateMaxPointer"] = pointer
+                                   #     block_stat["txFeeRateMaxValue"] = fee_rate
+                                   # block_stat["txFeeRateTotal"] += fee_rate
+                                   #
+                                   # try: block_stat["txFeeRateMapAmount"][fee_rate_key] += amount
+                                   # except: block_stat["txFeeRateMapAmount"][fee_rate_key] = amount
+                                   #
+                                   # try: block_stat["txFeeRateMapCount"][fee_rate_key] += 1
+                                   # except: block_stat["txFeeRateMapCount"][fee_rate_key] = 1
+                                   #
+                                   # try: block_stat["txFeeRateMapSize"][fee_rate_key] += tx["size"]
+                                   # except: block_stat["txFeeRateMapSize"][fee_rate_key] = tx["size"]
+                                   #
+                                   # # v_fee_rate_key
+                                   #
+                                   # if block_stat["txVFeeRateMinPointer"] == 0 or \
+                                   #         block_stat["txVFeeRateMinValue"] > v_fee_rate_key:
+                                   #     block_stat["txVFeeRateMinPointer"] = pointer
+                                   #     block_stat["txVFeeRateMinValue"] = v_fee_rate_key
+                                   # if block_stat["txVFeeRateMaxValue"] < v_fee_rate_key:
+                                   #     block_stat["txVFeeRateMaxPointer"] = pointer
+                                   #     block_stat["txVFeeRateMaxValue"] = v_fee_rate_key
+                                   # block_stat["txVFeeRateTotal"] += v_fee_rate_key
+                                   #
+                                   # try: block_stat["txVFeeRateMapAmount"][v_fee_rate_key] += amount
+                                   # except: block_stat["txVFeeRateMapAmount"][v_fee_rate_key] = amount
+                                   #
+                                   # try: block_stat["txVFeeRateMapCount"][v_fee_rate_key] += 1
+                                   # except: block_stat["txVFeeRateMapCount"][v_fee_rate_key] = 1
+                                   #
+                                   # try: block_stat["txVFeeRateMapSize"][v_fee_rate_key] += tx["size"]
+                                   # except: block_stat["txVFeeRateMapSize"][v_fee_rate_key] = tx["size"]
+                                   #
+
+
+
+
+
+
             if self.utxo_data and blocks:
                 blocks[x]["checkpoint"] = x
             for x in blocks:
