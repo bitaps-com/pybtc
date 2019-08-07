@@ -1397,7 +1397,7 @@ class Connector:
         self.log.warning("Stopping node connector ...")
         try:
             for i in self.BlockLoader.worker:
-                self.BlockLoader.worker.terminate()
+                self.BlockLoader.worker[i].terminate()
         except:
             pass
         [task.cancel() for task in self.tasks]
