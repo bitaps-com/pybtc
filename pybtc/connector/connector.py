@@ -154,6 +154,7 @@ class Connector:
         self.chain_tail_start_len = len(chain_tail)
         self.mempool_tx_count = 0
 
+        self.connected = asyncio.Future()
         self.block_txs_request = asyncio.Future()
         self.block_txs_request.set_result(True)
         self.new_tx_handler = None
@@ -173,7 +174,7 @@ class Connector:
         self.unconfirmed_tx_processing.set_result(True)
 
         self.log.info("Node connector started")
-        self.connected = self.loop.create_task(self.start())
+        self.loop.create_task(self.start())
 
 
 
