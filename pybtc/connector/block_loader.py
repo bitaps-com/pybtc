@@ -751,8 +751,11 @@ class Worker:
         except Exception as err:
             # print("load blocks error: %s" % str(err))
             # print(traceback.format_exc())
-            await self.pipe_sent_msg(b'result', pickle.dumps([]))
-            await self.pipe_sent_msg(b'failed', pickle.dumps(start_height))
+            try:
+                await self.pipe_sent_msg(b'result', pickle.dumps([]))
+                await self.pipe_sent_msg(b'failed', pickle.dumps(start_height))
+            except:
+                pass
 
 
     async def message_loop(self):
