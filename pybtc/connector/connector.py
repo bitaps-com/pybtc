@@ -226,8 +226,8 @@ class Connector:
 
 
         h = self.last_block_height
-        if h < len(self.chain_tail):
-            raise Exception("Chain tail len not match last block height")
+        # if h < len(self.chain_tail):
+        #     raise Exception("Chain tail len not match last block height")
         for row in reversed(self.chain_tail):
             self.block_headers_cache.set(row, h)
             h -= 1
