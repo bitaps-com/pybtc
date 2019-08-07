@@ -980,69 +980,70 @@ class Connector:
                                 raise Exception("utxo get failed ")
                         else:
                             raise Exception("utxo get failed %s" % rh2s(block["rawTx"][q]["vIn"][i]["txId"]))
-                    if self.option_tx_map:
-                        tx_map_append(((height << 39)+(q<<20)+(0<<19)+i,
-                                       block["rawTx"][q]["vIn"][i]["coin"][2],
-                                       block["rawTx"][q]["vIn"][i]["coin"][1]))
-                        block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
-                                             (height << 39)+(q<<20)+(0<<19)+i))
+                    if height > self.app_block_height_on_start:
+                        if self.option_tx_map:
+                            tx_map_append(((height << 39)+(q<<20)+(0<<19)+i,
+                                           block["rawTx"][q]["vIn"][i]["coin"][2],
+                                           block["rawTx"][q]["vIn"][i]["coin"][1]))
+                            block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
+                                                 (height << 39)+(q<<20)+(0<<19)+i))
 
-                    if self.option_analytica:
-                        r = block["rawTx"][q]["vIn"][i]["coin"]
-                        amount = r[1]
-                        block["rawTx"][q]["inputsAmount"] += amount
-                        pointer = (height << 39) + (q << 20) + (0 << 19) + i
-                        type = r[2][0]
-                        block["stat"]["iCountTotal"] += 1
-                        block["stat"]["iAmountTotal"] += amount
-                        if block["stat"]["iAmountMinPointer"] == 0 or \
-                                block["stat"]["iAmountMinValue"] > amount:
-                            block["stat"]["iAmountMinPointer"] = pointer
-                            block["stat"]["iAmountMinValue"] = amount
-                        if block["stat"]["iAmountMaxValue"] < amount:
-                            block["stat"]["iAmountMaxPointer"] = pointer
-                            block["stat"]["iAmountMaxValue"] = amount
-                        amount_key = str(floor(log10(amount))) if amount else "null"
-                        try:
-                            block["stat"]["iAmountMapCount"][amount_key] += 1
-                        except:
-                            block["stat"]["iAmountMapCount"][amount_key] = 1
-                        try:
-                            block["stat"]["iAmountMapAmount"][amount_key] += amount
-                        except:
-                            block["stat"]["iAmountMapAmount"][amount_key] = amount
-                        try:
-                            block["stat"]["iTypeMapCount"][type] += 1
-                        except:
-                            block["stat"]["iTypeMapCount"][type] = 1
-                        try:
-                            block["stat"]["iTypeMapAmount"][type] += amount
-                        except:
-                            block["stat"]["iTypeMapAmount"][type] = amount
+                        if self.option_analytica:
+                            r = block["rawTx"][q]["vIn"][i]["coin"]
+                            amount = r[1]
+                            block["rawTx"][q]["inputsAmount"] += amount
+                            pointer = (height << 39) + (q << 20) + (0 << 19) + i
+                            type = r[2][0]
+                            block["stat"]["iCountTotal"] += 1
+                            block["stat"]["iAmountTotal"] += amount
+                            if block["stat"]["iAmountMinPointer"] == 0 or \
+                                    block["stat"]["iAmountMinValue"] > amount:
+                                block["stat"]["iAmountMinPointer"] = pointer
+                                block["stat"]["iAmountMinValue"] = amount
+                            if block["stat"]["iAmountMaxValue"] < amount:
+                                block["stat"]["iAmountMaxPointer"] = pointer
+                                block["stat"]["iAmountMaxValue"] = amount
+                            amount_key = str(floor(log10(amount))) if amount else "null"
+                            try:
+                                block["stat"]["iAmountMapCount"][amount_key] += 1
+                            except:
+                                block["stat"]["iAmountMapCount"][amount_key] = 1
+                            try:
+                                block["stat"]["iAmountMapAmount"][amount_key] += amount
+                            except:
+                                block["stat"]["iAmountMapAmount"][amount_key] = amount
+                            try:
+                                block["stat"]["iTypeMapCount"][type] += 1
+                            except:
+                                block["stat"]["iTypeMapCount"][type] = 1
+                            try:
+                                block["stat"]["iTypeMapAmount"][type] += amount
+                            except:
+                                block["stat"]["iTypeMapAmount"][type] = amount
 
-                        if type == 1 or type == 6:
-                            s = parse_script(r[2][1:])
-                            st = s["type"]
-                            if st == "MULTISIG":
-                                st += "_%s/%s" % (s["reqSigs"], s["pubKeys"])
-                                if type == 1:
-                                    try:
-                                        block["stat"]["iP2SHtypeMapCount"][st] += 1
-                                    except:
-                                        block["stat"]["iP2SHtypeMapCount"][st] = 1
-                                    try:
-                                        block["stat"]["iP2SHtypeMapAmount"][st] += amount
-                                    except:
-                                        block["stat"]["iP2SHtypeMapAmount"][st] = amount
-                                else:
-                                    try:
-                                        block["stat"]["iP2WSHtypeMapCount"][st] += 1
-                                    except:
-                                        block["stat"]["iP2WSHtypeMapCount"][st] = 1
-                                    try:
-                                        block["stat"]["iP2WSHtypeMapAmount"][st] += amount
-                                    except:
-                                        block["stat"]["iP2WSHtypeMapAmount"][st] = amount
+                            if type == 1 or type == 6:
+                                s = parse_script(r[2][1:])
+                                st = s["type"]
+                                if st == "MULTISIG":
+                                    st += "_%s/%s" % (s["reqSigs"], s["pubKeys"])
+                                    if type == 1:
+                                        try:
+                                            block["stat"]["iP2SHtypeMapCount"][st] += 1
+                                        except:
+                                            block["stat"]["iP2SHtypeMapCount"][st] = 1
+                                        try:
+                                            block["stat"]["iP2SHtypeMapAmount"][st] += amount
+                                        except:
+                                            block["stat"]["iP2SHtypeMapAmount"][st] = amount
+                                    else:
+                                        try:
+                                            block["stat"]["iP2WSHtypeMapCount"][st] += 1
+                                        except:
+                                            block["stat"]["iP2WSHtypeMapCount"][st] = 1
+                                        try:
+                                            block["stat"]["iP2WSHtypeMapAmount"][st] += amount
+                                        except:
+                                            block["stat"]["iP2WSHtypeMapAmount"][st] = amount
 
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])
