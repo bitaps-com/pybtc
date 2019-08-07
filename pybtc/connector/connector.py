@@ -1395,6 +1395,11 @@ class Connector:
         self.active = False
         self.log.warning("New block processing restricted")
         self.log.warning("Stopping node connector ...")
+        try:
+            for i in self.BlockLoader.worker:
+                self.BlockLoader.worker.terminate()
+        except:
+            pass
         [task.cancel() for task in self.tasks]
         if self.tasks:
             await asyncio.wait(self.tasks)

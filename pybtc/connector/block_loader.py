@@ -755,7 +755,6 @@ class Worker:
                 await self.pipe_sent_msg(b'result', pickle.dumps([]))
                 await self.pipe_sent_msg(b'failed', pickle.dumps(start_height))
             except:
-                print("t")
                 await self.terminate_coroutine()
 
 
