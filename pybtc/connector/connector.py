@@ -176,6 +176,7 @@ class Connector:
         self.log.info("Node connector started")
         asyncio.ensure_future(self.start(), loop=self.loop)
 
+
     async def start(self):
         if self.utxo_data:
             await self.utxo_init()
@@ -238,6 +239,7 @@ class Connector:
         self.connected.set_result(True)
         self.get_next_block_mutex = True
         self.loop.create_task(self.get_next_block())
+
 
     async def utxo_init(self):
         if self.db_type is None:
@@ -391,6 +393,7 @@ class Connector:
                 self.log.warning("Zeromq handler terminated")
                 break
 
+
     async def handle_new_tx(self):
         while self.new_tx and self.synchronized:
             if not self.block_txs_request.done():
@@ -453,6 +456,7 @@ class Connector:
                 break
             except Exception as err:
                 self.log.error("watchdog error %s " % err)
+
 
     async def get_next_block(self):
         if self.active and self.active_block.done() and self.get_next_block_mutex:
@@ -698,6 +702,7 @@ class Connector:
             finally:
                 self.get_next_block_mutex = False
 
+
     async def _get_block_by_hash(self, hash):
         try:
             if self.deep_synchronization:
@@ -717,6 +722,7 @@ class Connector:
             return block
         except Exception:
             self.log.error("get block by hash %s FAILED" % hash)
+
 
     async def _new_block(self, block):
         if not self.active: return
@@ -832,7 +838,6 @@ class Connector:
 
             self.blocks_processing_time += time.time() - tq
             self.active_block.set_result(True)
-
 
 
     async def verify_block_position(self, block):
@@ -1135,6 +1140,7 @@ class Connector:
                                                                  / self.destroyed_coins, 4)))
             self.log.debug("---------------------")
 
+
     async def fetch_block_transactions(self, block):
         q = time.time()
         missed = set()
@@ -1384,15 +1390,13 @@ class Connector:
                         self.unconfirmed_tx_processing.set_result(True)
 
 
-
-
-
     async def stop(self):
         self.active = False
         self.log.warning("New block processing restricted")
         self.log.warning("Stopping node connector ...")
         [task.cancel() for task in self.tasks]
-        await asyncio.wait(self.tasks)
+        if self.tasks:
+            await asyncio.wait(self.tasks)
         try:
             self.zeromq_task.cancel()
             await asyncio.wait([self.zeromq_task])
