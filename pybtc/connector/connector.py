@@ -154,7 +154,7 @@ class Connector:
         self.chain_tail_start_len = len(chain_tail)
         self.mempool_tx_count = 0
 
-        self.connected = asyncio.Future()
+
         self.block_txs_request = asyncio.Future()
         self.block_txs_request.set_result(True)
         self.new_tx_handler = None
@@ -174,7 +174,7 @@ class Connector:
         self.unconfirmed_tx_processing.set_result(True)
 
         self.log.info("Node connector started")
-        self.loop.create_task(self.start())
+        self.connected = self.loop.create_task(self.start())
 
 
 
@@ -237,7 +237,6 @@ class Connector:
             self.block_loader = BlockLoader(self,workers = self.block_cache_workers)
         self.zeromq_task = self.loop.create_task(self.zeromq_handler())
         self.tasks.append(self.loop.create_task(self.watchdog()))
-        self.connected.set_result(True)
         self.get_next_block_mutex = True
         self.loop.create_task(self.get_next_block())
 
