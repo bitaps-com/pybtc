@@ -159,7 +159,6 @@ class Connector:
         self.new_tx_handler = None
         self.new_tx_tasks = 0
 
-        self.connected = asyncio.Future()
         self.await_tx = list()
         self.missed_tx = list()
         self.await_tx_future = dict()
@@ -174,7 +173,8 @@ class Connector:
         self.unconfirmed_tx_processing.set_result(True)
 
         self.log.info("Node connector started")
-        asyncio.ensure_future(self.start(), loop=self.loop)
+        self.connected = self.loop.create_task(self.start())
+
 
 
     async def start(self):
