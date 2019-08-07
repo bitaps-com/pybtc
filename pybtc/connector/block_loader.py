@@ -787,6 +787,7 @@ class Worker:
 
 
     async def terminate_coroutine(self):
+        self.log.warning("preload worker terminating ...")
         self.loop.stop()
         pending = asyncio.Task.all_tasks()
         for task in pending:
