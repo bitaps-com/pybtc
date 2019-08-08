@@ -1419,6 +1419,7 @@ class Connector:
             for i in self.BlockLoader.worker:
                 self.BlockLoader.worker[i].terminate()
         except:
+            print(traceback.format_exc())
             pass
         [task.cancel() for task in self.tasks]
         if self.tasks:
