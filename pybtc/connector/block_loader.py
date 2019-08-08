@@ -337,7 +337,6 @@ class Worker:
                                 "iP2WSHtypeMapCount": dict(),
                                 "iP2WSHtypeMapAmount": dict(),
 
-
                                 "txCountTotal": 0,
                                 "txAmountMinPointer": 0,
                                 "txAmountMinValue": 0,
@@ -382,7 +381,7 @@ class Worker:
                                 "txVFeeRateMapSize": dict()
                             }
 
-                        coinbase = block["rawTx"][0]["vIn"][0]["sigScript"]
+                        coinbase = block["rawTx"][0]["vIn"][0]["scriptSig"]
                         block["miner"] = None
                         for tag in MINER_COINBASE_TAG:
                             if coinbase.find(tag) != -1:

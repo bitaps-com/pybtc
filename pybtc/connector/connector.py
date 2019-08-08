@@ -528,7 +528,7 @@ class Connector:
                     block = await self._get_block_by_hash(h)
                     block["checkpoint"] = self.last_block_height + 1
                     block["height"] = self.last_block_height + 1
-                    coinbase = block["rawTx"][0]["vIn"][0]["sigScript"]
+                    coinbase = block["rawTx"][0]["vIn"][0]["scriptSig"]
                     block["miner"] = None
                     for tag in MINER_COINBASE_TAG:
                         if coinbase.find(tag) != -1:
