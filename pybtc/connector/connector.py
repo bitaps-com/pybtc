@@ -489,21 +489,25 @@ class Connector:
                             self.log.info("Flush utxo cache ...")
                             while self.app_last_block < self.last_block_height:
                                 self.log.debug("Waiting app ... Last block %s; "
-                                               "App last block %s;" % (self.last_block_height,
-                                                                       self.app_last_block))
+                                               "App last block %s;" % (self.last_block_height, self.app_last_block))
                                 await asyncio.sleep(5)
 
                             self.log.info("Last block %s App last block %s" % (self.last_block_height,
                                                                                self.app_last_block))
 
                             self.sync_utxo.checkpoints=deque([self.last_block_height])
+
                             self.sync_utxo.size_limit = 0
                             while  self.sync_utxo.save_process:
                                 self.log.info("wait for utxo cache flush ...")
-                                await self.sync_utxo.commit()
                                 await asyncio.sleep(10)
+
                             self.sync_utxo.create_checkpoint(self.last_block_height, self.app_last_block)
                             await self.sync_utxo.commit()
+                            while  self.sync_utxo.save_process:
+                                self.log.info("wait for utxo cache flush ...")
+                                await asyncio.sleep(10)
+
                             self.log.info("Flush utxo cache completed")
 
                         if self.synchronization_completed_handler:
