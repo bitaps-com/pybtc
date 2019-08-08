@@ -7,7 +7,7 @@ from pybtc.connector.utils import Cache
 from pybtc.connector.utils import seconds_to_age
 from pybtc.transaction import Transaction
 from pybtc import int_to_bytes, bytes_to_int, bytes_from_hex
-from pybtc import MRU, parse_script
+from pybtc import MRU, parse_script, MINER_COINBASE_TAG, MINER_PAYOUT_TAG, hash_to_address
 from collections import deque
 import traceback
 
@@ -528,6 +528,21 @@ class Connector:
                     block = await self._get_block_by_hash(h)
                     block["checkpoint"] = self.last_block_height + 1
                     block["height"] = self.last_block_height + 1
+                    coinbase = block["rawTx"][0]["vIn"][0]["sigScript"]
+                    block["miner"] = None
+                    for tag in MINER_COINBASE_TAG:
+                        if coinbase.find(tag) != -1:
+                            block["miner"] = MINER_COINBASE_TAG[tag]
+                            break
+                    else:
+                        try:
+                            address_hash = block["rawTx"][0]["vOut"][0]["addressHash"]
+                            script_hash = False if block["rawTx"][0]["vOut"][0]["nType"] == 1 else True
+                            a = hash_to_address(address_hash, script_hash=script_hash)
+                            if a in MINER_PAYOUT_TAG:
+                                block["miner"] = MINER_PAYOUT_TAG[a]
+                        except:
+                            pass
 
                     if self.option_tx_map:
                         block["txMap"], block["stxo"] = deque(), deque()

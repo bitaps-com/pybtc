@@ -2,7 +2,7 @@ from pybtc.functions.tools import bytes_to_int
 from pybtc.functions.tools import int_to_bytes
 from pybtc.functions.block import merkle_tree, merkle_proof
 from pybtc.connector.utils import decode_block_tx
-from pybtc import MRU, parse_script, rh2s
+from pybtc import MRU, parse_script, rh2s, MINER_COINBASE_TAG, MINER_PAYOUT_TAG, hash_to_address
 import asyncio
 import os
 from multiprocessing import Process
@@ -381,6 +381,23 @@ class Worker:
                                 "txVFeeRateMapSize": dict()
                             }
 
+                        coinbase = block["rawTx"][0]["vIn"][0]["sigScript"]
+                        block["miner"] = None
+                        for tag in MINER_COINBASE_TAG:
+                            if coinbase.find(tag) != -1:
+                                block["miner"] = MINER_COINBASE_TAG[tag]
+                                break
+                        else:
+                            try:
+                                address_hash = block["rawTx"][0]["vOut"][0]["addressHash"]
+                                script_hash = False if block["rawTx"][0]["vOut"][0]["nType"] == 1 else True
+                                a = hash_to_address(address_hash, script_hash=script_hash)
+                                if a in MINER_PAYOUT_TAG:
+                                    block["miner"] = MINER_PAYOUT_TAG[a]
+                            except:
+                                pass
+
+
                         if self.utxo_data:
                             for z in block["rawTx"]:
                                 if self.option_merkle_proof:
@@ -495,6 +512,8 @@ class Worker:
                                                print(traceback.format_exc())
                                         except:
                                             if self.dsn: missed.append(outpoint)
+
+
 
                                 if self.option_analytica:
                                     tx = block["rawTx"][z]

@@ -138,11 +138,9 @@ MINER_COINBASE_TAG = {
     b"Easy2Mine": {"name": "Easy2Mine", "link": "https://www.easy2mine.com"}
 }
 
-MINER_PAYOUT_TAG = { "LTCPodtg91HsKf5xB1MQ5L13CkcSfd2rCV" : {"name" : "litecoinpool.org", "link" : "https://www.litecoinpool.org"},
-                     "1CK6KHY6MHgYvmRQ4PAafKYDrg1ejbH1cE" : {"name" : "Slush", "link" : "https://slushpool.com"},
+MINER_PAYOUT_TAG = { "1CK6KHY6MHgYvmRQ4PAafKYDrg1ejbH1cE" : {"name" : "Slush", "link" : "https://slushpool.com"},
                      "1AqTMY7kmHZxBuLUR5wJjPFUvqGs23sesr" : {"name" : "Slush", "link" : "https://slushpool.com"},
                      "1AcAj9p6zJn4xLXdvmdiuPCtY7YkBPTAJo" : {"name" : "BitFury", "link" : "http://bitfury.com"},
-                     "LajyQBeZaBA1NkZDeY8YT5RYYVRkXMvb2T" : {"name" : "F2Pool", "link" : "https://www.f2pool.com"},
                      "3HuobiNg2wHjdPU2mQczL9on8WF7hZmaGd" : {"name" : "Huobi", "link" : "http://www.huobi.com"},
                      "1JLRXD8rjRgQtTS9MvfQALfHgGWau9L9ky" : {"name" : "BW.COM", "link" : "https://www.bw.com"},
                      "155fzsEBHy9Ri2bMQ8uuuR3tv1YzcDywd4" : {"name" : "BitClub", "link" : "https://bitclubpool.com"},
