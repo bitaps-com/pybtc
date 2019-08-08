@@ -10,7 +10,7 @@ from pybtc import int_to_bytes, bytes_to_int, bytes_from_hex
 from pybtc import MRU, parse_script, MINER_COINBASE_TAG, MINER_PAYOUT_TAG, hash_to_address
 from collections import deque
 import traceback
-
+import json
 
 
 
@@ -532,7 +532,7 @@ class Connector:
                     block["miner"] = None
                     for tag in MINER_COINBASE_TAG:
                         if coinbase.find(tag) != -1:
-                            block["miner"] = MINER_COINBASE_TAG[tag]
+                            block["miner"] = json.dumps(MINER_COINBASE_TAG[tag])
                             break
                     else:
                         try:
@@ -540,7 +540,7 @@ class Connector:
                             script_hash = False if block["rawTx"][0]["vOut"][0]["nType"] == 1 else True
                             a = hash_to_address(address_hash, script_hash=script_hash)
                             if a in MINER_PAYOUT_TAG:
-                                block["miner"] = MINER_PAYOUT_TAG[a]
+                                block["miner"] = json.dumps(MINER_PAYOUT_TAG[a])
                         except:
                             pass
 
