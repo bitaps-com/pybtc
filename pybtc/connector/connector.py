@@ -1348,7 +1348,7 @@ class Connector:
             if block_tx:
                 self.await_tx.remove(tx_hash)
                 self.await_tx_future[tx["txId"]].set_result(True)
-                # self.log.debug("tx %s; left %s" % (tx_hash, len(self.await_tx)))
+                self.log.debug("tx %s; left %s" % (tx_hash, len(self.await_tx)))
 
 
             # in case recently added transaction
