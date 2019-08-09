@@ -1417,8 +1417,8 @@ class Connector:
         self.log.warning("New block processing restricted")
         self.log.warning("Stopping node connector ...")
         try:
-            for i in self.BlockLoader.worker:
-                self.BlockLoader.worker[i].terminate()
+            for i in self.block_loader.worker:
+                self.block_loader.worker[i].terminate()
         except:
             print(traceback.format_exc())
             pass
