@@ -504,7 +504,9 @@ class Connector:
                                 await self.sync_utxo.commit()
                                 await asyncio.sleep(10)
 
-                            self.log.info("Flush utxo cache completed")
+                            self.log.info("Flush utxo cache completed %s %s " % (len(self.sync_utxo.cache),
+                                                                                   len(self.sync_utxo.pending_saved),
+                                                                                   ))
 
                         if self.synchronization_completed_handler:
                             await self.synchronization_completed_handler()
