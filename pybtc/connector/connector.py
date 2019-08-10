@@ -498,14 +498,10 @@ class Connector:
                             self.sync_utxo.checkpoints=deque([self.last_block_height])
 
                             self.sync_utxo.size_limit = 0
-                            while  self.sync_utxo.save_process:
+                            while  self.sync_utxo.save_process or self.sync_utxo.cache or self.sync_utxo.pending_saved:
                                 self.log.info("wait for utxo cache flush ...")
-                                await asyncio.sleep(10)
-
-                            self.sync_utxo.create_checkpoint(self.last_block_height, self.app_last_block)
-                            await self.sync_utxo.commit()
-                            while  self.sync_utxo.save_process:
-                                self.log.info("wait for utxo cache flush ...")
+                                self.sync_utxo.create_checkpoint(self.last_block_height, self.app_last_block)
+                                await self.sync_utxo.commit()
                                 await asyncio.sleep(10)
 
                             self.log.info("Flush utxo cache completed")
