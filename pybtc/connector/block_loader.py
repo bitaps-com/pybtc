@@ -102,6 +102,8 @@ class BlockLoader:
                                     self.height = self.parent.last_block_height + 1
                                 await self.pipe_sent_msg(self.worker[i].writer, b'rpc_batch_limit',
                                                          int_to_bytes(self.rpc_batch_limit))
+                                await self.pipe_sent_msg(self.worker[i].writer, b'target',
+                                                         int_to_bytes(target_height))
                                 await self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(self.height))
                                 self.height += self.rpc_batch_limit
                                 new_requests += 1
@@ -253,6 +255,7 @@ class Worker:
         self.rpc_timeout = rpc_timeout
         self.rpc_batch_limit = rpc_batch_limit
         self.utxo_data = utxo_data
+        self.target_height = 0
         self.name = name
         self.dsn = dsn
         self.db = None
@@ -281,7 +284,7 @@ class Worker:
             blocks, missed = dict(), deque()
             e, t, limit = height + limit, 0, 40
 
-            while height < e:
+            while height < e and height <= self.target_height:
                 batch, h_list = list(), list()
                 while len(batch) < limit and height < e:
                     batch.append(["getblockhash", height])
@@ -796,6 +799,11 @@ class Worker:
                 if msg_type == b'rpc_batch_limit':
                     self.rpc_batch_limit = bytes_to_int(msg)
                     continue
+
+                if msg_type == b'target_height':
+                    self.target_height = bytes_to_int(msg)
+                    continue
+
 
         except:
             pass
