@@ -1323,6 +1323,7 @@ class Connector:
                             tx["double_spent"] = True
                         except:
                             pass
+                    print('++', tx_hash)
 
                 # print('-', tx_hash)
                 for i in tx["vOut"]:
