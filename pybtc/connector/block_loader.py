@@ -102,7 +102,7 @@ class BlockLoader:
                                     self.height = self.parent.last_block_height + 1
                                 await self.pipe_sent_msg(self.worker[i].writer, b'rpc_batch_limit',
                                                          int_to_bytes(self.rpc_batch_limit))
-                                await self.pipe_sent_msg(self.worker[i].writer, b'target',
+                                await self.pipe_sent_msg(self.worker[i].writer, b'target_height',
                                                          int_to_bytes(target_height))
                                 await self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(self.height))
                                 self.height += self.rpc_batch_limit
@@ -802,7 +802,6 @@ class Worker:
 
                 if msg_type == b'target_height':
                     self.target_height = bytes_to_int(msg)
-                    print(self.target_height)
                     continue
 
 
