@@ -503,6 +503,7 @@ class Connector:
                                                                                         len(self.sync_utxo.pending_saved)) )
                                 self.sync_utxo.create_checkpoint(self.last_block_height, self.app_last_block)
                                 await self.sync_utxo.commit()
+                                print(self.sync_utxo.checkpoints)
                                 await asyncio.sleep(10)
 
                             self.log.info("Flush utxo cache completed %s %s " % (len(self.sync_utxo.cache),
