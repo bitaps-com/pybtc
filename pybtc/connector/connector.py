@@ -1310,7 +1310,9 @@ class Connector:
                         self.uutxo.load_buffer.append(tx["vIn"][i]["outpoint"])
                         commit_ustxo_buffer.add((tx["vIn"][i]["outpoint"], 0, tx["vIn"][i]["txId"], tx["txId"], i))
                     try:
+                        print('?', tx_hash)
                         await self.uutxo.load_utxo_data()
+                        print('+', tx_hash)
                     except:
                         print(traceback.format_exc())
 
