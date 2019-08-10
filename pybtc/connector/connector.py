@@ -1276,7 +1276,7 @@ class Connector:
 
     async def _new_transaction(self, tx, timestamp, block_tx = False):
         tx_hash = rh2s(tx["txId"])
-
+        print('-', tx_hash)
         if tx_hash in self.tx_in_process:
             if not block_tx:
                 self.new_tx_tasks -= 1
