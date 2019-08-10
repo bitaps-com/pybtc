@@ -1300,10 +1300,7 @@ class Connector:
                         tx["vIn"][i]["outpoint"] = b"".join((tx["vIn"][i]["txId"], int_to_bytes(tx["vIn"][i]["vOut"])))
                         self.uutxo.load_buffer.append(tx["vIn"][i]["outpoint"])
                         commit_ustxo_buffer.add((tx["vIn"][i]["outpoint"], 0, tx["vIn"][i]["txId"], tx["txId"], i))
-                    try:
-                        await self.uutxo.load_utxo_data()
-                    except:
-                        print(traceback.format_exc())
+                    await self.uutxo.load_utxo_data()
 
                     for i in tx["vIn"]:
                         tx["vIn"][i]["coin"] = self.uutxo.loaded_utxo[tx["vIn"][i]["outpoint"]]
@@ -1338,7 +1335,7 @@ class Connector:
             if block_tx:
                 self.await_tx.remove(tx_hash)
                 self.await_tx_future[tx["txId"]].set_result(True)
-                self.log.debug("tx %s; left %s" % (tx_hash, len(self.await_tx)))
+                # self.log.debug("tx %s; left %s" % (tx_hash, len(self.await_tx)))
 
 
             # in case recently added transaction
