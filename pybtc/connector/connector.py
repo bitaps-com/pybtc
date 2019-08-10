@@ -1282,11 +1282,6 @@ class Connector:
             return
 
         if self.tx_cache.has_key(tx_hash):
-            # if block_tx:
-            #     self.await_tx.remove(tx_hash)
-            #     self.await_tx_future[tx["txId"]].set_result(True)
-            #     print("block tx>", tx_hash, "left", len(self.await_tx))
-            # else:
             self.new_tx_tasks -= 1
             return
 
@@ -1310,9 +1305,7 @@ class Connector:
                         self.uutxo.load_buffer.append(tx["vIn"][i]["outpoint"])
                         commit_ustxo_buffer.add((tx["vIn"][i]["outpoint"], 0, tx["vIn"][i]["txId"], tx["txId"], i))
                     try:
-                        print('?', tx_hash)
                         await self.uutxo.load_utxo_data()
-                        print('+', tx_hash)
                     except:
                         print(traceback.format_exc())
 
@@ -1323,9 +1316,7 @@ class Connector:
                             tx["double_spent"] = True
                         except:
                             pass
-                    print('++', tx_hash)
 
-                # print('-', tx_hash)
                 for i in tx["vOut"]:
                     try:
                         address = b"".join((bytes([tx["vOut"][i]["nType"]]), tx["vOut"][i]["addressHash"]))
