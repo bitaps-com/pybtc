@@ -1320,7 +1320,7 @@ class Connector:
                         except:
                             pass
 
-                print('-', tx_hash)
+                # print('-', tx_hash)
                 for i in tx["vOut"]:
                     try:
                         address = b"".join((bytes([tx["vOut"][i]["nType"]]), tx["vOut"][i]["addressHash"]))
