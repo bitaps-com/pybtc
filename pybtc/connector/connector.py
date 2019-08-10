@@ -495,7 +495,6 @@ class Connector:
                             self.log.info("Last block %s App last block %s" % (self.last_block_height,
                                                                                self.app_last_block))
 
-                            print(self.sync_utxo.checkpoints)
                             self.sync_utxo.checkpoints =  deque([self.last_block_height])
 
                             self.sync_utxo.size_limit = 0
@@ -504,7 +503,6 @@ class Connector:
                                                                                         len(self.sync_utxo.pending_saved)) )
                                 self.sync_utxo.create_checkpoint(self.last_block_height, self.app_last_block)
                                 await self.sync_utxo.commit()
-                                print(self.sync_utxo.checkpoints)
                                 await asyncio.sleep(10)
 
                             self.log.info("Flush utxo cache completed %s %s " % (len(self.sync_utxo.cache),
