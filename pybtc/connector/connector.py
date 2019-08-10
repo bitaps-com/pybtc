@@ -495,7 +495,7 @@ class Connector:
                             self.log.info("Last block %s App last block %s" % (self.last_block_height,
                                                                                self.app_last_block))
 
-                            self.sync_utxo.checkpoints=self.sync_utxo.checkpoints.append(self.last_block_height)
+                            self.sync_utxo.checkpoints.append(self.last_block_height)
 
                             self.sync_utxo.size_limit = 0
                             while  self.sync_utxo.save_process or self.sync_utxo.cache or self.sync_utxo.pending_saved:
