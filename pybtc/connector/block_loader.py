@@ -802,6 +802,7 @@ class Worker:
 
                 if msg_type == b'target_height':
                     self.target_height = bytes_to_int(msg)
+                    print(self.target_height)
                     continue
 
 
