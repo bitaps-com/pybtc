@@ -511,6 +511,10 @@ class Connector:
                                                                                    ))
 
                         if self.synchronization_completed_handler:
+                            try:
+                                [self.block_loader.worker[i].terminate() for i in self.block_loader.worker]
+                            except:
+                                pass
                             await self.synchronization_completed_handler()
                         self.deep_synchronization = False
                         self.total_received_tx = 0
@@ -1411,7 +1415,6 @@ class Connector:
             for i in self.block_loader.worker:
                 self.block_loader.worker[i].terminate()
         except:
-            print(traceback.format_exc())
             pass
         [task.cancel() for task in self.tasks]
         if self.tasks:
