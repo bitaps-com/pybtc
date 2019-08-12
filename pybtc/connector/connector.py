@@ -105,7 +105,7 @@ class Connector:
         self.uutxo = None
         self.cache_loading = False
         self.app_block_height_on_start = int(last_block_height) if int(last_block_height) else 0
-        self.last_block_height = 0
+        self.last_block_height = -1
         self.last_block_utxo_cached_height = 0
         self.deep_synchronization = False
 
@@ -309,7 +309,8 @@ class Connector:
                 lb = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_block';")
                 lc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
                 if lb is None:
-                    lb = lc = 0
+                    lb = -1
+                    lc = 0
                     await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_block', 0);")
                     await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_cached_block', 0);")
 
