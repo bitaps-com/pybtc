@@ -936,7 +936,6 @@ class Connector:
                 for i in tx["vOut"]:
                     if "_s_" in tx["vOut"][i]:
                         self.coins += 1
-                        print(".")
                     else:
                         out = tx["vOut"][i]
                         if self.skip_opreturn and out["nType"] in (3, 8):
@@ -962,6 +961,15 @@ class Connector:
                                 tx["vIn"][i]["coin"] = inp["_a_"]
                                 self.preload_cached_annihilated += 1
                                 self.preload_cached_total += 1
+                                try:
+                                    outpoint = inp["vOut"]["_outpoint"]
+                                except:
+                                    outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
+                                try:
+                                    self.sync_utxo.get(outpoint)
+                                    print("+")
+                                except:
+                                    pass
                             except:
                                 try:
                                     outpoint = inp["vOut"]["_outpoint"]
