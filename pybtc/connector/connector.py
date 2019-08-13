@@ -529,7 +529,7 @@ class Connector:
                         print("!>", self.last_block_height)
                     else:
                         print(self.last_block_height + 1)
-                        self.loop.create_task(self.get_next_block())
+                        self.loop.create_task(self.test())
                         return
                 if not block:
                     h = await self.rpc.getblockhash(self.last_block_height + 1)
@@ -729,6 +729,11 @@ class Connector:
                 self.log.error("get next block failed %s" % str(err))
             finally:
                 self.get_next_block_mutex = False
+
+
+    async def test(self):
+        self.get_next_block_mutex = True
+        self.loop.create_task(self.get_next_block())
 
 
     async def _get_block_by_hash(self, hash):
