@@ -278,7 +278,6 @@ class Worker:
         self.loop.run_forever()
 
     async def load_blocks(self, height, limit):
-        print("get", height)
         start_height = height
         self.destroyed_coins = MRU()
         self.coins = MRU()
@@ -760,7 +759,6 @@ class Worker:
                         for i in blocks[x]["rawTx"][y]["vOut"]:
                             try:
                                 r = self.destroyed_coins.delete((x<<39)+(y<<20)+(1<<19)+i)
-                                print(">>>>", r, (x<<39)+(y<<20)+(1<<19)+i)
                                 blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                             except: pass
                 blocks[x] = pickle.dumps(blocks[x])
