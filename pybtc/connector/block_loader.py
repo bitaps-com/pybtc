@@ -464,7 +464,7 @@ class Worker:
                                                # if r[0] >> 39 >= start_height and r[0] >> 39 < height:
                                                #     block["rawTx"][z]["vIn"][i]["_a_"] = r
                                                # else:
-                                                block["rawTx"][z]["vIn"][i]["_c_"] = r
+                                               block["rawTx"][z]["vIn"][i]["_c_"] = r
                                                if self.option_tx_map:
                                                    block["txMap"].append(((x << 39) + (z << 20) + (0 << 19) + i,
                                                                           r[2], r[1]))
