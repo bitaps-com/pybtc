@@ -273,13 +273,14 @@ class Worker:
         self.out_writer = out_writer
         self.in_reader = in_reader
         self.coins = MRU(500000)
-        self.destroyed_coins = MRU(1000000)
         signal.signal(signal.SIGTERM, self.terminate)
         self.msg_loop = self.loop.create_task(self.message_loop())
         self.loop.run_forever()
 
     async def load_blocks(self, height, limit):
         start_height = height
+        self.destroyed_coins = MRU()
+        self.coins = MRU()
         try:
             blocks, missed = dict(), deque()
             e, t, limit = height + limit, 0, 40
@@ -305,8 +306,7 @@ class Worker:
                     if y["result"] is not None:
                         block = decode_block_tx(y["result"])
 
-                        if self.option_tx_map:
-                            block["txMap"], block["stxo"] = deque(), deque()
+                        if self.option_tx_map: block["txMap"], block["stxo"] = deque(), deque()
 
                         if self.option_merkle_proof:
                             mt = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
@@ -460,17 +460,20 @@ class Worker:
 
                                         try:
                                            r = self.coins.delete(outpoint)
+                                           self.destroyed_coins[r[0]] = True
                                            try:
                                                # if r[0] >> 39 >= start_height and r[0] >> 39 < height:
                                                #     block["rawTx"][z]["vIn"][i]["_a_"] = r
+                                               #
                                                # else:
-                                               block["rawTx"][z]["vIn"][i]["_c_"] = r
+                                               #     block["rawTx"][z]["vIn"][i]["_c_"] = r
+                                               block["rawTx"][z]["vIn"][i]["_a_"] = r
                                                if self.option_tx_map:
                                                    block["txMap"].append(((x << 39) + (z << 20) + (0 << 19) + i,
                                                                           r[2], r[1]))
                                                    block["stxo"].append((r[0], (x << 39) + (z << 20) + (0 << 19) + i))
                                                t += 1
-                                               self.destroyed_coins[r[0]] = True
+
 
                                                if self.option_analytica:
                                                    amount = r[1]
@@ -577,11 +580,9 @@ class Worker:
                                        if self.option_tx_map:
                                            block["txMap"].append(((height<<39)+(z<<20)+(0<<19)+i,
                                                                   p[outpoint][2], p[outpoint][1]))
-                                           block["stxo"].append((p[outpoint][0],
-                                                                (height << 39) + (z << 20) + (0 << 19) + i))
+                                           block["stxo"].append((p[outpoint][0], (height<<39)+(z<<20)+(0<<19)+i))
                                        t += 1
                                        n += 1
-
                                        if self.option_analytica:
                                            r = p[outpoint]
                                            amount = r[1]
@@ -625,8 +626,6 @@ class Worker:
                                                        except: block["stat"]["iP2WSHtypeMapCount"][st] = 1
                                                        try: block["stat"]["iP2WSHtypeMapAmount"][st] += amount
                                                        except: block["stat"]["iP2WSHtypeMapAmount"][st] = amount
-
-
                                    except:
                                        pass
 
@@ -752,10 +751,6 @@ class Worker:
                                    #
 
 
-
-
-
-
             if self.utxo_data and blocks:
                 blocks[x]["checkpoint"] = x
             for x in blocks:
@@ -765,9 +760,7 @@ class Worker:
                             try:
                                 r = self.destroyed_coins.delete((x<<39)+(y<<20)+(1<<19)+i)
                                 blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
-                                assert r is not None
                             except: pass
-
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except Exception as err:
