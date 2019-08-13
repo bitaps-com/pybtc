@@ -936,6 +936,7 @@ class Connector:
                 for i in tx["vOut"]:
                     if "_s_" in tx["vOut"][i]:
                         self.coins += 1
+                        print(".")
                     else:
                         out = tx["vOut"][i]
                         if self.skip_opreturn and out["nType"] in (3, 8):
