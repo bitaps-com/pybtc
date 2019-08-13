@@ -229,6 +229,7 @@ class BlockLoader:
                 else:
                     self.rpc_batch_limit = 40
                 for i in blocks:
+                    print("->", i)
                     self.parent.block_preload.set(i, blocks[i])
                 if blocks:
                     if self.parent.utxo_data:
@@ -278,7 +279,7 @@ class Worker:
         self.loop.run_forever()
 
     async def load_blocks(self, height, limit):
-        print("l", height)
+        print("get", height)
         start_height = height
         self.destroyed_coins = MRU()
         self.coins = MRU()
@@ -461,6 +462,7 @@ class Worker:
 
                                         try:
                                            r = self.coins.delete(outpoint)
+                                           block["rawTx"][z]["vIn"][i]["_a_"] = r
                                            self.destroyed_coins[r[0]] = True
                                            try:
                                                # if r[0] >> 39 >= start_height and r[0] >> 39 < height:
@@ -468,7 +470,7 @@ class Worker:
                                                #
                                                # else:
                                                #     block["rawTx"][z]["vIn"][i]["_c_"] = r
-                                               block["rawTx"][z]["vIn"][i]["_a_"] = r
+
                                                if self.option_tx_map:
                                                    block["txMap"].append(((x<<39)+(z<<20)+(0<<19)+i, r[2], r[1]))
                                                    block["stxo"].append((r[0], (x<<39)+(z<<20)+(0<<19)+i))
@@ -759,6 +761,7 @@ class Worker:
                         for i in blocks[x]["rawTx"][y]["vOut"]:
                             try:
                                 r = self.destroyed_coins.delete((x<<39)+(y<<20)+(1<<19)+i)
+                                print(">>>>", r)
                                 blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                             except: pass
                 blocks[x] = pickle.dumps(blocks[x])

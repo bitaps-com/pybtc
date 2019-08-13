@@ -969,8 +969,8 @@ class Connector:
                                 except:
                                     outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                 try:
-                                    self.sync_utxo.get(outpoint)
-                                    print("+")
+                                    k = self.sync_utxo.get(outpoint)
+                                    print(k)
                                 except:
                                     pass
                             except:
