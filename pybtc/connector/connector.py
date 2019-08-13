@@ -975,8 +975,9 @@ class Connector:
                                 except:
                                     outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                 try:
-                                    k = self.sync_utxo.get(outpoint)
-                                    print(k)
+                                    k = self.sync_utxo.cache.delete(outpoint)
+                                    if k is not None:
+                                        print("???", k)
                                 except:
                                     pass
                             except:
