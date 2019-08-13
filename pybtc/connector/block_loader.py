@@ -469,9 +469,8 @@ class Worker:
                                                #     block["rawTx"][z]["vIn"][i]["_c_"] = r
                                                block["rawTx"][z]["vIn"][i]["_a_"] = r
                                                if self.option_tx_map:
-                                                   block["txMap"].append(((x << 39) + (z << 20) + (0 << 19) + i,
-                                                                          r[2], r[1]))
-                                                   block["stxo"].append((r[0], (x << 39) + (z << 20) + (0 << 19) + i))
+                                                   block["txMap"].append(((x<<39)+(z<<20)+(0<<19)+i, r[2], r[1]))
+                                                   block["stxo"].append((r[0], (x<<39)+(z<<20)+(0<<19)+i))
                                                t += 1
 
 

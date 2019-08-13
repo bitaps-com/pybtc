@@ -526,7 +526,9 @@ class Connector:
                         q = time.time()
                         block = loads(raw_block)
                         self.blocks_decode_time += time.time() - q
-
+                    else:
+                        await asyncio.sleep(1)
+                        return self.loop.create_task(self.get_next_block())
                 if not block:
                     h = await self.rpc.getblockhash(self.last_block_height + 1)
                     block = await self._get_block_by_hash(h)
