@@ -229,7 +229,6 @@ class BlockLoader:
                 else:
                     self.rpc_batch_limit = 40
                 for i in blocks:
-                    print("->", i)
                     self.parent.block_preload.set(i, blocks[i])
                 if blocks:
                     if self.parent.utxo_data:
@@ -761,7 +760,7 @@ class Worker:
                         for i in blocks[x]["rawTx"][y]["vOut"]:
                             try:
                                 r = self.destroyed_coins.delete((x<<39)+(y<<20)+(1<<19)+i)
-                                print(">>>>", r)
+                                print(">>>>", r, (x<<39)+(y<<20)+(1<<19)+i)
                                 blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                             except: pass
                 blocks[x] = pickle.dumps(blocks[x])
