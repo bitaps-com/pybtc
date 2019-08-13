@@ -528,6 +528,7 @@ class Connector:
                         self.blocks_decode_time += time.time() - q
                     else:
                         self.loop.create_task(self.get_next_block())
+                        return
 
                 if not block:
                     h = await self.rpc.getblockhash(self.last_block_height + 1)
