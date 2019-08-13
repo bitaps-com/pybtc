@@ -278,6 +278,7 @@ class Worker:
         self.loop.run_forever()
 
     async def load_blocks(self, height, limit):
+        print("l", height)
         start_height = height
         self.destroyed_coins = MRU()
         self.coins = MRU()
