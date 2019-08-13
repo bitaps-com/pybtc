@@ -443,7 +443,7 @@ class Worker:
                                         try: block["stat"]["oAmountMapAmount"][amount_key] += amount
                                         except: block["stat"]["oAmountMapAmount"][amount_key] = amount
 
-
+                            for z in block["rawTx"]:
                                 if not block["rawTx"][z]["coinbase"]:
                                     for i  in block["rawTx"][z]["vIn"]:
                                         inp = block["rawTx"][z]["vIn"][i]
