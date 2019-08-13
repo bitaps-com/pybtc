@@ -526,6 +526,7 @@ class Connector:
                         q = time.time()
                         block = loads(raw_block)
                         self.blocks_decode_time += time.time() - q
+                        print("!>", self.last_block_height)
                     else:
                         print(self.last_block_height + 1)
                         await asyncio.sleep(1)
