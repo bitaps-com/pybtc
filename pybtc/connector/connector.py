@@ -968,16 +968,16 @@ class Connector:
                                 tx["vIn"][i]["coin"] = inp["_a_"]
                                 self.preload_cached_annihilated += 1
                                 self.preload_cached_total += 1
-                                try:
-                                    outpoint = inp["vOut"]["_outpoint"]
-                                except:
-                                    outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                                try:
-                                    k = self.sync_utxo.cache.delete(outpoint)
-                                    if k is not None:
-                                        print("???", k)
-                                except:
-                                    pass
+                                # try:
+                                #     outpoint = inp["vOut"]["_outpoint"]
+                                # except:
+                                #     outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
+                                # try:
+                                #     k = self.sync_utxo.cache.delete(outpoint)
+                                #     if k is not None:
+                                #         print("???", k)
+                                # except:
+                                #     pass
                             except:
                                 try:
                                     outpoint = inp["vOut"]["_outpoint"]
