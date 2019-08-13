@@ -529,8 +529,8 @@ class Connector:
                         print("!>", self.last_block_height)
                     else:
                         print(self.last_block_height + 1)
-                        await asyncio.sleep(1)
-                        return self.loop.create_task(self.get_next_block())
+                        self.loop.create_task(self.get_next_block())
+                        return
                 if not block:
                     h = await self.rpc.getblockhash(self.last_block_height + 1)
                     block = await self._get_block_by_hash(h)
