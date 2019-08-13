@@ -282,7 +282,7 @@ class Worker:
         start_height = height
         try:
             blocks, missed = dict(), deque()
-            e, t, limit = height + limit, 0, 40
+            e, t = height + limit, 0
 
             while height < e and height <= self.target_height:
                 batch, h_list = list(), list()
