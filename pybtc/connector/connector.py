@@ -977,13 +977,13 @@ class Connector:
                                     tx["vIn"][i]["coin"] = inp["_l_"]
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
-                                    self.sync_utxo.deleted.append(inp["vOut"]["_outpoint"])
+                                    self.sync_utxo.deleted.append(inp["_outpoint"])
                                 except:
-                                    r = self.sync_utxo.get(inp["vOut"]["_outpoint"])
+                                    r = self.sync_utxo.get(inp["_outpoint"])
                                     if r:
                                         tx["vIn"][i]["coin"] = r
                                     else:
-                                        missed.append((inp["vOut"]["_outpoint"], (height<<39)+(q<<20)+(0<<19)+i, q, i))
+                                        missed.append((inp["_outpoint"], (height<<39)+(q<<20)+(0<<19)+i, q, i))
 
             if missed:
                 t2 = time.time()
