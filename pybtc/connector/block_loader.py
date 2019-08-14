@@ -104,7 +104,6 @@ class BlockLoader:
                                 await self.pipe_sent_msg(self.worker[i].writer, b'target_height',
                                                          int_to_bytes(target_height))
                                 await self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(self.height))
-                                print("load ", self.height, target_height)
                                 self.height += self.rpc_batch_limit
                                 new_requests += 1
                     if not new_requests:
@@ -278,6 +277,7 @@ class Worker:
         self.loop.run_forever()
 
     async def load_blocks(self, height, limit):
+        print("re",height)
         start_height = height
         start_limit = limit
         self.destroyed_coins = MRU()
@@ -749,6 +749,7 @@ class Worker:
                                 blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                             except: pass
                 blocks[x] = pickle.dumps(blocks[x])
+            print("rek", height)
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except Exception as err:
             self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
