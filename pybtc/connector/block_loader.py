@@ -103,6 +103,7 @@ class BlockLoader:
                                 await self.pipe_sent_msg(self.worker[i].writer, b'target_height',
                                                          int_to_bytes(target_height))
                                 await self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(self.height))
+                                print("load ", self.height)
                                 self.height += self.rpc_batch_limit
                                 new_requests += 1
                     if not new_requests:
