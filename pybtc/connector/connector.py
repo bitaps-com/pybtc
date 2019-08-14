@@ -733,7 +733,7 @@ class Connector:
 
     async def test(self):
         await asyncio.sleep(5)
-        print(">", self.last_block_height)
+        print(">", self.last_block_height._store.keys())
         self.get_next_block_mutex = True
         self.loop.create_task(self.get_next_block())
 

@@ -73,7 +73,6 @@ class Cache():
         self._hit = 0
 
     def set(self, key, value):
-        print(key)
         self._check_limit()
         self._store[key] = value
         self._store_size += sys.getsizeof(value) + sys.getsizeof(key)
