@@ -92,8 +92,9 @@ class BlockLoader:
             new_requests = 0
             if self.parent.block_preload._store_size < self.parent.block_preload_cache_limit:
                 try:
-                    if self.height < target_height:
-                        for i in self.worker_busy:
+
+                    for i in self.worker_busy:
+                        if self.height < target_height:
                             if not self.worker_busy[i]:
                                 self.worker_busy[i] = True
                                 if self.height <= self.parent.last_block_height:
