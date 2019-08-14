@@ -133,6 +133,13 @@ class BlockLoader:
                            "cache last block %s;" % (next(iter(self.parent.block_preload._store)),
                                                      next(reversed(self.parent.block_preload._store))))
 
+        active = True
+        while active:
+            active = False
+            for i in self.worker_busy:
+                if self.worker_busy[i]: active = True
+            await asyncio.sleep(1)
+
         [self.worker[p].terminate() for p in self.worker]
         for p in self.worker_busy: self.worker_busy[p] = False
 
@@ -277,7 +284,6 @@ class Worker:
         self.loop.run_forever()
 
     async def load_blocks(self, height, limit):
-        print("re",height)
         start_height = height
         start_limit = limit
         self.destroyed_coins = MRU()
@@ -749,7 +755,6 @@ class Worker:
                                 blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                             except: pass
                 blocks[x] = pickle.dumps(blocks[x])
-            print("rek", height)
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except Exception as err:
             self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
