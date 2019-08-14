@@ -504,7 +504,9 @@ class Connector:
                                                                                         len(self.sync_utxo.pending_saved)) )
                                 self.sync_utxo.create_checkpoint(self.last_block_height, self.app_last_block)
                                 await self.sync_utxo.commit()
+
                                 await asyncio.sleep(10)
+
 
                             self.log.info("Flush utxo cache completed %s %s " % (len(self.sync_utxo.cache),
                                                                                    len(self.sync_utxo.pending_saved),
@@ -730,6 +732,8 @@ class Connector:
 
 
     async def test(self):
+        await asyncio.sleep(5)
+        print(">", self.last_block_height)
         self.get_next_block_mutex = True
         self.loop.create_task(self.get_next_block())
 
@@ -949,7 +953,6 @@ class Connector:
                             self.op_return += 1
                             continue
                         self.coins += 1
-
                         self.sync_utxo.set(b"".join((tx["txId"], int_to_bytes(i))),
                                            (height << 39) + (q << 20) + (1 << 19) + i,
                                            out["value"],
@@ -968,42 +971,19 @@ class Connector:
                                 tx["vIn"][i]["coin"] = inp["_a_"]
                                 self.preload_cached_annihilated += 1
                                 self.preload_cached_total += 1
-                                # try:
-                                #     outpoint = inp["vOut"]["_outpoint"]
-                                # except:
-                                #     outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                                # try:
-                                #     k = self.sync_utxo.cache.delete(outpoint)
-                                #     if k is not None:
-                                #         print("???", k)
-                                # except:
-                                #     pass
                             except:
                                 try:
-                                    outpoint = inp["vOut"]["_outpoint"]
-                                except:
-                                    outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                                try:
-                                    # preloaded and should exist in cache
-                                    tx["vIn"][i]["coin"] = inp["_c_"]
+                                    # coin was loaded from db on preload stage
+                                    tx["vIn"][i]["coin"] = inp["_l_"]
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
-                                    self.sync_utxo.get(outpoint)
+                                    self.sync_utxo.deleted.append(inp["vOut"]["_outpoint"])
                                 except:
-                                    try:
-                                        # coin was loaded from db on preload stage
-                                        tx["vIn"][i]["coin"] = inp["_l_"]
-                                        self.preload_cached_total += 1
-                                        self.preload_cached += 1
-                                        self.sync_utxo.deleted.append(outpoint)
-                                    except:
-                                        r = self.sync_utxo.get(outpoint)
-                                        if r:
-                                            tx["vIn"][i]["coin"] = r
-                                        else:
-                                            missed.append((outpoint,
-                                                          (height<<39)+(q<<20)+(0<<19)+i,
-                                                           q, i))
+                                    r = self.sync_utxo.get(inp["vOut"]["_outpoint"])
+                                    if r:
+                                        tx["vIn"][i]["coin"] = r
+                                    else:
+                                        missed.append((inp["vOut"]["_outpoint"], (height<<39)+(q<<20)+(0<<19)+i, q, i))
 
             if missed:
                 t2 = time.time()
