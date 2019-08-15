@@ -519,6 +519,7 @@ class Connector:
                                 pass
                             await self.synchronization_completed_handler()
                         self.deep_synchronization = False
+                        self.deep_sync_limit = self.node_last_block
                         self.total_received_tx = 0
                         self.total_received_tx_time = 0
                 block = None

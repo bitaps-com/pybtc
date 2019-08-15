@@ -105,6 +105,7 @@ class BlockLoader:
                                                          int_to_bytes(target_height))
                                 await self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(self.height))
                                 self.height += self.rpc_batch_limit
+                                if self.height > target_height: self.height = target_height
                                 new_requests += 1
                     if not new_requests:
                         await asyncio.sleep(1)
@@ -294,7 +295,7 @@ class Worker:
 
             while height < e and height <= self.target_height:
                 batch, h_list = list(), list()
-                while len(batch) < limit and height < e:
+                while len(batch) < limit and height < e and height <= self.target_height:
                     batch.append(["getblockhash", height])
                     h_list.append(height)
                     height += 1
