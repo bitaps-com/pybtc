@@ -159,3 +159,10 @@ MINER_PAYOUT_TAG = { "1CK6KHY6MHgYvmRQ4PAafKYDrg1ejbH1cE" : {"name" : "Slush", "
                      "3KJrsjfg1dD6CrsTeHdHVH3KqMpvL2XWQn" : {"name" : "Poolin", "link" : "https://www.poolin.com"},
                      "13hQVEstgo4iPQZv9C7VELnLWF7UWtF4Q3" : {"name" : "Bixin", "link" : "https://haopool.com/"},
                      "1GP8eWArgpwRum76saJS4cZKCHWJHs9PQo" : {"name": "CANOE", "link": "https://www.canoepool.com/"}}
+
+
+# 20,000 items with fp rate < 0.1% or 10,000 items and <0.0001%
+MAX_BLOOM_FILTER_SIZE = 36000
+MAX_HASH_FUNCS = 50
+LN2SQUARED = 0.4804530139182014246671025263266649717305529515945455
+LN2 = 0.6931471805599453094172321214581765680755001343602552

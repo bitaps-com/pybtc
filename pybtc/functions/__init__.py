@@ -7,3 +7,4 @@ from .block import *
 from .encode import *
 from .bip39_mnemonic import *
 from .bip32 import *
+from .bloom import *
