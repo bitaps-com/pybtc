@@ -109,7 +109,7 @@ def merkle_root_from_proof(merkle_proof, tx_id, index, return_hex=True, receive_
         for h in merkle_proof:
             _merkle_proof_append(s2rh(h) if isinstance(h, str) else h)
         merkle_proof = _merkle_proof
-        tx_id = bytes_from_hex(tx_id) if isinstance(tx_id, str) else tx_id
+        tx_id = s2rh(tx_id) if isinstance(tx_id, str) else tx_id
 
     root = tx_id
     for h in merkle_proof:
