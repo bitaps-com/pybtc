@@ -282,6 +282,7 @@ class Connector:
                                                                       out_tx_id BYTEA,
                                                                       tx_id BYTEA,
                                                                       input_index INT,
+                                                                      address BYTEA,
                                                                       PRIMARY KEY(outpoint, sequence));                                                      
                                    """)
 
@@ -1303,11 +1304,13 @@ class Connector:
                         self.destroyed_coins += 1
                         tx["vIn"][i]["outpoint"] = b"".join((tx["vIn"][i]["txId"], int_to_bytes(tx["vIn"][i]["vOut"])))
                         self.uutxo.load_buffer.append(tx["vIn"][i]["outpoint"])
-                        commit_ustxo_buffer.add((tx["vIn"][i]["outpoint"], 0, tx["vIn"][i]["txId"], tx["txId"], i))
+
                     await self.uutxo.load_utxo_data()
 
                     for i in tx["vIn"]:
                         tx["vIn"][i]["coin"] = self.uutxo.loaded_utxo[tx["vIn"][i]["outpoint"]]
+                        commit_ustxo_buffer.add((tx["vIn"][i]["outpoint"], 0,
+                                                 tx["vIn"][i]["txId"], tx["txId"], i, tx["vIn"][i]["coin"][2]))
                         try:
                             tx["vIn"][i]["double_spent"] = self.uutxo.loaded_ustxo[tx["vIn"][i]["outpoint"]]
                             tx["double_spent"] = True
