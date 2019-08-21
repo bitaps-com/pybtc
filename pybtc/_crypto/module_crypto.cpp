@@ -17,7 +17,7 @@ static PyObject* crypto_murmurhash3(PyObject *, PyObject* args) {
     unsigned char *charBuf = (unsigned char*)buffer.buf;
     std::vector<unsigned char> v(charBuf, charBuf + buffer.len);
     unsigned int r = MurmurHash3(nHashSeed, v);
-
+    PyBuffer_Release(&buffer);
     PyObject *return_value = Py_BuildValue("I", r);
 
     return return_value;
