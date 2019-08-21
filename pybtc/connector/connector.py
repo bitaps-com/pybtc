@@ -51,6 +51,7 @@ class Connector:
                  utxo_cache_size=1000000,
                  tx_orphan_buffer_limit=1000,
                  skip_opreturn=True,
+                 block_bloom_filters=False,
                  merkle_proof=False,
                  tx_map=False,
                  analytica=False,
@@ -77,6 +78,7 @@ class Connector:
         self.block_timeout = block_timeout
         self.tx_handler = tx_handler
         self.skip_opreturn = skip_opreturn
+        self.option_block_bloom_filters = block_bloom_filters
         self.option_merkle_proof = merkle_proof
         self.option_tx_map = tx_map
         self.option_analytica = analytica
@@ -531,7 +533,7 @@ class Connector:
                         block = loads(raw_block)
                         self.blocks_decode_time += time.time() - q
                     else:
-                        self.loop.create_task(self.test())
+                        self.loop.create_task(self.retry())
                         return
                 if not block:
                     h = await self.rpc.getblockhash(self.last_block_height + 1)
@@ -733,7 +735,7 @@ class Connector:
                 self.get_next_block_mutex = False
 
 
-    async def test(self):
+    async def retry(self):
         await asyncio.sleep(1)
         self.get_next_block_mutex = True
         self.loop.create_task(self.get_next_block())
@@ -1009,6 +1011,8 @@ class Connector:
                                            block["rawTx"][q]["vIn"][i]["coin"][1]))
                             block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
                                                  (height << 39)+(q<<20)+(0<<19)+i))
+                            if self.option_block_bloom_filters:
+                                block["affected_addresses"].add(block["rawTx"][q]["vIn"][i]["coin"][2])
 
                         if self.option_analytica:
                             r = block["rawTx"][q]["vIn"][i]["coin"]
@@ -1067,6 +1071,11 @@ class Connector:
                                         except:
                                             block["stat"]["iP2WSHtypeMapAmount"][st] = amount
 
+            if self.option_block_bloom_filters:
+                f, h = create_bloom_filter(len(block["affected_addresses"]), 0.01)
+                [insert_to_bloom_filter(f, a, h) for a in block["affected_addresses"]]
+                block["bloomFilter"] = f
+                block["nHashFuncs"] = h
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])
         self.batch_parsing += (time.time() - t) - t2
