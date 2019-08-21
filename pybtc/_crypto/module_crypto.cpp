@@ -2,8 +2,26 @@
 #include "common.h"
 #include "sha256.h"
 #include "base58.h"
+#include "hash.h"
 #include <vector>
 #include <iostream>
+
+
+
+static PyObject* crypto_murmurhash3(PyObject *, PyObject* args) {
+    unsigned int nHashSeed;
+    Py_buffer buffer;
+
+    std::vector<unsigned char> vDataToHash;
+    if (!PyArg_ParseTuple(args,"Iy*", &nHashSeed, &buffer )) return NULL;
+    unsigned char *charBuf = (unsigned char*)buffer.buf;
+    std::vector<unsigned char> v(charBuf, charBuf + buffer.len);
+    unsigned int r = MurmurHash3(nHashSeed, v);
+
+    PyObject *return_value = Py_BuildValue("I", r);
+
+    return return_value;
+}
 
 
 static PyObject* crypto_decode_base58(PyObject *, PyObject* args) {
@@ -64,6 +82,7 @@ static PyObject* crypto_sha256(PyObject *, PyObject* args) {
 
 
 static PyMethodDef module_methods[] = {
+    { "__murmurhash3__", (PyCFunction)crypto_murmurhash3, METH_VARARGS, nullptr },
     { "__decode_base58__", (PyCFunction)crypto_decode_base58, METH_VARARGS, nullptr },
     { "__encode_base58__", (PyCFunction)crypto_encode_base58, METH_VARARGS, nullptr },
     { "__double_sha256__", (PyCFunction)crypto_double_sha256, METH_VARARGS, nullptr },

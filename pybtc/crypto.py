@@ -2,6 +2,8 @@ import _crypto
 import _secp256k1
 from os import urandom
 
+def murmurhash3(seed, data):
+    return _crypto.__murmurhash3__(seed, data)
 
 def __decode_base58__(h):
     return _crypto.__decode_base58__(h)

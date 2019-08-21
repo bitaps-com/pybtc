@@ -627,7 +627,7 @@ class BlockDeserializeTests(unittest.TestCase):
         hl = [tx["txId"] for tx in bt["tx"].values()]
         m_tree = merkle_tree(hl)
 
-        proofs = ["".join(merkle_proof(m_tree, i)) for i in range(len(hl))]
+        proofs = [merkle_proof(m_tree, i) for i in range(len(hl))]
         print(proofs)
         [self.assertEqual(merkle_root_from_proof(proof, hl[i], i), m_root) for i, proof in enumerate(proofs)]
 
