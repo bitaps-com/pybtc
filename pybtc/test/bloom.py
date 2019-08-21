@@ -14,8 +14,6 @@ class BloomFunctionsTests(unittest.TestCase):
         print("\nTesting bloom filter functions:\n")
 
     def test_bloom(self):
-        print(len(bloom.create_bloom_filter(6000, 0.01)))
-
         f, h = create_bloom_filter(10, 0.03)
         insert_to_bloom_filter(f, b"323434", h)
 
