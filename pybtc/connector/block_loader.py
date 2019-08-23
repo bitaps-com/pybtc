@@ -293,6 +293,7 @@ class Worker:
         self.destroyed_coins = MRU()
         self.coins = MRU()
         try:
+            self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
             blocks, missed = dict(), deque()
             e, t, limit = height + limit, 0, 40
 
@@ -778,18 +779,19 @@ class Worker:
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except Exception as err:
-            self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
             self.loop.create_task(self.load_blocks(start_height, start_limit))
             self.log.error("block loader restarting: %s" % err)
             print(traceback.format_exc())
             await asyncio.sleep(1)
+        finally:
+            try: await self.rpc.close()
+            except: pass
 
 
 
 
     async def message_loop(self):
         try:
-            self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
             if self.dsn:
                 self.db = await asyncpg.create_pool(dsn=self.dsn, min_size=1, max_size=1)
             self.reader = await self.get_pipe_reader(self.in_reader)
