@@ -1013,7 +1013,9 @@ class Connector:
                             block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
                                                  (height << 39)+(q<<20)+(0<<19)+i))
                             if self.option_block_bloom_filters:
-                                block["affected_addresses"].add(block["rawTx"][q]["vIn"][i]["coin"][2])
+                                insert_to_bloom_filter(block["bloomFilter"],
+                                                       block["rawTx"][q]["vIn"][i]["coin"][2],
+                                                       block["nHashFuncs"])
 
                         if self.option_analytica:
                             r = block["rawTx"][q]["vIn"][i]["coin"]
@@ -1072,11 +1074,6 @@ class Connector:
                                         except:
                                             block["stat"]["iP2WSHtypeMapAmount"][st] = amount
 
-            if self.option_block_bloom_filters:
-                f, h = create_bloom_filter(len(block["affected_addresses"]), 0.01)
-                [insert_to_bloom_filter(f, a, h) for a in block["affected_addresses"]]
-                block["bloomFilter"] = f
-                block["nHashFuncs"] = h
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])
         self.batch_parsing += (time.time() - t) - t2

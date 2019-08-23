@@ -567,15 +567,17 @@ class Worker:
                                                "FROM connector_utxo "
                                                "WHERE outpoint = ANY($1);", missed)
                    m += len(rows)
+
                    p = dict()
                    for row in rows:
-                       p[row["outpoint"]] = (row["pointer"],  row["amount"], row["address"])
+                        p[row["outpoint"]] = (row["pointer"],  row["amount"], row["address"])
+
                    for block in  blocks:
                        for z in blocks[block]["rawTx"]:
+                           still_missed = 0
                            if not blocks[block]["rawTx"][z]["coinbase"]:
                                for i in blocks[block]["rawTx"][z]["vIn"]:
-                                   inp = blocks[block]["rawTx"][z]["vIn"][i]
-                                   outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
+                                   outpoint = block["rawTx"][z]["vIn"][i]["_outpoint"]
                                    try:
                                        blocks[block]["rawTx"][z]["vIn"][i]["_l_"] = p[outpoint]
 
@@ -633,8 +635,14 @@ class Worker:
                                                        try: block["stat"]["iP2WSHtypeMapAmount"][st] += amount
                                                        except: block["stat"]["iP2WSHtypeMapAmount"][st] = amount
                                    except:
-                                       pass
+                                       still_missed += 1
 
+                       if self.option_block_bloom_filters:
+                           f, h = create_bloom_filter(len(block["affected_addresses"]) + still_missed,
+                                                      0.0000001)
+                           [insert_to_bloom_filter(f, a, h) for a in block["affected_addresses"]]
+                           block["bloomFilter"], block["nHashFuncs"] = f, h
+                           del block["affected_addresses"]
                    if self.option_analytica:
                        for b in blocks:
                            block = blocks[b]

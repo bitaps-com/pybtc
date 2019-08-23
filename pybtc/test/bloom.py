@@ -4,7 +4,7 @@ parentPath = os.path.abspath("..")
 if parentPath not in sys.path:
     sys.path.insert(0, parentPath)
 from pybtc import *
-
+import random
 
 
 
@@ -14,19 +14,56 @@ class BloomFunctionsTests(unittest.TestCase):
         print("\nTesting bloom filter functions:\n")
 
     def test_bloom(self):
-        f, h = create_bloom_filter(10, 0.03)
-        insert_to_bloom_filter(f, b"323434", h)
+        import lzma
 
-        self.assertEqual(contains_in_bloom_filter(f, b"323434", h), 1)
-        self.assertEqual(contains_in_bloom_filter(f, b"324348577", h), 0)
-        k = [sha256(int_to_bytes(i), hex=0) for i in range(20000)]
-        filter, h = create_bloom_filter(10000, 0.01)
+        f, h = create_bloom_filter(15000, 0.0000001)
+        print(">>", len(f), h)
+        h = 3 # < 2000
+        h = 4 # < 6000
+        h = 3 # < 6000
+        f = bytearray(512000 * 2)
 
-        for elem in k[:6000]: insert_to_bloom_filter(filter, elem, h)
+        N = 4.792529188683719
+        N = 4.092206312410748
+        M = 3000
+        f = bytearray(ceil(M*N))
+
+        h = 23 # < 6000
+
+        f, h = create_bloom_filter(M, 0.0000001)
+        # f = bytearray(128000 )
+
+        print(">", len(f), ceil(M*N))
+
+        k = set()
+        while len(k) < M:
+            k.add(sha256(int_to_bytes(random.randint(1, 10000000)))[:21])
+
+        for elem in k:
 
         exist = 0
         for elem in k:
-            if contains_in_bloom_filter(filter, elem, h):
+            if not contains_in_bloom_filter(f, elem, h):
                 exist += 1
-        self.assertEqual(exist >= 6000, True)
+        print("errors", exist, len(k), len(lzma.compress(f)))
+
+        p = set()
+        w = 0
+
+        for i in range(2):
+            p = set()
+            while len(p)< 100000:
+                t = sha256(int_to_bytes(random.randint(1, 10000000)))[:21]
+                if t not in k:
+                    p.add(t)
+
+            exist = 0
+            checked = 0
+            for elem in p:
+                if contains_in_bloom_filter(f, elem, h):
+                    exist += 1
+                checked += 1
+            print(i,"exist", exist, checked, h)
+            if exist: w+= 1
+            # self.assertEqual(exist >= 6000, True)
 

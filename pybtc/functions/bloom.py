@@ -1,14 +1,16 @@
 import struct
-from  math import log
+from  math import log, ceil
 from pybtc.constants import *
 from pybtc.crypto import murmurhash3
 
 _BIT_MASK = bytearray([0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80])
 
 def create_bloom_filter(n_elements, n_fp_rate):
-    filter = bytearray(int(min(-1 / LN2SQUARED * n_elements * log(n_fp_rate), MAX_BLOOM_FILTER_SIZE * 8) / 8))
-    hash_func_count = int(min(len(filter) * 8 / n_elements * LN2, MAX_HASH_FUNCS))
+    l = -1 / LN2SQUARED * n_elements * log(n_fp_rate)
+    filter = bytearray(ceil(l/8))
+    hash_func_count = int(min(l / n_elements * LN2, MAX_HASH_FUNCS))
     return filter, hash_func_count
+
 
 def insert_to_bloom_filter(filter, elem, hash_func_count, n_tweak = 0):
     fl = len(filter)
