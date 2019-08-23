@@ -2,6 +2,7 @@ from pybtc.functions.tools import bytes_to_int
 from pybtc.functions.tools import int_to_bytes
 from pybtc.functions.block import merkle_tree, merkle_proof
 from pybtc.connector.utils import decode_block_tx
+from pybtc.functions.bloom  import create_bloom_filter, insert_to_bloom_filter
 from pybtc import MRU, parse_script, rh2s, MINER_COINBASE_TAG, MINER_PAYOUT_TAG, hash_to_address
 import asyncio
 import os
@@ -777,10 +778,10 @@ class Worker:
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except Exception as err:
-            print(traceback.format_exc())
             self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
             self.loop.create_task(self.load_blocks(start_height, start_limit))
-            print("block loader restarted")
+            self.log.error("block loader restarting: %s" % err)
+            await asyncio.sleep(1)
 
 
 
