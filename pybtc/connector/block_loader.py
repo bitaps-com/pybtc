@@ -777,6 +777,7 @@ class Worker:
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except Exception as err:
+            print(traceback.format_exc())
             self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
             self.loop.create_task(self.load_blocks(start_height, start_limit))
             print("block loader restarted")
