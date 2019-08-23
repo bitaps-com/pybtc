@@ -70,6 +70,7 @@ class Connector:
 
         # settings
         self.log = logger
+        self.rpc = None
         self.rpc_url = node_rpc_url
         self.app_proc_title = app_proc_title
         self.rpc_timeout = rpc_timeout
@@ -1434,7 +1435,7 @@ class Connector:
         if not self.active_block.done():
             self.log.warning("Waiting active block task ...")
             await self.active_block
-        await self.rpc.close()
+        if self.rpc: await self.rpc.close()
         if self.zmqContext:
             self.zmqContext.destroy()
         self.log.warning('Node connector terminated')
