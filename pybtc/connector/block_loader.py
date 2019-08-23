@@ -640,11 +640,11 @@ class Worker:
                                        still_missed += 1
 
                        if self.option_block_bloom_filters:
-                           f, h = create_bloom_filter(len(block["affected_addresses"]) + still_missed,
+                           f, h = create_bloom_filter(len(blocks[block]["affected_addresses"]) + still_missed,
                                                       0.0000001)
-                           [insert_to_bloom_filter(f, a, h) for a in block["affected_addresses"]]
-                           block["bloomFilter"], block["nHashFuncs"] = f, h
-                           del block["affected_addresses"]
+                           [insert_to_bloom_filter(f, a, h) for a in blocks[block]["affected_addresses"]]
+                           blocks[block]["bloomFilter"], blocks[block]["nHashFuncs"] = f, h
+                           del blocks[block]["affected_addresses"]
                    if self.option_analytica:
                        for b in blocks:
                            block = blocks[b]
@@ -779,10 +779,10 @@ class Worker:
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except Exception as err:
-            self.loop.create_task(self.load_blocks(start_height, start_limit))
             self.log.error("block loader restarting: %s" % err)
             print(traceback.format_exc())
             await asyncio.sleep(1)
+            self.loop.create_task(self.load_blocks(start_height, start_limit))
         finally:
             try: await self.rpc.close()
             except: pass
