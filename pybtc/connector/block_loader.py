@@ -781,6 +781,7 @@ class Worker:
             self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
             self.loop.create_task(self.load_blocks(start_height, start_limit))
             self.log.error("block loader restarting: %s" % err)
+            print(traceback.format_exc())
             await asyncio.sleep(1)
 
 
