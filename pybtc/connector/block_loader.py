@@ -2,7 +2,6 @@ from pybtc.functions.tools import bytes_to_int
 from pybtc.functions.tools import int_to_bytes
 from pybtc.functions.block import merkle_tree, merkle_proof
 from pybtc.connector.utils import decode_block_tx
-from pybtc.functions.filters  import create_bloom_filter, insert_to_bloom_filter
 from pybtc import MRU, parse_script, rh2s, MINER_COINBASE_TAG, MINER_PAYOUT_TAG, hash_to_address
 import asyncio
 import os
@@ -159,7 +158,7 @@ class BlockLoader:
                                               self.rpc_url, self.rpc_timeout, self.rpc_batch_limit,
                                               self.dsn, self.parent.app_proc_title, self.parent.utxo_data,
                                               self.parent.option_tx_map,
-                                              self.parent.option_block_bloom_filters,
+                                              self.parent.option_block_filters,
                                               self.parent.option_merkle_proof,
                                               self.parent.option_analytica))
         worker.start()
@@ -258,7 +257,7 @@ class Worker:
 
     def __init__(self, name , in_reader, in_writer, out_reader, out_writer,
                  rpc_url, rpc_timeout, rpc_batch_limit, dsn, app_proc_title, utxo_data,
-                 option_tx_map, option_block_bloom_filters, option_merkle_proof, option_analytica):
+                 option_tx_map, option_block_filters, option_merkle_proof, option_analytica):
         setproctitle('%s: blocks preload worker %s' % (app_proc_title, name))
         self.rpc_url = rpc_url
         self.rpc_timeout = rpc_timeout
@@ -270,7 +269,7 @@ class Worker:
         self.db = None
         self.option_tx_map = option_tx_map
         self.option_merkle_proof = option_merkle_proof
-        self.option_block_bloom_filters = option_block_bloom_filters
+        self.option_block_filters = option_block_filters
         self.option_analytica = option_analytica
         in_writer.close()
         out_reader.close()
@@ -320,7 +319,7 @@ class Worker:
 
                         if self.option_tx_map: block["txMap"], block["stxo"] = deque(), deque()
 
-                        if self.option_block_bloom_filters: block["affected_addresses"] = set()
+                        if self.option_block_filters: block["affected_addresses"] = set()
 
                         if self.option_merkle_proof:
                             mt = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
@@ -432,7 +431,7 @@ class Worker:
                                                                    block["rawTx"][z]["vOut"][i]["addressHash"]))
                                     except: address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
                                                                 block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
-                                    if self.option_block_bloom_filters: block["affected_addresses"].add(address)
+                                    if self.option_block_filters: block["affected_addresses"].add(address)
 
                                     block["rawTx"][z]["vOut"][i]["_address"] = address
                                     self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
@@ -476,7 +475,7 @@ class Worker:
                                         try:
                                            r = self.coins.delete(outpoint)
                                            block["rawTx"][z]["vIn"][i]["_a_"] = r
-                                           if self.option_block_bloom_filters: block["affected_addresses"].add(r[2])
+                                           if self.option_block_filters: block["affected_addresses"].add(r[2])
                                            self.destroyed_coins[r[0]] = True
                                            if self.option_tx_map:
                                                block["txMap"].append(((x<<39)+(z<<20)+(0<<19)+i, r[2], r[1]))
@@ -576,14 +575,13 @@ class Worker:
 
                    for block in  blocks:
                        for z in blocks[block]["rawTx"]:
-                           still_missed = 0
                            if not blocks[block]["rawTx"][z]["coinbase"]:
                                for i in blocks[block]["rawTx"][z]["vIn"]:
                                    outpoint = block["rawTx"][z]["vIn"][i]["_outpoint"]
                                    try:
                                        blocks[block]["rawTx"][z]["vIn"][i]["_l_"] = p[outpoint]
 
-                                       if self.option_block_bloom_filters:
+                                       if self.option_block_filters:
                                            block["affected_addresses"].add(p[outpoint][2])
 
                                        if self.option_tx_map:
@@ -637,14 +635,9 @@ class Worker:
                                                        try: block["stat"]["iP2WSHtypeMapAmount"][st] += amount
                                                        except: block["stat"]["iP2WSHtypeMapAmount"][st] = amount
                                    except:
-                                       still_missed += 1
+                                       pass
 
-                       if self.option_block_bloom_filters:
-                           f, h = create_bloom_filter(len(blocks[block]["affected_addresses"]) + still_missed,
-                                                      0.0000001)
-                           [insert_to_bloom_filter(f, a, h) for a in blocks[block]["affected_addresses"]]
-                           blocks[block]["bloomFilter"], blocks[block]["nHashFuncs"] = f, h
-                           del blocks[block]["affected_addresses"]
+
                    if self.option_analytica:
                        for b in blocks:
                            block = blocks[b]

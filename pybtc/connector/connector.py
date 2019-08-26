@@ -1,5 +1,5 @@
 from pybtc.functions.tools import rh2s, s2rh
-from pybtc.functions.filters  import insert_to_bloom_filter
+from pybtc.functions.filters  import create_gcs
 from pybtc.connector.block_loader import BlockLoader
 from pybtc.functions.block import merkle_tree, merkle_proof
 from pybtc.connector.utxo import UTXO, UUTXO
@@ -52,7 +52,7 @@ class Connector:
                  utxo_cache_size=1000000,
                  tx_orphan_buffer_limit=1000,
                  skip_opreturn=True,
-                 block_bloom_filters=False,
+                 block_filters=False,
                  merkle_proof=False,
                  tx_map=False,
                  analytica=False,
@@ -80,7 +80,7 @@ class Connector:
         self.block_timeout = block_timeout
         self.tx_handler = tx_handler
         self.skip_opreturn = skip_opreturn
-        self.option_block_bloom_filters = block_bloom_filters
+        self.option_block_filters = block_filters
         self.option_merkle_proof = merkle_proof
         self.option_tx_map = tx_map
         self.option_analytica = analytica
@@ -1013,10 +1013,8 @@ class Connector:
                                            block["rawTx"][q]["vIn"][i]["coin"][1]))
                             block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
                                                  (height << 39)+(q<<20)+(0<<19)+i))
-                            if self.option_block_bloom_filters:
-                                insert_to_bloom_filter(block["bloomFilter"],
-                                                       block["rawTx"][q]["vIn"][i]["coin"][2],
-                                                       block["nHashFuncs"])
+                            if self.option_block_filters:
+                                block["affectedAddress"] = block["rawTx"][q]["vIn"][i]["coin"][2]
 
                         if self.option_analytica:
                             r = block["rawTx"][q]["vIn"][i]["coin"]
@@ -1074,6 +1072,8 @@ class Connector:
                                             block["stat"]["iP2WSHtypeMapAmount"][st] += amount
                                         except:
                                             block["stat"]["iP2WSHtypeMapAmount"][st] = amount
+
+            block["filter"] = create_gcs(block["affectedAddress"], M=54975581, P=25 ,hex=0)
 
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])
