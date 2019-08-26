@@ -1073,7 +1073,7 @@ class Connector:
                                         except:
                                             block["stat"]["iP2WSHtypeMapAmount"][st] = amount
 
-            block["filter"] = create_gcs(block["affectedAddress"], M=54975581, P=25 ,hex=0)
+            block["filter"] = create_gcs(block["affectedAddresses"], M=54975581, P=25 ,hex=0)
 
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])
