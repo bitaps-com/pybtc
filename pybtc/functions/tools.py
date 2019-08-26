@@ -1,7 +1,7 @@
 from math import ceil, floor
 from io import BytesIO
 from struct import pack, unpack
-
+from pybtc.crypto import __map_into_range__
 
 
 bytes_from_hex = bytes.fromhex
@@ -389,3 +389,12 @@ def get_stream(stream):
             raise TypeError
     return stream
 
+def map_into_range(element, m_f):
+    return __map_into_range__(element, m_f)
+
+
+def hash_to_random_vectors(h):
+    if isinstance(h, str):
+        h = s2rh(h)
+    return bytes_to_int(h[:8], byteorder="little"),\
+           bytes_to_int(h[8:16],  byteorder="little")

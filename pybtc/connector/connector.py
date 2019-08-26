@@ -1,5 +1,5 @@
 from pybtc.functions.tools import rh2s, s2rh
-from pybtc.functions.bloom  import insert_to_bloom_filter
+from pybtc.functions.filters  import insert_to_bloom_filter
 from pybtc.connector.block_loader import BlockLoader
 from pybtc.functions.block import merkle_tree, merkle_proof
 from pybtc.connector.utxo import UTXO, UUTXO

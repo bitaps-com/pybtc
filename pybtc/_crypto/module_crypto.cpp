@@ -6,6 +6,61 @@
 #include <vector>
 #include <iostream>
 
+// Map a value x that is uniformly distributed in the range [0, 2^64) to a
+// value uniformly distributed in [0, n) by returning the upper 64 bits of
+// x * n.
+//
+// See: https://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
+static uint64_t MapIntoRange(uint64_t x, uint64_t n)
+{
+#ifdef __SIZEOF_INT128__
+    return (static_cast<unsigned __int128>(x) * static_cast<unsigned __int128>(n)) >> 64;
+#else
+    // To perform the calculation on 64-bit numbers without losing the
+    // result to overflow, split the numbers into the most significant and
+    // least significant 32 bits and perform multiplication piece-wise.
+    //
+    // See: https://stackoverflow.com/a/26855440
+    uint64_t x_hi = x >> 32;
+    uint64_t x_lo = x & 0xFFFFFFFF;
+    uint64_t n_hi = n >> 32;
+    uint64_t n_lo = n & 0xFFFFFFFF;
+
+    uint64_t ac = x_hi * n_hi;
+    uint64_t ad = x_hi * n_lo;
+    uint64_t bc = x_lo * n_hi;
+    uint64_t bd = x_lo * n_lo;
+
+    uint64_t mid34 = (bd >> 32) + (bc & 0xFFFFFFFF) + (ad & 0xFFFFFFFF);
+    uint64_t upper64 = ac + (bc >> 32) + (ad >> 32) + (mid34 >> 32);
+    return upper64;
+#endif
+}
+
+
+static PyObject* crypto_map_into_range(PyObject *, PyObject* args) {
+    uint64_t x, n;
+    if (!PyArg_ParseTuple(args,"KK", &x, &n)) return NULL;
+
+    uint64_t r = MapIntoRange(x, n);
+
+    PyObject *return_value = Py_BuildValue("K", r);
+
+    return return_value;
+}
+
+static PyObject* crypto_siphash(PyObject *, PyObject* args) {
+    Py_buffer buffer;
+    uint64_t k0, k1;
+    if (!PyArg_ParseTuple(args,"KKy*", &k0, &k1, &buffer)) return NULL;
+
+    uint64_t hash = CSipHasher(k0, k1).Write((const unsigned char*) buffer.buf, buffer.len).Finalize();
+
+    PyBuffer_Release(&buffer);
+    PyObject *return_value = Py_BuildValue("K", hash);
+
+    return return_value;
+}
 
 
 static PyObject* crypto_murmurhash3(PyObject *, PyObject* args) {
@@ -82,6 +137,8 @@ static PyObject* crypto_sha256(PyObject *, PyObject* args) {
 
 
 static PyMethodDef module_methods[] = {
+    { "__map_into_range__", (PyCFunction)crypto_map_into_range, METH_VARARGS, nullptr },
+    { "__siphash__", (PyCFunction)crypto_siphash, METH_VARARGS, nullptr },
     { "__murmurhash3__", (PyCFunction)crypto_murmurhash3, METH_VARARGS, nullptr },
     { "__decode_base58__", (PyCFunction)crypto_decode_base58, METH_VARARGS, nullptr },
     { "__encode_base58__", (PyCFunction)crypto_encode_base58, METH_VARARGS, nullptr },
