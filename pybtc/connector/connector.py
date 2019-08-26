@@ -988,7 +988,7 @@ class Connector:
                                     if r:
                                         tx["vIn"][i]["coin"] = r
                                     else:
-                                        missed.append((inp["_outpoint"], (height<<39)+(q<<20)+(0<<19)+i, q, i))
+                                        missed.append((inp["_outpoint"], (height<<39)+(q<<20)+i, q, i))
 
             if missed:
                 t2 = time.time()
@@ -1008,11 +1008,11 @@ class Connector:
                             raise Exception("utxo get failed %s" % rh2s(block["rawTx"][q]["vIn"][i]["txId"]))
                     if height > self.app_block_height_on_start:
                         if self.option_tx_map:
-                            tx_map_append(((height << 39)+(q<<20)+(0<<19)+i,
+                            tx_map_append(((height << 39)+(q<<20)+i,
                                            block["rawTx"][q]["vIn"][i]["coin"][2],
                                            block["rawTx"][q]["vIn"][i]["coin"][1]))
                             block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
-                                                 (height << 39)+(q<<20)+(0<<19)+i))
+                                                 (height << 39)+(q<<20)+i))
                             if self.option_block_filters:
                                 block["affectedAddresses"].add(block["rawTx"][q]["vIn"][i]["coin"][2])
 
