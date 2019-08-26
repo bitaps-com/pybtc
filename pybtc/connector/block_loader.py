@@ -319,7 +319,7 @@ class Worker:
 
                         if self.option_tx_map: block["txMap"], block["stxo"] = deque(), deque()
 
-                        if self.option_block_filters: block["affected_addresses"] = set()
+                        if self.option_block_filters: block["affectedAddresses"] = set()
 
                         if self.option_merkle_proof:
                             mt = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
@@ -431,7 +431,7 @@ class Worker:
                                                                    block["rawTx"][z]["vOut"][i]["addressHash"]))
                                     except: address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
                                                                 block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
-                                    if self.option_block_filters: block["affected_addresses"].add(address)
+                                    if self.option_block_filters: block["affectedAddresses"].add(address)
 
                                     block["rawTx"][z]["vOut"][i]["_address"] = address
                                     self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
@@ -475,7 +475,7 @@ class Worker:
                                         try:
                                            r = self.coins.delete(outpoint)
                                            block["rawTx"][z]["vIn"][i]["_a_"] = r
-                                           if self.option_block_filters: block["affected_addresses"].add(r[2])
+                                           if self.option_block_filters: block["affectedAddresses"].add(r[2])
                                            self.destroyed_coins[r[0]] = True
                                            if self.option_tx_map:
                                                block["txMap"].append(((x<<39)+(z<<20)+(0<<19)+i, r[2], r[1]))
@@ -582,7 +582,7 @@ class Worker:
                                        blocks[block]["rawTx"][z]["vIn"][i]["_l_"] = p[outpoint]
 
                                        if self.option_block_filters:
-                                           blocks[block]["affected_addresses"].add(p[outpoint][2])
+                                           blocks[block]["affectedAddresses"].add(p[outpoint][2])
 
                                        if self.option_tx_map:
                                            blocks[block]["txMap"].append(((height<<39)+(z<<20)+(0<<19)+i,
