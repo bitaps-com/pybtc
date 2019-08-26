@@ -65,6 +65,7 @@ class FilterFunctionsTests(unittest.TestCase):
         print("Filter bytes per address ", len(f) / 20_000)
 
     def test_5_byte_hash_20000_1000000(self):
+        return
         print("Hash 5 bytes as filter 20 000 elements vs 1 000 000 monitoring addresses:")
 
         print("generate address set ...")
@@ -150,7 +151,7 @@ class FilterFunctionsTests(unittest.TestCase):
         print("False positive blocks", blocks_affected, "from 2000", "time", q)
 
     def test_bip58(self):
-
+        return
         print("bip58 10 000 elements vs 784 931 monitoring addresses:")
 
         print("generate address set ...")
@@ -246,6 +247,14 @@ class FilterFunctionsTests(unittest.TestCase):
             if positive:
                 blocks_affected += 1
         print("False positive blocks", blocks_affected, "from 2000", "time", q)
+        d = 2000 * len(f) + 1024 * 1024 * 1024 * blocks_affected
+        d2 = 1024 * 1024 * 1024 * 2000
+        print("Download", round(d /( 1024 * 1024 * 1024), 2),
+              "Mb  vs ",  round(d2 /( 1024 * 1024 * 1024), 2),
+              "Mb;  effectivity ", round( (1 - (d / d2)) * 100, 2) , " %")
+        print("Filters size: ", round( (2000 * len(f) )/( 1024 * 1024 * 1024), 2), "Mb")
+
+
 
     def test_bip58_x100000(self):
         return
@@ -293,12 +302,12 @@ class FilterFunctionsTests(unittest.TestCase):
         print("False positive blocks", blocks_affected, "from 2000", "time", q)
 
     def test_gcs_20000_1000000(self):
-        return
+
         print("\nGCS 20 000 elements vs 1 000 000 monitoring addresses:")
 
         print("generate address set ...")
         addresses = set()
-        while len(addresses) < 10_000_000:
+        while len(addresses) < 1_000_000:
             addresses.add(sha256(int_to_bytes(random.randint(1, 0xFFFFFFFFFFFFFFFFFFFF)))[:21])
 
         haddresses = set()
@@ -314,7 +323,7 @@ class FilterFunctionsTests(unittest.TestCase):
 
             block_addresses = set()
             lblock_addresses = list()
-            while len(block_addresses) < 20_000:
+            while len(block_addresses) < 10_000:
                 a = sha256(int_to_bytes(random.randint(1, 0xFFFFFFFFFFFFFFFFFFFF)))[:21]
                 if a in addresses:
                     continue
@@ -589,3 +598,21 @@ class FilterFunctionsTests(unittest.TestCase):
             if exist:
                 c += 1
         print(c, "from", 144)
+
+
+"""
+bip158 - 10_000 x 784_931 :   size: 26312  effectivity  35.1 %
+bip158 - 10_000 x 100_000 :   size: 26312  effectivity  88.2 %
+
+GCS N=10000 M=54975581 P=25 - 10_000 x 1_000_000: size: 33990  effectivity  99.5 %
+
+
+GCS N=20000 M=54975581 P=25 - 20_000 x 1_000_000: size: 67977  effectivity  98.34 %
+GCS N=20000 M=54975581 P=25 - 20_000 x 10_000_000: size: 67977  effectivity  81.34 %
+GCS N=20000 M=54975581 P=25 - 20_000 x 100_000_000: size: 67977  effectivity  16.84 %
+
+
+
+
+
+"""

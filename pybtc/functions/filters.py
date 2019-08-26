@@ -5,7 +5,7 @@ from  math import log, ceil
 from pybtc.constants import LN2SQUARED, LN2
 from pybtc.functions.tools import  map_into_range, int_to_var_int
 from pybtc.functions.hash import siphash, murmurhash3
-from bitarray import bitarray
+from _bitarray import _bitarray as bitarray
 from collections import deque
 
 _BIT_MASK = bytearray([0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80])
