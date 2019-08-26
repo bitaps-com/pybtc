@@ -577,17 +577,17 @@ class Worker:
                        for z in blocks[block]["rawTx"]:
                            if not blocks[block]["rawTx"][z]["coinbase"]:
                                for i in blocks[block]["rawTx"][z]["vIn"]:
-                                   outpoint = block["rawTx"][z]["vIn"][i]["_outpoint"]
+                                   outpoint = blocks[block]["rawTx"][z]["vIn"][i]["_outpoint"]
                                    try:
                                        blocks[block]["rawTx"][z]["vIn"][i]["_l_"] = p[outpoint]
 
                                        if self.option_block_filters:
-                                           block["affected_addresses"].add(p[outpoint][2])
+                                           blocks[block]["affected_addresses"].add(p[outpoint][2])
 
                                        if self.option_tx_map:
-                                           block["txMap"].append(((height<<39)+(z<<20)+(0<<19)+i,
+                                           blocks[block]["txMap"].append(((height<<39)+(z<<20)+(0<<19)+i,
                                                                   p[outpoint][2], p[outpoint][1]))
-                                           block["stxo"].append((p[outpoint][0], (height<<39)+(z<<20)+(0<<19)+i))
+                                           blocks[block]["stxo"].append((p[outpoint][0], (height<<39)+(z<<20)+(0<<19)+i))
 
                                        t += 1
                                        n += 1
