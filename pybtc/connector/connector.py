@@ -1014,7 +1014,7 @@ class Connector:
                             block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
                                                  (height << 39)+(q<<20)+(0<<19)+i))
                             if self.option_block_filters:
-                                block["affectedAddresses"] = block["rawTx"][q]["vIn"][i]["coin"][2]
+                                block["affectedAddresses"].add(block["rawTx"][q]["vIn"][i]["coin"][2])
 
                         if self.option_analytica:
                             r = block["rawTx"][q]["vIn"][i]["coin"]
