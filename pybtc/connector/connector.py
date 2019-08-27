@@ -982,11 +982,7 @@ class Connector:
                                     tx["vIn"][i]["coin"] = inp["_l_"]
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
-                                    try:
-                                        self.sync_utxo.scheduled_to_delete.append(inp["_outpoint"])
-                                    except:
-                                        print(">>>> error x1")
-                                        print(traceback.format_exc())
+                                    self.sync_utxo.scheduled_to_delete.append(inp["_outpoint"])
                                 except:
                                     r = self.sync_utxo.get(inp["_outpoint"])
                                     if r:
@@ -1012,9 +1008,6 @@ class Connector:
                             raise Exception("utxo get failed %s" % rh2s(block["rawTx"][q]["vIn"][i]["txId"]))
                     if height > self.app_block_height_on_start:
                         if self.option_tx_map:
-                            assert ((height << 39)+(q<<20)+i,
-                                           block["rawTx"][q]["vIn"][i]["coin"][2],
-                                           block["rawTx"][q]["vIn"][i]["coin"][1]) not in block["txMap"]
                             tx_map_append(((height << 39)+(q<<20)+i,
                                            block["rawTx"][q]["vIn"][i]["coin"][2],
                                            block["rawTx"][q]["vIn"][i]["coin"][1]))
