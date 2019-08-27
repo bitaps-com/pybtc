@@ -997,6 +997,11 @@ class Connector:
                                     r = self.sync_utxo.get(inp["_outpoint"])
                                     if r:
                                         tx["vIn"][i]["coin"] = r
+                                        if self.option_block_filters:
+                                            h = map_into_range(siphash(r[2],
+                                                                       v_0=block["_v_0"],
+                                                                       v_1=block["_v_0"]), N * M)
+                                            block["filter"].append(h)
                                     else:
                                         missed.append((inp["_outpoint"], (height<<39)+(q<<20)+i, q, i))
 
@@ -1088,7 +1093,6 @@ class Connector:
                                             block["stat"]["iP2WSHtypeMapAmount"][st] = amount
 
             if self.option_block_filters:
-                print(block["height"], len(block["filter"]), block["_N"], N, "I",block["_I"], "O", block["_O"])
                 assert len(block["filter"]) == N
                 block["filter"] = create_gcs(block["filter"], hashed=True,
                                              M=M, P=self.option_block_filter_bits ,hex=0)

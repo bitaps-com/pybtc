@@ -503,7 +503,7 @@ class Worker:
                                                if self.option_block_filters:
                                                    block["filter"].append(r[2])
                                                    block["_I"] += 1
-                                                   print("-")
+
 
 
                                                if self.option_tx_map:
@@ -616,7 +616,6 @@ class Worker:
                                        try:
                                            if self.option_block_filters:
                                                blocks[h]["filter"].append(p[outpoint][2])
-                                               print("-")
 
                                            if self.option_tx_map:
                                                blocks[h]["txMap"].append(((h<<39)+(z<<20)+i,
