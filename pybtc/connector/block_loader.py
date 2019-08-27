@@ -18,6 +18,7 @@ from collections import deque
 import pickle
 from math import *
 import json
+import concurrent
 
 try:
     import asyncpg
@@ -809,7 +810,7 @@ class Worker:
 
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
-        except asyncio.CancelledError:
+        except concurrent.futures.CancelledError:
             pass
         except Exception as err:
             self.log.error("block loader restarting: %s" % err)
