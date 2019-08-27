@@ -495,8 +495,7 @@ class Worker:
                                                block["rawTx"][z]["vIn"][i]["_a_"] = r
                                                self.destroyed_coins[r[0]] = True
 
-                                               if self.option_block_filters:
-                                                   block["filter"].append(r[2])
+                                               if self.option_block_filters: block["filter"].append(r[2])
 
 
                                                if self.option_tx_map:
@@ -607,7 +606,7 @@ class Worker:
                                        blocks[h]["rawTx"][z]["vIn"][i]["_l_"] = p[outpoint]
                                        try:
                                            if self.option_block_filters:
-                                               blocks[h]["filter"].add(p[outpoint][2])
+                                               blocks[h]["filter"].append(p[outpoint][2])
 
                                            if self.option_tx_map:
                                                blocks[h]["txMap"].append(((h<<39)+(z<<20)+i,
