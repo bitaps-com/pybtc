@@ -983,7 +983,7 @@ class Connector:
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
                                     try:
-                                        self.sync_utxo.deleted.append(inp["_outpoint"])
+                                        self.sync_utxo.scheduled_to_delete.append(inp["_outpoint"])
                                     except:
                                         print(">>>> error x1")
                                         print(traceback.format_exc())
