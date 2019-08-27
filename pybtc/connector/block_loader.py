@@ -783,9 +783,11 @@ class Worker:
                             except: pass
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
+        except asyncio.CancelledError:
+            pass
         except Exception as err:
             self.log.error("block loader restarting: %s" % err)
-            print(traceback.format_exc())
+            # print(traceback.format_exc())
             await asyncio.sleep(1)
             self.loop.create_task(self.load_blocks(start_height, start_limit))
         finally:
