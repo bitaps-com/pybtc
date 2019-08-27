@@ -982,7 +982,10 @@ class Connector:
                                     tx["vIn"][i]["coin"] = inp["_l_"]
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
-                                    self.sync_utxo.deleted.append(inp["_outpoint"])
+                                    try:
+                                        self.sync_utxo.deleted.append(inp["_outpoint"])
+                                    except:
+                                        pass
                                 except:
                                     r = self.sync_utxo.get(inp["_outpoint"])
                                     if r:

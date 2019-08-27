@@ -590,59 +590,61 @@ class Worker:
                                    outpoint = blocks[h]["rawTx"][z]["vIn"][i]["_outpoint"]
                                    try:
                                        blocks[h]["rawTx"][z]["vIn"][i]["_l_"] = p[outpoint]
+                                       try:
+                                           if self.option_block_filters:
+                                               blocks[h]["affectedAddresses"].add(p[outpoint][2])
 
-                                       if self.option_block_filters:
-                                           blocks[h]["affectedAddresses"].add(p[outpoint][2])
+                                           if self.option_tx_map:
+                                               blocks[h]["txMap"].append(((h<<39)+(z<<20)+i, p[outpoint][2],p[outpoint][1]))
+                                               blocks[h]["stxo"].append((p[outpoint][0], (h<<39)+(z<<20)+i))
 
-                                       if self.option_tx_map:
-                                           blocks[h]["txMap"].append(((h<<39)+(z<<20)+i, p[outpoint][2],p[outpoint][1]))
-                                           blocks[h]["stxo"].append((p[outpoint][0], (h<<39)+(z<<20)+i))
-
-                                       t += 1
-                                       n += 1
-                                       # if self.option_analytica:
-                                       #     r = p[outpoint]
-                                       #     amount = r[1]
-                                       #     type = r[2][0]
-                                       #     block["stat"]["rawTx"][z]["inputsAmount"] += amount
-                                       #     pointer = (height<<39)+(z<<20)+(0<<19)+i
-                                       #
-                                       #     block["stat"]["iCountTotal"] += 1
-                                       #     block["stat"]["iAmountTotal"] += amount
-                                       #     if block["stat"]["iAmountMinPointer"] == 0 or \
-                                       #             block["stat"]["iAmountMinValue"] > amount:
-                                       #         block["stat"]["iAmountMinPointer"] = pointer
-                                       #         block["stat"]["iAmountMinValue"] = amount
-                                       #     if block["stat"]["iAmountMaxValue"] < amount:
-                                       #         block["stat"]["iAmountMaxPointer"] = pointer
-                                       #         block["stat"]["iAmountMaxValue"] = amount
-                                       #     amount_key = str(floor(log10(amount))) if amount else "null"
-                                       #     try: block["stat"]["iAmountMapCount"][amount_key] += 1
-                                       #     except: block["stat"]["iAmountMapCount"][amount_key] = 1
-                                       #     try: block["stat"]["iAmountMapAmount"][amount_key] += amount
-                                       #     except: block["stat"]["iAmountMapAmount"][amount_key] = amount
-                                       #
-                                       #     try: block["stat"]["iTypeMapCount"][type] += 1
-                                       #     except: block["stat"]["iTypeMapCount"][type] = 1
-                                       #
-                                       #     try: block["stat"]["iTypeMapAmount"][type] += amount
-                                       #     except: block["stat"]["iTypeMapAmount"][type] = amount
-                                       #
-                                       #     if type == 1 or type == 6:
-                                       #         s = parse_script(r[2][1:])
-                                       #         st = s["type"]
-                                       #         if st == "MULTISIG":
-                                       #             st += "_%s/%s" % (s["reqSigs"], s["pubKeys"])
-                                       #             if type == 1:
-                                       #                 try: block["stat"]["iP2SHtypeMapCount"][st] += 1
-                                       #                 except: block["stat"]["iP2SHtypeMapCount"][st] = 1
-                                       #                 try: block["stat"]["iP2SHtypeMapAmount"][st] += amount
-                                       #                 except: block["stat"]["iP2SHtypeMapAmount"][st] = amount
-                                       #             else:
-                                       #                 try: block["stat"]["iP2WSHtypeMapCount"][st] += 1
-                                       #                 except: block["stat"]["iP2WSHtypeMapCount"][st] = 1
-                                       #                 try: block["stat"]["iP2WSHtypeMapAmount"][st] += amount
-                                       #                 except: block["stat"]["iP2WSHtypeMapAmount"][st] = amount
+                                           t += 1
+                                           n += 1
+                                           # if self.option_analytica:
+                                           #     r = p[outpoint]
+                                           #     amount = r[1]
+                                           #     type = r[2][0]
+                                           #     block["stat"]["rawTx"][z]["inputsAmount"] += amount
+                                           #     pointer = (height<<39)+(z<<20)+(0<<19)+i
+                                           #
+                                           #     block["stat"]["iCountTotal"] += 1
+                                           #     block["stat"]["iAmountTotal"] += amount
+                                           #     if block["stat"]["iAmountMinPointer"] == 0 or \
+                                           #             block["stat"]["iAmountMinValue"] > amount:
+                                           #         block["stat"]["iAmountMinPointer"] = pointer
+                                           #         block["stat"]["iAmountMinValue"] = amount
+                                           #     if block["stat"]["iAmountMaxValue"] < amount:
+                                           #         block["stat"]["iAmountMaxPointer"] = pointer
+                                           #         block["stat"]["iAmountMaxValue"] = amount
+                                           #     amount_key = str(floor(log10(amount))) if amount else "null"
+                                           #     try: block["stat"]["iAmountMapCount"][amount_key] += 1
+                                           #     except: block["stat"]["iAmountMapCount"][amount_key] = 1
+                                           #     try: block["stat"]["iAmountMapAmount"][amount_key] += amount
+                                           #     except: block["stat"]["iAmountMapAmount"][amount_key] = amount
+                                           #
+                                           #     try: block["stat"]["iTypeMapCount"][type] += 1
+                                           #     except: block["stat"]["iTypeMapCount"][type] = 1
+                                           #
+                                           #     try: block["stat"]["iTypeMapAmount"][type] += amount
+                                           #     except: block["stat"]["iTypeMapAmount"][type] = amount
+                                           #
+                                           #     if type == 1 or type == 6:
+                                           #         s = parse_script(r[2][1:])
+                                           #         st = s["type"]
+                                           #         if st == "MULTISIG":
+                                           #             st += "_%s/%s" % (s["reqSigs"], s["pubKeys"])
+                                           #             if type == 1:
+                                           #                 try: block["stat"]["iP2SHtypeMapCount"][st] += 1
+                                           #                 except: block["stat"]["iP2SHtypeMapCount"][st] = 1
+                                           #                 try: block["stat"]["iP2SHtypeMapAmount"][st] += amount
+                                           #                 except: block["stat"]["iP2SHtypeMapAmount"][st] = amount
+                                           #             else:
+                                           #                 try: block["stat"]["iP2WSHtypeMapCount"][st] += 1
+                                           #                 except: block["stat"]["iP2WSHtypeMapCount"][st] = 1
+                                           #                 try: block["stat"]["iP2WSHtypeMapAmount"][st] += amount
+                                           #                 except: block["stat"]["iP2WSHtypeMapAmount"][st] = amount
+                                       except:
+                                           print(">>>>>", traceback.format_exc())
                                    except:
                                        pass
 
