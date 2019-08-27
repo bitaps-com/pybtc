@@ -595,7 +595,8 @@ class Worker:
                                                blocks[h]["affectedAddresses"].add(p[outpoint][2])
 
                                            if self.option_tx_map:
-                                               blocks[h]["txMap"].append(((h<<39)+(z<<20)+i, p[outpoint][2],p[outpoint][1]))
+                                               blocks[h]["txMap"].append(((h<<39)+(z<<20)+i,
+                                                                          p[outpoint][2], p[outpoint][1]))
                                                blocks[h]["stxo"].append((p[outpoint][0], (h<<39)+(z<<20)+i))
 
                                            t += 1

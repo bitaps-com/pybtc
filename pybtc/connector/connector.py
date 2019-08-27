@@ -985,7 +985,8 @@ class Connector:
                                     try:
                                         self.sync_utxo.deleted.append(inp["_outpoint"])
                                     except:
-                                        pass
+                                        print(">>>> error x1")
+                                        print(traceback.format_exc())
                                 except:
                                     r = self.sync_utxo.get(inp["_outpoint"])
                                     if r:
