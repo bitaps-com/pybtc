@@ -493,7 +493,7 @@ class Worker:
 
                                         if self.option_block_filters:
                                             block["_N"] += 1
-                                            block["_I"] += 1
+
                                         try:
                                            r = self.coins.delete(outpoint)
                                            try:
@@ -502,6 +502,7 @@ class Worker:
 
                                                if self.option_block_filters:
                                                    block["filter"].append(r[2])
+                                                   block["_I"] += 1
                                                    print("-")
 
 
