@@ -554,7 +554,7 @@ class Worker:
                                                             except: block["stat"]["iP2WSHtypeMapAmount"][st] = amount
 
                                         except:
-                                            print(block["height"], "m")
+                                            print(x, "m")
                                             if self.dsn: missed.append(outpoint)
 
                                 if self.option_analytica:
