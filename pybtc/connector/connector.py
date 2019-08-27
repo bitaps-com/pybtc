@@ -1029,6 +1029,7 @@ class Connector:
                                                            v_1=block["_v_0"]), N * M)
                                 block["filter"].append(h)
 
+
                         if self.option_analytica:
                             r = block["rawTx"][q]["vIn"][i]["coin"]
                             amount = r[1]

@@ -500,7 +500,9 @@ class Worker:
                                                block["rawTx"][z]["vIn"][i]["_a_"] = r
                                                self.destroyed_coins[r[0]] = True
 
-                                               if self.option_block_filters: block["filter"].append(r[2])
+                                               if self.option_block_filters:
+                                                   block["filter"].append(r[2])
+                                                   print("-")
 
 
                                                if self.option_tx_map:
@@ -612,6 +614,7 @@ class Worker:
                                        try:
                                            if self.option_block_filters:
                                                blocks[h]["filter"].append(p[outpoint][2])
+                                               print("-")
 
                                            if self.option_tx_map:
                                                blocks[h]["txMap"].append(((h<<39)+(z<<20)+i,
@@ -808,7 +811,7 @@ class Worker:
 
                     M = self.option_block_filter_fps
                     N = blocks[x]["_N"]
-
+                    print(len(blocks[x]["filter"]))
                     blocks[x]["filter"] = [map_into_range(siphash(e, v_0=v_0, v_1=v_1), N * M)
                                                for e in blocks[x]["filter"]]
 
