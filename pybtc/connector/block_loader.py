@@ -423,6 +423,7 @@ class Worker:
 
                         if self.utxo_data:
                             block["_N"] = 0
+                            block["_O"] = 0
                             block["_I"] = 0
                             # handle outputs
                             for z in block["rawTx"]:
@@ -448,6 +449,7 @@ class Worker:
                                             if block["rawTx"][z]["vOut"][i]["value"]:
                                                 block["filter"].append(address)
                                                 block["_N"] += 1
+                                                block["_O"] += 1
 
                                     block["rawTx"][z]["vOut"][i]["_address"] = address
                                     self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)

@@ -1087,7 +1087,7 @@ class Connector:
                                             block["stat"]["iP2WSHtypeMapAmount"][st] = amount
 
             if self.option_block_filters:
-                print(block["height"], len(block["filter"]), block["_N"], N, block["_I"])
+                print(block["height"], len(block["filter"]), block["_N"], N, "I",block["_I"], "O", block["_I"])
                 assert len(block["filter"]) == N
                 block["filter"] = create_gcs(block["filter"], hashed=True,
                                              M=M, P=self.option_block_filter_bits ,hex=0)
