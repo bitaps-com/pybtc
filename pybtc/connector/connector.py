@@ -1008,6 +1008,9 @@ class Connector:
                             raise Exception("utxo get failed %s" % rh2s(block["rawTx"][q]["vIn"][i]["txId"]))
                     if height > self.app_block_height_on_start:
                         if self.option_tx_map:
+                            assert ((height << 39)+(q<<20)+i,
+                                           block["rawTx"][q]["vIn"][i]["coin"][2],
+                                           block["rawTx"][q]["vIn"][i]["coin"][1]) not in block["txMap"]
                             tx_map_append(((height << 39)+(q<<20)+i,
                                            block["rawTx"][q]["vIn"][i]["coin"][2],
                                            block["rawTx"][q]["vIn"][i]["coin"][1]))

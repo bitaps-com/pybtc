@@ -415,6 +415,8 @@ class Worker:
 
 
                         if self.utxo_data:
+
+                            # handle outputs
                             for z in block["rawTx"]:
                                 if self.option_merkle_proof:
                                     block["rawTx"][z]["merkleProof"] = b''.join(merkle_proof(mt, z, return_hex=False))
@@ -456,6 +458,7 @@ class Worker:
                                         try: block["stat"]["oAmountMapAmount"][amount_key] += amount
                                         except: block["stat"]["oAmountMapAmount"][amount_key] = amount
 
+                            # handle inputs
                             for z in block["rawTx"]:
                                 if not block["rawTx"][z]["coinbase"]:
                                     for i  in block["rawTx"][z]["vIn"]:
@@ -476,11 +479,15 @@ class Worker:
                                            r = self.coins.delete(outpoint)
                                            try:
                                                block["rawTx"][z]["vIn"][i]["_a_"] = r
-                                               if self.option_block_filters: block["affectedAddresses"].add(r[2])
                                                self.destroyed_coins[r[0]] = True
+
+                                               if self.option_block_filters:
+                                                   block["affectedAddresses"].add(r[2])
+
                                                if self.option_tx_map:
-                                                   block["txMap"].append(((x<<39)+(z<<20)+(0<<19)+i, r[2], r[1]))
-                                                   block["stxo"].append((r[0], (x<<39)+(z<<20)+(0<<19)+i))
+                                                   block["txMap"].append(((x<<39)+(z<<20)+i, r[2], r[1]))
+                                                   block["stxo"].append((r[0], (x<<39)+(z<<20)+i))
+
                                                t += 1
                                            except:
                                                print(traceback.format_exc())
@@ -588,8 +595,7 @@ class Worker:
                                            blocks[h]["affectedAddresses"].add(p[outpoint][2])
 
                                        if self.option_tx_map:
-                                           blocks[h]["txMap"].append(((h<<39)+(z<<20)+i,
-                                                                  p[outpoint][2], p[outpoint][1]))
+                                           blocks[h]["txMap"].append(((h<<39)+(z<<20)+i, p[outpoint][2],p[outpoint][1]))
                                            blocks[h]["stxo"].append((p[outpoint][0], (h<<39)+(z<<20)+i))
 
                                        t += 1
