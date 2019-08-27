@@ -423,6 +423,7 @@ class Worker:
 
                         if self.utxo_data:
                             block["_N"] = 0
+                            block["_I"] = 0
                             # handle outputs
                             for z in block["rawTx"]:
                                 if self.option_merkle_proof:
@@ -488,7 +489,9 @@ class Worker:
                                                     elif hp == h and op > inp["vOut"]: bip69 = False
                                                 hp, op = h, inp["vOut"]
 
-                                        if self.option_block_filters: block["_N"] += 1
+                                        if self.option_block_filters:
+                                            block["_N"] += 1
+                                            block["_I"] += 1
                                         try:
                                            r = self.coins.delete(outpoint)
                                            try:
