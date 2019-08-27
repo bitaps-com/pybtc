@@ -1,4 +1,6 @@
 from pybtc.functions.tools import rh2s, s2rh
+from pybtc.functions.tools import map_into_range
+from pybtc.functions.hash import siphash
 from pybtc.functions.filters  import create_gcs
 from pybtc.connector.block_loader import BlockLoader
 from pybtc.functions.block import merkle_tree, merkle_proof
@@ -53,6 +55,8 @@ class Connector:
                  tx_orphan_buffer_limit=1000,
                  skip_opreturn=True,
                  block_filters=False,
+                 option_block_filter_fps=54975581,
+                 option_block_filter_bits=25,
                  merkle_proof=False,
                  tx_map=False,
                  analytica=False,
@@ -81,6 +85,8 @@ class Connector:
         self.tx_handler = tx_handler
         self.skip_opreturn = skip_opreturn
         self.option_block_filters = block_filters
+        self.option_block_filter_fps = option_block_filter_fps
+        self.option_block_filter_bits = option_block_filter_bits
         self.option_merkle_proof = merkle_proof
         self.option_tx_map = tx_map
         self.option_analytica = analytica
@@ -947,6 +953,10 @@ class Connector:
             #  fetch information about destroyed coins
             #  save new coins to utxo table
             #
+            if self.option_block_filters:
+                M = self.option_block_filter_fps
+                N = block["_N"]
+
             for q in block["rawTx"]:
                 tx = block["rawTx"][q]
                 for i in tx["vOut"]:
@@ -1014,7 +1024,10 @@ class Connector:
                             block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
                                                  (height << 39)+(q<<20)+i))
                             if self.option_block_filters:
-                                block["affectedAddresses"].add(block["rawTx"][q]["vIn"][i]["coin"][2])
+                                h = map_into_range(siphash(block["rawTx"][q]["vIn"][i]["coin"][2],
+                                                           v_0=block["_v_0"],
+                                                           v_1=block["_v_0"]), N * M)
+                                block["filter"].append(h)
 
                         if self.option_analytica:
                             r = block["rawTx"][q]["vIn"][i]["coin"]
@@ -1073,7 +1086,10 @@ class Connector:
                                         except:
                                             block["stat"]["iP2WSHtypeMapAmount"][st] = amount
 
-            block["filter"] = create_gcs(block["affectedAddresses"], M=54975581, P=25 ,hex=0)
+            if self.option_block_filters:
+                assert len(block["filter"]) == N
+                block["filter"] = create_gcs(block["filter"], hashed=True,
+                                             M=M, P=self.option_block_filter_bits ,hex=0)
 
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])

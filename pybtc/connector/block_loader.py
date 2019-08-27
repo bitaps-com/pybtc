@@ -1,4 +1,7 @@
 from pybtc.functions.tools import bytes_to_int
+from pybtc.functions.tools import hash_to_random_vectors
+from pybtc.functions.tools import map_into_range
+from pybtc.functions.hash import siphash
 from pybtc.functions.tools import int_to_bytes
 from pybtc.functions.block import merkle_tree, merkle_proof
 from pybtc.connector.utils import decode_block_tx
@@ -160,7 +163,8 @@ class BlockLoader:
                                               self.parent.option_tx_map,
                                               self.parent.option_block_filters,
                                               self.parent.option_merkle_proof,
-                                              self.parent.option_analytica))
+                                              self.parent.option_analytica,
+                                              self.parent.option_block_filter_fps))
         worker.start()
         in_reader.close()
         out_writer.close()
@@ -257,7 +261,8 @@ class Worker:
 
     def __init__(self, name , in_reader, in_writer, out_reader, out_writer,
                  rpc_url, rpc_timeout, rpc_batch_limit, dsn, app_proc_title, utxo_data,
-                 option_tx_map, option_block_filters, option_merkle_proof, option_analytica):
+                 option_tx_map, option_block_filters, option_merkle_proof,
+                 option_analytica, option_block_filter_fps):
         setproctitle('%s: blocks preload worker %s' % (app_proc_title, name))
         self.rpc_url = rpc_url
         self.rpc_timeout = rpc_timeout
@@ -271,6 +276,7 @@ class Worker:
         self.option_merkle_proof = option_merkle_proof
         self.option_block_filters = option_block_filters
         self.option_analytica = option_analytica
+        self.option_block_filter_fps = option_block_filter_fps
         in_writer.close()
         out_reader.close()
         policy = asyncio.get_event_loop_policy()
@@ -319,7 +325,7 @@ class Worker:
 
                         if self.option_tx_map: block["txMap"], block["stxo"] = deque(), deque()
 
-                        if self.option_block_filters: block["affectedAddresses"] = set()
+                        if self.option_block_filters: block["filter"] = list()
 
                         if self.option_merkle_proof:
                             mt = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
@@ -415,7 +421,7 @@ class Worker:
 
 
                         if self.utxo_data:
-
+                            block["_N"] = 0
                             # handle outputs
                             for z in block["rawTx"]:
                                 if self.option_merkle_proof:
@@ -426,6 +432,7 @@ class Worker:
                                     block["rawTx"][z]["inputsAmount"] = 0
 
                                 for i in block["rawTx"][z]["vOut"]:
+
                                     o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
                                     pointer = (x << 39)+(z << 20)+(1 << 19) + i
 
@@ -433,7 +440,12 @@ class Worker:
                                                                    block["rawTx"][z]["vOut"][i]["addressHash"]))
                                     except: address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
                                                                 block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
-                                    if self.option_block_filters: block["affectedAddresses"].add(address)
+                                    if self.option_block_filters:
+
+                                        if block["rawTx"][z]["vOut"][i]["nType"] not in (3, 4):
+                                            if block["rawTx"][z]["vOut"][i]["value"]:
+                                                block["filter"].append(address)
+                                                block["_N"] += 1
 
                                     block["rawTx"][z]["vOut"][i]["_address"] = address
                                     self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
@@ -475,6 +487,7 @@ class Worker:
                                                     elif hp == h and op > inp["vOut"]: bip69 = False
                                                 hp, op = h, inp["vOut"]
 
+                                        if self.option_block_filters: block["_N"] += 1
                                         try:
                                            r = self.coins.delete(outpoint)
                                            try:
@@ -482,7 +495,8 @@ class Worker:
                                                self.destroyed_coins[r[0]] = True
 
                                                if self.option_block_filters:
-                                                   block["affectedAddresses"].add(r[2])
+                                                   block["filter"].append(r[2])
+
 
                                                if self.option_tx_map:
                                                    block["txMap"].append(((x<<39)+(z<<20)+i, r[2], r[1]))
@@ -592,7 +606,7 @@ class Worker:
                                        blocks[h]["rawTx"][z]["vIn"][i]["_l_"] = p[outpoint]
                                        try:
                                            if self.option_block_filters:
-                                               blocks[h]["affectedAddresses"].add(p[outpoint][2])
+                                               blocks[h]["filter"].add(p[outpoint][2])
 
                                            if self.option_tx_map:
                                                blocks[h]["txMap"].append(((h<<39)+(z<<20)+i,
@@ -781,6 +795,18 @@ class Worker:
                                 r = self.destroyed_coins.delete((x<<39)+(y<<20)+(1<<19)+i)
                                 blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                             except: pass
+                if self.option_block_filters:
+                    v_0, v_1 = hash_to_random_vectors(blocks[x]["hash"])
+
+                    blocks[x]["_v_0"] = v_0
+                    blocks[x]["_v_1"] = v_1
+
+                    M = self.option_block_filter_fps
+                    N = blocks[x]["_N"]
+
+                    blocks[x]["filter"] = [map_into_range(siphash(e, v_0=v_0, v_1=v_1), N * M)
+                                               for e in blocks[x]["filter"]]
+
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except asyncio.CancelledError:
