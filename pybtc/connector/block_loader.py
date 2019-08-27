@@ -443,7 +443,7 @@ class Worker:
                                                                 block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
                                     if self.option_block_filters:
 
-                                        if block["rawTx"][z]["vOut"][i]["nType"] not in (3, 4):
+                                        if block["rawTx"][z]["vOut"][i]["nType"] not in (3, 8):
                                             if block["rawTx"][z]["vOut"][i]["value"]:
                                                 block["filter"].append(address)
                                                 block["_N"] += 1
