@@ -1029,9 +1029,9 @@ class Connector:
                             block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
                                                  (height << 39)+(q<<20)+i))
                             if self.option_block_filters:
-                                h = int_to_bytes(map_into_range(siphash(block["rawTx"][q]["vIn"][i]["coin"][2],
+                                h = map_into_range(siphash(block["rawTx"][q]["vIn"][i]["coin"][2],
                                                            v_0=block["_v_0"],
-                                                           v_1=block["_v_0"]), N * M))
+                                                           v_1=block["_v_0"]), N * M)
                                 block["filter"] += h.to_bytes(8, byteorder="little")
 
 
