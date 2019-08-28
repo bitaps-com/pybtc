@@ -1001,7 +1001,7 @@ class Connector:
                                             h = map_into_range(siphash(r[2],
                                                                        v_0=block["_v_0"],
                                                                        v_1=block["_v_0"]), N * M)
-                                            block["filter"].append(h)
+                                            block["filter"] += h.to_bytes(8, byteorder="little")
                                     else:
                                         missed.append((inp["_outpoint"], (height<<39)+(q<<20)+i, q, i))
 
