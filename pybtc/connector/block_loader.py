@@ -165,7 +165,8 @@ class BlockLoader:
                                               self.parent.option_block_filters,
                                               self.parent.option_merkle_proof,
                                               self.parent.option_analytica,
-                                              self.parent.option_block_filter_fps))
+                                              self.parent.option_block_filter_fps,
+                                              self.parent.option_block_filter_capacity))
         worker.start()
         in_reader.close()
         out_writer.close()
@@ -263,7 +264,7 @@ class Worker:
     def __init__(self, name , in_reader, in_writer, out_reader, out_writer,
                  rpc_url, rpc_timeout, rpc_batch_limit, dsn, app_proc_title, utxo_data,
                  option_tx_map, option_block_filters, option_merkle_proof,
-                 option_analytica, option_block_filter_fps):
+                 option_analytica, option_block_filter_fps, option_block_filter_capacity):
         setproctitle('%s: blocks preload worker %s' % (app_proc_title, name))
         self.rpc_url = rpc_url
         self.rpc_timeout = rpc_timeout
@@ -278,6 +279,7 @@ class Worker:
         self.option_block_filters = option_block_filters
         self.option_analytica = option_analytica
         self.option_block_filter_fps = option_block_filter_fps
+        self.option_block_filter_capacity = option_block_filter_capacity
         in_writer.close()
         out_reader.close()
         policy = asyncio.get_event_loop_policy()
@@ -298,6 +300,7 @@ class Worker:
         start_limit = limit
         self.destroyed_coins = MRU()
         self.coins = MRU()
+        F = self.option_block_filter_fps * self.option_block_filter_capacity
         try:
             self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
             blocks, missed = dict(), deque()
@@ -623,49 +626,49 @@ class Worker:
 
                                            t += 1
                                            n += 1
-                                           # if self.option_analytica:
-                                           #     r = p[outpoint]
-                                           #     amount = r[1]
-                                           #     type = r[2][0]
-                                           #     block["stat"]["rawTx"][z]["inputsAmount"] += amount
-                                           #     pointer = (height<<39)+(z<<20)+(0<<19)+i
-                                           #
-                                           #     block["stat"]["iCountTotal"] += 1
-                                           #     block["stat"]["iAmountTotal"] += amount
-                                           #     if block["stat"]["iAmountMinPointer"] == 0 or \
-                                           #             block["stat"]["iAmountMinValue"] > amount:
-                                           #         block["stat"]["iAmountMinPointer"] = pointer
-                                           #         block["stat"]["iAmountMinValue"] = amount
-                                           #     if block["stat"]["iAmountMaxValue"] < amount:
-                                           #         block["stat"]["iAmountMaxPointer"] = pointer
-                                           #         block["stat"]["iAmountMaxValue"] = amount
-                                           #     amount_key = str(floor(log10(amount))) if amount else "null"
-                                           #     try: block["stat"]["iAmountMapCount"][amount_key] += 1
-                                           #     except: block["stat"]["iAmountMapCount"][amount_key] = 1
-                                           #     try: block["stat"]["iAmountMapAmount"][amount_key] += amount
-                                           #     except: block["stat"]["iAmountMapAmount"][amount_key] = amount
-                                           #
-                                           #     try: block["stat"]["iTypeMapCount"][type] += 1
-                                           #     except: block["stat"]["iTypeMapCount"][type] = 1
-                                           #
-                                           #     try: block["stat"]["iTypeMapAmount"][type] += amount
-                                           #     except: block["stat"]["iTypeMapAmount"][type] = amount
-                                           #
-                                           #     if type == 1 or type == 6:
-                                           #         s = parse_script(r[2][1:])
-                                           #         st = s["type"]
-                                           #         if st == "MULTISIG":
-                                           #             st += "_%s/%s" % (s["reqSigs"], s["pubKeys"])
-                                           #             if type == 1:
-                                           #                 try: block["stat"]["iP2SHtypeMapCount"][st] += 1
-                                           #                 except: block["stat"]["iP2SHtypeMapCount"][st] = 1
-                                           #                 try: block["stat"]["iP2SHtypeMapAmount"][st] += amount
-                                           #                 except: block["stat"]["iP2SHtypeMapAmount"][st] = amount
-                                           #             else:
-                                           #                 try: block["stat"]["iP2WSHtypeMapCount"][st] += 1
-                                           #                 except: block["stat"]["iP2WSHtypeMapCount"][st] = 1
-                                           #                 try: block["stat"]["iP2WSHtypeMapAmount"][st] += amount
-                                           #                 except: block["stat"]["iP2WSHtypeMapAmount"][st] = amount
+                                           if self.option_analytica:
+                                               r = p[outpoint]
+                                               amount = r[1]
+                                               type = r[2][0]
+                                               block["stat"]["rawTx"][z]["inputsAmount"] += amount
+                                               pointer = (height<<39)+(z<<20)+(0<<19)+i
+
+                                               block["stat"]["iCountTotal"] += 1
+                                               block["stat"]["iAmountTotal"] += amount
+                                               if block["stat"]["iAmountMinPointer"] == 0 or \
+                                                       block["stat"]["iAmountMinValue"] > amount:
+                                                   block["stat"]["iAmountMinPointer"] = pointer
+                                                   block["stat"]["iAmountMinValue"] = amount
+                                               if block["stat"]["iAmountMaxValue"] < amount:
+                                                   block["stat"]["iAmountMaxPointer"] = pointer
+                                                   block["stat"]["iAmountMaxValue"] = amount
+                                               amount_key = str(floor(log10(amount))) if amount else "null"
+                                               try: block["stat"]["iAmountMapCount"][amount_key] += 1
+                                               except: block["stat"]["iAmountMapCount"][amount_key] = 1
+                                               try: block["stat"]["iAmountMapAmount"][amount_key] += amount
+                                               except: block["stat"]["iAmountMapAmount"][amount_key] = amount
+
+                                               try: block["stat"]["iTypeMapCount"][type] += 1
+                                               except: block["stat"]["iTypeMapCount"][type] = 1
+
+                                               try: block["stat"]["iTypeMapAmount"][type] += amount
+                                               except: block["stat"]["iTypeMapAmount"][type] = amount
+
+                                               if type == 1 or type == 6:
+                                                   s = parse_script(r[2][1:])
+                                                   st = s["type"]
+                                                   if st == "MULTISIG":
+                                                       st += "_%s/%s" % (s["reqSigs"], s["pubKeys"])
+                                                       if type == 1:
+                                                           try: block["stat"]["iP2SHtypeMapCount"][st] += 1
+                                                           except: block["stat"]["iP2SHtypeMapCount"][st] = 1
+                                                           try: block["stat"]["iP2SHtypeMapAmount"][st] += amount
+                                                           except: block["stat"]["iP2SHtypeMapAmount"][st] = amount
+                                                       else:
+                                                           try: block["stat"]["iP2WSHtypeMapCount"][st] += 1
+                                                           except: block["stat"]["iP2WSHtypeMapCount"][st] = 1
+                                                           try: block["stat"]["iP2WSHtypeMapAmount"][st] += amount
+                                                           except: block["stat"]["iP2WSHtypeMapAmount"][st] = amount
                                        except:
                                            print(">>>>>", traceback.format_exc())
                                    except:
@@ -804,16 +807,7 @@ class Worker:
                                 blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                             except: pass
                 if self.option_block_filters:
-                    v_0, v_1 = hash_to_random_vectors(blocks[x]["hash"])
-
-                    blocks[x]["_v_0"] = v_0
-                    blocks[x]["_v_1"] = v_1
-
-                    M = self.option_block_filter_fps
-                    N = 20000
-                    # print(len(blocks[x]["filter"]))
-                    blocks[x]["filter"] = bytearray(b"".join([map_into_range(siphash(e, v_0=v_0, v_1=v_1),
-                                                                   N * M).to_bytes(8, byteorder="little")
+                    blocks[x]["filter"] = bytearray(b"".join([map_into_range(siphash(e), F).to_bytes(8, byteorder="big")
                                                              for e in blocks[x]["filter"]]))
 
                 blocks[x] = pickle.dumps(blocks[x])
