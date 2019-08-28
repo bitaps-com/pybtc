@@ -301,7 +301,8 @@ class Worker:
         self.destroyed_coins = MRU()
         self.coins = MRU()
         F = self.option_block_filter_fps * self.option_block_filter_capacity
-        print(">>",F)
+        print(">>",F, self.option_block_filter_fps,
+              self.option_block_filter_capacity)
         try:
             self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
             blocks, missed = dict(), deque()
