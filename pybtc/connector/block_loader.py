@@ -810,10 +810,11 @@ class Worker:
                     blocks[x]["_v_1"] = v_1
 
                     M = self.option_block_filter_fps
-                    N = blocks[x]["_N"]
+                    N = 20000
                     # print(len(blocks[x]["filter"]))
-                    blocks[x]["filter"] = [map_into_range(siphash(e, v_0=v_0, v_1=v_1), N * M)
-                                               for e in blocks[x]["filter"]]
+                    blocks[x]["filter"] = bytearray(b"".join([map_into_range(siphash(e, v_0=v_0, v_1=v_1),
+                                                                   N * M).to_bytes(8, byteorder="little")
+                                                             for e in blocks[x]["filter"]]))
 
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))

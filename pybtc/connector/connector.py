@@ -1029,10 +1029,11 @@ class Connector:
                             block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
                                                  (height << 39)+(q<<20)+i))
                             if self.option_block_filters:
-                                h = map_into_range(siphash(block["rawTx"][q]["vIn"][i]["coin"][2],
+                                h = int_to_bytes(map_into_range(siphash(block["rawTx"][q]["vIn"][i]["coin"][2],
                                                            v_0=block["_v_0"],
-                                                           v_1=block["_v_0"]), N * M)
-                                block["filter"].append(h)
+                                                           v_1=block["_v_0"]), N * M))
+                                block["filter"] += h.to_bytes(8, byteorder="little")
+
 
 
                         if self.option_analytica:
@@ -1092,10 +1093,10 @@ class Connector:
                                         except:
                                             block["stat"]["iP2WSHtypeMapAmount"][st] = amount
 
-            if self.option_block_filters:
-                assert len(block["filter"]) == N
-                block["filter"] = create_gcs(block["filter"], hashed=True,
-                                             M=M, P=self.option_block_filter_bits ,hex=0)
+            # if self.option_block_filters:
+            #     assert len(block["filter"]) == N
+            #     block["filter"] = create_gcs(block["filter"], hashed=True,
+            #                                  M=M, P=self.option_block_filter_bits ,hex=0)
 
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])
