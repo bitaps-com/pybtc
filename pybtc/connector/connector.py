@@ -1034,6 +1034,7 @@ class Connector:
 
 
 
+
                         if self.option_analytica:
                             r = block["rawTx"][q]["vIn"][i]["coin"]
                             amount = r[1]

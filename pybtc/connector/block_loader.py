@@ -301,6 +301,7 @@ class Worker:
         self.destroyed_coins = MRU()
         self.coins = MRU()
         F = self.option_block_filter_fps * self.option_block_filter_capacity
+        print(">>",F)
         try:
             self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
             blocks, missed = dict(), deque()
@@ -807,6 +808,7 @@ class Worker:
                                 blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                             except: pass
                 if self.option_block_filters:
+
                     blocks[x]["filter"] = bytearray(b"".join([map_into_range(siphash(e), F).to_bytes(8, byteorder="big")
                                                              for e in blocks[x]["filter"]]))
 
