@@ -1092,10 +1092,10 @@ class Connector:
                                         except:
                                             block["stat"]["iP2WSHtypeMapAmount"][st] = amount
 
-            if self.option_block_filters:
-                assert len(block["filter"]) == N
-                block["filter"] = create_gcs(block["filter"], hashed=True,
-                                             M=M, P=self.option_block_filter_bits ,hex=0)
+            # if self.option_block_filters:
+            #     assert len(block["filter"]) == N
+            #     block["filter"] = create_gcs(block["filter"], hashed=True,
+            #                                  M=M, P=self.option_block_filter_bits ,hex=0)
 
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])
