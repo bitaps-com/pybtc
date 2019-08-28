@@ -55,9 +55,9 @@ class Connector:
                  tx_orphan_buffer_limit=1000,
                  skip_opreturn=True,
                  block_filters=False,
-                 option_block_filter_fps=54975581,
-                 option_block_filter_bits=25,
-                 option_block_filter_capacity=20000,
+                 block_filter_fps=54975581,
+                 block_filter_bits=25,
+                 block_filter_capacity=20000,
                  merkle_proof=False,
                  tx_map=False,
                  analytica=False,
@@ -86,11 +86,11 @@ class Connector:
         self.tx_handler = tx_handler
         self.skip_opreturn = skip_opreturn
         self.option_block_filters = block_filters
-        self.option_block_filter_fps = option_block_filter_fps
-        self.option_block_filter_bits = option_block_filter_bits
-        self.option_block_filter_F = option_block_filter_fps * option_block_filter_bits
+        self.option_block_filter_fps = block_filter_fps
+        self.option_block_filter_bits = block_filter_bits
+        self.option_block_filter_F = block_filter_fps * block_filter_bits
 
-        self.option_block_filter_capacity = option_block_filter_capacity
+        self.option_block_filter_capacity = block_filter_capacity
         self.option_merkle_proof = merkle_proof
         self.option_tx_map = tx_map
         self.option_analytica = analytica
