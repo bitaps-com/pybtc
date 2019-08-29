@@ -15,10 +15,14 @@
 #define IS_PY3K
 #endif
 
-
+#ifdef IS_PY3K
 #define Py_TPFLAGS_HAVE_WEAKREFS  0
-#define WITH_BUFFER
+#endif
 
+#if PY_MAJOR_VERSION == 3 || (PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION == 7)
+/* (new) buffer protocol */
+#define WITH_BUFFER
+#endif
 
 #ifdef STDC_HEADERS
 #include <stddef.h>
@@ -65,7 +69,9 @@ static PyTypeObject Bitarraytype;
 #define GETBIT(self, i)  \
     ((self)->ob_item[(i) / 8] & BITMASK((self)->endian, i) ? 1 : 0)
 
-static void setbit(bitarrayobject *self, idx_t i, int bit) {
+static void
+setbit(bitarrayobject *self, idx_t i, int bit)
+{
     char *cp, mask;
 
     mask = BITMASK(self->endian, i);
@@ -76,7 +82,9 @@ static void setbit(bitarrayobject *self, idx_t i, int bit) {
         *cp &= ~mask;
 }
 
-static int check_overflow(idx_t nbits) {
+static int
+check_overflow(idx_t nbits)
+{
     idx_t max_bits;
 
     assert(nbits >= 0);
@@ -93,7 +101,9 @@ static int check_overflow(idx_t nbits) {
     return 0;
 }
 
-static int resize(bitarrayobject *self, idx_t nbits) {
+static int
+resize(bitarrayobject *self, idx_t nbits)
+{
     Py_ssize_t newsize;
     size_t new_allocated;
     Py_ssize_t allocated = self->allocated;
