@@ -50,13 +50,14 @@ def contains_in_bloom_filter(filter, elem, hash_func_count, n_tweak = 0,  max_ha
 
 
 
-def create_gcs(elements, M=784931, P=19, v_0=0, v_1=0, hashed=False, hex=False):
+def create_gcs(elements, N=None, M=784931, P=19, v_0=0, v_1=0, hashed=False, hex=False):
     # M=784931
     # P=19
     # BIP 158  constant values
     # v_0, v_1 - randomization vectors for siphash
 
-    N = len(elements)
+    if N is None:
+        N = len(elements)
 
     if N >= 4294967296 or M >= 4294967296:
         raise TypeError("elements count MUST be <2^32 and M MUST be <2^32")

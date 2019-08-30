@@ -15,6 +15,86 @@ class FilterFunctionsTests(unittest.TestCase):
     def setUpClass(cls):
         print("\nTesting filter functions:\n")
 
+    def test_bloom_filter(self):
+        print("test gcs")
+        b_addresses = set()
+        while len(b_addresses) < 1000_000:
+            b_addresses.add(sha256(int_to_bytes(random.randint(1, 0xFFFFFFFFFFFFFFFFFFFF)))[:21])
+        print("blocks addresses created ")
+        f = create_gcs(b_addresses, N = 10_000, M=54975581, P=25)
+        l = decode_gcs(f, len(b_addresses),P=25)
+        print("blocks set created ", len(f))
+
+        m_addresses = set()
+        while len(m_addresses) < 10000:
+            i = sha256(int_to_bytes(random.randint(1, 0xFFFFFFFFFFFFFFFFFFFF)))[:21]
+            if i not in b_addresses:
+                m_addresses.add(i)
+        print("m addresses created ")
+        f2 = create_gcs(m_addresses, N = 10_000, M=54975581, P=25)
+        l2 = decode_gcs(f2, len(m_addresses), P=25)
+        print("m set created ")
+        e = 0
+        for i in l2:
+            if i in l:
+                e += 1
+
+        print(" exist =", e)
+
+
+        import zlib
+        print("",len(f))
+        print("",len(zlib.compress(f)))
+
+
+    def test_bloom_gcs_1000000(self):
+        return
+        print("GCS filter 20 000 elements vs 1 000 000 monitoring addresses:")
+
+        print("generate address set ...")
+        addresses = set()
+        while len(addresses) < 1_000_000:
+            addresses.add(sha256(int_to_bytes(random.randint(1, 0xFFFFFFFFFFFFFFFFFFFF)))[:21])
+
+        print("Test false positive rate for 2000 blocks:")
+
+        blocks_affected = 0
+        q = 0
+        for i in range(2000):
+
+            block_addresses = set()
+            while len(block_addresses) < 20_000:
+                a = sha256(int_to_bytes(random.randint(1, 0xFFFFFFFFFFFFFFFFFFFF)))[:21]
+                if a in addresses:
+                    continue
+                block_addresses.add(a)
+
+            # create bloom filter
+            f, h = create_bloom_filter(20_000, 1 / 5_000_000, max_bit_size=0)
+            for a in block_addresses:
+                insert_to_bloom_filter(f, a, h)
+
+
+            positive = 0
+            t = time.time()
+            for a in addresses:
+                if contains_in_bloom_filter(f, a, h):
+                    positive += 1
+            t = time.time() - t
+            q += t
+            print("Block", i, "false positive", positive, "filter size", len(f), "time", t)
+            if positive:
+                blocks_affected += 1
+        print("False positive blocks", blocks_affected, "from 2000", "time", q)
+
+        print("Test false negative:")
+        negative = 0
+        for a in addresses:
+            if not contains_in_bloom_filter(f, a, h):
+                negative += 1
+        print("False negative ", negative)
+        print("Filter bytes per address ", len(f) / 20_000)
+
 
     def test_bloom_filter_fpr_20000_1000000(self):
         return
@@ -301,8 +381,10 @@ class FilterFunctionsTests(unittest.TestCase):
                 blocks_affected += 1
         print("False positive blocks", blocks_affected, "from 2000", "time", q)
 
-    def test_gcs_20000_1000000(self):
 
+
+    def test_gcs_20000_1000000(self):
+        return
         print("\nGCS 20 000 elements vs 1 000 000 monitoring addresses:")
 
         print("generate address set ...")
