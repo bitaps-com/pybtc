@@ -1032,7 +1032,7 @@ class Connector:
                                 h = map_into_range(siphash(block["rawTx"][q]["vIn"][i]["coin"][2]),
                                                    self.option_block_filter_F)
                                 block["filter"] += h.to_bytes(8, byteorder="big")
-
+                                block["_I"] += 1
 
 
 
