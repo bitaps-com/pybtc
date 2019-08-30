@@ -1095,7 +1095,7 @@ class Connector:
             if self.option_block_filters:
                 assert int(len(block["filter"])/8) == block["_N"]
                 if block["_N"] != block["_I"] + block["_O"]:
-                    print(block["_N"], block["_I"], block["_O"])
+                    print(block["_N"], block["_I"], block["_O"],height )
                 assert block["_N"] == block["_I"] + block["_O"]
 
 
