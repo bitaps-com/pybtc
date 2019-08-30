@@ -429,6 +429,8 @@ class Worker:
                             block["_N"] = 0
                             block["_O"] = 0
                             block["_I"] = 0
+                            block["_A"] = 0
+                            block["_L"] = 0
                             # handle outputs
                             for z in block["rawTx"]:
                                 if self.option_merkle_proof:
@@ -507,6 +509,7 @@ class Worker:
                                                if self.option_block_filters:
                                                    block["filter"].append(r[2])
                                                    block["_I"] += 1
+                                                   block["_A"] += 1
 
 
 
@@ -620,6 +623,7 @@ class Worker:
                                            if self.option_block_filters:
                                                blocks[h]["filter"].append(p[outpoint][2])
                                                blocks[h]["_I"] += 1
+                                               blocks[h]["_L"] += 1
                                            if self.option_tx_map:
                                                blocks[h]["txMap"].append(((h<<39)+(z<<20)+i,
                                                                           p[outpoint][2], p[outpoint][1]))
