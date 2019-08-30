@@ -1001,6 +1001,7 @@ class Connector:
                                         if self.option_block_filters:
                                             h = map_into_range(siphash(r[2]), self.option_block_filter_F)
                                             block["filter"] += h.to_bytes(8, byteorder="big")
+                                            block["_I"] += 1
                                     else:
                                         missed.append((inp["_outpoint"], (height<<39)+(q<<20)+i, q, i))
 
