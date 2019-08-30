@@ -619,7 +619,7 @@ class Worker:
                                        try:
                                            if self.option_block_filters:
                                                blocks[h]["filter"].append(p[outpoint][2])
-
+                                               blocks[h]["_I"] += 1
                                            if self.option_tx_map:
                                                blocks[h]["txMap"].append(((h<<39)+(z<<20)+i,
                                                                           p[outpoint][2], p[outpoint][1]))
