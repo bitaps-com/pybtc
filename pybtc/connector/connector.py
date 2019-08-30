@@ -1093,7 +1093,7 @@ class Connector:
                                             block["stat"]["iP2WSHtypeMapAmount"][st] = amount
 
                     if self.option_block_filters:
-                        assert int(len(block["filter"]/8)) == block["_N"]
+                        assert int(len(block["filter"])/8) == block["_N"]
                         assert block["_N"] == block["_I"] + block["_O"]
 
         self.total_received_tx += len(block["rawTx"])
