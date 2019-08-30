@@ -452,10 +452,9 @@ class Worker:
                                     if self.option_block_filters:
 
                                         if block["rawTx"][z]["vOut"][i]["nType"] not in (3, 8):
-                                            if block["rawTx"][z]["vOut"][i]["value"]:
-                                                block["filter"].append(address)
-                                                block["_N"] += 1
-                                                block["_O"] += 1
+                                            block["filter"].append(address)
+                                            block["_N"] += 1
+                                            block["_O"] += 1
 
                                     block["rawTx"][z]["vOut"][i]["_address"] = address
                                     self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
