@@ -460,7 +460,9 @@ class Worker:
                                     self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
 
                                     if self.option_tx_map:
-                                        block["txMap"].append((pointer, address, block["rawTx"][z]["vOut"][i]["value"]))
+                                        if address[0] not in (3, 8):
+                                            block["txMap"].append((pointer, address,
+                                                                   block["rawTx"][z]["vOut"][i]["value"]))
 
                                     if self.option_analytica:
                                         amount = block["rawTx"][z]["vOut"][i]["value"]
@@ -624,6 +626,7 @@ class Worker:
                                                blocks[h]["_I"] += 1
                                                blocks[h]["_L"] += 1
                                            if self.option_tx_map:
+
                                                blocks[h]["txMap"].append(((h<<39)+(z<<20)+i,
                                                                           p[outpoint][2], p[outpoint][1]))
                                                blocks[h]["stxo"].append((p[outpoint][0], (h<<39)+(z<<20)+i))
