@@ -88,9 +88,8 @@ class Connector:
         self.option_block_filters = block_filters
         self.option_block_filter_fps = block_filter_fps
         self.option_block_filter_bits = block_filter_bits
-        self.option_block_filter_F = block_filter_fps * block_filter_bits
-
         self.option_block_filter_capacity = block_filter_capacity
+        self.option_block_filter_F = block_filter_fps * block_filter_capacity
         self.option_merkle_proof = merkle_proof
         self.option_tx_map = tx_map
         self.option_analytica = analytica
