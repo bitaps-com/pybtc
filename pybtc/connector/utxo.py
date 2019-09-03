@@ -490,7 +490,8 @@ class UUTXO():
                 for row in rows:
                     commit_ustxo.remove((row["o"], row["s"], row["ot"], row["t"], row["i"], row["a"]))
 
-                commit_ustxo = set((i[0], i[1] + 1, i[2], i[3], i[4] ) for i in commit_ustxo)
+                # in case double spend increment sequence
+                commit_ustxo = set((i[0], i[1] + 1, i[2], i[3], i[4], i[5]) for i in commit_ustxo)
 
     async def apply_block_changes(self, txs, h, conn):
         if self.db_type == "postgresql":

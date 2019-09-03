@@ -1342,7 +1342,7 @@ class Connector:
                     for i in tx["vIn"]:
                         tx["vIn"][i]["coin"] = self.uutxo.loaded_utxo[tx["vIn"][i]["outpoint"]]
                         commit_ustxo_buffer.add((tx["vIn"][i]["outpoint"],
-                                                 tx["vIn"][i]["sequence"],
+                                                 0,
                                                  tx["vIn"][i]["txId"],
                                                  tx["txId"],
                                                  i,
