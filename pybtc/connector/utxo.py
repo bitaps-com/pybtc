@@ -469,9 +469,8 @@ class UUTXO():
                                                  records=commit_uutxo)
 
             while commit_ustxo:
-                print(">>", commit_ustxo)
                 rows = await conn.fetch("INSERT  INTO connector_unconfirmed_stxo "
-                                        "(outpoint, sequence, out_tx_id, tx_id, input_index) "
+                                        "(outpoint, sequence, out_tx_id, tx_id, input_index, address) "
                                         " (SELECT r.outpoint,"
                                         "         r.sequence,"
                                         "         r.out_tx_id,"
