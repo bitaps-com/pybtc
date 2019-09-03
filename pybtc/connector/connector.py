@@ -1341,8 +1341,12 @@ class Connector:
 
                     for i in tx["vIn"]:
                         tx["vIn"][i]["coin"] = self.uutxo.loaded_utxo[tx["vIn"][i]["outpoint"]]
-                        commit_ustxo_buffer.add((tx["vIn"][i]["outpoint"], 0,
-                                                 tx["vIn"][i]["txId"], tx["txId"], i, tx["vIn"][i]["coin"][2]))
+                        commit_ustxo_buffer.add((tx["vIn"][i]["outpoint"],
+                                                 tx["vIn"][i]["sequence"],
+                                                 tx["vIn"][i]["txId"],
+                                                 tx["txId"],
+                                                 i,
+                                                 tx["vIn"][i]["coin"][2]))
                         try:
                             tx["vIn"][i]["double_spent"] = self.uutxo.loaded_ustxo[tx["vIn"][i]["outpoint"]]
                             tx["double_spent"] = True
