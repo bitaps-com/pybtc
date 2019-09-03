@@ -325,7 +325,7 @@ class Connector:
                 if lb is None:
                     lb = -1
                     lc = 0
-                    await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_block', 0);")
+                    await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_block', -1);")
                     await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_cached_block', 0);")
 
                 self.mempool_tx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "

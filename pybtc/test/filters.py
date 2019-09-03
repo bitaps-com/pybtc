@@ -15,10 +15,62 @@ class FilterFunctionsTests(unittest.TestCase):
     def setUpClass(cls):
         print("\nTesting filter functions:\n")
 
+
+    def test_bloom_filter11(self):
+        print("test gcs11")
+
+
+        m_addresses = set()
+        while len(m_addresses) < 10_000:
+            i = sha256(int_to_bytes(random.randint(1, 0xFFFFFFFFFFFFFFFFFFFF)))[:21]
+            m_addresses.add(i)
+        print("m addresses created ", len(m_addresses))
+
+        f2 = create_gcs(m_addresses, N=7332)
+        l2 = set(decode_gcs(f2, len(m_addresses)))
+        print("m set created ")
+
+        size = 0
+        for c in range(10):
+            et = 0
+            for fi in range(2000):
+                f2 = create_gcs(m_addresses, N=7332, v_0= fi)
+                l2 = set(decode_gcs(f2, len(m_addresses)))
+                b_addresses = set()
+                w = 7332
+                while len(b_addresses) < w:
+                    r = sha256(int_to_bytes(random.randint(1, 0xFFFFFFFFFFFFFFFFFFFF)))[:21]
+
+                    if r not in m_addresses:
+                        b_addresses.add(r)
+
+
+                f = create_gcs(b_addresses, v_0=fi)
+                print("blocks addresses created ", len(b_addresses), "filter size", len(f))
+
+                l = set(decode_gcs(f, len(b_addresses)))
+                size += len(f)
+                e = 0
+                for q in l2:
+                    if q in l:
+                        e += 1
+                if e:
+                    et+=1
+                print(" false positive =", e)
+            print(c,":", "2000 blocks","false positive count:", et)
+
+
+        import zlib
+        print("",len(f))
+        print("",len(zlib.compress(f)))
+
+
+
     def test_bloom_filter(self):
+        return
         print("test gcs")
         b_addresses = set()
-        while len(b_addresses) < 1000_000:
+        while len(b_addresses) < 10_000:
             b_addresses.add(sha256(int_to_bytes(random.randint(1, 0xFFFFFFFFFFFFFFFFFFFF)))[:21])
         print("blocks addresses created ")
         f = create_gcs(b_addresses, N = 10_000, M=54975581, P=25)
