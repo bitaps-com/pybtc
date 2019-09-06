@@ -1001,6 +1001,9 @@ class Connector:
                                             h = map_into_range(siphash(r[2]), self.option_block_filter_F)
                                             block["filter"] += h.to_bytes(8, byteorder="big")
                                             block["_I"] += 1
+                                        if self.option_tx_map:
+                                            tx_map_append(((height << 39) + (q << 20) + i, r[2],  r[1]))
+                                            block["stxo"].append((r[0], (height << 39) + (q << 20) + i))
                                     else:
                                         missed.append((inp["_outpoint"], (height<<39)+(q<<20)+i, q, i))
 
