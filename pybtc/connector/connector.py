@@ -1095,11 +1095,11 @@ class Connector:
                                         except:
                                             block["stat"]["iP2WSHtypeMapAmount"][st] = amount
 
-            if self.option_block_filters:
-                assert int(len(block["filter"])/8) == block["_N"]
-                if block["_N"] != block["_I"] + block["_O"]:
-                    print(block["_N"], block["_I"], block["_O"], block["_L"], block["_A"],height )
-                assert block["_N"] == block["_I"] + block["_O"]
+            # if self.option_block_filters:
+            #     # assert int(len(block["filter"])/8) == block["_N"]
+            #     if block["_N"] != block["_I"] + block["_O"]:
+            #         print(block["_N"], block["_I"], block["_O"], block["_L"], block["_A"],height )
+            #     assert block["_N"] == block["_I"] + block["_O"]
 
 
         self.total_received_tx += len(block["rawTx"])
