@@ -498,8 +498,7 @@ class Worker:
                                                     elif hp == h and op > inp["vOut"]: bip69 = False
                                                 hp, op = h, inp["vOut"]
 
-                                        if self.option_block_filters:
-                                            block["_N"] += 1
+                                        block["_N"] += 1
 
                                         try:
                                            r = self.coins.delete(outpoint)

@@ -1099,7 +1099,7 @@ class Connector:
             #     # assert int(len(block["filter"])/8) == block["_N"]
             #     if block["_N"] != block["_I"] + block["_O"]:
             #         print(block["_N"], block["_I"], block["_O"], block["_L"], block["_A"],height )
-            #     assert block["_N"] == block["_I"] + block["_O"]
+            assert block["_N"] == len(block["txMap"])
 
 
         self.total_received_tx += len(block["rawTx"])
