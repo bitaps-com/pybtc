@@ -63,7 +63,7 @@ def create_gcs(elements, N=None, M=784931, P=19, v_0=0, v_1=0, hashed=False, hex
         raise TypeError("elements count MUST be <2^32 and M MUST be <2^32")
 
     gcs_filter = bitarray(endian='big')
-
+    gcs_filter_append = gcs_filter.append
     last = 0
     if not hashed:
         elements = [map_into_range(siphash(e, v_0=v_0, v_1=v_1), N * M) for e in elements]
@@ -73,14 +73,14 @@ def create_gcs(elements, N=None, M=784931, P=19, v_0=0, v_1=0, hashed=False, hex
         q, r = delta >> P, delta & ((1 << P) - 1)
 
         while q:
-            gcs_filter.append(True)
+            gcs_filter_append(True)
             q -= 1
 
-        gcs_filter.append(False)
+        gcs_filter_append(False)
 
         c = P - 1
         while c >= 0:
-            gcs_filter.append(bool(r & (1 << c)))
+            gcs_filter_append(bool(r & (1 << c)))
             c -= 1
 
         last = value
@@ -91,6 +91,7 @@ def create_gcs(elements, N=None, M=784931, P=19, v_0=0, v_1=0, hashed=False, hex
 
 def decode_gcs(h, N, P=19):
     s = []
+    s_append = s.append
     last = 0
     gcs_filter = bitarray(endian='big')
     gcs_filter.frombytes(h)
@@ -115,7 +116,7 @@ def decode_gcs(h, N, P=19):
 
         delta = (q << P) + r
         last += delta
-        s.append(last)
+        s_append(last)
 
     return s
 
