@@ -509,7 +509,7 @@ class Connector:
 
                             self.log.info("Last block %s App last block %s" % (self.last_block_height,
                                                                                self.app_last_block))
-                            print(self.sync_utxo.checkpoints)
+                            self.log.debug("checkpoints: %s " % str(self.sync_utxo.checkpoints))
                             self.sync_utxo.checkpoints =  deque([self.last_block_height])
 
                             self.sync_utxo.size_limit = 0
