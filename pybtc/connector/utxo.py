@@ -606,7 +606,10 @@ class UUTXO():
                                                                     "dbs_stxo": dbs_stxo,
                                                                     "invalid_txs": block_invalid_txs}))
 
-            return {"dbs_uutxo": dbs_uutxo, "dbs_stxo": dbs_stxo, "invalid_txs": block_invalid_txs}
+            return {"dbs_uutxo": dbs_uutxo,
+                    "dbs_stxo": dbs_stxo,
+                    "invalid_txs": block_invalid_txs,
+                    "stxo": stxo}
 
 
     async def rollback_block(self, conn):
