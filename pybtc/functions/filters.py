@@ -120,3 +120,21 @@ def decode_gcs(h, N, P=19):
 
     return s
 
+
+def create_test_filter(elements):
+    a_filter = bitarray(endian='big')
+    a_filter_append = a_filter.append
+    deltas = deque()
+    last = 0
+    for value in  sorted(elements):
+        delta = value - last
+        c = delta.bit_length() - 1
+        deltas.append(c)
+        while c >= 0:
+            a_filter_append(delta & (1 << c))
+            c -= 1
+        last = value
+
+    f = a_filter.tobytes()
+    return f.hex() if hex else f
+

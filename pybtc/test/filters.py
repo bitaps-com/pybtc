@@ -22,14 +22,14 @@ class FilterFunctionsTests(unittest.TestCase):
 
         m_addresses = set()
         while len(m_addresses) < 10_000:
-            i = sha256(int_to_bytes(random.randint(1, 0xFFFFFFFFFFFFFFFFFFFF)))[:21]
+            i = siphash(sha256(int_to_bytes(random.randint(1, 0xFFFFFFFFFFFFFFFFFFFF)))[:21])
             m_addresses.add(i)
         print("m addresses created ", len(m_addresses))
 
-        f2 = create_gcs(m_addresses, N=7332)
-        l2 = set(decode_gcs(f2, len(m_addresses)))
-        print("m set created ")
+        f2 = create_test_filter(m_addresses)
 
+        print("filter len ", len(f2)/ 1024 / 1024)
+        return
         size = 0
         for c in range(10):
             et = 0
