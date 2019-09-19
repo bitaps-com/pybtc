@@ -52,7 +52,7 @@
 #         return self.frombytes(string.encode())
 #
 #     def tostring(self):
-#         """tostring() -> str
+#         """tostring() -> k
 #
 # Return the string representing (machine values) of the bitarray.
 # When the length of the bitarray is not a multiple of 8, the few remaining

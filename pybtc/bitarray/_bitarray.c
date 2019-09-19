@@ -696,12 +696,6 @@ static int IntBool_AsInt(PyObject *v) {
     if (PyBool_Check(v))
         return PyObject_IsTrue(v);
 
-#ifndef IS_PY3K
-    if (PyInt_Check(v)) {
-        x = PyInt_AsLong(v);
-    }
-    else
-#endif
     if (PyLong_Check(v)) {
         x = PyLong_AsLong(v);
     }
@@ -727,12 +721,7 @@ static int IntBool_AsInt(PyObject *v) {
 static int getIndex(PyObject *v, idx_t *i) {
     idx_t x;
 
-#ifndef IS_PY3K
-    if (PyInt_Check(v)) {
-        x = PyInt_AS_LONG(v);
-    }
-    else
-#endif
+
     if (PyLong_Check(v)) {
         x = PyLong_AsLongLong(v);
     }
@@ -812,26 +801,22 @@ static PyObject *bitarray_length(bitarrayobject *self) {
     return PyLong_FromLongLong(self->nbits);
 }
 
-PyDoc_STRVAR(length_doc,
-"length() -> int\n\
-\n\
-Return the length, i.e. number of bits stored in the bitarray.\n\
-This method is preferred over __len__ (used when typing ``len(a)``),\n\
-since __len__ will fail for a bitarray object with 2^31 or more elements\n\
-on a 32bit machine, whereas this method will return the correct value,\n\
-on 32bit and 64bit machines.");
+PyDoc_STRVAR(length_doc,"length() -> int\n\
+                        \n\
+                        Return the length, i.e. number of bits stored in the bitarray.\n\
+                        This method is preferred over __len__ (used when typing ``len(a)``),\n\
+                        since __len__ will fail for a bitarray object with 2^31 or more elements\n\
+                        on a 32bit machine, whereas this method will return the correct value,\n\
+                        on 32bit and 64bit machines.");
 
-PyDoc_STRVAR(len_doc,
-"__len__() -> int\n\
-\n\
-Return the length, i.e. number of bits stored in the bitarray.\n\
-This method will fail for a bitarray object with 2^31 or more elements\n\
-on a 32bit machine.  Use bitarray.length() instead.");
+PyDoc_STRVAR(len_doc, "__len__() -> int\n\
+                      \n\
+                      Return the length, i.e. number of bits stored in the bitarray.\n\
+                      This method will fail for a bitarray object with 2^31 or more elements\n\
+                      on a 32bit machine.  Use bitarray.length() instead.");
 
 
-static PyObject *
-bitarray_copy(bitarrayobject *self)
-{
+static PyObject *bitarray_copy(bitarrayobject *self) {
     PyObject *res;
 
     res = newbitarrayobject(Py_TYPE(self), self->nbits, self->endian);
@@ -842,15 +827,10 @@ bitarray_copy(bitarrayobject *self)
     return res;
 }
 
-PyDoc_STRVAR(copy_doc,
-"copy() -> bitarray\n\
-\n\
-Return a copy of the bitarray.");
+PyDoc_STRVAR(copy_doc, "copy() -> bitarray\n\nReturn a copy of the bitarray.");
 
 
-static PyObject *
-bitarray_count(bitarrayobject *self, PyObject *args)
-{
+static PyObject *bitarray_count(bitarrayobject *self, PyObject *args) {
     idx_t n1;
     long x = 1;
 
@@ -861,15 +841,11 @@ bitarray_count(bitarrayobject *self, PyObject *args)
     return PyLong_FromLongLong(x ? n1 : (self->nbits - n1));
 }
 
-PyDoc_STRVAR(count_doc,
-"count([value]) -> int\n\
-\n\
-Return number of occurrences of value (defaults to True) in the bitarray.");
+PyDoc_STRVAR(count_doc, "count([value]) -> int\n\n\
+                        Return number of occurrences of value (defaults to True) in the bitarray.");
 
 
-static PyObject *
-bitarray_index(bitarrayobject *self, PyObject *args)
-{
+static PyObject *bitarray_index(bitarrayobject *self, PyObject *args) {
     PyObject *x;
     idx_t i, start = 0, stop = self->nbits;
     long vi;
@@ -905,32 +881,26 @@ bitarray_index(bitarrayobject *self, PyObject *args)
     return PyLong_FromLongLong(i);
 }
 
-PyDoc_STRVAR(index_doc,
-"index(value, [start, [stop]]) -> int\n\
-\n\
-Return index of the first occurrence of bool(value) in the bitarray.\n\
-Raises ValueError if the value is not present.");
+PyDoc_STRVAR(index_doc, "index(value, [start, [stop]]) -> int\n\
+                        \n\
+                        Return index of the first occurrence of bool(value) in the bitarray.\n\
+                        Raises ValueError if the value is not present.");
 
 
-static PyObject *
-bitarray_extend(bitarrayobject *self, PyObject *obj)
-{
+static PyObject *bitarray_extend(bitarrayobject *self, PyObject *obj) {
     if (extend_dispatch(self, obj) < 0)
         return NULL;
     Py_RETURN_NONE;
 }
 
-PyDoc_STRVAR(extend_doc,
-"extend(object)\n\
-\n\
-Append bits to the end of the bitarray.  The objects which can be passed\n\
-to this method are the same iterable objects which can given to a bitarray\n\
-object upon initialization.");
+PyDoc_STRVAR(extend_doc, "extend(object)\n\
+                         \n\
+                         Append bits to the end of the bitarray.  The objects which can be passed\n\
+                         to this method are the same iterable objects which can given to a bitarray\n\
+                         object upon initialization.");
 
 
-static PyObject *
-bitarray_contains(bitarrayobject *self, PyObject *x)
-{
+static PyObject *bitarray_contains(bitarrayobject *self, PyObject *x) {
     long res;
 
     if (IS_INT_OR_BOOL(x)) {
@@ -951,16 +921,13 @@ bitarray_contains(bitarrayobject *self, PyObject *x)
     return PyBool_FromLong(res);
 }
 
-PyDoc_STRVAR(contains_doc,
-"__contains__(x) -> bool\n\
-\n\
-Return True if bitarray contains x, False otherwise.\n\
-The value x may be a boolean (or integer between 0 and 1), or a bitarray.");
+PyDoc_STRVAR(contains_doc, "__contains__(x) -> bool\n\
+                            \n\
+                            Return True if bitarray contains x, False otherwise.\n\
+                            The value x may be a boolean (or integer between 0 and 1), or a bitarray.");
 
 
-static PyObject *
-bitarray_search(bitarrayobject *self, PyObject *args)
-{
+static PyObject *bitarray_search(bitarrayobject *self, PyObject *args) {
     PyObject *list = NULL;   /* list of matching positions to be returned */
     PyObject *x, *item = NULL;
     Py_ssize_t limit = -1;
@@ -1004,18 +971,15 @@ bitarray_search(bitarrayobject *self, PyObject *args)
     return list;
 }
 
-PyDoc_STRVAR(search_doc,
-"search(bitarray, [limit]) -> list\n\
-\n\
-Searches for the given bitarray in self, and return the list of start\n\
-positions.\n\
-The optional argument limits the number of search results to the integer\n\
-specified.  By default, all search results are returned.");
+PyDoc_STRVAR(search_doc, "search(bitarray, [limit]) -> list\n\
+                         \n\
+                         Searches for the given bitarray in self, and return the list of start\n\
+                         positions.\n\
+                         The optional argument limits the number of search results to the integer\n\
+                         specified.  By default, all search results are returned.");
 
 
-static PyObject *
-bitarray_buffer_info(bitarrayobject *self)
-{
+static PyObject *bitarray_buffer_info(bitarrayobject *self) {
     PyObject *res, *ptr;
 
     ptr = PyLong_FromVoidPtr(self->ob_item),
@@ -1029,75 +993,50 @@ bitarray_buffer_info(bitarrayobject *self)
     return res;
 }
 
-PyDoc_STRVAR(buffer_info_doc,
-"buffer_info() -> tuple\n\
-\n\
-Return a tuple (address, size, endianness, unused, allocated) giving the\n\
-current memory address, the size (in bytes) used to hold the bitarray's\n\
-contents, the bit endianness as a string, the number of unused bits\n\
-(e.g. a bitarray of length 11 will have a buffer size of 2 bytes and\n\
-5 unused bits), and the size (in bytes) of the allocated memory.");
+PyDoc_STRVAR(buffer_info_doc, "buffer_info() -> tuple\n\
+                               \n\
+                               Return a tuple (address, size, endianness, unused, allocated) giving the\n\
+                               current memory address, the size (in bytes) used to hold the bitarray's\n\
+                               contents, the bit endianness as a string, the number of unused bits\n\
+                               (e.g. a bitarray of length 11 will have a buffer size of 2 bytes and\n\
+                               5 unused bits), and the size (in bytes) of the allocated memory.");
 
 
-static PyObject *
-bitarray_endian(bitarrayobject *self)
-{
-#ifdef IS_PY3K
+static PyObject *bitarray_endian(bitarrayobject *self) {
     return PyUnicode_FromString(ENDIAN_STR(self));
-#else
-    return PyString_FromString(ENDIAN_STR(self));
-#endif
 }
 
-PyDoc_STRVAR(endian_doc,
-"endian() -> str\n\
-\n\
-Return the bit endianness as a string (either 'little' or 'big').");
+PyDoc_STRVAR(endian_doc, "endian() -> str\n\nReturn the bit endianness as a string (either 'little' or 'big').");
 
 
-static PyObject *
-bitarray_append(bitarrayobject *self, PyObject *v)
-{
+static PyObject *bitarray_append(bitarrayobject *self, PyObject *v) {
     if (append_item(self, v) < 0)
         return NULL;
 
     Py_RETURN_NONE;
 }
 
-PyDoc_STRVAR(append_doc,
-"append(item)\n\
-\n\
-Append the value bool(item) to the end of the bitarray.");
+PyDoc_STRVAR(append_doc, "append(item)\n\nAppend the value bool(item) to the end of the bitarray.");
 
 
-static PyObject *
-bitarray_all(bitarrayobject *self)
-{
+static PyObject *bitarray_all(bitarrayobject *self) {
     if (findfirst(self, 0, 0, self->nbits) >= 0)
         Py_RETURN_FALSE;
     else
         Py_RETURN_TRUE;
 }
 
-PyDoc_STRVAR(all_doc,
-"all() -> bool\n\
-\n\
-Returns True when all bits in the array are True.");
+PyDoc_STRVAR(all_doc, "all() -> bool\n\nReturns True when all bits in the array are True.");
 
 
-static PyObject *
-bitarray_any(bitarrayobject *self)
-{
+static PyObject *bitarray_any(bitarrayobject *self) {
     if (findfirst(self, 1, 0, self->nbits) >= 0)
         Py_RETURN_TRUE;
     else
         Py_RETURN_FALSE;
 }
 
-PyDoc_STRVAR(any_doc,
-"any() -> bool\n\
-\n\
-Returns True when any bit in the array is True.");
+PyDoc_STRVAR(any_doc, "any() -> bool\n\nReturns True when any bit in the array is True.");
 
 
 static PyObject *
@@ -2052,9 +1991,7 @@ check_codedict(PyObject *codedict)
     return 0;
 }
 
-static PyObject *
-bitarray_encode(bitarrayobject *self, PyObject *args)
-{
+static PyObject *bitarray_encode(bitarrayobject *self, PyObject *args) {
     PyObject *codedict, *iterable, *iter, *symbol, *bits;
 
     if (!PyArg_ParseTuple(args, "OO:encode", &codedict, &iterable))

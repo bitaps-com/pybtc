@@ -1,5 +1,6 @@
 from pybtc.functions.tools import bytes_to_int
 from pybtc.functions.tools import hash_to_random_vectors
+from pybtc.functions.address import hash_to_script
 from pybtc.functions.tools import map_into_range
 from pybtc.functions.hash import siphash
 from pybtc.functions.tools import int_to_bytes
@@ -162,11 +163,10 @@ class BlockLoader:
                                               self.rpc_url, self.rpc_timeout, self.rpc_batch_limit,
                                               self.dsn, self.parent.app_proc_title, self.parent.utxo_data,
                                               self.parent.option_tx_map,
-                                              self.parent.option_block_filters,
+                                              self.parent.option_block_batch_filters,
+                                              self.parent.option_block_bip158_filters,
                                               self.parent.option_merkle_proof,
-                                              self.parent.option_analytica,
-                                              self.parent.option_block_filter_fps,
-                                              self.parent.option_block_filter_capacity))
+                                              self.parent.option_analytica))
         worker.start()
         in_reader.close()
         out_writer.close()
@@ -263,8 +263,8 @@ class Worker:
 
     def __init__(self, name , in_reader, in_writer, out_reader, out_writer,
                  rpc_url, rpc_timeout, rpc_batch_limit, dsn, app_proc_title, utxo_data,
-                 option_tx_map, option_block_filters, option_merkle_proof,
-                 option_analytica, option_block_filter_fps, option_block_filter_capacity):
+                 option_tx_map, option_block_batch_filters, option_block_bip158_filters, option_merkle_proof,
+                 option_analytica):
         setproctitle('%s: blocks preload worker %s' % (app_proc_title, name))
         self.rpc_url = rpc_url
         self.rpc_timeout = rpc_timeout
@@ -276,10 +276,9 @@ class Worker:
         self.db = None
         self.option_tx_map = option_tx_map
         self.option_merkle_proof = option_merkle_proof
-        self.option_block_filters = option_block_filters
+        self.option_block_batch_filters = option_block_batch_filters
+        self.option_block_bip158_filters = option_block_bip158_filters
         self.option_analytica = option_analytica
-        self.option_block_filter_fps = option_block_filter_fps
-        self.option_block_filter_capacity = option_block_filter_capacity
         in_writer.close()
         out_reader.close()
         policy = asyncio.get_event_loop_policy()
@@ -300,7 +299,6 @@ class Worker:
         start_limit = limit
         self.destroyed_coins = MRU()
         self.coins = MRU()
-        F = self.option_block_filter_fps * self.option_block_filter_capacity
 
         try:
             self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
@@ -327,10 +325,12 @@ class Worker:
                 for x, y in zip(h, result):
                     if y["result"] is not None:
                         block = decode_block_tx(y["result"])
-
+                        block["p2pkMapHash"] = []
                         if self.option_tx_map: block["txMap"], block["stxo"] = deque(), deque()
 
-                        if self.option_block_filters: block["filter"] = list()
+                        if self.option_block_batch_filters: block["filter"] = list()
+
+                        if self.option_block_bip158_filters: block["bip158_filter"] = list()
 
                         if self.option_merkle_proof:
                             mt = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
@@ -445,16 +445,27 @@ class Worker:
                                     o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
                                     pointer = (x << 39)+(z << 20)+(1 << 19) + i
 
-                                    try: address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
+                                    try:
+                                        if block["rawTx"][z]["vOut"][i]["nType"] == 2:
+                                            block["p2pkMapHash"].append((block["rawTx"][z]["vOut"][i]["addressHash"],
+                                                                         block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
+
+                                            raise Exception("PUBKEY")
+                                        address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
                                                                    block["rawTx"][z]["vOut"][i]["addressHash"]))
                                     except: address = b"".join((bytes([block["rawTx"][z]["vOut"][i]["nType"]]),
                                                                 block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
-                                    if self.option_block_filters:
+
+                                    if self.option_block_batch_filters:
 
                                         if block["rawTx"][z]["vOut"][i]["nType"] not in (3, 8):
                                             block["filter"].append(address)
                                             block["_N"] += 1
                                             block["_O"] += 1
+
+                                    if self.option_block_bip158_filters:
+                                        if block["rawTx"][z]["vOut"][i]["nType"] not in (3, 8):
+                                            block["bip158_filter"].append(block["rawTx"][z]["vOut"][i]["scriptPubKey"])
 
                                     block["rawTx"][z]["vOut"][i]["_address"] = address
                                     self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
@@ -506,11 +517,15 @@ class Worker:
                                                block["rawTx"][z]["vIn"][i]["_a_"] = r
                                                self.destroyed_coins[r[0]] = True
 
-                                               if self.option_block_filters:
+                                               if self.option_block_batch_filters:
                                                    block["filter"].append(r[2])
                                                    block["_I"] += 1
                                                    block["_A"] += 1
 
+                                               if self.option_block_bip158_filters:
+                                                   if r[2][0] in (0, 1, 5, 6):
+                                                       block["bip158_filter"].append(hash_to_script(r[2][1:], r[2][0]))
+                                                   else:  block["bip158_filter"].append(r[2][1:])
 
 
                                                if self.option_tx_map:
@@ -620,10 +635,16 @@ class Worker:
                                    try:
                                        blocks[h]["rawTx"][z]["vIn"][i]["_l_"] = p[outpoint]
                                        try:
-                                           if self.option_block_filters:
+                                           if self.option_block_batch_filters:
                                                blocks[h]["filter"].append(p[outpoint][2])
                                                blocks[h]["_I"] += 1
                                                blocks[h]["_L"] += 1
+                                           if self.option_block_bip158_filters:
+                                               r = p[outpoint][2]
+                                               if r[0] in (0, 1, 5, 6):
+                                                   blocks[h]["bip158_filter"].append(hash_to_script(r[1:], r[0]))
+                                               else:
+                                                   blocks[h]["bip158_filter"].append(r[1:])
                                            if self.option_tx_map:
 
                                                blocks[h]["txMap"].append(((h<<39)+(z<<20)+i,
@@ -812,9 +833,9 @@ class Worker:
                                 r = self.destroyed_coins.delete((x<<39)+(y<<20)+(1<<19)+i)
                                 blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                             except: pass
-                if self.option_block_filters:
-
-                    blocks[x]["filter"] = bytearray(b"".join([map_into_range(siphash(e), F).to_bytes(8, byteorder="big")
+                if self.option_block_batch_filters:
+                    blocks[x]["filter"] = bytearray(b"".join([map_into_range(siphash(e),
+                                                                             10 ** 13).to_bytes(8, byteorder="big")
                                                              for e in blocks[x]["filter"]]))
 
                 blocks[x] = pickle.dumps(blocks[x])

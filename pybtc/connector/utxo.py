@@ -30,6 +30,7 @@ class UTXO():
         self.loaded = dict()   # loaded from db missed records
 
         self.utxo_records = deque()  # prepared utxo records for write to db
+        self.p2pkMapHash = deque()  # prepared utxo records for write to db
         self.pending_saved = dict()  # temp hash table, while records write process
 
         self.scheduled_to_delete = deque()
@@ -330,6 +331,10 @@ class UTXO():
                                                              "address",
                                                              "amount"],
                                                     records=self.utxo_records)
+               if self.p2pkMapHash:
+                   await conn.executemany("INSERT INTO connector_p2pk_map (address, script) "
+                                          "VALUES ($1, $2) ON CONFLICT DO NOTHING;", self.p2pkMapHash)
+                   self.p2pkMapHash = deque()
                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                   "WHERE name = 'last_block';", self.checkpoint)
                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
@@ -458,7 +463,7 @@ class UUTXO():
             self.load_data_future.set_result(True)
 
 
-    async def commit_tx(self, commit_uutxo, commit_ustxo, conn):
+    async def commit_tx(self, commit_uutxo, commit_ustxo, commit_up2pk_map, conn):
         if self.db_type == "postgresql":
             if commit_uutxo:
                 await conn.copy_records_to_table('connector_unconfirmed_utxo',
@@ -467,6 +472,12 @@ class UUTXO():
                                                           "address",
                                                           "amount"],
                                                  records=commit_uutxo)
+            if commit_up2pk_map:
+                await conn.copy_records_to_table('connector_unconfirmed_p2pk_map',
+                                                 columns=["tx_id",
+                                                          "address",
+                                                          "script"],
+                                                 records=commit_up2pk_map)
 
             while commit_ustxo:
                 rows = await conn.fetch("INSERT  INTO connector_unconfirmed_stxo "
@@ -495,6 +506,22 @@ class UUTXO():
     async def apply_block_changes(self, txs, h, conn):
         if self.db_type == "postgresql":
             # handle block new coins
+
+            rows = await conn.fetch("DELETE FROM connector_unconfirmed_p2pk_map  "
+                                    "WHERE tx_id = ANY($1) "
+                                    "RETURNING  address, script;", txs)
+
+            p2pk_map = deque()
+            p2pk_map_backup = deque()
+            for row in rows:
+                p2pk_map.append((row["address"], row["script"]))
+                p2pk_map_backup.append((row["tx_id"], row["address"], row["script"]))
+
+            if p2pk_map:
+                await conn.executemany("INSERT INTO connector_p2pk_map (address, script) "
+                                       "VALUES ($1, $2) ON CONFLICT DO NOTHING;", p2pk_map)
+
+
             # remove all block created coins from connector_unconfirmed_utxo table
             # add new coins to connector_utxo table
 
@@ -504,8 +531,8 @@ class UUTXO():
                                     "           out_tx_id as t,"
                                     "           address, "
                                     "           amount;", txs)
-            batch = deque()
-            uutxo = deque()
+
+            batch, uutxo = deque(), deque()
             for r in rows:
                 batch.append((r["outpoint"],
                              (h << 39) + (txs.index(r["t"]) << 20) + (1 << 19) + bytes_to_int(r[32:]),
@@ -604,7 +631,8 @@ class UUTXO():
                                                                     "stxo": stxo,
                                                                     "dbs_uutxo": dbs_uutxo,
                                                                     "dbs_stxo": dbs_stxo,
-                                                                    "invalid_txs": block_invalid_txs}))
+                                                                    "invalid_txs": block_invalid_txs,
+                                                                    "p2pk_map": p2pk_map_backup}))
 
             return {"dbs_uutxo": dbs_uutxo,
                     "dbs_stxo": dbs_stxo,
@@ -629,6 +657,10 @@ class UUTXO():
         await conn.copy_records_to_table('connector_utxo',
                                          columns=["outpoint", "pointer",
                                                   "address", "amount"], records=data["utxo"])
+        if data["p2pk_map"]:
+            await conn.copy_records_to_table('connector_unconfirmed_p2pk_map',
+                                             columns=["tx_id", "address", "script"],
+                                             records=data["p2pk_map"])
 
         await conn.copy_records_to_table('connector_unconfirmed_utxo',
                                          columns=["outpoint", "out_tx_id",

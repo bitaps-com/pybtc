@@ -1,7 +1,8 @@
 from pybtc.functions.tools import rh2s, s2rh
 from pybtc.functions.tools import map_into_range
 from pybtc.functions.hash import siphash
-from pybtc.functions.filters  import create_gcs
+from pybtc.functions.address import hash_to_script
+from pybtc.functions.filters  import create_gcs_filter
 from pybtc.connector.block_loader import BlockLoader
 from pybtc.functions.block import merkle_tree, merkle_proof
 from pybtc.connector.utxo import UTXO, UUTXO
@@ -54,10 +55,8 @@ class Connector:
                  utxo_cache_size=1000000,
                  tx_orphan_buffer_limit=1000,
                  skip_opreturn=True,
-                 block_filters=False,
-                 block_filter_fps=54975581,
-                 block_filter_bits=25,
-                 block_filter_capacity=20000,
+                 block_batch_filters=False,
+                 block_bip158_filters=False,
                  merkle_proof=False,
                  tx_map=False,
                  analytica=False,
@@ -85,8 +84,8 @@ class Connector:
         self.block_timeout = block_timeout
         self.tx_handler = tx_handler
         self.skip_opreturn = skip_opreturn
-        self.option_block_filters = block_filters
-        self.option_block_filter_fps = block_filter_fps
+        self.option_block_bip158_filters = block_bip158_filters
+        self.option_block_batch_filters = block_batch_filters
         self.option_block_filter_bits = block_filter_bits
         self.option_block_filter_capacity = block_filter_capacity
         self.option_block_filter_F = block_filter_fps * block_filter_capacity
@@ -282,12 +281,25 @@ class Connector:
                                                           amount  BIGINT,
                                                           PRIMARY KEY(outpoint));
                                    """)
+
+                await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                          connector_p2pk_map (address BYTEA,
+                                                              script BYTEA,
+                                                              PRIMARY KEY (address));                                                      
+                                   """)
+
                 await conn.execute("""CREATE TABLE IF NOT EXISTS 
                                           connector_unconfirmed_utxo (outpoint BYTEA,
                                                                       out_tx_id BYTEA,
                                                                       address BYTEA,
                                                                       amount  BIGINT,
                                                                       PRIMARY KEY (outpoint));                                                      
+                                   """)
+                await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                          connector_unconfirmed_p2pk_map (tx_id BYTEA,
+                                                                          address BYTEA,
+                                                                          script BYTEA,
+                                                                          PRIMARY KEY (tx_id));                                                      
                                    """)
                 await conn.execute("""CREATE TABLE IF NOT EXISTS 
                                           connector_unconfirmed_stxo (outpoint BYTEA, 
@@ -525,8 +537,7 @@ class Connector:
 
 
                             self.log.info("Flush utxo cache completed %s %s " % (len(self.sync_utxo.cache),
-                                                                                   len(self.sync_utxo.pending_saved),
-                                                                                   ))
+                                                                                 len(self.sync_utxo.pending_saved),))
 
                         if self.synchronization_completed_handler:
                             try:
@@ -538,6 +549,7 @@ class Connector:
                         self.deep_sync_limit = self.node_last_block
                         self.total_received_tx = 0
                         self.total_received_tx_time = 0
+
                 block = None
                 if self.deep_synchronization:
                     raw_block = self.block_preload.pop(self.last_block_height + 1)
@@ -548,197 +560,12 @@ class Connector:
                     else:
                         self.loop.create_task(self.retry())
                         return
+
                 if not block:
                     h = await self.rpc.getblockhash(self.last_block_height + 1)
                     block = await self._get_block_by_hash(h)
                     block["checkpoint"] = self.last_block_height + 1
                     block["height"] = self.last_block_height + 1
-                    if self.deep_synchronization:
-                        coinbase = block["rawTx"][0]["vIn"][0]["scriptSig"]
-                        block["miner"] = None
-                        for tag in MINER_COINBASE_TAG:
-                            if coinbase.find(tag) != -1:
-                                block["miner"] = json.dumps(MINER_COINBASE_TAG[tag])
-                                break
-                        else:
-                            try:
-                                address_hash = block["rawTx"][0]["vOut"][0]["addressHash"]
-                                script_hash = False if block["rawTx"][0]["vOut"][0]["nType"] == 1 else True
-                                a = hash_to_address(address_hash, script_hash=script_hash)
-                                if a in MINER_PAYOUT_TAG:
-                                    block["miner"] = json.dumps(MINER_PAYOUT_TAG[a])
-                            except:
-                                pass
-
-                        if self.option_tx_map:
-                            block["txMap"], block["stxo"] = deque(), deque()
-
-                        if self.option_merkle_proof:
-                            mt = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
-                        if self.option_analytica:
-                            block["stat"] = {
-                                "oCountTotal": 0,
-                                "oAmountMinPointer": 0,
-                                "oAmountMinValue": 0,
-                                "oAmountMaxPointer": 0,
-                                "oAmountMaxValue": 0,
-                                "oAmountTotal": 0,
-                                "oAmountMapCount": dict(),
-                                "oAmountMapAmount": dict(),
-                                "oTypeMapCount": dict(),
-                                "oTypeMapAmount": dict(),
-                                "oTypeMapSize": dict(),
-
-                                "iCountTotal": 0,
-                                "iAmountMinPointer": 0,
-                                "iAmountMinValue": 0,
-                                "iAmountMaxPointer": 0,
-                                "iAmountMaxValue": 0,
-                                "iAmountTotal": 0,
-                                "iAmountMapCount": dict(),
-                                "iAmountMapAmount": dict(),
-                                "iTypeMapCount": dict(),
-                                "iTypeMapAmount": dict(),
-                                "iP2SHtypeMapCount": dict(),
-                                "iP2SHtypeMapAmount": dict(),
-                                "iP2WSHtypeMapCount": dict(),
-                                "iP2WSHtypeMapAmount": dict(),
-
-                                "txCountTotal": 0,
-                                "txAmountMinPointer": 0,
-                                "txAmountMinValue": 0,
-                                "txAmountMaxPointer": 0,
-                                "txAmountMaxValue": 0,
-                                "txAmountMapCount": dict(),
-                                "txAmountMapAmount": dict(),
-                                "txAmountMapSize": dict(),
-                                "txAmountTotal": 0,
-                                "txSizeMinPointer": 0,
-                                "txSizeMinValue": 0,
-                                "txSizeMaxPointer": 0,
-                                "txSizeMaxValue": 0,
-                                "txSizeTotal": 0,
-                                "txBSizeTotal": 0,
-                                "txVSizeTotal": 0,
-                                "txSizeMapCount": dict(),
-                                "txSizeMapAmount": dict(),
-                                "txTypeMapCount": dict(),
-                                "txTypeMapSize": dict(),
-                                "txTypeMapAmount": dict(),
-                                "txFeeMinPointer": 0,
-                                "txFeeMinValue": 0,
-                                "txFeeMaxPointer": 0,
-                                "txFeeMaxValue": 0,
-                                "txFeeTotal": 0,
-                                "txFeeRateMinPointer": 0,
-                                "txFeeRateMinValue": 0,
-                                "txFeeRateMaxPointer": 0,
-                                "txFeeRateMaxValue": 0,
-                                "txFeeRateTotal": 0,
-                                "txFeeRateMapCount": dict(),
-                                "txFeeRateMapAmount": dict(),
-                                "txFeeRateMapSize": dict(),
-                                "txVFeeRateMinPointer": 0,
-                                "txVFeeRateMinValue": 0,
-                                "txVFeeRateMaxPointer": 0,
-                                "txVFeeRateMaxValue": 0,
-                                "txVFeeRateTotal": 0,
-                                "txVFeeRateMapCount": dict(),
-                                "txVFeeRateMapAmount": dict(),
-                                "txVFeeRateMapSize": dict()
-                            }
-
-                        for t in block["rawTx"]:
-                            tx = block["rawTx"][t]
-
-                            if self.option_merkle_proof:
-                                block["rawTx"][t]["merkleProof"] = b''.join(merkle_proof(mt, t, return_hex=False))
-                            if self.option_analytica:
-                                bip69, rbf = True, False
-                                hp, op = None, None
-                                block["rawTx"][t]["inputsAmount"] = 0
-
-                            # # get inputs
-                            for i in tx["vOut"]:
-                                out = tx["vOut"][i]
-                                if out["nType"] not in (8, 3):
-                                    if "addressHash" not in out:
-                                        address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
-                                    else:
-                                        address = b"".join((bytes([out["nType"]]), out["addressHash"]))
-                                    if self.option_tx_map:
-                                        block["txMap"].append(((block["height"]<<39)+(t<<20)+(1<<19)+i,
-                                                               address, out["value"]))
-                                    block["rawTx"][t]["vOut"][i]["_address"] = address
-
-                                    if self.option_analytica:
-                                        pointer = (block["height"]<<39)+(t<<20)+(1<<19)+i
-                                        amount = block["rawTx"][t]["vOut"][i]["value"]
-                                        block["stat"]["oCountTotal"] += 1
-                                        block["stat"]["oAmountTotal"] += amount
-                                        if block["stat"]["oAmountMinPointer"] == 0 or \
-                                                block["stat"]["oAmountMinValue"] > amount:
-                                            block["stat"]["oAmountMinPointer"] = pointer
-                                            block["stat"]["oAmountMinPointer"] = amount
-                                        if block["stat"]["oAmountMaxValue"] < amount:
-                                            block["stat"]["oAmountMaxPointer"] = pointer
-                                            block["stat"]["oAmountMaxValue"] = amount
-                                        amount_key = str(floor(log10(amount))) if amount else "null"
-                                        try:
-                                            block["stat"]["oAmountMapCount"][amount_key] += 1
-                                        except:
-                                            block["stat"]["oAmountMapCount"][amount_key] = 1
-                                        try:
-                                            block["stat"]["oAmountMapAmount"][amount_key] += amount
-                                        except:
-                                            block["stat"]["oAmountMapAmount"][amount_key] = amount
-
-                            if not block["rawTx"][t]["coinbase"]:
-                                for i in block["rawTx"][t]["vIn"]:
-                                    inp = block["rawTx"][t]["vIn"][i]
-                                    outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                                    block["rawTx"][t]["vIn"][i]["_outpoint"] = outpoint
-
-                                    if self.option_analytica:
-                                        if not rbf and inp["sequence"] < 0xfffffffe:  rbf = True
-                                        if bip69:
-                                            h = rh2s(inp["txId"])
-                                            if hp is not None:
-                                                if hp > h:
-                                                    bip69 = False
-                                                elif hp == h and op > inp["vOut"]:
-                                                    bip69 = False
-                                            hp, op = h, inp["vOut"]
-
-                            if self.option_analytica:
-                                tx = block["rawTx"][t]
-                                pointer = (block["height"] << 19) + t
-                                amount, size = tx["amount"], tx["size"]
-                                amount_key = str(floor(log10(amount))) if amount else "null"
-                                block["stat"]["txCountTotal"] += 1
-                                if block["stat"]["txAmountMinPointer"] == 0 or \
-                                        block["stat"]["txAmountMinValue"] > amount:
-                                    block["stat"]["txAmountMinPointer"] = pointer
-                                    block["stat"]["txAmountMinValue"] = amount
-
-                                if block["stat"]["txAmountMaxValue"] < amount:
-                                    block["stat"]["txAmountMaxPointer"] = pointer
-                                    block["stat"]["txAmountMaxValue"] = amount
-
-                                try:
-                                    block["stat"]["txAmountMapAmount"][amount_key] += amount
-                                except:
-                                    block["stat"]["txAmountMapAmount"][amount_key] = amount
-                                try:
-                                    block["stat"]["txAmountMapCount"][amount_key] += 1
-                                except:
-                                    block["stat"]["txAmountMapCount"][amount_key] = 1
-
-                                try:
-                                    block["stat"]["txAmountMapSize"][amount_key] += size
-                                except:
-                                    block["stat"]["txAmountMapSize"][amount_key] = size
-
 
                 self.loop.create_task(self._new_block(block))
 
@@ -999,10 +826,17 @@ class Connector:
                                     r = self.sync_utxo.get(inp["_outpoint"])
                                     if r:
                                         tx["vIn"][i]["coin"] = r
-                                        if self.option_block_filters:
-                                            h = map_into_range(siphash(r[2]), self.option_block_filter_F)
+                                        if self.option_block_batch_filters:
+                                            h = map_into_range(siphash(r[2]), 10 ** 13)
                                             block["filter"] += h.to_bytes(8, byteorder="big")
                                             block["_I"] += 1
+
+                                        if self.option_block_bip158_filters:
+                                            if r[2] in (0, 1, 5, 6):
+                                                block["bip158_filter"].append(hash_to_script(r[1:], r[2]))
+                                            else:
+                                                block["bip158_filter"].append(r[2][1:])
+
                                         if self.option_tx_map:
                                             tx_map_append(((height << 39) + (q << 20) + i, r[2],  r[1]))
                                             block["stxo"].append((r[0], (height << 39) + (q << 20) + i))
@@ -1032,9 +866,8 @@ class Connector:
                                            block["rawTx"][q]["vIn"][i]["coin"][1]))
                             block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
                                                  (height << 39)+(q<<20)+i))
-                            if self.option_block_filters:
-                                h = map_into_range(siphash(block["rawTx"][q]["vIn"][i]["coin"][2]),
-                                                   self.option_block_filter_F)
+                            if self.option_block_batch_filters:
+                                h = map_into_range(siphash(block["rawTx"][q]["vIn"][i]["coin"][2]), 10 ** 13)
                                 block["filter"] += h.to_bytes(8, byteorder="big")
                                 block["_I"] += 1
 
@@ -1337,6 +1170,8 @@ class Connector:
                 tx["double_spent"] = False
                 commit_uutxo_buffer = set()
                 commit_ustxo_buffer = set()
+                commit_up2pk_map = set()
+
                 if not tx["coinbase"]:
                     for i in tx["vIn"]:
                         self.destroyed_coins += 1
@@ -1361,6 +1196,12 @@ class Connector:
 
                 for i in tx["vOut"]:
                     try:
+                        if tx["vOut"][i]["nType"] == 2:
+                            commit_up2pk_map.add((tx["txId"],
+                                                  tx["vOut"][i]["addressHash"],
+                                                  tx["vOut"][i]["scriptPubKey"]))
+
+                            raise Exception("PUBKEY")
                         address = b"".join((bytes([tx["vOut"][i]["nType"]]), tx["vOut"][i]["addressHash"]))
                     except:
                         address = b"".join((bytes([tx["vOut"][i]["nType"]]), tx["vOut"][i]["scriptPubKey"]))
@@ -1371,7 +1212,10 @@ class Connector:
                                              tx["vOut"][i]["value"]))
                 async with self.db_pool.acquire() as conn:
                     async with conn.transaction():
-                        await self.uutxo.commit_tx(commit_uutxo_buffer, commit_ustxo_buffer, conn)
+                        await self.uutxo.commit_tx(commit_uutxo_buffer,
+                                                   commit_ustxo_buffer,
+                                                   commit_up2pk_map,
+                                                   conn)
 
                         if self.tx_handler:
                             await self.tx_handler(tx, timestamp, conn)

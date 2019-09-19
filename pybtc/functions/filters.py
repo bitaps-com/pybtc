@@ -1,14 +1,17 @@
 import struct
 import io
-from pybtc.functions.tools import int_to_bytes
+from pybtc.functions.tools import int_to_var_int, read_var_int, var_int_to_int
 from  math import log, ceil
 from pybtc.constants import LN2SQUARED, LN2
-from pybtc.functions.tools import  map_into_range, int_to_var_int
+from pybtc.functions.tools import  map_into_range, get_stream
 from pybtc.functions.hash import siphash, murmurhash3
 from _bitarray import _bitarray
+from heapq import heappush, heappop
+
 
 class bitarray(_bitarray):
     pass
+
 
 
 from collections import deque
@@ -49,24 +52,26 @@ def contains_in_bloom_filter(filter, elem, hash_func_count, n_tweak = 0,  max_ha
     return True
 
 
-
-def create_gcs(elements, N=None, M=784931, P=19, v_0=0, v_1=0, hashed=False, hex=False):
+def create_gcs_filter(elements, N=None, M=784931, P=19, v_0=0, v_1=0, hex=False):
     # M=784931
     # P=19
-    # BIP 158  constant values
+    # BIP 158  constants
     # v_0, v_1 - randomization vectors for siphash
 
     if N is None:
         N = len(elements)
-
     if N >= 4294967296 or M >= 4294967296:
         raise TypeError("elements count MUST be <2^32 and M MUST be <2^32")
 
-    gcs_filter = bitarray(endian='big')
+    elements = [map_into_range(siphash(e, v_0=v_0, v_1=v_1), N * M) for e in elements]
+    f = encode_gcs(elements, P)
+
+    return f.hex() if hex else f
+
+def encode_gcs(elements, P):
+    gcs_filter = bitarray()
     gcs_filter_append = gcs_filter.append
     last = 0
-    if not hashed:
-        elements = [map_into_range(siphash(e, v_0=v_0, v_1=v_1), N * M) for e in elements]
 
     for value in  sorted(elements):
         delta = value - last
@@ -82,12 +87,9 @@ def create_gcs(elements, N=None, M=784931, P=19, v_0=0, v_1=0, hashed=False, hex
         while c >= 0:
             gcs_filter_append(bool(r & (1 << c)))
             c -= 1
-
         last = value
 
-    f = gcs_filter.tobytes()
-    return f.hex() if hex else f
-
+    return gcs_filter.tobytes()
 
 def decode_gcs(h, N, P=19):
     s = []
@@ -121,20 +123,213 @@ def decode_gcs(h, N, P=19):
     return s
 
 
-def create_test_filter(elements):
-    a_filter = bitarray(endian='big')
-    a_filter_append = a_filter.append
-    deltas = deque()
+
+class Node(object):
+    def __init__(self):
+        self.child = [None, None]
+        self.symbol = None
+        self.freq = None
+
+    def __lt__(self, other):
+        return self.freq < other.freq
+
+def huffman_tree(freq):
+    minheap = []
+    for c in sorted(freq):
+        nd = Node()
+        nd.symbol = c
+        nd.freq = freq[c]
+        heappush(minheap, nd)
+
+    while len(minheap) > 1:
+        r = heappop(minheap)
+        l = heappop(minheap)
+
+        parent = Node()
+        parent.child = [l, r]
+        parent.freq = l.freq + r.freq
+        heappush(minheap, parent)
+
+    return minheap[0]
+
+def huffman_code(tree):
+    result = {}
+
+    def traverse(nd, prefix=bitarray()):
+        if nd.symbol is None: # parent, so traverse each of the children
+            for i in range(2):
+                traverse(nd.child[i], prefix + bitarray([i]))
+        else: # leaf
+            if prefix == bitarray():
+                prefix = bitarray("0")
+            result[nd.symbol] = prefix
+
+    traverse(tree)
+
+    return result
+
+
+def encode_dhcs(elements, min_bits_threshold=20):
+    # Delta-Hoffman coded set
+    data_sequence = bitarray()
+    data_sequence_append = data_sequence.append
+
+    deltas_bits = deque()
+    deltas_bits_map_freq = dict()
     last = 0
+
     for value in  sorted(elements):
-        delta = value - last
-        c = delta.bit_length() - 1
-        deltas.append(c)
-        while c >= 0:
-            a_filter_append(delta & (1 << c))
-            c -= 1
+        delta =  value - last
+
+        bits = delta.bit_length()
+        if bits < min_bits_threshold:
+            bits =  min_bits_threshold
+
+        deltas_bits.append(bits)
+
+        try:
+            deltas_bits_map_freq[bits] += 1
+        except:
+            deltas_bits_map_freq[bits] = 1
+
+        while bits > 0:
+            data_sequence_append(delta & (1 << (bits - 1)))
+            bits -= 1
         last = value
 
-    f = a_filter.tobytes()
-    return f.hex() if hex else f
+    # huffman encode round 1
+    # encode bits length sequence to byte string
+    codes_round_1 = huffman_code(huffman_tree(deltas_bits_map_freq))
+    r = bitarray()
+    r.encode(codes_round_1, deltas_bits)
+    bits_sequence = r.tobytes()
+    bits_sequnce_len_round_1 = r.length()
 
+    # huffman encode round 2
+    # encode byte string
+    deltas_bits = deque()
+    deltas_bits_map_freq = dict()
+    for i in bits_sequence:
+        b = i >> 4
+        c = i & 0b1111
+        deltas_bits.append(b)
+        try:
+            deltas_bits_map_freq[b] += 1
+        except:
+            deltas_bits_map_freq[b] = 1
+
+        deltas_bits.append(c)
+        try:
+            deltas_bits_map_freq[c] += 1
+        except:
+            deltas_bits_map_freq[c] = 1
+
+    codes_round_2 = huffman_code(huffman_tree(deltas_bits_map_freq))
+    r = bitarray()
+    r.encode(codes_round_2, deltas_bits)
+    bits_sequnce_len_round_2 = r.length()
+    bits_sequence = r.tobytes()
+
+
+    code_table_1 = int_to_var_int(len(codes_round_1))
+    for code in codes_round_1:
+        code_table_1 += int_to_var_int(code)
+        code_table_1 += int_to_var_int(codes_round_1[code].length())
+        code_table_1 += b"".join([bytes([i]) for i in codes_round_1[code].tolist()])
+
+    code_table_2 = int_to_var_int(len(codes_round_2))
+    for code in codes_round_2:
+        code_table_2 += int_to_var_int(code)
+        code_table_2 += int_to_var_int(codes_round_2[code].length())
+        code_table_2 += b"".join([bytes([i]) for i in codes_round_2[code].tolist()])
+
+
+    d_filter_len = data_sequence.length()
+    d_filter_string = data_sequence.tobytes()
+
+    return  b"".join((code_table_1,
+                      code_table_2,
+                      int_to_var_int(bits_sequnce_len_round_1),
+                      int_to_var_int(bits_sequnce_len_round_2),
+                      bits_sequence,
+                      int_to_var_int(d_filter_len),
+                      d_filter_string))
+
+
+def decode_dhcs(h):
+    # Delta-Hoffman coded set
+    stream = get_stream(h)
+
+    # read code_table_1
+    c = var_int_to_int(read_var_int(stream))
+    code_table_1 = dict()
+    for i in range(c):
+        key = var_int_to_int(read_var_int(stream))
+        l = var_int_to_int(read_var_int(stream))
+        code =  bitarray([bool(k) for k in stream.read(l)])
+        code_table_1[key] = code
+
+    # read code_table_2
+    c = var_int_to_int(read_var_int(stream))
+    code_table_2 = dict()
+    for i in range(c):
+        key = var_int_to_int(read_var_int(stream))
+        l = var_int_to_int(read_var_int(stream))
+        code =  bitarray([bool(k) for k in stream.read(l)])
+        code_table_2[key] = code
+
+    # read compressed deltas
+    deltas_bits_len_1 = var_int_to_int(read_var_int(stream))
+    deltas_bits_len_2 = var_int_to_int(read_var_int(stream))
+    deltas_byte_len = deltas_bits_len_2 // 8 + int(bool(deltas_bits_len_2 % 8))
+
+    r = stream.read(deltas_byte_len)
+    deltas = bitarray()
+    deltas.frombytes(r)
+
+    while deltas.length() > deltas_bits_len_2:
+        deltas.pop()
+
+    # Huffman decode round 1
+    r = deltas.decode(code_table_2)
+    deltas_string = bytearray()
+    for i in range(int(len(r)/2)):
+        deltas_string += bytes([(r[i*2] << 4) + r[i*2 + 1]])
+
+    # Huffman decode round 2
+    r = bitarray()
+    r.frombytes(bytes(deltas_string))
+
+    while r.length() > deltas_bits_len_1:
+        r.pop()
+
+    deltas_bits = r.decode(code_table_1)
+
+
+    d_filter_bit_len = var_int_to_int(read_var_int(stream))
+    d_filter_byte_len = d_filter_bit_len // 8 + int(bool(d_filter_bit_len % 8))
+    r = stream.read(d_filter_byte_len)
+
+    d_filter = bitarray()
+    d_filter.frombytes(r)
+
+    while d_filter.length() > d_filter_bit_len:
+        d_filter.pop()
+
+    f = 0
+    f_max = d_filter.length()
+    decoded_set = set()
+    last = 0
+
+    for bits in deltas_bits:
+        d = 0
+        while bits  > 0 and f < f_max :
+            bits -= 1
+            d = d << 1
+            if d_filter[f]:
+                d += 1
+            f += 1
+        last += d
+        decoded_set.add(last)
+
+    return decoded_set
