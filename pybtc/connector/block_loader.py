@@ -2,7 +2,7 @@ from pybtc.functions.tools import bytes_to_int
 from pybtc.functions.address import hash_to_script
 from pybtc.functions.tools import map_into_range
 from pybtc.functions.hash import siphash
-from pybtc.functions.tools import int_to_bytes
+from pybtc.functions.tools import int_to_bytes, int_to_c_int
 from pybtc.functions.block import merkle_tree, merkle_proof
 from pybtc.connector.utils import decode_block_tx
 from pybtc import MRU, parse_script, rh2s, MINER_COINBASE_TAG, MINER_PAYOUT_TAG, hash_to_address
@@ -854,7 +854,11 @@ class Worker:
                                                                              10 ** 13).to_bytes(8, byteorder="big")
                                                              for e in blocks[x]["filterP2WSH"]]))
                 if self.option_block_bip158_filters:
-                    blocks[x]["bip158_filter"] = bytearray(b"".join(blocks[x]["bip158_filter"]))
+                    f = bytearray()
+                    for script in blocks[x]["bip158_filter"]:
+                        f += int_to_c_int(len(script))
+                        f += script
+                    blocks[x]["bip158_filter"] = script
 
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))

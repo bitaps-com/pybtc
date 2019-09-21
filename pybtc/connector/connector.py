@@ -1,5 +1,5 @@
 from pybtc.functions.tools import rh2s, s2rh
-from pybtc.functions.tools import map_into_range
+from pybtc.functions.tools import map_into_range, int_to_c_int
 from pybtc.functions.hash import siphash
 from pybtc.functions.address import hash_to_script
 from pybtc.functions.filters  import create_gcs_filter
@@ -886,9 +886,12 @@ class Connector:
 
                         if self.option_block_bip158_filters:
                             if r[2][0] in (0, 1, 5, 6):
-                                block["bip158_filter"] += hash_to_script(r[2][1:], r[2][0])
+                                script = hash_to_script(r[2][1:], r[2][0])
                             else:
-                                block["bip158_filter"] += r[2][1:]
+                                script = r[2][1:]
+
+                            block["bip158_filter"] += b"".join([int_to_c_int(len(script)),
+                                                                script])
 
                         if self.option_analytica:
                             r = block["rawTx"][q]["vIn"][i]["coin"]
