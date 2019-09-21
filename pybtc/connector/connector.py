@@ -86,9 +86,6 @@ class Connector:
         self.skip_opreturn = skip_opreturn
         self.option_block_bip158_filters = block_bip158_filters
         self.option_block_batch_filters = block_batch_filters
-        self.option_block_filter_bits = block_filter_bits
-        self.option_block_filter_capacity = block_filter_capacity
-        self.option_block_filter_F = block_filter_fps * block_filter_capacity
         self.option_merkle_proof = merkle_proof
         self.option_tx_map = tx_map
         self.option_analytica = analytica
@@ -826,16 +823,22 @@ class Connector:
                                     r = self.sync_utxo.get(inp["_outpoint"])
                                     if r:
                                         tx["vIn"][i]["coin"] = r
+                                        h = map_into_range(siphash(r[2][1:]), 10 ** 13)
                                         if self.option_block_batch_filters:
-                                            h = map_into_range(siphash(r[2]), 10 ** 13)
-                                            block["filter"] += h.to_bytes(8, byteorder="big")
-                                            block["_I"] += 1
+                                            if r[2][0] in (0, 2):
+                                                block["filterP2PKH"] += h.to_bytes(8, byteorder="big")
+                                            elif r[2][0] == 1:
+                                                block["filterP2SH"] += h.to_bytes(8, byteorder="big")
+                                            elif r[2][0] == 5:
+                                                block["filterP2WPKH"] += h.to_bytes(8, byteorder="big")
+                                            elif r[2][0] == 6:
+                                                block["filterP2WSH"] += h.to_bytes(8, byteorder="big")
 
                                         if self.option_block_bip158_filters:
-                                            if r[2] in (0, 1, 5, 6):
-                                                block["bip158_filter"].append(hash_to_script(r[1:], r[2]))
+                                            if r[2][0] in (0, 1, 5, 6):
+                                                block["bip158_filter"] += hash_to_script(r[2][1:], r[2][0])
                                             else:
-                                                block["bip158_filter"].append(r[2][1:])
+                                                block["bip158_filter"] += r[2][1:]
 
                                         if self.option_tx_map:
                                             tx_map_append(((height << 39) + (q << 20) + i, r[2],  r[1]))
@@ -866,12 +869,26 @@ class Connector:
                                            block["rawTx"][q]["vIn"][i]["coin"][1]))
                             block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
                                                  (height << 39)+(q<<20)+i))
-                            if self.option_block_batch_filters:
-                                h = map_into_range(siphash(block["rawTx"][q]["vIn"][i]["coin"][2]), 10 ** 13)
-                                block["filter"] += h.to_bytes(8, byteorder="big")
-                                block["_I"] += 1
 
+                        r = block["rawTx"][q]["vIn"][i]["coin"]
 
+                        if self.option_block_batch_filters:
+                            h = map_into_range(siphash(r[2]), 10 ** 13)
+
+                            if r[2][0] in (0, 2):
+                                block["filterP2PKH"] += h.to_bytes(8, byteorder="big")
+                            elif r[2][0] == 1:
+                                block["filterP2SH"] += h.to_bytes(8, byteorder="big")
+                            elif r[2][0] == 5:
+                                block["filterP2WPKH"] += h.to_bytes(8, byteorder="big")
+                            elif r[2][0] == 6:
+                                block["filterP2WSH"] += h.to_bytes(8, byteorder="big")
+
+                        if self.option_block_bip158_filters:
+                            if r[2][0] in (0, 1, 5, 6):
+                                block["bip158_filter"] += hash_to_script(r[2][1:], r[2][0])
+                            else:
+                                block["bip158_filter"] += r[2][1:]
 
                         if self.option_analytica:
                             r = block["rawTx"][q]["vIn"][i]["coin"]
@@ -929,13 +946,6 @@ class Connector:
                                             block["stat"]["iP2WSHtypeMapAmount"][st] += amount
                                         except:
                                             block["stat"]["iP2WSHtypeMapAmount"][st] = amount
-
-            # if self.option_block_filters:
-            #     # assert int(len(block["filter"])/8) == block["_N"]
-            #     if block["_N"] != block["_I"] + block["_O"]:
-            #         print(block["_N"], block["_I"], block["_O"], block["_L"], block["_A"],height )
-            if height > self.app_block_height_on_start:
-                assert block["_N"] == len(block["txMap"])
 
 
         self.total_received_tx += len(block["rawTx"])

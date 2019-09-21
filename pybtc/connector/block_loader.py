@@ -1,5 +1,4 @@
 from pybtc.functions.tools import bytes_to_int
-from pybtc.functions.tools import hash_to_random_vectors
 from pybtc.functions.address import hash_to_script
 from pybtc.functions.tools import map_into_range
 from pybtc.functions.hash import siphash
@@ -41,7 +40,6 @@ except:
 
 class BlockLoader:
     def __init__(self, parent, workers=4, dsn = None):
-
         self.worker_limit = workers
         self.worker = dict()
         self.worker_tasks = list()
@@ -91,13 +89,11 @@ class BlockLoader:
         target_height = self.parent.node_last_block - self.parent.deep_sync_limit
         self.height = self.parent.last_block_height + 1
 
-
         while self.height < target_height:
             target_height = self.parent.node_last_block - self.parent.deep_sync_limit
             new_requests = 0
             if self.parent.block_preload._store_size < self.parent.block_preload_cache_limit:
                 try:
-
                     for i in self.worker_busy:
                         if self.height < target_height:
                             if not self.worker_busy[i]:
@@ -129,7 +125,6 @@ class BlockLoader:
             else:
                 await  asyncio.sleep(1)
 
-
         self.watchdog_task.cancel()
         if self.parent.block_preload._store:
             while next(reversed(self.parent.block_preload._store)) < target_height:
@@ -138,7 +133,6 @@ class BlockLoader:
             self.log.debug("    Cache first block %s; "
                            "cache last block %s;" % (next(iter(self.parent.block_preload._store)),
                                                      next(reversed(self.parent.block_preload._store))))
-
         active = True
         while active:
             active = False
@@ -328,9 +322,14 @@ class Worker:
                         block["p2pkMapHash"] = []
                         if self.option_tx_map: block["txMap"], block["stxo"] = deque(), deque()
 
-                        if self.option_block_batch_filters: block["filter"] = list()
+                        if self.option_block_batch_filters:
+                            block["filterP2PKH"] = list()
+                            block["filterP2SH"] = list()
+                            block["filterP2WPKH"] = list()
+                            block["filterP2WSH"] = list()
 
-                        if self.option_block_bip158_filters: block["bip158_filter"] = list()
+                        if self.option_block_bip158_filters:
+                            block["bip158_filter"] = list()
 
                         if self.option_merkle_proof:
                             mt = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
@@ -426,11 +425,6 @@ class Worker:
 
 
                         if self.utxo_data:
-                            block["_N"] = 0
-                            block["_O"] = 0
-                            block["_I"] = 0
-                            block["_A"] = 0
-                            block["_L"] = 0
                             # handle outputs
                             for z in block["rawTx"]:
                                 if self.option_merkle_proof:
@@ -457,11 +451,14 @@ class Worker:
                                                                 block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
 
                                     if self.option_block_batch_filters:
-
-                                        if block["rawTx"][z]["vOut"][i]["nType"] not in (3, 8):
-                                            block["filter"].append(address)
-                                            block["_N"] += 1
-                                            block["_O"] += 1
+                                        if block["rawTx"][z]["vOut"][i]["nType"] in (0, 2):
+                                            block["filterP2PKH"].append(block["rawTx"][z]["vOut"][i]["addressHash"])
+                                        elif block["rawTx"][z]["vOut"][i]["nType"] == 1:
+                                            block["filterP2SH"].append(block["rawTx"][z]["vOut"][i]["addressHash"])
+                                        elif block["rawTx"][z]["vOut"][i]["nType"] == 5:
+                                            block["filterP2WPKH"].append(block["rawTx"][z]["vOut"][i]["addressHash"])
+                                        elif block["rawTx"][z]["vOut"][i]["nType"] == 6:
+                                            block["filterP2WSH"].append(block["rawTx"][z]["vOut"][i]["addressHash"])
 
                                     if self.option_block_bip158_filters:
                                         if block["rawTx"][z]["vOut"][i]["nType"] not in (3, 8):
@@ -509,8 +506,6 @@ class Worker:
                                                     elif hp == h and op > inp["vOut"]: bip69 = False
                                                 hp, op = h, inp["vOut"]
 
-                                        block["_N"] += 1
-
                                         try:
                                            r = self.coins.delete(outpoint)
                                            try:
@@ -518,15 +513,19 @@ class Worker:
                                                self.destroyed_coins[r[0]] = True
 
                                                if self.option_block_batch_filters:
-                                                   block["filter"].append(r[2])
-                                                   block["_I"] += 1
-                                                   block["_A"] += 1
+                                                   if r[2][0] in (0, 2):
+                                                       block["filterP2PKH"].append(r[2][1:])
+                                                   elif r[2][0] == 1:
+                                                       block["filterP2SH"].append(r[2][1:])
+                                                   elif r[2][0] == 5:
+                                                       block["filterP2WPKH"].append(r[2][1:])
+                                                   elif r[2][0] == 6:
+                                                       block["filterP2WSH"].append(r[2][1:])
 
                                                if self.option_block_bip158_filters:
                                                    if r[2][0] in (0, 1, 5, 6):
                                                        block["bip158_filter"].append(hash_to_script(r[2][1:], r[2][0]))
                                                    else:  block["bip158_filter"].append(r[2][1:])
-
 
                                                if self.option_tx_map:
                                                    block["txMap"].append(((x<<39)+(z<<20)+i, r[2], r[1]))
@@ -636,17 +635,24 @@ class Worker:
                                        blocks[h]["rawTx"][z]["vIn"][i]["_l_"] = p[outpoint]
                                        try:
                                            if self.option_block_batch_filters:
-                                               blocks[h]["filter"].append(p[outpoint][2])
-                                               blocks[h]["_I"] += 1
-                                               blocks[h]["_L"] += 1
+                                               r = p[outpoint]
+                                               if r[2][0] in (0, 2):
+                                                   blocks[h]["filterP2PKH"].append(r[2][1:])
+                                               elif r[2][0] == 1:
+                                                   blocks[h]["filterP2SH"].append(r[2][1:])
+                                               elif r[2][0] == 5:
+                                                   blocks[h]["filterP2WPKH"].append(r[2][1:])
+                                               elif r[2][0] == 6:
+                                                   blocks[h]["filterP2WSH"].append(r[2][1:])
+
                                            if self.option_block_bip158_filters:
                                                r = p[outpoint][2]
                                                if r[0] in (0, 1, 5, 6):
                                                    blocks[h]["bip158_filter"].append(hash_to_script(r[1:], r[0]))
                                                else:
                                                    blocks[h]["bip158_filter"].append(r[1:])
-                                           if self.option_tx_map:
 
+                                           if self.option_tx_map:
                                                blocks[h]["txMap"].append(((h<<39)+(z<<20)+i,
                                                                           p[outpoint][2], p[outpoint][1]))
                                                blocks[h]["stxo"].append((p[outpoint][0], (h<<39)+(z<<20)+i))
@@ -697,7 +703,7 @@ class Worker:
                                                            try: block["stat"]["iP2WSHtypeMapAmount"][st] += amount
                                                            except: block["stat"]["iP2WSHtypeMapAmount"][st] = amount
                                        except:
-                                           print(">>>>>", traceback.format_exc())
+                                           print(traceback.format_exc())
                                    except:
                                        pass
 
@@ -833,10 +839,22 @@ class Worker:
                                 r = self.destroyed_coins.delete((x<<39)+(y<<20)+(1<<19)+i)
                                 blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                             except: pass
+
                 if self.option_block_batch_filters:
-                    blocks[x]["filter"] = bytearray(b"".join([map_into_range(siphash(e),
+                    blocks[x]["filterP2PKH"] = bytearray(b"".join([map_into_range(siphash(e),
                                                                              10 ** 13).to_bytes(8, byteorder="big")
-                                                             for e in blocks[x]["filter"]]))
+                                                             for e in blocks[x]["filterP2PKH"]]))
+                    blocks[x]["filterP2SH"] = bytearray(b"".join([map_into_range(siphash(e),
+                                                                             10 ** 13).to_bytes(8, byteorder="big")
+                                                             for e in blocks[x]["filterP2SH"]]))
+                    blocks[x]["filterP2WPKH"] = bytearray(b"".join([map_into_range(siphash(e),
+                                                                             10 ** 13).to_bytes(8, byteorder="big")
+                                                             for e in blocks[x]["filterP2WPKH"]]))
+                    blocks[x]["filterP2WSH"] = bytearray(b"".join([map_into_range(siphash(e),
+                                                                             10 ** 13).to_bytes(8, byteorder="big")
+                                                             for e in blocks[x]["filterP2WSH"]]))
+                if self.option_block_bip158_filters:
+                    blocks[x]["bip158_filter"] = bytearray(b"".join(blocks[x]["bip158_filter"]))
 
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
