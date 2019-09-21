@@ -836,8 +836,11 @@ class Connector:
 
                                         if self.option_block_bip158_filters:
                                             if r[2][0] in (0, 1, 5, 6):
+                                                block["bip158_filter"] += int_to_c_int(hash_to_script(r[2][1:],
+                                                                                                      r[2][0]))
                                                 block["bip158_filter"] += hash_to_script(r[2][1:], r[2][0])
                                             else:
+                                                block["bip158_filter"] += int_to_c_int(r[2][1:])
                                                 block["bip158_filter"] += r[2][1:]
 
                                         if self.option_tx_map:
