@@ -826,10 +826,10 @@ class Connector:
 
                                         if self.option_block_batch_filters:
                                             if r[2][0] == 2:
-                                                h = map_into_range(siphash(r[2][1:]), 10 ** 13)
-                                            else:
                                                 h = parse_script(bytes(r[2][1:]))["addressHash"]
                                                 h = map_into_range(siphash(h), 10 ** 13)
+                                            else:
+                                                h = map_into_range(siphash(r[2][1:]), 10 ** 13)
 
                                             if r[2][0] in (0, 2):
                                                 block["filterP2PKH"] += h.to_bytes(8, byteorder="big")
@@ -884,10 +884,10 @@ class Connector:
                         if self.option_block_batch_filters:
 
                             if r[2][0] == 2:
-                                h = map_into_range(siphash(r[2][1:]), 10 ** 13)
-                            else:
                                 h = parse_script(bytes(r[2][1:]))["addressHash"]
                                 h = map_into_range(siphash(h), 10 ** 13)
+                            else:
+                                h = map_into_range(siphash(r[2][1:]), 10 ** 13)
 
 
                             if r[2][0] in (0, 2):

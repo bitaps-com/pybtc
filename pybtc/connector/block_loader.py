@@ -513,14 +513,19 @@ class Worker:
                                                self.destroyed_coins[r[0]] = True
 
                                                if self.option_block_batch_filters:
+                                                   if r[2][0] == 2:
+                                                       hr = parse_script(bytes(r[2][1:]))["addressHash"]
+                                                   else:
+                                                       hr = r[2][1:]
+
                                                    if r[2][0] in (0, 2):
-                                                       block["filterP2PKH"].append(r[2][1:])
+                                                       block["filterP2PKH"].append(hr)
                                                    elif r[2][0] == 1:
-                                                       block["filterP2SH"].append(r[2][1:])
+                                                       block["filterP2SH"].append(hr)
                                                    elif r[2][0] == 5:
-                                                       block["filterP2WPKH"].append(r[2][1:])
+                                                       block["filterP2WPKH"].append(hr)
                                                    elif r[2][0] == 6:
-                                                       block["filterP2WSH"].append(r[2][1:])
+                                                       block["filterP2WSH"].append(hr)
 
                                                if self.option_block_bip158_filters:
                                                    if r[2][0] in (0, 1, 5, 6):
@@ -636,15 +641,20 @@ class Worker:
                                        blocks[h]["rawTx"][z]["vIn"][i]["_l_"] = p[outpoint]
                                        try:
                                            if self.option_block_batch_filters:
-                                               r = p[outpoint]
-                                               if r[2][0] in (0, 2):
-                                                   blocks[h]["filterP2PKH"].append(r[2][1:])
-                                               elif r[2][0] == 1:
-                                                   blocks[h]["filterP2SH"].append(r[2][1:])
-                                               elif r[2][0] == 5:
-                                                   blocks[h]["filterP2WPKH"].append(r[2][1:])
-                                               elif r[2][0] == 6:
-                                                   blocks[h]["filterP2WSH"].append(r[2][1:])
+                                               r = p[outpoint][2]
+                                               if r[0] == 2:
+                                                   hr = parse_script(bytes(r[1:]))["addressHash"]
+                                               else:
+                                                   hr = r[1:]
+
+                                               if r[0] in (0, 2):
+                                                   blocks[h]["filterP2PKH"].append(hr)
+                                               elif r[0] == 1:
+                                                   blocks[h]["filterP2SH"].append(hr)
+                                               elif r[0] == 5:
+                                                   blocks[h]["filterP2WPKH"].append(hr)
+                                               elif r[0] == 6:
+                                                   blocks[h]["filterP2WSH"].append(hr)
 
                                            if self.option_block_bip158_filters:
                                                r = p[outpoint][2]
