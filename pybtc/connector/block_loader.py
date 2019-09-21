@@ -525,7 +525,8 @@ class Worker:
                                                if self.option_block_bip158_filters:
                                                    if r[2][0] in (0, 1, 5, 6):
                                                        block["bip158_filter"].append(hash_to_script(r[2][1:], r[2][0]))
-                                                   else:  block["bip158_filter"].append(r[2][1:])
+                                                   else:
+                                                       block["bip158_filter"].append(r[2][1:])
 
                                                if self.option_tx_map:
                                                    block["txMap"].append(((x<<39)+(z<<20)+i, r[2], r[1]))
@@ -858,7 +859,7 @@ class Worker:
                     for script in blocks[x]["bip158_filter"]:
                         f += int_to_c_int(len(script))
                         f += script
-                    blocks[x]["bip158_filter"] = script
+                    blocks[x]["bip158_filter"] = f
 
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
