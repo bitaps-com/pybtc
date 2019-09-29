@@ -108,7 +108,7 @@ class FilterFunctionsTests(unittest.TestCase):
         print("OK")
 
     def test_bip58_simulation(self):
-        return
+
         print("bip58 10 000 monitoring addresses; 7300 elements; fpr 1/784931:")
 
         print("generate address set ...")
@@ -118,7 +118,7 @@ class FilterFunctionsTests(unittest.TestCase):
 
         haddresses = set()
         for a in addresses:
-            haddresses.add(map_into_range(siphash(a), 10000 * 784931))
+            haddresses.add(map_into_range(siphash(a), 10000 * 100471170))
 
 
         print("Test false positive rate for 2739 ( 20 000 000 items) blocks:")
@@ -133,7 +133,7 @@ class FilterFunctionsTests(unittest.TestCase):
                 a = sha256(int_to_bytes(random.randint(1, 0xFFFFFFFFFFFFFFFFFFFF)))[:21]
                 if a in addresses:
                     continue
-                block_addresses.add(map_into_range(siphash(a), 7300 * 784931))
+                block_addresses.add(map_into_range(siphash(a), 7300 * 100471170))
                 lblock_addresses.append(a)
 
             # create gcs

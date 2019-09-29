@@ -774,6 +774,11 @@ class Connector:
     async def _block_as_transactions_batch(self, block):
         t, t2 = time.time(), 0
         height = block["height"]
+        batch_filters_map = {0: "filterP2PKH",
+                             1: "filterP2SH",
+                             2: "filterP2PKH",
+                             5: "filterP2WPKH",
+                             6: "filterP2WSH"}
         if self.option_tx_map:
             tx_map_append = block["txMap"].append
         if self.utxo_data:
@@ -823,22 +828,16 @@ class Connector:
                                     r = self.sync_utxo.get(inp["_outpoint"])
                                     if r:
                                         tx["vIn"][i]["coin"] = r
+                                        out_type = r[2][0]
 
                                         if self.option_block_batch_filters:
-                                            if r[2][0] == 2:
-                                                h = parse_script(bytes(r[2][1:]))["addressHash"]
-                                                h = map_into_range(siphash(h), 10 ** 13)
+                                            if out_type == 2:
+                                                h = siphash(parse_script(bytes(r[2][1:]))["addressHash"])
                                             else:
-                                                h = map_into_range(siphash(r[2][1:]), 10 ** 13)
+                                                h = siphash(r[2][1:])
+                                            block[batch_filters_map[out_type]] += int_to_c_int(i) + int_to_c_int(1)
+                                            block[batch_filters_map[out_type]] += h.to_bytes(8, byteorder="big")
 
-                                            if r[2][0] in (0, 2):
-                                                block["filterP2PKH"] += h.to_bytes(8, byteorder="big")
-                                            elif r[2][0] == 1:
-                                                block["filterP2SH"] += h.to_bytes(8, byteorder="big")
-                                            elif r[2][0] == 5:
-                                                block["filterP2WPKH"] += h.to_bytes(8, byteorder="big")
-                                            elif r[2][0] == 6:
-                                                block["filterP2WSH"] += h.to_bytes(8, byteorder="big")
 
                                         if self.option_block_bip158_filters:
                                             if r[2][0] in (0, 1, 5, 6):
@@ -880,24 +879,16 @@ class Connector:
                                                  (height << 39)+(q<<20)+i))
 
                         r = block["rawTx"][q]["vIn"][i]["coin"]
-
+                        out_type = r[2][0]
                         if self.option_block_batch_filters:
 
-                            if r[2][0] == 2:
-                                h = parse_script(bytes(r[2][1:]))["addressHash"]
-                                h = map_into_range(siphash(h), 10 ** 13)
+                            if out_type == 2:
+                                h = siphash(parse_script(bytes(r[2][1:]))["addressHash"])
                             else:
-                                h = map_into_range(siphash(r[2][1:]), 10 ** 13)
+                                h = siphash(r[2][1:])
+                            block[batch_filters_map[out_type]] += int_to_c_int(i) + int_to_c_int(1)
+                            block[batch_filters_map[out_type]] += h.to_bytes(8, byteorder="big")
 
-
-                            if r[2][0] in (0, 2):
-                                block["filterP2PKH"] += h.to_bytes(8, byteorder="big")
-                            elif r[2][0] == 1:
-                                block["filterP2SH"] += h.to_bytes(8, byteorder="big")
-                            elif r[2][0] == 5:
-                                block["filterP2WPKH"] += h.to_bytes(8, byteorder="big")
-                            elif r[2][0] == 6:
-                                block["filterP2WSH"] += h.to_bytes(8, byteorder="big")
 
                         if self.option_block_bip158_filters:
                             if r[2][0] in (0, 1, 5, 6):
