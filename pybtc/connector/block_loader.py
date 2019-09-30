@@ -534,6 +534,8 @@ class Worker:
 
                                                if self.option_block_batch_filters and out_type != 7:
                                                    if out_type == 2:
+                                                       print(parse_script(bytes(r[2][1:])))
+                                                       print(r[2].hex())
                                                        hr = parse_script(bytes(r[2][1:]))["addressHash"]
                                                    else:
                                                        hr = r[2][1:]
