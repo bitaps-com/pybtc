@@ -532,7 +532,7 @@ class Worker:
                                                out_type = r[2][0]
 
                                                if self.option_block_filters:
-                                                   if out_type not in (2, 7):
+                                                   if out_type not in (2, 4, 7):
                                                        script = hash_to_script(r[2][1:], out_type)
                                                    else:
                                                        script = r[2][1:]
@@ -651,7 +651,7 @@ class Worker:
                                        try:
                                            out_type = p[outpoint][2][0]
                                            if self.option_block_filters:
-                                               if out_type not in (2, 7):
+                                               if out_type not in (2, 4, 7):
                                                    script = hash_to_script(p[outpoint][2][1:], out_type)
                                                else:
                                                    script = p[outpoint][2][1:]
