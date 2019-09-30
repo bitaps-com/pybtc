@@ -827,11 +827,11 @@ class Connector:
                                             block["filter"] += int_to_c_int(q)
                                             if r[2][0] in (0, 1, 5, 6):
                                                 sh = hash_to_script(r[2][1:], r[2][0])
-                                                block["bip158_filter"] += int_to_c_int(len(sh))
-                                                block["bip158_filter"] += hash_to_script(r[2][1:], r[2][0])
+                                                block["filter"] += int_to_c_int(len(sh))
+                                                block["filter"] += hash_to_script(r[2][1:], r[2][0])
                                             else:
-                                                block["bip158_filter"] += int_to_c_int(len(r[2][1:]))
-                                                block["bip158_filter"] += r[2][1:]
+                                                block["filter"] += int_to_c_int(len(r[2][1:]))
+                                                block["filter"] += r[2][1:]
 
                                         if self.option_tx_map:
                                             tx_map_append(((height << 39) + (q << 20) + i, r[2],  r[1]))
