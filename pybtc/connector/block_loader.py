@@ -457,9 +457,9 @@ class Worker:
                                     o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
                                     pointer = (x << 39)+(z << 20)+(1 << 19) + i
                                     out_type = block["rawTx"][z]["vOut"][i]["nType"]
-                                    address_hash = block["rawTx"][z]["vOut"][i]["addressHash"]
 
                                     try:
+                                        address_hash = block["rawTx"][z]["vOut"][i]["addressHash"]
                                         if out_type == 2:
                                             block["p2pkMapHash"].append((address_hash,
                                                                          block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
@@ -473,10 +473,10 @@ class Worker:
                                     if out_type not in (3, 8):
                                         if self.option_block_batch_filters:
                                             try:
-                                                block[self.batch_filters_map[out_type]][z].add(address_hash)
+                                                block[self.batch_filters_map[out_type]][z].add(address[1:])
                                             except:
                                                 try:
-                                                    block[self.batch_filters_map[out_type]][z] = {address_hash}
+                                                    block[self.batch_filters_map[out_type]][z] = {address[1:]}
                                                 except:
                                                     pass
 
