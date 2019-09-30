@@ -467,7 +467,8 @@ class Worker:
                                             raise Exception("PUBKEY")
                                         address = b"".join((bytes([out_type]), address_hash))
                                     except:
-                                        address = b"".join((bytes([out_type]), address_hash))
+                                        address = b"".join((bytes([out_type]),
+                                                            block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
 
                                     if out_type not in (3, 8):
                                         if self.option_block_batch_filters:
@@ -534,8 +535,6 @@ class Worker:
 
                                                if self.option_block_batch_filters and out_type != 7:
                                                    if out_type == 2:
-                                                       print(parse_script(bytes(r[2][1:])))
-                                                       print(r[2].hex())
                                                        hr = parse_script(bytes(r[2][1:]))["addressHash"]
                                                    else:
                                                        hr = r[2][1:]
