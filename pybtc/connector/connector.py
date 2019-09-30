@@ -824,7 +824,7 @@ class Connector:
                                         tx["vIn"][i]["coin"] = r
 
                                         if self.option_block_filters:
-                                            block["filter"] += int_to_c_int(q)
+                                            block["filter"] += int_to_c_int(q) + int_to_c_int(1)
                                             if r[2][0] in (0, 1, 5, 6):
                                                 sh = hash_to_script(r[2][1:], r[2][0])
                                                 block["filter"] += int_to_c_int(len(sh))
@@ -872,6 +872,7 @@ class Connector:
                                 script = r[2][1:]
 
                             block["filter"] += b"".join([int_to_c_int(q),
+                                                         int_to_c_int(1),
                                                          int_to_c_int(len(script)),
                                                          script])
 
