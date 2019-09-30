@@ -166,8 +166,7 @@ class BlockLoader:
                                               self.parent.app_proc_title,
                                               self.parent.utxo_data,
                                               self.parent.option_tx_map,
-                                              self.parent.option_block_batch_filters,
-                                              self.parent.option_block_bip158_filters,
+                                              self.parent.option_block_filters,
                                               self.parent.option_merkle_proof,
                                               self.parent.option_analytica))
         worker.start()
@@ -267,10 +266,22 @@ class BlockLoader:
 
 class Worker:
 
-    def __init__(self, name , in_reader, in_writer, out_reader, out_writer,
-                 rpc_url, rpc_timeout, rpc_batch_limit, dsn, app_proc_title, utxo_data,
-                 option_tx_map, option_block_batch_filters, option_block_bip158_filters,
-                 option_merkle_proof, option_analytica):
+    def __init__(self,
+                 name,
+                 in_reader,
+                 in_writer,
+                 out_reader,
+                 out_writer,
+                 rpc_url,
+                 rpc_timeout,
+                 rpc_batch_limit,
+                 dsn,
+                 app_proc_title,
+                 utxo_data,
+                 option_tx_map,
+                 option_block_filters,
+                 option_merkle_proof,
+                 option_analytica):
         try:
             setproctitle('%s: blocks preload worker %s' % (app_proc_title, name))
         except:
@@ -286,8 +297,7 @@ class Worker:
         self.db = None
         self.option_tx_map = option_tx_map
         self.option_merkle_proof = option_merkle_proof
-        self.option_block_batch_filters = option_block_batch_filters
-        self.option_block_bip158_filters = option_block_bip158_filters
+        self.option_block_filters = option_block_filters
         self.option_analytica = option_analytica
         in_writer.close()
         out_reader.close()
@@ -309,11 +319,7 @@ class Worker:
         start_limit = limit
         self.destroyed_coins = MRU()
         self.coins = MRU()
-        self.batch_filters_map = {0: "filterP2PKH",
-                                  1: "filterP2SH",
-                                  2: "filterP2PKH",
-                                  5: "filterP2WPKH",
-                                  6: "filterP2WSH"}
+
         try:
             self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
             blocks, missed = dict(), deque()
@@ -342,12 +348,9 @@ class Worker:
                         block["p2pkMapHash"] = []
                         if self.option_tx_map: block["txMap"], block["stxo"] = deque(), deque()
 
-                        if self.option_block_batch_filters:
-                            for f in self.batch_filters_map.values():
-                                block[f] = dict()
+                        if self.option_block_filters:
+                            block["filter"] = dict()
 
-                        if self.option_block_bip158_filters:
-                            block["bip158"] = list()
 
                         if self.option_merkle_proof:
                             mt = merkle_tree(block["rawTx"][i]["txId"] for i in block["rawTx"])
@@ -459,30 +462,25 @@ class Worker:
                                     out_type = block["rawTx"][z]["vOut"][i]["nType"]
 
                                     try:
-                                        address_hash = block["rawTx"][z]["vOut"][i]["addressHash"]
                                         if out_type == 2:
-                                            block["p2pkMapHash"].append((address_hash,
+                                            block["p2pkMapHash"].append((block["rawTx"][z]["vOut"][i]["addressHash"],
                                                                          block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
 
-                                            raise Exception("PUBKEY")
-                                        address = b"".join((bytes([out_type]), address_hash))
+                                            raise Exception("P2PK")
+                                        address = b"".join((bytes([out_type]),
+                                                            block["rawTx"][z]["vOut"][i]["addressHash"]))
                                     except:
                                         address = b"".join((bytes([out_type]),
                                                             block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
 
                                     if out_type not in (3, 8):
-                                        if self.option_block_batch_filters:
+                                        if self.option_block_filters:
                                             try:
-                                                block[self.batch_filters_map[out_type]][z].add(address[1:])
+                                                block["filter"][z].add(block["rawTx"][z]["vOut"][i]["scriptPubKey"])
                                             except:
-                                                try:
-                                                    block[self.batch_filters_map[out_type]][z] = {address[1:]}
-                                                except:
-                                                    pass
+                                                block["filter"][z] = {block["rawTx"][z]["vOut"][i]["scriptPubKey"]}
 
-                                        if self.option_block_bip158_filters:
-                                                block["bip158_filter"].\
-                                                    append(block["rawTx"][z]["vOut"][i]["scriptPubKey"])
+
 
                                         if self.option_tx_map:
                                                 block["txMap"].append((pointer, address,
@@ -533,24 +531,16 @@ class Worker:
                                                self.destroyed_coins[r[0]] = True
                                                out_type = r[2][0]
 
-                                               if self.option_block_batch_filters and out_type != 7:
-                                                   if out_type == 2:
-                                                       hr = parse_script(bytes(r[2][1:]))["addressHash"]
+                                               if self.option_block_filters:
+                                                   if out_type not in (2, 7):
+                                                       script = hash_to_script(r[2][1:], out_type)
                                                    else:
-                                                       hr = r[2][1:]
-                                                   try:
-                                                       block[self.batch_filters_map[out_type]][z].add(hr)
-                                                   except:
-                                                       try:
-                                                           block[self.batch_filters_map[out_type]][z] = {hr}
-                                                       except:
-                                                           pass
+                                                       script = r[2][1:]
 
-                                               if self.option_block_bip158_filters:
-                                                   if out_type in (0, 1, 5, 6):
-                                                       block["bip158_filter"].append(hash_to_script(r[2][1:], out_type))
-                                                   else:
-                                                       block["bip158_filter"].append(r[2][1:])
+                                                   try:
+                                                       block["filter"][z].add(script)
+                                                   except:
+                                                        block["filter"][z] = {script}
 
                                                if self.option_tx_map:
                                                    block["txMap"].append(((x<<39)+(z<<20)+i, r[2], r[1]))
@@ -660,27 +650,16 @@ class Worker:
                                        blocks[h]["rawTx"][z]["vIn"][i]["_l_"] = p[outpoint]
                                        try:
                                            out_type = p[outpoint][2][0]
-                                           if self.option_block_batch_filters and out_type != 7:
-                                               r = p[outpoint][2]
-                                               if out_type == 2:
-                                                   hr = parse_script(bytes(r[1:]))["addressHash"]
+                                           if self.option_block_filters:
+                                               if out_type not in (2, 7):
+                                                   script = hash_to_script(p[outpoint][2][1:], out_type)
                                                else:
-                                                   hr = r[1:]
+                                                   script = p[outpoint][2][1:]
+
                                                try:
-                                                   blocks[h][self.batch_filters_map[out_type]][z].add(hr)
+                                                   blocks[h]["filter"][z].add(script)
                                                except:
-                                                   try:
-                                                       blocks[h][self.batch_filters_map[out_type]][z] = {hr}
-                                                   except:
-                                                       pass
-
-
-                                           if self.option_block_bip158_filters:
-                                               r = p[outpoint][2]
-                                               if out_type in (0, 1, 5, 6):
-                                                   blocks[h]["bip158_filter"].append(hash_to_script(r[1:], out_type))
-                                               else:
-                                                   blocks[h]["bip158_filter"].append(r[1:])
+                                                   blocks[h]["filter"][z] = {script}
 
                                            if self.option_tx_map:
                                                blocks[h]["txMap"].append(((h<<39)+(z<<20)+i,
@@ -871,21 +850,14 @@ class Worker:
                                 blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                             except: pass
 
-                if self.option_block_batch_filters:
-                    for f_type in set(self.batch_filters_map.values()):
-                        items  = bytearray()
-                        for z in blocks[x][f_type].keys():
-                            items += int_to_c_int(z) + int_to_c_int(len(blocks[x][f_type][z]))
-                            for e in blocks[x][f_type][z]:
-                                items += siphash(e).to_bytes(8, byteorder="big")
-                        blocks[x][f_type] = items
+                if self.option_block_filters:
+                    items  = bytearray()
+                    for z in blocks[x]["filter"].keys():
+                        items += int_to_c_int(z) + int_to_c_int(len(blocks[x]["filter"][z]))
+                        for e in blocks[x]["filter"][z]:
+                            items += int_to_c_int(len(e)) + e
+                    blocks[x]["filter"] = items
 
-                if self.option_block_bip158_filters:
-                    f = bytearray()
-                    for script in blocks[x]["bip158_filter"]:
-                        f += int_to_c_int(len(script))
-                        f += script
-                    blocks[x]["bip158_filter"] = f
 
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))

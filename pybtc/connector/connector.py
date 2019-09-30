@@ -55,8 +55,7 @@ class Connector:
                  utxo_cache_size=1000000,
                  tx_orphan_buffer_limit=1000,
                  skip_opreturn=True,
-                 block_batch_filters=False,
-                 block_bip158_filters=False,
+                 block_filters=False,
                  merkle_proof=False,
                  tx_map=False,
                  analytica=False,
@@ -84,8 +83,7 @@ class Connector:
         self.block_timeout = block_timeout
         self.tx_handler = tx_handler
         self.skip_opreturn = skip_opreturn
-        self.option_block_bip158_filters = block_bip158_filters
-        self.option_block_batch_filters = block_batch_filters
+        self.option_block_filters = block_filters
         self.option_merkle_proof = merkle_proof
         self.option_tx_map = tx_map
         self.option_analytica = analytica
@@ -774,11 +772,7 @@ class Connector:
     async def _block_as_transactions_batch(self, block):
         t, t2 = time.time(), 0
         height = block["height"]
-        batch_filters_map = {0: "filterP2PKH",
-                             1: "filterP2SH",
-                             2: "filterP2PKH",
-                             5: "filterP2WPKH",
-                             6: "filterP2WSH"}
+
         if self.option_tx_map:
             tx_map_append = block["txMap"].append
         if self.utxo_data:
@@ -828,18 +822,9 @@ class Connector:
                                     r = self.sync_utxo.get(inp["_outpoint"])
                                     if r:
                                         tx["vIn"][i]["coin"] = r
-                                        out_type = r[2][0]
 
-                                        if self.option_block_batch_filters and out_type != 7:
-                                            if out_type == 2:
-                                                h = siphash(parse_script(bytes(r[2][1:]))["addressHash"])
-                                            else:
-                                                h = siphash(r[2][1:])
-                                            block[batch_filters_map[out_type]] += int_to_c_int(i) + int_to_c_int(1)
-                                            block[batch_filters_map[out_type]] += h.to_bytes(8, byteorder="big")
-
-
-                                        if self.option_block_bip158_filters:
+                                        if self.option_block_filters:
+                                            block["filter"] += int_to_c_int(q)
                                             if r[2][0] in (0, 1, 5, 6):
                                                 sh = hash_to_script(r[2][1:], r[2][0])
                                                 block["bip158_filter"] += int_to_c_int(len(sh))
@@ -879,25 +864,16 @@ class Connector:
                                                  (height << 39)+(q<<20)+i))
 
                         r = block["rawTx"][q]["vIn"][i]["coin"]
-                        out_type = r[2][0]
-                        if self.option_block_batch_filters:
 
-                            if out_type == 2:
-                                h = siphash(parse_script(bytes(r[2][1:]))["addressHash"])
-                            else:
-                                h = siphash(r[2][1:])
-                            block[batch_filters_map[out_type]] += int_to_c_int(i) + int_to_c_int(1)
-                            block[batch_filters_map[out_type]] += h.to_bytes(8, byteorder="big")
-
-
-                        if self.option_block_bip158_filters:
+                        if self.option_block_filters:
                             if r[2][0] in (0, 1, 5, 6):
                                 script = hash_to_script(r[2][1:], r[2][0])
                             else:
                                 script = r[2][1:]
 
-                            block["bip158_filter"] += b"".join([int_to_c_int(len(script)),
-                                                                script])
+                            block["filter"] += b"".join([int_to_c_int(q),
+                                                         int_to_c_int(len(script)),
+                                                         script])
 
                         if self.option_analytica:
                             r = block["rawTx"][q]["vIn"][i]["coin"]
