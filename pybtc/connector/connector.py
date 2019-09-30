@@ -830,7 +830,7 @@ class Connector:
                                         tx["vIn"][i]["coin"] = r
                                         out_type = r[2][0]
 
-                                        if self.option_block_batch_filters:
+                                        if self.option_block_batch_filters and out_type != 7:
                                             if out_type == 2:
                                                 h = siphash(parse_script(bytes(r[2][1:]))["addressHash"])
                                             else:
