@@ -872,7 +872,7 @@ class Worker:
                             except: pass
 
                 if self.option_block_batch_filters:
-                    for f_type in self.batch_filters_map.values():
+                    for f_type in set(self.batch_filters_map.values()):
                         items  = bytearray()
                         for z in blocks[x][f_type].keys():
                             items += int_to_c_int(z) + int_to_c_int(len(blocks[x][f_type][z]))
