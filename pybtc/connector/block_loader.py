@@ -1,6 +1,5 @@
 from pybtc.functions.tools import bytes_to_int
 from pybtc.functions.address import hash_to_script
-from pybtc.functions.tools import map_into_range
 from pybtc.functions.hash import siphash
 from pybtc.functions.tools import int_to_bytes, int_to_c_int
 from pybtc.functions.block import merkle_tree, merkle_proof
@@ -155,9 +154,17 @@ class BlockLoader:
         in_writer, out_writer  = os.fdopen(in_writer,'wb'), os.fdopen(out_writer,'wb')
 
         # create new process
-        worker = Process(target=Worker, args=(index, in_reader, in_writer, out_reader, out_writer,
-                                              self.rpc_url, self.rpc_timeout, self.rpc_batch_limit,
-                                              self.dsn, self.parent.app_proc_title, self.parent.utxo_data,
+        worker = Process(target=Worker, args=(index,
+                                              in_reader,
+                                              in_writer,
+                                              out_reader,
+                                              out_writer,
+                                              self.rpc_url,
+                                              self.rpc_timeout,
+                                              self.rpc_batch_limit,
+                                              self.dsn,
+                                              self.parent.app_proc_title,
+                                              self.parent.utxo_data,
                                               self.parent.option_tx_map,
                                               self.parent.option_block_batch_filters,
                                               self.parent.option_block_bip158_filters,
@@ -262,8 +269,8 @@ class Worker:
 
     def __init__(self, name , in_reader, in_writer, out_reader, out_writer,
                  rpc_url, rpc_timeout, rpc_batch_limit, dsn, app_proc_title, utxo_data,
-                 option_tx_map, option_block_batch_filters, option_block_bip158_filters, option_merkle_proof,
-                 option_analytica):
+                 option_tx_map, option_block_batch_filters, option_block_bip158_filters,
+                 option_merkle_proof, option_analytica):
         try:
             setproctitle('%s: blocks preload worker %s' % (app_proc_title, name))
         except:
