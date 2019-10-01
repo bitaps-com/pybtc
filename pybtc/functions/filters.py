@@ -168,6 +168,24 @@ def huffman_code(tree):
 
     return result
 
+def encode_huffman(elements):
+    map_freq = dict()
+    for value in  elements:
+        try:
+            map_freq[value] += 1
+        except:
+            map_freq[value] = 1
+    bitstr = bitarray()
+    codes = huffman_code(huffman_tree(map_freq))
+    bitstr.encode(codes, elements)
+
+    code_table_1 = int_to_var_int(len(codes))
+    for code in codes:
+        code_table_1 += int_to_var_int(code)
+        code_table_1 += int_to_var_int(codes[code].length())
+        code_table_1 += b"".join([bytes([i]) for i in codes[code].tolist()])
+
+    return bitstr.tobytes() + code_table_1
 
 def encode_dhcs(elements, min_bits_threshold=20):
     # Delta-Hoffman coded set
