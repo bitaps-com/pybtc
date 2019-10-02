@@ -824,14 +824,18 @@ class Connector:
                                         tx["vIn"][i]["coin"] = r
 
                                         if self.option_block_filters:
-                                            block["filter"] += int_to_c_int(q) + int_to_c_int(1)
-                                            if r[2][0] in (0, 1, 5, 6):
-                                                sh = hash_to_script(r[2][1:], r[2][0])
-                                                block["filter"] += int_to_c_int(len(sh))
-                                                block["filter"] += hash_to_script(r[2][1:], r[2][0])
-                                            else:
-                                                block["filter"] += int_to_c_int(len(r[2][1:]))
-                                                block["filter"] += r[2][1:]
+                                            if r[0] in (0, 1, 5, 6):
+                                                e = b"".join((bytes([r[0]]),
+                                                              q.to_bytes(4, byteorder="little"),
+                                                              siphash(r[1:])))
+                                                block["filter"] += e
+                                            elif r[0] == 2:
+                                                a = parse_script(siphash(r[1:]))["addressHash"]
+                                                e = b"".join((bytes([r[0]]),
+                                                              q.to_bytes(4, byteorder="little"),
+                                                              siphash(a)))
+                                                block["filter"] += e
+
 
                                         if self.option_tx_map:
                                             tx_map_append(((height << 39) + (q << 20) + i, r[2],  r[1]))
@@ -863,18 +867,20 @@ class Connector:
                             block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
                                                  (height << 39)+(q<<20)+i))
 
-                        r = block["rawTx"][q]["vIn"][i]["coin"]
+                        r = block["rawTx"][q]["vIn"][i]["coin"][2]
 
                         if self.option_block_filters:
-                            if r[2][0] in (0, 1, 5, 6):
-                                script = hash_to_script(r[2][1:], r[2][0])
-                            else:
-                                script = r[2][1:]
-
-                            block["filter"] += b"".join([int_to_c_int(q),
-                                                         int_to_c_int(1),
-                                                         int_to_c_int(len(script)),
-                                                         script])
+                            if r[0] in (0, 1, 5, 6):
+                                e = b"".join((bytes([r[0]]),
+                                              q.to_bytes(4, byteorder="little"),
+                                              siphash(r[1:])))
+                                block["filter"] += e
+                            elif r[0] == 2:
+                                a = parse_script(siphash(r[1:]))["addressHash"]
+                                e = b"".join((bytes([r[0]]),
+                                              q.to_bytes(4, byteorder="little"),
+                                              siphash(a)))
+                                block["filter"] += e
 
                         if self.option_analytica:
                             r = block["rawTx"][q]["vIn"][i]["coin"]

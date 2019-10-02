@@ -349,7 +349,7 @@ class Worker:
                         if self.option_tx_map: block["txMap"], block["stxo"] = deque(), deque()
 
                         if self.option_block_filters:
-                            block["filter"] = dict()
+                            block["filter"] = set()
 
 
                         if self.option_merkle_proof:
@@ -457,34 +457,28 @@ class Worker:
                                     block["rawTx"][z]["inputsAmount"] = 0
 
                                 for i in block["rawTx"][z]["vOut"]:
+                                    out= block["rawTx"][z]["vOut"][i]
                                     o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
                                     pointer = (x << 39)+(z << 20)+(1 << 19) + i
-                                    out_type = block["rawTx"][z]["vOut"][i]["nType"]
+                                    out_type = out["nType"]
 
                                     try:
                                         if out_type == 2:
-                                            block["p2pkMapHash"].append((block["rawTx"][z]["vOut"][i]["addressHash"],
-                                                                         block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
-
+                                            block["p2pkMapHash"].append((out["addressHash"], out["scriptPubKey"]))
                                             raise Exception("P2PK")
-                                        address = b"".join((bytes([out_type]),
-                                                            block["rawTx"][z]["vOut"][i]["addressHash"]))
+                                        address = b"".join((bytes([out_type]), out["addressHash"]))
                                     except:
-                                        address = b"".join((bytes([out_type]),
-                                                            block["rawTx"][z]["vOut"][i]["scriptPubKey"]))
+                                        address = b"".join((bytes([out_type]), out["scriptPubKey"]))
 
-                                    if out_type not in (3, 8):
+                                    if out_type in (0, 1, 2, 5, 6):
                                         if self.option_block_filters:
-                                            try:
-                                                block["filter"][z].add(block["rawTx"][z]["vOut"][i]["scriptPubKey"])
-                                            except:
-                                                block["filter"][z] = {block["rawTx"][z]["vOut"][i]["scriptPubKey"]}
-
-
+                                            e = b"".join((bytes([out_type]),
+                                                          z.to_bytes(4, byteorder="little"),
+                                                          siphash(out["addressHash"])))
+                                            block["filter"].add(e)
 
                                         if self.option_tx_map:
-                                                block["txMap"].append((pointer, address,
-                                                                   block["rawTx"][z]["vOut"][i]["value"]))
+                                                block["txMap"].append((pointer, address, out["value"]))
 
                                     if self.option_analytica:
                                         amount = block["rawTx"][z]["vOut"][i]["value"]
@@ -503,8 +497,8 @@ class Worker:
                                         try: block["stat"]["oAmountMapAmount"][amount_key] += amount
                                         except: block["stat"]["oAmountMapAmount"][amount_key] = amount
 
-                                    block["rawTx"][z]["vOut"][i]["_address"] = address
-                                    self.coins[o] = (pointer, block["rawTx"][z]["vOut"][i]["value"], address)
+                                    out["_address"] = address
+                                    self.coins[o] = (pointer, out["value"], address)
 
 
                             # handle inputs
@@ -532,15 +526,17 @@ class Worker:
                                                out_type = r[2][0]
 
                                                if self.option_block_filters:
-                                                   if out_type not in (2, 4, 7):
-                                                       script = hash_to_script(r[2][1:], out_type)
-                                                   else:
-                                                       script = r[2][1:]
-
-                                                   try:
-                                                       block["filter"][z].add(script)
-                                                   except:
-                                                        block["filter"][z] = {script}
+                                                   if out_type in (0, 1, 5, 6):
+                                                       e = b"".join((bytes([out_type]),
+                                                                     z.to_bytes(4, byteorder="little"),
+                                                                     siphash(r[2][1:])))
+                                                       block["filter"].add(e)
+                                                   elif out_type == 2:
+                                                       a = parse_script(siphash(r[2][1:]))["addressHash"]
+                                                       e = b"".join((bytes([out_type]),
+                                                                     z.to_bytes(4, byteorder="little"),
+                                                                     siphash(a)))
+                                                       block["filter"].add(e)
 
                                                if self.option_tx_map:
                                                    block["txMap"].append(((x<<39)+(z<<20)+i, r[2], r[1]))
@@ -651,15 +647,18 @@ class Worker:
                                        try:
                                            out_type = p[outpoint][2][0]
                                            if self.option_block_filters:
-                                               if out_type not in (2, 4, 7):
-                                                   script = hash_to_script(p[outpoint][2][1:], out_type)
-                                               else:
-                                                   script = p[outpoint][2][1:]
+                                               if out_type in (0, 1, 5, 6):
+                                                   e = b"".join((bytes([out_type]),
+                                                                 z.to_bytes(4, byteorder="little"),
+                                                                 siphash(p[outpoint][2][1:])))
+                                                   blocks[h]["filter"].add(e)
+                                               elif out_type == 2:
+                                                   a = parse_script(siphash(p[outpoint][2][1:]))["addressHash"]
+                                                   e = b"".join((bytes([out_type]),
+                                                                 z.to_bytes(4, byteorder="little"),
+                                                                 siphash(a)))
+                                                   blocks[h]["filter"].add(e)
 
-                                               try:
-                                                   blocks[h]["filter"][z].add(script)
-                                               except:
-                                                   blocks[h]["filter"][z] = {script}
 
                                            if self.option_tx_map:
                                                blocks[h]["txMap"].append(((h<<39)+(z<<20)+i,
@@ -851,12 +850,7 @@ class Worker:
                             except: pass
 
                 if self.option_block_filters:
-                    items  = bytearray()
-                    for z in blocks[x]["filter"].keys():
-                        items += int_to_c_int(z) + int_to_c_int(len(blocks[x]["filter"][z]))
-                        for e in blocks[x]["filter"][z]:
-                            items += int_to_c_int(len(e)) + e
-                    blocks[x]["filter"] = items
+                    blocks[x]["filter"] = bytearray(b"".join(blocks[x]["filter"]))
 
 
                 blocks[x] = pickle.dumps(blocks[x])
