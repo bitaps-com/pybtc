@@ -830,7 +830,7 @@ class Connector:
                                                               siphash(r[1:]).to_bytes(8,byteorder="little")))
                                                 block["filter"] += e
                                             elif r[0] == 2:
-                                                a = parse_script(siphash(r[1:]))["addressHash"]
+                                                a = parse_script(r[1:])["addressHash"]
                                                 e = b"".join((bytes([r[0]]),
                                                               q.to_bytes(4, byteorder="little"),
                                                               siphash(a).to_bytes(8,byteorder="little")))
@@ -876,7 +876,7 @@ class Connector:
                                               siphash(r[1:]).to_bytes(8,byteorder="little")))
                                 block["filter"] += e
                             elif r[0] == 2:
-                                a = parse_script(siphash(r[1:]))["addressHash"]
+                                a = parse_script(r[1:])["addressHash"]
                                 e = b"".join((bytes([r[0]]),
                                               q.to_bytes(4, byteorder="little"),
                                               siphash(a).to_bytes(8,byteorder="little")))

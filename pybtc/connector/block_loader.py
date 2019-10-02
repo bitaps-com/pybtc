@@ -532,7 +532,7 @@ class Worker:
                                                                      siphash(r[2][1:]).to_bytes(8,byteorder="little")))
                                                        block["filter"].add(e)
                                                    elif out_type == 2:
-                                                       a = parse_script(siphash(r[2][1:]))["addressHash"]
+                                                       a = parse_script(r[2][1:])["addressHash"]
                                                        e = b"".join((bytes([out_type]),
                                                                      z.to_bytes(4, byteorder="little"),
                                                                      siphash(a).to_bytes(8,byteorder="little")))
@@ -653,7 +653,7 @@ class Worker:
                                                                  siphash(p[outpoint][2][1:]).to_bytes(8,byteorder="little")))
                                                    blocks[h]["filter"].add(e)
                                                elif out_type == 2:
-                                                   a = parse_script(siphash(p[outpoint][2][1:]))["addressHash"]
+                                                   a = parse_script(p[outpoint][2][1:])["addressHash"]
                                                    e = b"".join((bytes([out_type]),
                                                                  z.to_bytes(4, byteorder="little"),
                                                                  siphash(a).to_bytes(8,byteorder="little")))
