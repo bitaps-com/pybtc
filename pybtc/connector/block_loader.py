@@ -474,7 +474,7 @@ class Worker:
                                         if self.option_block_filters:
                                             e = b"".join((bytes([out_type]),
                                                           z.to_bytes(4, byteorder="little"),
-                                                          siphash(out["addressHash"])))
+                                                          siphash(out["addressHash"]).to_bytes(8,byteorder="little")))
                                             block["filter"].add(e)
 
                                         if self.option_tx_map:
@@ -529,13 +529,13 @@ class Worker:
                                                    if out_type in (0, 1, 5, 6):
                                                        e = b"".join((bytes([out_type]),
                                                                      z.to_bytes(4, byteorder="little"),
-                                                                     siphash(r[2][1:])))
+                                                                     siphash(r[2][1:]).to_bytes(8,byteorder="little")))
                                                        block["filter"].add(e)
                                                    elif out_type == 2:
                                                        a = parse_script(siphash(r[2][1:]))["addressHash"]
                                                        e = b"".join((bytes([out_type]),
                                                                      z.to_bytes(4, byteorder="little"),
-                                                                     siphash(a)))
+                                                                     siphash(a).to_bytes(8,byteorder="little")))
                                                        block["filter"].add(e)
 
                                                if self.option_tx_map:
@@ -650,13 +650,13 @@ class Worker:
                                                if out_type in (0, 1, 5, 6):
                                                    e = b"".join((bytes([out_type]),
                                                                  z.to_bytes(4, byteorder="little"),
-                                                                 siphash(p[outpoint][2][1:])))
+                                                                 siphash(p[outpoint][2][1:]).to_bytes(8,byteorder="little")))
                                                    blocks[h]["filter"].add(e)
                                                elif out_type == 2:
                                                    a = parse_script(siphash(p[outpoint][2][1:]))["addressHash"]
                                                    e = b"".join((bytes([out_type]),
                                                                  z.to_bytes(4, byteorder="little"),
-                                                                 siphash(a)))
+                                                                 siphash(a).to_bytes(8,byteorder="little")))
                                                    blocks[h]["filter"].add(e)
 
 
