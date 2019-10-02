@@ -323,11 +323,11 @@ class Worker:
         try:
             self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
             blocks, missed = dict(), deque()
-            e, t, limit = height + limit, 0, 40
+            v, t, limit = height + limit, 0, 40
 
-            while height < e and height <= self.target_height:
+            while height < v and height <= self.target_height:
                 batch, h_list = list(), list()
-                while len(batch) < limit and height < e and height <= self.target_height:
+                while len(batch) < limit and height < v and height <= self.target_height:
                     batch.append(["getblockhash", height])
                     h_list.append(height)
                     height += 1
