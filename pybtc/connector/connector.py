@@ -824,14 +824,14 @@ class Connector:
                                         tx["vIn"][i]["coin"] = r
 
                                         if self.option_block_filters:
-                                            if r[0] in (0, 1, 5, 6):
-                                                e = b"".join((bytes([r[0]]),
+                                            if r[2][0] in (0, 1, 5, 6):
+                                                e = b"".join((bytes([r[2][0]]),
                                                               q.to_bytes(4, byteorder="little"),
-                                                              siphash(r[1:]).to_bytes(8,byteorder="little")))
+                                                              siphash(r[2][1:]).to_bytes(8,byteorder="little")))
                                                 block["filter"] += e
-                                            elif r[0] == 2:
-                                                a = parse_script(r[1:])["addressHash"]
-                                                e = b"".join((bytes([r[0]]),
+                                            elif r[2][0] == 2:
+                                                a = parse_script(r[2][1:])["addressHash"]
+                                                e = b"".join((bytes([r[2][0]]),
                                                               q.to_bytes(4, byteorder="little"),
                                                               siphash(a).to_bytes(8,byteorder="little")))
                                                 block["filter"] += e
