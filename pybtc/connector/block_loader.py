@@ -537,6 +537,7 @@ class Worker:
                                                                      z.to_bytes(4, byteorder="little"),
                                                                      siphash(a).to_bytes(8,byteorder="little")))
                                                        block["filter"].add(e)
+                                                       print(x, siphash(a), parse_script(r[2][1:])["addressHash"])
 
                                                if self.option_tx_map:
                                                    block["txMap"].append(((x<<39)+(z<<20)+i, r[2], r[1]))
