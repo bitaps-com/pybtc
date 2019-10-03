@@ -91,35 +91,40 @@ def encode_gcs(elements, P):
 
     return gcs_filter.tobytes()
 
-def decode_gcs(h, N, P=19):
-    s = []
+def decode_gcs(h, P):
+    s = deque()
     s_append = s.append
     last = 0
     gcs_filter = bitarray(endian='big')
     gcs_filter.frombytes(h)
+
     f = 0
-    for i in range(N):
-        q = 0
-        r = 0
+    while True:
+        try:
+            q = 0
+            r = 0
 
-        while gcs_filter[f]:
-            q += 1
+            while gcs_filter[f]:
+                q += 1
+                f += 1
             f += 1
-        f += 1
-        c = P - 1
+            c = P - 1
 
-        while c >= 0:
-            r = r << 1
-            if gcs_filter[f]:
-                r += 1
-            f += 1
+            while c >= 0:
+                r = r << 1
+                if gcs_filter[f]:
+                    r += 1
+                f += 1
+                c -= 1
 
-            c -= 1
+        except IndexError:
+            break
+        except:
+            raise
 
         delta = (q << P) + r
         last += delta
         s_append(last)
-
     return s
 
 
@@ -169,23 +174,25 @@ def huffman_code(tree):
     return result
 
 def encode_huffman(elements):
-    map_freq = dict()
-    for value in  elements:
-        try:
-            map_freq[value] += 1
-        except:
-            map_freq[value] = 1
-    bitstr = bitarray()
-    codes = huffman_code(huffman_tree(map_freq))
-    bitstr.encode(codes, elements)
+    if elements:
+        map_freq = dict()
+        for value in  elements:
+            try:
+                map_freq[value] += 1
+            except:
+                map_freq[value] = 1
+        bitstr = bitarray()
+        codes = huffman_code(huffman_tree(map_freq))
+        bitstr.encode(codes, elements)
 
-    code_table_1 = int_to_var_int(len(codes))
-    for code in codes:
-        code_table_1 += int_to_var_int(code)
-        code_table_1 += int_to_var_int(codes[code].length())
-        code_table_1 += b"".join([bytes([i]) for i in codes[code].tolist()])
+        code_table_1 = int_to_var_int(len(codes))
+        for code in codes:
+            code_table_1 += int_to_var_int(code)
+            code_table_1 += int_to_var_int(codes[code].length())
+            code_table_1 += b"".join([bytes([i]) for i in codes[code].tolist()])
 
-    return bitstr.tobytes() + code_table_1
+        return bitstr.tobytes() + code_table_1
+    return b""
 
 def encode_dhcs(elements, min_bits_threshold=20):
     # Delta-Hoffman coded set
