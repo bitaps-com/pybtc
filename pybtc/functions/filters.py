@@ -186,13 +186,39 @@ def encode_huffman(elements):
         bitstr.encode(codes, elements)
 
         code_table_1 = int_to_var_int(len(codes))
-        for code in codes:
+        for code in sorted(codes.keys()):
             code_table_1 += int_to_var_int(code)
             code_table_1 += int_to_var_int(codes[code].length())
             code_table_1 += b"".join([bytes([i]) for i in codes[code].tolist()])
-
-        return bitstr.tobytes() + code_table_1
+        h = bitstr.tobytes()
+        delta_bit_length = 8 * len(h) -  bitstr.length()
+        return b"".join((code_table_1,
+                         int_to_var_int(len(h)),
+                         int_to_var_int(delta_bit_length),
+                         h))
     return b""
+
+
+def decode_huffman(h):
+    if h:
+        stream = get_stream(h)
+        c = var_int_to_int(read_var_int(stream))
+        code_table = dict()
+        for i in range(c):
+             key = var_int_to_int(read_var_int(stream))
+             l = var_int_to_int(read_var_int(stream))
+             code =  bitarray([bool(k) for k in stream.read(l)])
+             code_table[key] = code
+        l = var_int_to_int(read_var_int(stream))
+        delta_bit_length = var_int_to_int(read_var_int(stream))
+        d = bitarray()
+        d.frombytes(stream.read(l))
+        while d.length() > (l  * 8 - delta_bit_length):
+            d.pop()
+        return d.decode(code_table)
+    return []
+
+
 
 def encode_dhcs(elements, min_bits_threshold=20):
     # Delta-Hoffman coded set
@@ -279,6 +305,7 @@ def encode_dhcs(elements, min_bits_threshold=20):
                       bits_sequence,
                       int_to_var_int(d_filter_len),
                       d_filter_string))
+
 
 
 def decode_dhcs(h):
