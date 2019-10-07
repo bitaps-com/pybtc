@@ -430,6 +430,7 @@ class Connector:
         backup synchronization option
         in case zeromq failed
         """
+        last_maintenance = 0
         while True:
             try:
                 while True:
@@ -462,13 +463,15 @@ class Connector:
                         async with self.db_pool.acquire() as conn:
                             d = await conn.fetchval("SELECT n_dead_tup FROM pg_stat_user_tables "
                                                     "WHERE relname = 'connector_utxo' LIMIT 1;")
-                            if d > 10000000:
+                            if d > 10000000 and (time.time() - last_maintenance) > 60*30 :
                                 self.log.info("Maintenance connector_utxo table ...")
                                 t = time.time()
                                 await conn.execute("VACUUM FULL connector_utxo;")
                                 await conn.execute("ANALYZE connector_utxo;")
                                 self.log.info("Maintenance connector_utxo table completed %s",
                                               round(time.time() - t, 2))
+                                last_maintenance = time.time()
+
                     except:
                         pass
 
@@ -877,9 +880,7 @@ class Connector:
                                 block["filter"] += e
                             elif r[0] == 2:
                                 a = parse_script(r[1:])["addressHash"]
-                                e = b"".join((bytes([r[0]]),
-                                              q.to_bytes(4, byteorder="little"),
-                                              a[:6]))
+                                e = b"".join((bytes([2]), q.to_bytes(4, byteorder="little"), a[:6]))
                                 block["filter"] += e
 
                         if self.option_analytica:
