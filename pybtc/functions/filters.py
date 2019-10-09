@@ -68,14 +68,34 @@ def create_gcs_filter(elements, N=None, M=784931, P=19, v_0=0, v_1=0, hex=False)
 
     return f.hex() if hex else f
 
-def encode_gcs(elements, P):
+def encode_deltas(elements):
+    last = 0
+    max_v = 0
+    deltas = deque()
+    for value in elements:
+        d = value - last
+        last = value
+        deltas.append(d)
+        if max_v < d:
+            max_v = d
+    return deltas, max_v
+
+
+    for value in elements:
+def encode_gcs(elements, P, sort = True, deltas = True):
     gcs_filter = bitarray()
     gcs_filter_append = gcs_filter.append
     last = 0
+    if sort:
+        elements = sorted(elements)
 
-    for value in  sorted(elements):
-        delta = value - last
-        q, r = delta >> P, delta & ((1 << P) - 1)
+    for value in elements:
+        if deltas:
+            e = value - last
+            last = value
+        else:
+            e = value
+        q, r = e >> P, e & ((1 << P) - 1)
 
         while q:
             gcs_filter_append(True)
@@ -87,7 +107,6 @@ def encode_gcs(elements, P):
         while c >= 0:
             gcs_filter_append(bool(r & (1 << c)))
             c -= 1
-        last = value
 
     return gcs_filter.tobytes()
 
