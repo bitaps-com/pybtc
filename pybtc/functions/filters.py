@@ -81,7 +81,6 @@ def encode_deltas(elements):
     return deltas, max_v
 
 
-    for value in elements:
 def encode_gcs(elements, P, sort = True, deltas = True):
     gcs_filter = bitarray()
     gcs_filter_append = gcs_filter.append
