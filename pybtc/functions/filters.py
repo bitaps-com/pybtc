@@ -191,6 +191,26 @@ def huffman_code(tree):
 
     return result
 
+def huffman_freq_normalize(freq):
+    r = dict()
+    for i in freq:
+        try:
+            r[freq[i]].append(i)
+        except:
+            r[freq[i]] = [i]
+
+    codes = deque()
+    for i in sorted(r.keys()):
+        for e in sorted(r[i]):
+            codes.append(e)
+
+    nfreq = dict()
+    for i in range(len(codes)):
+        nfreq[codes[i]] = i + 1
+
+    return nfreq, codes
+
+
 def encode_huffman(elements):
     if elements:
         map_freq = dict()
@@ -200,17 +220,16 @@ def encode_huffman(elements):
             except:
                 map_freq[value] = 1
         bitstr = bitarray()
-        codes = huffman_code(huffman_tree(map_freq))
+        nfreq, code_table = huffman_freq_normalize(map_freq)
+        codes = huffman_code(huffman_tree(nfreq))
         bitstr.encode(codes, elements)
 
-        code_table_1 = int_to_var_int(len(codes))
-        for code in sorted(codes.keys()):
-            code_table_1 += int_to_var_int(code)
-            code_table_1 += int_to_var_int(codes[code].length())
-            code_table_1 += b"".join([bytes([i]) for i in codes[code].tolist()])
+        code_table_string = int_to_var_int(len(code_table))
+        for code in code_table:
+            code_table_string += int_to_var_int(code)
         h = bitstr.tobytes()
         delta_bit_length = 8 * len(h) -  bitstr.length()
-        return b"".join((code_table_1,
+        return b"".join((code_table_string,
                          int_to_var_int(len(h)),
                          int_to_var_int(delta_bit_length),
                          h))
@@ -221,19 +240,19 @@ def decode_huffman(h):
     if h:
         stream = get_stream(h)
         c = var_int_to_int(read_var_int(stream))
-        code_table = dict()
+        freq = dict()
         for i in range(c):
              key = var_int_to_int(read_var_int(stream))
-             l = var_int_to_int(read_var_int(stream))
-             code =  bitarray([bool(k) for k in stream.read(l)])
-             code_table[key] = code
+             freq[key] = i + 1
+        codes = huffman_code(huffman_tree(freq))
+
         l = var_int_to_int(read_var_int(stream))
         delta_bit_length = var_int_to_int(read_var_int(stream))
         d = bitarray()
         d.frombytes(stream.read(l))
         while d.length() > (l  * 8 - delta_bit_length):
             d.pop()
-        return d.decode(code_table)
+        return d.decode(codes)
     return []
 
 
