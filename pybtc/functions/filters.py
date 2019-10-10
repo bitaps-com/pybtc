@@ -90,14 +90,20 @@ def encode_gcs(elements, P = None, sort = True, deltas = True):
         if deltas:
             last = 0
             d_max = 2
+            new_elements = deque()
             for value in elements:
                 d = value - last
                 if d_max < d:
                     d_max = d
+                new_elements.append(d)
+                last = value
+            deltas = False
+            elements = new_elements
         else:
             d_max = max(elements)
         P = floor(log2(d_max / 1.497137))
 
+    last = 0
     for value in elements:
         if deltas:
             e = value - last
