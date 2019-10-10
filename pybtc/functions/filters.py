@@ -1,13 +1,12 @@
 import struct
 import io
 from pybtc.functions.tools import int_to_var_int, read_var_int, var_int_to_int
-from  math import log, ceil
+from  math import log, ceil, floor, log2
 from pybtc.constants import LN2SQUARED, LN2
 from pybtc.functions.tools import  map_into_range, get_stream
 from pybtc.functions.hash import siphash, murmurhash3
 from _bitarray import _bitarray
 from heapq import heappush, heappop
-
 
 class bitarray(_bitarray):
     pass
@@ -81,12 +80,23 @@ def encode_deltas(elements):
     return deltas, max_v
 
 
-def encode_gcs(elements, P, sort = True, deltas = True):
+def encode_gcs(elements, P = None, sort = True, deltas = True):
     gcs_filter = bitarray()
     gcs_filter_append = gcs_filter.append
-    last = 0
+
     if sort:
         elements = sorted(elements)
+    if P is None:
+        if deltas:
+            last = 0
+            d_max = 2
+            for value in elements:
+                d = value - last
+                if d_max < d:
+                    d_max = d
+        else:
+            d_max = max(elements)
+        P = floor(log2(d_max / 1.497137))
 
     for value in elements:
         if deltas:
@@ -107,14 +117,16 @@ def encode_gcs(elements, P, sort = True, deltas = True):
             gcs_filter_append(bool(r & (1 << c)))
             c -= 1
 
-    return gcs_filter.tobytes()
+    return int_to_var_int(P) + gcs_filter.tobytes()
 
-def decode_gcs(h, P):
+def decode_gcs(h):
+    stream = get_stream(h)
+    P = var_int_to_int(read_var_int(stream))
     s = deque()
     s_append = s.append
     last = 0
     gcs_filter = bitarray(endian='big')
-    gcs_filter.frombytes(h)
+    gcs_filter.frombytes(stream.read())
 
     f = 0
     while True:
