@@ -123,10 +123,11 @@ def encode_gcs(elements, P = None, sort = True, deltas = True):
             gcs_filter_append(bool(r & (1 << c)))
             c -= 1
 
-    return int_to_var_int(P) + gcs_filter.tobytes()
+    return int_to_var_int(len(elements)) + int_to_var_int(P) + gcs_filter.tobytes()
 
 def decode_gcs(h):
     stream = get_stream(h)
+    L = var_int_to_int(read_var_int(stream))
     P = var_int_to_int(read_var_int(stream))
     s = deque()
     s_append = s.append
@@ -135,29 +136,22 @@ def decode_gcs(h):
     gcs_filter.frombytes(stream.read())
 
     f = 0
-    while True:
-        try:
-            q = 0
-            r = 0
+    for i in range(L):
+        q = 0
+        r = 0
 
-            while gcs_filter[f]:
-                q += 1
-                f += 1
+        while gcs_filter[f]:
+            q += 1
             f += 1
-            c = P - 1
+        f += 1
+        c = P - 1
 
-            while c >= 0:
-                r = r << 1
-                if gcs_filter[f]:
-                    r += 1
-                f += 1
-                c -= 1
-
-        except IndexError:
-            break
-        except:
-            raise
-
+        while c >= 0:
+            r = r << 1
+            if gcs_filter[f]:
+                r += 1
+            f += 1
+            c -= 1
         delta = (q << P) + r
         last += delta
         s_append(last)
