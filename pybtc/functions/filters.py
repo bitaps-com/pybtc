@@ -1,5 +1,6 @@
 import struct
 import io
+import statistics
 from pybtc.functions.tools import int_to_var_int, read_var_int, var_int_to_int
 from  math import log, ceil, floor, log2
 from pybtc.constants import LN2SQUARED, LN2
@@ -87,21 +88,19 @@ def encode_gcs(elements, P = None, sort = True, deltas = True):
     if sort:
         elements = sorted(elements)
     if P is None:
+
         if deltas:
             last = 0
-            d_max = 2
             new_elements = deque()
             for value in elements:
                 d = value - last
-                if d_max < d:
-                    d_max = d
                 new_elements.append(d)
                 last = value
             deltas = False
             elements = new_elements
-        else:
-            d_max = max(elements)
-        P = floor(log2(d_max / 1.497137))
+
+        mid = statistics.median_high(elements)
+        P = ceil(log2(mid / 1.497137))
 
     last = 0
     for value in elements:

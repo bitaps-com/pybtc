@@ -1,9 +1,12 @@
 import unittest
 
-import pybtc.test
+from pybtc.test.filters  import filters
+# testLoad = unittest.TestLoader()
+# suites = testLoad.loadTestsFromModule(pybtc.test)
+#
+# runner = unittest.TextTestRunner(verbosity=1)
+# runner.run(suites)
+#
+# import unittest
 
-testLoad = unittest.TestLoader()
-suites = testLoad.loadTestsFromModule(pybtc.test)
-
-runner = unittest.TextTestRunner(verbosity=1)
-runner.run(suites)
+unittest.main()

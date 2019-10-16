@@ -11,7 +11,7 @@ def split_len(seq, length):
     return [seq[i:i+length] for i in range(0, len(seq), length)]
 
 
-class FilterFunctionsTests(unittest.TestCase):
+class filters(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         print("\nTesting filter functions:\n")
@@ -113,12 +113,24 @@ class FilterFunctionsTests(unittest.TestCase):
 
         print("generate address set ...")
         addresses = set()
-        while len(addresses) < 10000:
-            addresses.add(sha256(int_to_bytes(random.randint(1, 0xFFFFFFFFFFFFFFFFFFFF)))[:21])
+        while len(addresses) < 500:
+            addresses.add(sha256(int_to_bytes(random.randint(1, 0xFFFFFFFFFFFFFFFFFFFF)))[:5])
 
         haddresses = set()
         for a in addresses:
             haddresses.add(map_into_range(siphash(a), 10000 * 100471170))
+
+        haddresses = set()
+        for a in addresses:
+            haddresses.add(map_into_range(siphash(a), 500 * 784931))
+
+        M = 784931
+        P = 19
+        c = encode_gcs(haddresses)
+        print(len(c))
+        c = encode_gcs(haddresses, P=19)
+        print(len(c))
+        return
 
 
         print("Test false positive rate for 2739 ( 20 000 000 items) blocks:")
