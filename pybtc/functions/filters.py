@@ -100,7 +100,7 @@ def encode_gcs(elements, P = None, sort = True, deltas = True):
             elements = new_elements
 
         mid = statistics.median_high(elements)
-        P = ceil(log2(mid / 1.497137))
+        P = ceil(log2(mid if mid > 1 else 2/ 1.497137))
 
     last = 0
     for value in elements:
