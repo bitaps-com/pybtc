@@ -114,7 +114,7 @@ class filters(unittest.TestCase):
         print("generate address set ...")
         addresses = set()
         while len(addresses) < 500:
-            addresses.add(sha256(int_to_bytes(random.randint(1, 0xFFFFFFFFFFFFFFFFFFFF)))[:5])
+            addresses.add(sha256(int_to_bytes(random.randint(1, 0xFFFFFFFFFFFFFFFFFFFF)))[:6])
 
         haddresses = set()
         for a in addresses:

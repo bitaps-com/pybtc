@@ -1,6 +1,5 @@
 import struct
 import io
-import statistics
 from pybtc.functions.tools import int_to_var_int, read_var_int, var_int_to_int
 from  math import log, ceil, floor, log2
 from pybtc.constants import LN2SQUARED, LN2
@@ -91,18 +90,32 @@ def encode_gcs(elements, P = None, sort = True, deltas = True):
 
         if deltas:
             last = 0
-            new_elements = deque()
-            for value in elements:
-                d = value - last
-                new_elements.append(d)
-                last = value
-            deltas = False
-            elements = new_elements
 
-        mid = statistics.median_high(elements)
-        if mid < 2:
-            mid = 2
-        P = round(log2((mid / 1.497137)))
+            if len(elements) < 2:
+                d_max = elements[0]
+            else:
+                d_max = 0
+                new_elements = deque()
+                for value in elements:
+                    d = value - last
+                    new_elements.append(d)
+                    if last and d_max < d:
+                        d_max = d
+                    last = value
+
+                deltas = False
+                elements = new_elements
+        else:
+            d_max = max(elements)
+
+        mc = sorted(elements)[len(elements) // 2] # median high
+        d_max = d_max if d_max > 1 else 2
+        mc = mc if mc > 1 else 2
+
+        P = (floor(log2((mc / 1.497137))) + floor(log2((d_max / 1.497137)))) >> 1
+
+        if P < 1:
+            P = 1
 
     last = 0
     for value in elements:
@@ -125,6 +138,7 @@ def encode_gcs(elements, P = None, sort = True, deltas = True):
             c -= 1
 
     return int_to_var_int(len(elements)) + int_to_var_int(P) + gcs_filter.tobytes()
+
 
 def decode_gcs(h):
     stream = get_stream(h)
