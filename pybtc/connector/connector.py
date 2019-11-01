@@ -830,13 +830,13 @@ class Connector:
                                             if r[2][0] in (0, 1, 5, 6):
                                                 e = b"".join((bytes([r[2][0]]),
                                                               q.to_bytes(4, byteorder="little"),
-                                                              r[2][1:7]))
+                                                              r[2][1:21]))
                                                 block["filter"] += e
                                             elif r[2][0] == 2:
                                                 a = parse_script(r[2][1:])["addressHash"]
                                                 e = b"".join((bytes([r[2][0]]),
                                                               q.to_bytes(4, byteorder="little"),
-                                                              a[:6]))
+                                                              a[:20]))
                                                 block["filter"] += e
 
 
@@ -876,11 +876,11 @@ class Connector:
                             if r[0] in (0, 1, 5, 6):
                                 e = b"".join((bytes([r[0]]),
                                               q.to_bytes(4, byteorder="little"),
-                                              r[1:7]))
+                                              r[1:21]))
                                 block["filter"] += e
                             elif r[0] == 2:
                                 a = parse_script(r[1:])["addressHash"]
-                                e = b"".join((bytes([2]), q.to_bytes(4, byteorder="little"), a[:6]))
+                                e = b"".join((bytes([2]), q.to_bytes(4, byteorder="little"), a[:20]))
                                 block["filter"] += e
 
                         if self.option_analytica:
