@@ -509,7 +509,7 @@ class UUTXO():
 
             rows = await conn.fetch("DELETE FROM connector_unconfirmed_p2pk_map  "
                                     "WHERE tx_id = ANY($1) "
-                                    "RETURNING  address, script;", txs)
+                                    "RETURNING  address, script, tx_id;", txs)
 
             p2pk_map = deque()
             p2pk_map_backup = deque()
