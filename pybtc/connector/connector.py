@@ -1,20 +1,26 @@
 from pybtc.functions.tools import rh2s, s2rh
+from pybtc.functions.tools import map_into_range, int_to_c_int
+from pybtc.functions.hash import siphash
+from pybtc.functions.address import hash_to_script
+from pybtc.functions.filters  import create_gcs_filter
 from pybtc.connector.block_loader import BlockLoader
+from pybtc.functions.block import merkle_tree, merkle_proof
 from pybtc.connector.utxo import UTXO, UUTXO
 from pybtc.connector.utils import decode_block_tx
 from pybtc.connector.utils import Cache
 from pybtc.connector.utils import seconds_to_age
 from pybtc.transaction import Transaction
 from pybtc import int_to_bytes, bytes_to_int, bytes_from_hex
-from pybtc import MRU
+from pybtc import MRU, parse_script, MINER_COINBASE_TAG, MINER_PAYOUT_TAG, hash_to_address
 from collections import deque
-
-
+import traceback
+import json
 
 
 
 import asyncio
 import time
+from math import *
 from _pickle import loads
 
 try:
@@ -49,6 +55,10 @@ class Connector:
                  utxo_cache_size=1000000,
                  tx_orphan_buffer_limit=1000,
                  skip_opreturn=True,
+                 block_filters=False,
+                 merkle_proof=False,
+                 tx_map=False,
+                 analytica=False,
                  block_cache_workers= 4,
                  block_preload_cache_limit= 1000 * 1000000,
                  block_preload_batch_size_limit = 200000000,
@@ -63,6 +73,7 @@ class Connector:
 
         # settings
         self.log = logger
+        self.rpc = None
         self.rpc_url = node_rpc_url
         self.app_proc_title = app_proc_title
         self.rpc_timeout = rpc_timeout
@@ -72,6 +83,10 @@ class Connector:
         self.block_timeout = block_timeout
         self.tx_handler = tx_handler
         self.skip_opreturn = skip_opreturn
+        self.option_block_filters = block_filters
+        self.option_merkle_proof = merkle_proof
+        self.option_tx_map = tx_map
+        self.option_analytica = analytica
         self.before_block_handler = before_block_handler
         self.block_handler = block_handler
         self.after_block_handler = after_block_handler
@@ -97,7 +112,7 @@ class Connector:
         self.uutxo = None
         self.cache_loading = False
         self.app_block_height_on_start = int(last_block_height) if int(last_block_height) else 0
-        self.last_block_height = 0
+        self.last_block_height = -1
         self.last_block_utxo_cached_height = 0
         self.deep_synchronization = False
 
@@ -146,12 +161,12 @@ class Connector:
         self.chain_tail_start_len = len(chain_tail)
         self.mempool_tx_count = 0
 
+
         self.block_txs_request = asyncio.Future()
         self.block_txs_request.set_result(True)
         self.new_tx_handler = None
         self.new_tx_tasks = 0
 
-        self.connected = asyncio.Future()
         self.await_tx = list()
         self.missed_tx = list()
         self.await_tx_future = dict()
@@ -166,7 +181,9 @@ class Connector:
         self.unconfirmed_tx_processing.set_result(True)
 
         self.log.info("Node connector started")
-        asyncio.ensure_future(self.start(), loop=self.loop)
+        self.connected = self.loop.create_task(self.start())
+
+
 
     async def start(self):
         if self.utxo_data:
@@ -216,8 +233,8 @@ class Connector:
 
 
         h = self.last_block_height
-        if h < len(self.chain_tail):
-            raise Exception("Chain tail len not match last block height")
+        # if h < len(self.chain_tail):
+        #     raise Exception("Chain tail len not match last block height")
         for row in reversed(self.chain_tail):
             self.block_headers_cache.set(row, h)
             h -= 1
@@ -227,9 +244,9 @@ class Connector:
             self.block_loader = BlockLoader(self,workers = self.block_cache_workers)
         self.zeromq_task = self.loop.create_task(self.zeromq_handler())
         self.tasks.append(self.loop.create_task(self.watchdog()))
-        self.connected.set_result(True)
         self.get_next_block_mutex = True
         self.loop.create_task(self.get_next_block())
+
 
     async def utxo_init(self):
         if self.db_type is None:
@@ -259,6 +276,13 @@ class Connector:
                                                           amount  BIGINT,
                                                           PRIMARY KEY(outpoint));
                                    """)
+
+                await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                          connector_p2pk_map (address BYTEA,
+                                                              script BYTEA,
+                                                              PRIMARY KEY (address));                                                      
+                                   """)
+
                 await conn.execute("""CREATE TABLE IF NOT EXISTS 
                                           connector_unconfirmed_utxo (outpoint BYTEA,
                                                                       out_tx_id BYTEA,
@@ -267,11 +291,18 @@ class Connector:
                                                                       PRIMARY KEY (outpoint));                                                      
                                    """)
                 await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                          connector_unconfirmed_p2pk_map (tx_id BYTEA,
+                                                                          address BYTEA,
+                                                                          script BYTEA,
+                                                                          PRIMARY KEY (tx_id));                                                      
+                                   """)
+                await conn.execute("""CREATE TABLE IF NOT EXISTS 
                                           connector_unconfirmed_stxo (outpoint BYTEA, 
                                                                       sequence  INT,
                                                                       out_tx_id BYTEA,
                                                                       tx_id BYTEA,
                                                                       input_index INT,
+                                                                      address BYTEA,
                                                                       PRIMARY KEY(outpoint, sequence));                                                      
                                    """)
 
@@ -299,8 +330,9 @@ class Connector:
                 lb = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_block';")
                 lc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
                 if lb is None:
-                    lb = lc = 0
-                    await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_block', 0);")
+                    lb = -1
+                    lc = 0
+                    await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_block', -1);")
                     await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_cached_block', 0);")
 
                 self.mempool_tx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "
@@ -383,6 +415,7 @@ class Connector:
                 self.log.warning("Zeromq handler terminated")
                 break
 
+
     async def handle_new_tx(self):
         while self.new_tx and self.synchronized:
             if not self.block_txs_request.done():
@@ -397,6 +430,7 @@ class Connector:
         backup synchronization option
         in case zeromq failed
         """
+        last_maintenance = 0
         while True:
             try:
                 while True:
@@ -423,10 +457,21 @@ class Connector:
                     try:
                         if self.last_block_height > self.deep_sync_limit:
                             async with self.db_pool.acquire() as conn:
-                                async with conn.transaction():
-                                    await conn.execute("DELETE FROM connector_block_state_checkpoint "
-                                                       "WHERE height < $1;",
-                                                       self.last_block_height - self.deep_sync_limit)
+                                await conn.execute("DELETE FROM connector_block_state_checkpoint "
+                                                   "WHERE height < $1;",
+                                                   self.last_block_height - self.deep_sync_limit)
+                        async with self.db_pool.acquire() as conn:
+                            d = await conn.fetchval("SELECT n_dead_tup FROM pg_stat_user_tables "
+                                                    "WHERE relname = 'connector_utxo' LIMIT 1;")
+                            if d > 10000000 and (time.time() - last_maintenance) > 60*30 :
+                                self.log.info("Maintenance connector_utxo table ...")
+                                t = time.time()
+                                await conn.execute("VACUUM FULL connector_utxo;")
+                                await conn.execute("ANALYZE connector_utxo;")
+                                self.log.info("Maintenance connector_utxo table completed %s",
+                                              round(time.time() - t, 2))
+                                last_maintenance = time.time()
+
                     except:
                         pass
 
@@ -436,6 +481,7 @@ class Connector:
                 break
             except Exception as err:
                 self.log.error("watchdog error %s " % err)
+
 
     async def get_next_block(self):
         if self.active and self.active_block.done() and self.get_next_block_mutex:
@@ -468,28 +514,40 @@ class Connector:
                             self.log.info("Flush utxo cache ...")
                             while self.app_last_block < self.last_block_height:
                                 self.log.debug("Waiting app ... Last block %s; "
-                                               "App last block %s;" % (self.last_block_height,
-                                                                       self.app_last_block))
+                                               "App last block %s;" % (self.last_block_height, self.app_last_block))
                                 await asyncio.sleep(5)
 
                             self.log.info("Last block %s App last block %s" % (self.last_block_height,
                                                                                self.app_last_block))
+                            self.log.debug("checkpoints: %s " % str(self.sync_utxo.checkpoints))
+                            self.sync_utxo.checkpoints =  deque([self.last_block_height])
 
-                            self.sync_utxo.checkpoints=[self.last_block_height]
                             self.sync_utxo.size_limit = 0
-                            while  self.sync_utxo.save_process:
-                                self.log.info("wait for utxo cache flush ...")
+                            while  self.sync_utxo.save_process or self.sync_utxo.cache or self.sync_utxo.pending_saved:
+                                self.log.info("wait for utxo cache flush [%s/%s]..." % (len(self.sync_utxo.cache),
+                                                                                        len(self.sync_utxo.pending_saved)))
+                                self.log.debug("checkpoints: %s " % str(self.sync_utxo.checkpoints))
+                                if not self.sync_utxo.save_process:
+                                    self.sync_utxo.create_checkpoint(self.last_block_height, self.app_last_block)
                                 await self.sync_utxo.commit()
+
                                 await asyncio.sleep(10)
-                            self.sync_utxo.create_checkpoint(self.last_block_height, self.app_last_block)
-                            await self.sync_utxo.commit()
-                            self.log.info("Flush utxo cache completed")
+
+
+                            self.log.info("Flush utxo cache completed %s %s " % (len(self.sync_utxo.cache),
+                                                                                 len(self.sync_utxo.pending_saved),))
 
                         if self.synchronization_completed_handler:
+                            try:
+                                [self.block_loader.worker[i].terminate() for i in self.block_loader.worker]
+                            except:
+                                pass
                             await self.synchronization_completed_handler()
                         self.deep_synchronization = False
+                        self.deep_sync_limit = self.node_last_block
                         self.total_received_tx = 0
                         self.total_received_tx_time = 0
+
                 block = None
                 if self.deep_synchronization:
                     raw_block = self.block_preload.pop(self.last_block_height + 1)
@@ -497,6 +555,9 @@ class Connector:
                         q = time.time()
                         block = loads(raw_block)
                         self.blocks_decode_time += time.time() - q
+                    else:
+                        self.loop.create_task(self.retry())
+                        return
 
                 if not block:
                     h = await self.rpc.getblockhash(self.last_block_height + 1)
@@ -510,6 +571,13 @@ class Connector:
                 self.log.error("get next block failed %s" % str(err))
             finally:
                 self.get_next_block_mutex = False
+
+
+    async def retry(self):
+        await asyncio.sleep(1)
+        self.get_next_block_mutex = True
+        self.loop.create_task(self.get_next_block())
+
 
     async def _get_block_by_hash(self, hash):
         try:
@@ -530,6 +598,7 @@ class Connector:
             return block
         except Exception:
             self.log.error("get block by hash %s FAILED" % hash)
+
 
     async def _new_block(self, block):
         if not self.active: return
@@ -553,9 +622,10 @@ class Connector:
                 if self.block_headers_cache.get(block["hash"]) is not None:
                     return
 
-            mount_point_exist = await self.verify_block_position(block)
-            if not mount_point_exist:
-                return
+            if not self.deep_synchronization:
+                mount_point_exist = await self.verify_block_position(block)
+                if not mount_point_exist:
+                    return
 
             if self.deep_synchronization:
                 await self._block_as_transactions_batch(block)
@@ -631,6 +701,8 @@ class Connector:
                     self.await_tx_future[i].cancel()
             self.await_tx_future = dict()
             self.log.error("block %s error %s" % (block["height"], str(err)))
+            print(traceback.format_exc())
+
 
         finally:
             if self.node_last_block > self.last_block_height:
@@ -642,7 +714,6 @@ class Connector:
 
             self.blocks_processing_time += time.time() - tq
             self.active_block.set_result(True)
-
 
 
     async def verify_block_position(self, block):
@@ -666,7 +737,6 @@ class Connector:
                 return True
 
         if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
-
             if self.orphan_handler:
                 if self.utxo_data:
                     if self.db_type == "postgresql":
@@ -705,12 +775,16 @@ class Connector:
     async def _block_as_transactions_batch(self, block):
         t, t2 = time.time(), 0
         height = block["height"]
+
+        if self.option_tx_map:
+            tx_map_append = block["txMap"].append
         if self.utxo_data:
             #
             #  utxo mode
             #  fetch information about destroyed coins
             #  save new coins to utxo table
             #
+
             for q in block["rawTx"]:
                 tx = block["rawTx"][q]
                 for i in tx["vOut"]:
@@ -722,15 +796,10 @@ class Connector:
                             self.op_return += 1
                             continue
                         self.coins += 1
-
-                        try:
-                            address = b"".join((bytes([out["nType"]]), out["addressHash"]))
-                        except:
-                            address = b"".join((bytes([out["nType"]]), out["scriptPubKey"]))
                         self.sync_utxo.set(b"".join((tx["txId"], int_to_bytes(i))),
-                                           (height<<39)+(q<<20)+(1<<19)+i,
+                                           (height << 39) + (q << 20) + (1 << 19) + i,
                                            out["value"],
-                                           address)
+                                           out["_address"])
 
             stxo, missed = dict(), deque()
             for q in block["rawTx"]:
@@ -747,29 +816,35 @@ class Connector:
                                 self.preload_cached_total += 1
                             except:
                                 try:
-                                    # preloaded and should exist in cache
-                                    tx["vIn"][i]["coin"] = inp["_c_"]
+                                    # coin was loaded from db on preload stage
+                                    tx["vIn"][i]["coin"] = inp["_l_"]
                                     self.preload_cached_total += 1
                                     self.preload_cached += 1
-                                    outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                                    self.sync_utxo.get(outpoint)
+                                    self.sync_utxo.scheduled_to_delete.append(inp["_outpoint"])
                                 except:
-                                    try:
-                                        # coin was loaded from db on preload stage
-                                        tx["vIn"][i]["coin"] = inp["_l_"]
-                                        self.preload_cached_total += 1
-                                        self.preload_cached += 1
-                                        outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                                        self.sync_utxo.deleted.append(outpoint)
-                                    except:
-                                        outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
-                                        r = self.sync_utxo.get(outpoint)
-                                        if r:
-                                            tx["vIn"][i]["coin"] = r
-                                        else:
-                                            missed.append((outpoint,
-                                                          (height<<39)+(q<<20)+(1<<19)+i,
-                                                           q, i))
+                                    r = self.sync_utxo.get(inp["_outpoint"])
+                                    if r:
+                                        tx["vIn"][i]["coin"] = r
+
+                                        if self.option_block_filters:
+                                            if r[2][0] in (0, 1, 5, 6):
+                                                e = b"".join((bytes([r[2][0]]),
+                                                              q.to_bytes(4, byteorder="little"),
+                                                              r[2][1:21]))
+                                                block["filter"] += e
+                                            elif r[2][0] == 2:
+                                                a = parse_script(r[2][1:])["addressHash"]
+                                                e = b"".join((bytes([r[2][0]]),
+                                                              q.to_bytes(4, byteorder="little"),
+                                                              a[:20]))
+                                                block["filter"] += e
+
+
+                                        if self.option_tx_map:
+                                            tx_map_append(((height << 39) + (q << 20) + i, r[2],  r[1]))
+                                            block["stxo"].append((r[0], (height << 39) + (q << 20) + i))
+                                    else:
+                                        missed.append((inp["_outpoint"], (height<<39)+(q<<20)+i, q, i))
 
             if missed:
                 t2 = time.time()
@@ -787,6 +862,84 @@ class Connector:
                                 raise Exception("utxo get failed ")
                         else:
                             raise Exception("utxo get failed %s" % rh2s(block["rawTx"][q]["vIn"][i]["txId"]))
+                    if height > self.app_block_height_on_start:
+                        if self.option_tx_map:
+                            tx_map_append(((height << 39)+(q<<20)+i,
+                                           block["rawTx"][q]["vIn"][i]["coin"][2],
+                                           block["rawTx"][q]["vIn"][i]["coin"][1]))
+                            block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
+                                                 (height << 39)+(q<<20)+i))
+
+                        r = block["rawTx"][q]["vIn"][i]["coin"][2]
+
+                        if self.option_block_filters:
+                            if r[0] in (0, 1, 5, 6):
+                                e = b"".join((bytes([r[0]]),
+                                              q.to_bytes(4, byteorder="little"),
+                                              r[1:21]))
+                                block["filter"] += e
+                            elif r[0] == 2:
+                                a = parse_script(r[1:])["addressHash"]
+                                e = b"".join((bytes([2]), q.to_bytes(4, byteorder="little"), a[:20]))
+                                block["filter"] += e
+
+                        if self.option_analytica:
+                            r = block["rawTx"][q]["vIn"][i]["coin"]
+                            amount = r[1]
+                            block["rawTx"][q]["inputsAmount"] += amount
+                            pointer = (height << 39) + (q << 20) + (0 << 19) + i
+                            type = r[2][0]
+                            block["stat"]["iCountTotal"] += 1
+                            block["stat"]["iAmountTotal"] += amount
+                            if block["stat"]["iAmountMinPointer"] == 0 or \
+                                    block["stat"]["iAmountMinValue"] > amount:
+                                block["stat"]["iAmountMinPointer"] = pointer
+                                block["stat"]["iAmountMinValue"] = amount
+                            if block["stat"]["iAmountMaxValue"] < amount:
+                                block["stat"]["iAmountMaxPointer"] = pointer
+                                block["stat"]["iAmountMaxValue"] = amount
+                            amount_key = str(floor(log10(amount))) if amount else "null"
+                            try:
+                                block["stat"]["iAmountMapCount"][amount_key] += 1
+                            except:
+                                block["stat"]["iAmountMapCount"][amount_key] = 1
+                            try:
+                                block["stat"]["iAmountMapAmount"][amount_key] += amount
+                            except:
+                                block["stat"]["iAmountMapAmount"][amount_key] = amount
+                            try:
+                                block["stat"]["iTypeMapCount"][type] += 1
+                            except:
+                                block["stat"]["iTypeMapCount"][type] = 1
+                            try:
+                                block["stat"]["iTypeMapAmount"][type] += amount
+                            except:
+                                block["stat"]["iTypeMapAmount"][type] = amount
+
+                            if type == 1 or type == 6:
+                                s = parse_script(r[2][1:])
+                                st = s["type"]
+                                if st == "MULTISIG":
+                                    st += "_%s/%s" % (s["reqSigs"], s["pubKeys"])
+                                    if type == 1:
+                                        try:
+                                            block["stat"]["iP2SHtypeMapCount"][st] += 1
+                                        except:
+                                            block["stat"]["iP2SHtypeMapCount"][st] = 1
+                                        try:
+                                            block["stat"]["iP2SHtypeMapAmount"][st] += amount
+                                        except:
+                                            block["stat"]["iP2SHtypeMapAmount"][st] = amount
+                                    else:
+                                        try:
+                                            block["stat"]["iP2WSHtypeMapCount"][st] += 1
+                                        except:
+                                            block["stat"]["iP2WSHtypeMapCount"][st] = 1
+                                        try:
+                                            block["stat"]["iP2WSHtypeMapAmount"][st] += amount
+                                        except:
+                                            block["stat"]["iP2WSHtypeMapAmount"][st] = amount
+
 
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])
@@ -883,6 +1036,7 @@ class Connector:
                                                            round((self.sync_utxo._hit + self.preload_cached_annihilated)
                                                                  / self.destroyed_coins, 4)))
             self.log.debug("---------------------")
+
 
     async def fetch_block_transactions(self, block):
         q = time.time()
@@ -997,18 +1151,12 @@ class Connector:
 
     async def _new_transaction(self, tx, timestamp, block_tx = False):
         tx_hash = rh2s(tx["txId"])
-
         if tx_hash in self.tx_in_process:
             if not block_tx:
                 self.new_tx_tasks -= 1
             return
 
         if self.tx_cache.has_key(tx_hash):
-            # if block_tx:
-            #     self.await_tx.remove(tx_hash)
-            #     self.await_tx_future[tx["txId"]].set_result(True)
-            #     print("block tx>", tx_hash, "left", len(self.await_tx))
-            # else:
             self.new_tx_tasks -= 1
             return
 
@@ -1025,27 +1173,38 @@ class Connector:
                 tx["double_spent"] = False
                 commit_uutxo_buffer = set()
                 commit_ustxo_buffer = set()
+                commit_up2pk_map = set()
+
                 if not tx["coinbase"]:
                     for i in tx["vIn"]:
                         self.destroyed_coins += 1
                         tx["vIn"][i]["outpoint"] = b"".join((tx["vIn"][i]["txId"], int_to_bytes(tx["vIn"][i]["vOut"])))
                         self.uutxo.load_buffer.append(tx["vIn"][i]["outpoint"])
-                        commit_ustxo_buffer.add((tx["vIn"][i]["outpoint"], 0, tx["vIn"][i]["txId"], tx["txId"], i))
 
                     await self.uutxo.load_utxo_data()
 
                     for i in tx["vIn"]:
                         tx["vIn"][i]["coin"] = self.uutxo.loaded_utxo[tx["vIn"][i]["outpoint"]]
+                        commit_ustxo_buffer.add((tx["vIn"][i]["outpoint"],
+                                                 0,
+                                                 tx["vIn"][i]["txId"],
+                                                 tx["txId"],
+                                                 i,
+                                                 tx["vIn"][i]["coin"][2]))
                         try:
                             tx["vIn"][i]["double_spent"] = self.uutxo.loaded_ustxo[tx["vIn"][i]["outpoint"]]
                             tx["double_spent"] = True
                         except:
                             pass
 
-
-
                 for i in tx["vOut"]:
                     try:
+                        if tx["vOut"][i]["nType"] == 2:
+                            commit_up2pk_map.add((tx["txId"],
+                                                  tx["vOut"][i]["addressHash"],
+                                                  tx["vOut"][i]["scriptPubKey"]))
+
+                            raise Exception("PUBKEY")
                         address = b"".join((bytes([tx["vOut"][i]["nType"]]), tx["vOut"][i]["addressHash"]))
                     except:
                         address = b"".join((bytes([tx["vOut"][i]["nType"]]), tx["vOut"][i]["scriptPubKey"]))
@@ -1056,7 +1215,10 @@ class Connector:
                                              tx["vOut"][i]["value"]))
                 async with self.db_pool.acquire() as conn:
                     async with conn.transaction():
-                        await self.uutxo.commit_tx(commit_uutxo_buffer, commit_ustxo_buffer, conn)
+                        await self.uutxo.commit_tx(commit_uutxo_buffer,
+                                                   commit_ustxo_buffer,
+                                                   commit_up2pk_map,
+                                                   conn)
 
                         if self.tx_handler:
                             await self.tx_handler(tx, timestamp, conn)
@@ -1111,6 +1273,7 @@ class Connector:
 
             if block_tx:
                 self.log.critical("new transaction error %s" % err)
+                print(traceback.format_exc())
                 self.await_tx = set()
                 self.block_txs_request.cancel()
                 for i in self.await_tx_future:
@@ -1133,15 +1296,18 @@ class Connector:
                         self.unconfirmed_tx_processing.set_result(True)
 
 
-
-
-
     async def stop(self):
         self.active = False
         self.log.warning("New block processing restricted")
         self.log.warning("Stopping node connector ...")
+        try:
+            for i in self.block_loader.worker:
+                self.block_loader.worker[i].terminate()
+        except:
+            pass
         [task.cancel() for task in self.tasks]
-        await asyncio.wait(self.tasks)
+        if self.tasks:
+            await asyncio.wait(self.tasks)
         try:
             self.zeromq_task.cancel()
             await asyncio.wait([self.zeromq_task])
@@ -1150,7 +1316,7 @@ class Connector:
         if not self.active_block.done():
             self.log.warning("Waiting active block task ...")
             await self.active_block
-        await self.rpc.close()
+        if self.rpc: await self.rpc.close()
         if self.zmqContext:
             self.zmqContext.destroy()
         self.log.warning('Node connector terminated')

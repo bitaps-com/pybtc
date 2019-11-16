@@ -3,6 +3,16 @@ import _secp256k1
 from os import urandom
 
 
+
+def __map_into_range__(element, m_f):
+    return _crypto.__map_into_range__(element, m_f)
+
+def __siphash__(v_0, v_1, data):
+    return _crypto.__siphash__(v_0, v_1, data)
+
+def __murmurhash3__(seed, data):
+    return _crypto.__murmurhash3__(seed, data)
+
 def __decode_base58__(h):
     return _crypto.__decode_base58__(h)
 

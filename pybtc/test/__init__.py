@@ -8,7 +8,8 @@
 # from .address_class import *
 # from .transaction_deserialize import *
 # from .transaction_constructor import *
-from .block import *
+# from .block import *
+from .filters import *
 
 # from .script_deserialize import *
 # from .create_transaction import *

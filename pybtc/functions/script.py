@@ -82,7 +82,8 @@ def parse_script(script, segwit=True):
                             break
                         s += 1
                     if c == script[-2] - 80:
-                        return {"nType": 4, "type": "MULTISIG", "reqSigs": script[0] - 80, "script": script}
+                        return {"nType": 4, "type": "MULTISIG", "reqSigs": script[0] - 80,
+                                "pubKeys": c, "script": script}
 
     s, m, n, last, req_sigs = 0, 0, 0, 0, 0
     while l - s > 0:
@@ -148,10 +149,6 @@ def script_to_address(script, testnet=False):
         return hash_to_address(d["addressHash"], testnet=testnet,
                                script_hash=script_hash, witness_version=witness_version)
     return None
-
-
-
-
 
 def decode_script(script, asm=False):
     """

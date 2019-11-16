@@ -53,7 +53,7 @@ def decode_block_tx(block):
     b["rawTx"] = dict()
     b["tx"] = list()
     for i in range(var_int_to_int(read_var_int(s))):
-        b["rawTx"][i] = Transaction(s, format="raw")
+        b["rawTx"][i] = Transaction(s, format="raw", keep_raw_tx=True)
         b["tx"].append(rh2s(b["rawTx"][i]["txId"]))
         b["amount"] += b["rawTx"][i]["amount"]
         b["strippedSize"] += b["rawTx"][i]["bSize"]

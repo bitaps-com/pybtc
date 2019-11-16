@@ -98,13 +98,18 @@ def merkle_proof(merkle_tree, index, return_hex=True, receive_hex=False):
         return mp
 
 def merkle_root_from_proof(merkle_proof, tx_id, index, return_hex=True, receive_hex=True):
+    if isinstance(merkle_proof, str):
+        merkle_proof = bytes_from_hex(merkle_proof)
+    if isinstance(merkle_proof, bytes):
+        merkle_proof = [merkle_proof[y - 32:y] for y in range(32, len(merkle_proof) + 32, 32)]
+
     if receive_hex:
         _merkle_proof = deque()
         _merkle_proof_append = _merkle_proof.append
         for h in merkle_proof:
             _merkle_proof_append(s2rh(h) if isinstance(h, str) else h)
         merkle_proof = _merkle_proof
-        tx_id = bytes_from_hex(tx_id) if isinstance(tx_id, str) else tx_id
+        tx_id = s2rh(tx_id) if isinstance(tx_id, str) else tx_id
 
     root = tx_id
     for h in merkle_proof:

@@ -203,6 +203,33 @@ def address_to_script(address, hex=False):
     s = b''.join(s)
     return s.hex() if hex else s
 
+def hash_to_script(address_hash, script_type, hex=False):
+    """
+    Get public key script from hash.
+
+    :param address: h in base58 or bech32 format.
+    :param hex:  (optional) If set to True return key in HEX format, by default is True.
+    :return: public key script in HEX or bytes string.
+    """
+    if isinstance(address_hash, str):
+        address_hash = bytes_from_hex(address_hash)
+    if not isinstance(address_hash, bytes):
+        raise TypeError("address hash must be HEX encoded string or bytes")
+
+    if script_type == 1:
+        s = [OP_HASH160, b'\x14', address_hash, OP_EQUAL]
+    elif script_type == 0:
+        s = [OP_DUP, OP_HASH160, b'\x14', address_hash, OP_EQUALVERIFY, OP_CHECKSIG]
+    elif script_type in (5,6):
+        s = [OP_0,
+             bytes([len(address_hash)]),
+             address_hash]
+    else:
+        raise ValueError("address type invalid")
+    s = b''.join(s)
+    return s.hex() if hex else s
+
+
 
 def public_key_to_p2sh_p2wpkh_script(pubkey):
     if len(pubkey) != 33:
