@@ -90,13 +90,29 @@ class Wallet():
             raise Exception("Create bip44 account only possible from Master private key")
         if not isinstance(account, int):
             raise  ValueError("account should be integer")
-        self.create_account("%s_external" % account, [44|HARDENED_KEY, HARDENED_KEY, account, 0])
-        self.create_account("%s_internal" % account, [44|HARDENED_KEY, HARDENED_KEY, account, 1])
+        self.create_account("bip44_%s_external" % account, [44|HARDENED_KEY, HARDENED_KEY, account, 0])
+        self.create_account("bip44_%s_internal" % account, [44|HARDENED_KEY, HARDENED_KEY, account, 1])
 
-    def get_bip44_address(self, i, chain="external", account_index=0, address_type="P2WPKH"):
+    def get_bip44_address(self, i, chain="external", account_index=0, address_type="P2PKH"):
         if chain not in ("internal", "external"):
-            raise ValueError("chain should be inetrnal or external")
-        account_name = "%s_%s" % (account_index, chain)
+            raise ValueError("chain should be internal or external")
+        account_name = "bip44_%s_%s" % (account_index, chain)
+        if account_name not in self.accounts:
+            self.create_bip44_account(account=account_index)
+        return self.get_chain_address(i, account=account_name, address_type=address_type)
+
+    def create_bip84_account(self, account=0):
+        if self.extended_key["depth"] != 0:
+            raise Exception("Create bip84 account only possible from Master private key")
+        if not isinstance(account, int):
+            raise  ValueError("account should be integer")
+        self.create_account("bip84_%s_external" % account, [84|HARDENED_KEY, HARDENED_KEY, account|HARDENED_KEY, 0])
+        self.create_account("bip84_%s_internal" % account, [84|HARDENED_KEY, HARDENED_KEY, account|HARDENED_KEY, 1])
+
+    def get_bip84_address(self, i, chain="external", account_index=0, address_type="P2WPKH"):
+        if chain not in ("internal", "external"):
+            raise ValueError("chain should be internal or external")
+        account_name = "bip84_%s_%s" % (account_index, chain)
         if account_name not in self.accounts:
             self.create_bip44_account(account=account_index)
         return self.get_chain_address(i, account=account_name, address_type=address_type)
