@@ -233,8 +233,7 @@ class Connector:
 
 
         h = self.last_block_height
-        # if h < len(self.chain_tail):
-        #     raise Exception("Chain tail len not match last block height")
+
         for row in reversed(self.chain_tail):
             self.block_headers_cache.set(row, h)
             h -= 1
@@ -882,64 +881,6 @@ class Connector:
                                 a = parse_script(r[1:])["addressHash"]
                                 e = b"".join((bytes([2]), q.to_bytes(4, byteorder="little"), a[:20]))
                                 block["filter"] += e
-
-                        if self.option_analytica:
-                            r = block["rawTx"][q]["vIn"][i]["coin"]
-                            amount = r[1]
-                            block["rawTx"][q]["inputsAmount"] += amount
-                            pointer = (height << 39) + (q << 20) + (0 << 19) + i
-                            type = r[2][0]
-                            block["stat"]["iCountTotal"] += 1
-                            block["stat"]["iAmountTotal"] += amount
-                            if block["stat"]["iAmountMinPointer"] == 0 or \
-                                    block["stat"]["iAmountMinValue"] > amount:
-                                block["stat"]["iAmountMinPointer"] = pointer
-                                block["stat"]["iAmountMinValue"] = amount
-                            if block["stat"]["iAmountMaxValue"] < amount:
-                                block["stat"]["iAmountMaxPointer"] = pointer
-                                block["stat"]["iAmountMaxValue"] = amount
-                            amount_key = str(floor(log10(amount))) if amount else "null"
-                            try:
-                                block["stat"]["iAmountMapCount"][amount_key] += 1
-                            except:
-                                block["stat"]["iAmountMapCount"][amount_key] = 1
-                            try:
-                                block["stat"]["iAmountMapAmount"][amount_key] += amount
-                            except:
-                                block["stat"]["iAmountMapAmount"][amount_key] = amount
-                            try:
-                                block["stat"]["iTypeMapCount"][type] += 1
-                            except:
-                                block["stat"]["iTypeMapCount"][type] = 1
-                            try:
-                                block["stat"]["iTypeMapAmount"][type] += amount
-                            except:
-                                block["stat"]["iTypeMapAmount"][type] = amount
-
-                            if type == 1 or type == 6:
-                                s = parse_script(r[2][1:])
-                                st = s["type"]
-                                if st == "MULTISIG":
-                                    st += "_%s/%s" % (s["reqSigs"], s["pubKeys"])
-                                    if type == 1:
-                                        try:
-                                            block["stat"]["iP2SHtypeMapCount"][st] += 1
-                                        except:
-                                            block["stat"]["iP2SHtypeMapCount"][st] = 1
-                                        try:
-                                            block["stat"]["iP2SHtypeMapAmount"][st] += amount
-                                        except:
-                                            block["stat"]["iP2SHtypeMapAmount"][st] = amount
-                                    else:
-                                        try:
-                                            block["stat"]["iP2WSHtypeMapCount"][st] += 1
-                                        except:
-                                            block["stat"]["iP2WSHtypeMapCount"][st] = 1
-                                        try:
-                                            block["stat"]["iP2WSHtypeMapAmount"][st] += amount
-                                        except:
-                                            block["stat"]["iP2WSHtypeMapAmount"][st] = amount
-
 
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])
