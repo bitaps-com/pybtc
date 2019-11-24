@@ -1,26 +1,16 @@
 from pybtc.functions.tools import rh2s, s2rh
-from pybtc.functions.tools import map_into_range, int_to_c_int
-from pybtc.functions.hash import siphash
-from pybtc.functions.address import hash_to_script
-from pybtc.functions.filters  import create_gcs_filter
 from pybtc.connector.block_loader import BlockLoader
-from pybtc.functions.block import merkle_tree, merkle_proof
 from pybtc.connector.utxo import UTXO, UUTXO
 from pybtc.connector.utils import decode_block_tx
 from pybtc.connector.utils import Cache
 from pybtc.connector.utils import seconds_to_age
 from pybtc.transaction import Transaction
 from pybtc import int_to_bytes, bytes_to_int, bytes_from_hex
-from pybtc import MRU, parse_script, MINER_COINBASE_TAG, MINER_PAYOUT_TAG, hash_to_address
+from pybtc import MRU, parse_script
 from collections import deque
 import traceback
-import json
-
-
-
 import asyncio
 import time
-from math import *
 from _pickle import loads
 
 try:
@@ -255,15 +245,16 @@ class Connector:
         # if self.db_type not in ("rocksdb", "leveldb", "postgresql"):
         #     raise Exception("Connector supported database types is: rocksdb, leveldb, postgresql")
         if self.db_type in ("rocksdb", "leveldb"):
+            pass
             # rocksdb and leveldb
-            lb = self.db.get(b"last_block")
-            if lb is None:
-                lb = 0
-                self.db.put(b"last_block", int_to_bytes(0))
-                self.db.put(b"last_cached_block", int_to_bytes(0))
-            else:
-                lb = bytes_to_int(lb)
-            lc = bytes_to_int(self.db.get(b"last_cached_block"))
+            # lb = self.db.get(b"last_block")
+            # if lb is None:
+            #     lb = 0
+            #     self.db.put(b"last_block", int_to_bytes(0))
+            #     self.db.put(b"last_cached_block", int_to_bytes(0))
+            # else:
+            #     lb = bytes_to_int(lb)
+            # lc = bytes_to_int(self.db.get(b"last_cached_block"))
         else:
             # postgresql
             self.db_pool = await asyncpg.create_pool(dsn=self.db, min_size=1, max_size=20)

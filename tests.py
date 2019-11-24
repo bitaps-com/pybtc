@@ -1,6 +1,9 @@
 import unittest
+import pybtc
 
-from pybtc.test.filters  import filters
+# from pybtc.test.filters  import filters
+# from pybtc.test.filters  import filters
+from pybtc.test.wallet_class import *
 # testLoad = unittest.TestLoader()
 # suites = testLoad.loadTestsFromModule(pybtc.test)
 #

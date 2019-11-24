@@ -88,11 +88,12 @@ def derive_xkey(xkey, *path_level, base58=True, hex=False):
                         In case True base58 flag value will be ignored.
     :return: extended child private/public key  in base58, HEX or bytes string format.
     """
-
-    xkey = decode_base58_with_checksum(xkey)
+    if isinstance(xkey, str):
+        xkey = decode_base58_with_checksum(xkey)
     if xkey[:4] in [MAINNET_XPRIVATE_KEY_PREFIX, TESTNET_XPRIVATE_KEY_PREFIX]:
         for i in path_level:
             xkey = derive_child_xprivate_key(xkey, i)
+
     elif xkey[:4] in [MAINNET_XPUBLIC_KEY_PREFIX, TESTNET_XPUBLIC_KEY_PREFIX]:
         for i in path_level:
             xkey = derive_child_xpublic_key(xkey, i)
@@ -230,7 +231,11 @@ def is_xprivate_key_valid(key):
     if not isinstance(key, bytes) or len(key)!=78:
         return False
     if key[:4] not in [MAINNET_XPRIVATE_KEY_PREFIX,
-                                TESTNET_XPRIVATE_KEY_PREFIX]:
+                       TESTNET_XPRIVATE_KEY_PREFIX,
+                       MAINNET_M49_XPRIVATE_KEY_PREFIX,
+                       TESTNET_M49_XPRIVATE_KEY_PREFIX,
+                       MAINNET_M84_XPRIVATE_KEY_PREFIX,
+                       TESTNET_M84_XPRIVATE_KEY_PREFIX]:
         return False
     return True
 
@@ -253,6 +258,99 @@ def is_xpublic_key_valid(key):
     if not isinstance(key, bytes) or len(key)!=78:
         return False
     if key[:4] not in [MAINNET_XPUBLIC_KEY_PREFIX,
-                                TESTNET_XPUBLIC_KEY_PREFIX]:
+                       TESTNET_XPUBLIC_KEY_PREFIX,
+                       MAINNET_M49_XPUBLIC_KEY_PREFIX,
+                       TESTNET_M49_XPUBLIC_KEY_PREFIX,
+                       MAINNET_M84_XPUBLIC_KEY_PREFIX,
+                       TESTNET_M84_XPUBLIC_KEY_PREFIX]:
         return False
     return True
+
+def path_xkey_to_bip32_xkey(key, base58=True, hex=False):
+    if isinstance(key, str):
+        try:
+            key = decode_base58_with_checksum(key)
+        except:
+            try:
+                key = bytes.fromhex(key)
+            except:
+                pass
+    if not isinstance(key, bytes) or len(key)!=78:
+        return False
+
+    if key[:4] in (MAINNET_XPUBLIC_KEY_PREFIX,
+                   TESTNET_XPUBLIC_KEY_PREFIX,
+                   MAINNET_XPRIVATE_KEY_PREFIX,
+                   TESTNET_XPRIVATE_KEY_PREFIX):
+        pass
+    elif key[:4] in (MAINNET_M49_XPUBLIC_KEY_PREFIX, MAINNET_M84_XPUBLIC_KEY_PREFIX):
+        key = MAINNET_XPUBLIC_KEY_PREFIX + key[4:]
+    elif key[:4] in (TESTNET_M49_XPUBLIC_KEY_PREFIX, TESTNET_M84_XPUBLIC_KEY_PREFIX):
+        key = TESTNET_XPUBLIC_KEY_PREFIX + key[4:]
+    elif key[:4] in (MAINNET_M49_XPRIVATE_KEY_PREFIX, MAINNET_M84_XPRIVATE_KEY_PREFIX):
+        key = MAINNET_XPRIVATE_KEY_PREFIX + key[4:]
+    elif key[:4] in (TESTNET_M49_XPRIVATE_KEY_PREFIX, TESTNET_M84_XPRIVATE_KEY_PREFIX):
+        key = TESTNET_XPRIVATE_KEY_PREFIX + key[4:]
+
+    if hex:
+        return key.hex()
+    elif base58:
+        return encode_base58_with_checksum(key)
+    else:
+        return key
+
+def bip32_xkey_to_path_xkey(key, path_type, base58=True, hex=False):
+    if path_type not in ("BIP44", "BIP49", "BIP84"):
+        raise ValueError("unsupported path type %s" % path_type)
+
+    if isinstance(key, str):
+        try:
+            key = decode_base58_with_checksum(key)
+        except:
+            try:
+                key = bytes.fromhex(key)
+            except:
+                pass
+    if not isinstance(key, bytes) or len(key) != 78:
+        raise ValueError("invalid key")
+
+    if key[:4] == TESTNET_XPRIVATE_KEY_PREFIX:
+        if path_type == "BIP44":
+            key = TESTNET_M44_XPRIVATE_KEY_PREFIX + key[4:]
+        elif path_type == "BIP49":
+            key = TESTNET_M49_XPRIVATE_KEY_PREFIX + key[4:]
+        elif path_type == "BIP84":
+            key = TESTNET_M84_XPRIVATE_KEY_PREFIX + key[4:]
+
+    elif key[:4] == MAINNET_XPRIVATE_KEY_PREFIX:
+        if path_type == "BIP44":
+            key = MAINNET_M44_XPRIVATE_KEY_PREFIX + key[4:]
+        elif path_type == "BIP49":
+            key = MAINNET_M49_XPRIVATE_KEY_PREFIX + key[4:]
+        elif path_type == "BIP84":
+            key = MAINNET_M84_XPRIVATE_KEY_PREFIX + key[4:]
+    elif key[:4] == TESTNET_XPUBLIC_KEY_PREFIX:
+        if path_type == "BIP44":
+            key = TESTNET_M44_XPUBLIC_KEY_PREFIX + key[4:]
+        elif path_type == "BIP49":
+            key = TESTNET_M49_XPUBLIC_KEY_PREFIX + key[4:]
+        elif path_type == "BIP84":
+            key = TESTNET_M84_XPUBLIC_KEY_PREFIX + key[4:]
+
+    elif key[:4] == MAINNET_XPUBLIC_KEY_PREFIX:
+        if path_type == "BIP44":
+            key = MAINNET_M44_XPUBLIC_KEY_PREFIX + key[4:]
+        elif path_type == "BIP49":
+            key = MAINNET_M49_XPUBLIC_KEY_PREFIX + key[4:]
+        elif path_type == "BIP84":
+            key = MAINNET_M84_XPUBLIC_KEY_PREFIX + key[4:]
+    else:
+        raise ValueError("invalid key")
+
+    if hex:
+        return key.hex()
+    elif base58:
+        return encode_base58_with_checksum(key)
+    else:
+        return key
+
