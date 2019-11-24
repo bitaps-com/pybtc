@@ -1,9 +1,12 @@
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <stdio.h>
 #include <stdlib.h>
 #define USE_NUM_GMP
 #include "secp256k1.h"
 #include "secp256k1_recovery.h"
+
+
 
 
 secp256k1_context *secp256k1_precomp_context_sign;
@@ -18,11 +21,11 @@ static PyObject *secp256k1_secp256k1_ec_pubkey_tweak_add(PyObject *self, PyObjec
     int flag;
     if (!PyArg_ParseTuple(args,"y*y*i", &pubkey, &tweak, &flag)) { return NULL; }
     secp256k1_pubkey data;
-    int t = secp256k1_ec_pubkey_parse(secp256k1_precomp_context_sign, &data, pubkey.buf, pubkey.len);
+    int t = secp256k1_ec_pubkey_parse(secp256k1_context_no_precomp, &data, pubkey.buf, pubkey.len);
     PyBuffer_Release(&pubkey);
     if (t==0) { return Py_BuildValue("b", -1); }
 
-    t = secp256k1_ec_pubkey_tweak_add(secp256k1_context_no_precomp, &data, tweak.buf);
+    t = secp256k1_ec_pubkey_tweak_add(secp256k1_precomp_context_verify, &data, tweak.buf);
     PyBuffer_Release(&tweak);
     if (t==0) { return Py_BuildValue("b", -2); }
 
@@ -225,6 +228,7 @@ static PyObject *secp256k1_secp256k1_context_randomize(PyObject *self, PyObject 
 }
 
 static PyObject *secp256k1_secp256k1_ec_pubkey_create(PyObject *self, PyObject *args) {
+
     int flag;
     Py_buffer buffer;
     if (!PyArg_ParseTuple(args,"y*i", &buffer, &flag)) { return NULL; }
@@ -234,8 +238,9 @@ static PyObject *secp256k1_secp256k1_ec_pubkey_create(PyObject *self, PyObject *
     r = secp256k1_ec_pubkey_create(secp256k1_precomp_context_sign, &pubkey, buffer.buf);
     PyBuffer_Release(&buffer);
     if (r != 1) {
-      return Py_BuildValue("b", 0);
+      return Py_BuildValue("b", (Py_ssize_t)0);
     }
+
     size_t outl;
     if (flag == 1) {
       outl = 33;
@@ -246,11 +251,13 @@ static PyObject *secp256k1_secp256k1_ec_pubkey_create(PyObject *self, PyObject *
     }
     unsigned char pubkeyo[outl];
 
+
     r = secp256k1_ec_pubkey_serialize(secp256k1_context_no_precomp, pubkeyo, &outl, &pubkey, flag);
     if (r != 1) {
-      return Py_BuildValue("b", 0);
+      return Py_BuildValue("b", (Py_ssize_t)0);
     }
     PyObject *return_value =  Py_BuildValue("y#", pubkeyo, outl);
+
     Py_DECREF(pubkeyo);
     return return_value;
 }

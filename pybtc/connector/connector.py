@@ -1,26 +1,16 @@
 from pybtc.functions.tools import rh2s, s2rh
-from pybtc.functions.tools import map_into_range, int_to_c_int
-from pybtc.functions.hash import siphash
-from pybtc.functions.address import hash_to_script
-from pybtc.functions.filters  import create_gcs_filter
 from pybtc.connector.block_loader import BlockLoader
-from pybtc.functions.block import merkle_tree, merkle_proof
 from pybtc.connector.utxo import UTXO, UUTXO
 from pybtc.connector.utils import decode_block_tx
 from pybtc.connector.utils import Cache
 from pybtc.connector.utils import seconds_to_age
 from pybtc.transaction import Transaction
 from pybtc import int_to_bytes, bytes_to_int, bytes_from_hex
-from pybtc import MRU, parse_script, MINER_COINBASE_TAG, MINER_PAYOUT_TAG, hash_to_address
+from pybtc import MRU, parse_script
 from collections import deque
 import traceback
-import json
-
-
-
 import asyncio
 import time
-from math import *
 from _pickle import loads
 
 try:
@@ -233,8 +223,7 @@ class Connector:
 
 
         h = self.last_block_height
-        # if h < len(self.chain_tail):
-        #     raise Exception("Chain tail len not match last block height")
+
         for row in reversed(self.chain_tail):
             self.block_headers_cache.set(row, h)
             h -= 1
@@ -256,15 +245,16 @@ class Connector:
         # if self.db_type not in ("rocksdb", "leveldb", "postgresql"):
         #     raise Exception("Connector supported database types is: rocksdb, leveldb, postgresql")
         if self.db_type in ("rocksdb", "leveldb"):
+            pass
             # rocksdb and leveldb
-            lb = self.db.get(b"last_block")
-            if lb is None:
-                lb = 0
-                self.db.put(b"last_block", int_to_bytes(0))
-                self.db.put(b"last_cached_block", int_to_bytes(0))
-            else:
-                lb = bytes_to_int(lb)
-            lc = bytes_to_int(self.db.get(b"last_cached_block"))
+            # lb = self.db.get(b"last_block")
+            # if lb is None:
+            #     lb = 0
+            #     self.db.put(b"last_block", int_to_bytes(0))
+            #     self.db.put(b"last_cached_block", int_to_bytes(0))
+            # else:
+            #     lb = bytes_to_int(lb)
+            # lc = bytes_to_int(self.db.get(b"last_cached_block"))
         else:
             # postgresql
             self.db_pool = await asyncpg.create_pool(dsn=self.db, min_size=1, max_size=20)
@@ -882,64 +872,6 @@ class Connector:
                                 a = parse_script(r[1:])["addressHash"]
                                 e = b"".join((bytes([2]), q.to_bytes(4, byteorder="little"), a[:20]))
                                 block["filter"] += e
-
-                        if self.option_analytica:
-                            r = block["rawTx"][q]["vIn"][i]["coin"]
-                            amount = r[1]
-                            block["rawTx"][q]["inputsAmount"] += amount
-                            pointer = (height << 39) + (q << 20) + (0 << 19) + i
-                            type = r[2][0]
-                            block["stat"]["iCountTotal"] += 1
-                            block["stat"]["iAmountTotal"] += amount
-                            if block["stat"]["iAmountMinPointer"] == 0 or \
-                                    block["stat"]["iAmountMinValue"] > amount:
-                                block["stat"]["iAmountMinPointer"] = pointer
-                                block["stat"]["iAmountMinValue"] = amount
-                            if block["stat"]["iAmountMaxValue"] < amount:
-                                block["stat"]["iAmountMaxPointer"] = pointer
-                                block["stat"]["iAmountMaxValue"] = amount
-                            amount_key = str(floor(log10(amount))) if amount else "null"
-                            try:
-                                block["stat"]["iAmountMapCount"][amount_key] += 1
-                            except:
-                                block["stat"]["iAmountMapCount"][amount_key] = 1
-                            try:
-                                block["stat"]["iAmountMapAmount"][amount_key] += amount
-                            except:
-                                block["stat"]["iAmountMapAmount"][amount_key] = amount
-                            try:
-                                block["stat"]["iTypeMapCount"][type] += 1
-                            except:
-                                block["stat"]["iTypeMapCount"][type] = 1
-                            try:
-                                block["stat"]["iTypeMapAmount"][type] += amount
-                            except:
-                                block["stat"]["iTypeMapAmount"][type] = amount
-
-                            if type == 1 or type == 6:
-                                s = parse_script(r[2][1:])
-                                st = s["type"]
-                                if st == "MULTISIG":
-                                    st += "_%s/%s" % (s["reqSigs"], s["pubKeys"])
-                                    if type == 1:
-                                        try:
-                                            block["stat"]["iP2SHtypeMapCount"][st] += 1
-                                        except:
-                                            block["stat"]["iP2SHtypeMapCount"][st] = 1
-                                        try:
-                                            block["stat"]["iP2SHtypeMapAmount"][st] += amount
-                                        except:
-                                            block["stat"]["iP2SHtypeMapAmount"][st] = amount
-                                    else:
-                                        try:
-                                            block["stat"]["iP2WSHtypeMapCount"][st] += 1
-                                        except:
-                                            block["stat"]["iP2WSHtypeMapCount"][st] = 1
-                                        try:
-                                            block["stat"]["iP2WSHtypeMapAmount"][st] += amount
-                                        except:
-                                            block["stat"]["iP2WSHtypeMapAmount"][st] = amount
-
 
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])

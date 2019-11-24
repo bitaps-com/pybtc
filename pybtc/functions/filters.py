@@ -84,10 +84,12 @@ def encode_gcs(elements, P = None, sort = True, deltas = True):
     gcs_filter = bitarray()
     gcs_filter_append = gcs_filter.append
 
+    if len(elements) == 0:
+        return b""
+
     if sort:
         elements = sorted(elements)
     if P is None:
-
         if deltas:
             last = 0
 
@@ -107,8 +109,10 @@ def encode_gcs(elements, P = None, sort = True, deltas = True):
                 elements = new_elements
         else:
             d_max = max(elements)
-
-        mc = sorted(elements)[len(elements) // 2] # median high
+        if not sort:
+            mc = sorted(elements)[len(elements) // 2] # median high
+        else:
+            mc = elements[len(elements) // 2] # median high
         d_max = d_max if d_max > 1 else 2
         mc = mc if mc > 1 else 2
 
