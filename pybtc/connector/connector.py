@@ -311,6 +311,7 @@ class Connector:
                 await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_block', -1);")
                 await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_cached_block', 0);")
                 await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('bootstrap_completed', 0);")
+                await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('deep_synchronization', 1);")
 
             self.mempool_tx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "
                                                         "FROM connector_unconfirmed_utxo;")
@@ -513,15 +514,21 @@ class Connector:
                                 self.log.info("Flush utxo cache completed %s %s " % (len(self.sync_utxo.cache),
                                                                                      len(self.sync_utxo.pending_saved),))
 
+                            async with self.db_pool.acquire() as conn:
+                                await conn.execute("UPDATE connector_utxo_state SET value=0 "
+                                                   "WHERE name = 'deep_synchronization';")
+
                             if self.synchronization_completed_handler:
                                 try:
                                     [self.block_loader.worker[i].terminate() for i in self.block_loader.worker]
                                 except:
                                     pass
+
                                 await self.synchronization_completed_handler()
                             async with self.db_pool.acquire() as conn:
                                 await conn.execute("UPDATE connector_utxo_state SET value=1 "
                                                    "WHERE name = 'bootstrap_completed';")
+
                             self.bootstrap_completed = True
                             self.deep_synchronization = False
                             self.deep_sync_limit = self.node_last_block
