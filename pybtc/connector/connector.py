@@ -57,8 +57,6 @@ class Connector:
                  db=None,
                  app_proc_title="Connector"):
 
-
-
         self.loop = asyncio.get_event_loop()
 
         # settings
@@ -191,7 +189,7 @@ class Connector:
             if not isinstance(self.node_last_block, int):
                 self.log.error("Get node best block height failed")
                 self.log.error("Node rpc url: " + self.rpc_url)
-                await asyncio.sleep(10)
+                await asyncio.sleep(20)
                 continue
 
             self.log.info("Node best block height %s" % self.node_last_block)
@@ -201,14 +199,15 @@ class Connector:
 
             if self.node_last_block < self.last_block_height:
                 self.log.error("Node is behind application blockchain state!")
-                await asyncio.sleep(10)
+                self.log.error("Waiting for node sync")
+                await asyncio.sleep(20)
                 continue
             elif self.node_last_block == self.last_block_height:
                 self.log.info("Blockchain is synchronized")
             else:
                 d = self.node_last_block - self.last_block_height
                 self.log.info("%s blocks before synchronization" % d)
-                if d > self.deep_sync_limit:
+                if d > self.deep_sync_limit and not self.bootstrap_completed:
                     self.log.info("Deep synchronization mode")
                     self.deep_synchronization = True
             break
@@ -219,7 +218,7 @@ class Connector:
             else:
                 db = self.db
             self.sync_utxo = UTXO(self.db_type, db, self.rpc, self.loop, self.log, self.utxo_cache_size)
-            self.uutxo = UUTXO(self.db_type, db, self.log)
+            self.uutxo = UUTXO(self.db_type, db, self.option_block_filters, self.log)
 
 
         h = self.last_block_height
@@ -227,7 +226,7 @@ class Connector:
         for row in reversed(self.chain_tail):
             self.block_headers_cache.set(row, h)
             h -= 1
-        if self.utxo_data and self.db_type == "postgresql":
+        if self.utxo_data:
             self.block_loader = BlockLoader(self, workers=self.block_cache_workers, dsn = self.db)
         else:
             self.block_loader = BlockLoader(self,workers = self.block_cache_workers)
@@ -242,92 +241,80 @@ class Connector:
             raise Exception("UTXO data required  db connection")
         if self.db_type != "postgresql":
             raise Exception("Connector supported database engine is: postgresql")
-        # if self.db_type not in ("rocksdb", "leveldb", "postgresql"):
-        #     raise Exception("Connector supported database types is: rocksdb, leveldb, postgresql")
-        if self.db_type in ("rocksdb", "leveldb"):
-            pass
-            # rocksdb and leveldb
-            # lb = self.db.get(b"last_block")
-            # if lb is None:
-            #     lb = 0
-            #     self.db.put(b"last_block", int_to_bytes(0))
-            #     self.db.put(b"last_cached_block", int_to_bytes(0))
-            # else:
-            #     lb = bytes_to_int(lb)
-            # lc = bytes_to_int(self.db.get(b"last_cached_block"))
-        else:
-            # postgresql
-            self.db_pool = await asyncpg.create_pool(dsn=self.db, min_size=1, max_size=20)
-            async with self.db_pool.acquire() as conn:
-                await conn.execute("""CREATE TABLE IF NOT EXISTS 
-                                          connector_utxo (outpoint BYTEA,
-                                                          pointer BIGINT,
-                                                          address BYTEA,
-                                                          amount  BIGINT,
-                                                          PRIMARY KEY(outpoint));
-                                   """)
+        self.db_pool = await asyncpg.create_pool(dsn=self.db, min_size=1, max_size=20)
+        async with self.db_pool.acquire() as conn:
+            await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                      connector_utxo (outpoint BYTEA,
+                                                      pointer BIGINT,
+                                                      address BYTEA,
+                                                      amount  BIGINT,
+                                                      PRIMARY KEY(outpoint));
+                               """)
 
-                await conn.execute("""CREATE TABLE IF NOT EXISTS 
-                                          connector_p2pk_map (address BYTEA,
-                                                              script BYTEA,
-                                                              PRIMARY KEY (address));                                                      
-                                   """)
+            await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                      connector_p2pk_map (address BYTEA,
+                                                          script BYTEA,
+                                                          PRIMARY KEY (address));                                                      
+                               """)
 
-                await conn.execute("""CREATE TABLE IF NOT EXISTS 
-                                          connector_unconfirmed_utxo (outpoint BYTEA,
-                                                                      out_tx_id BYTEA,
+            await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                      connector_unconfirmed_utxo (outpoint BYTEA,
+                                                                  out_tx_id BYTEA,
+                                                                  address BYTEA,
+                                                                  amount  BIGINT,
+                                                                  PRIMARY KEY (outpoint));                                                      
+                               """)
+            await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                      connector_unconfirmed_p2pk_map (tx_id BYTEA,
                                                                       address BYTEA,
-                                                                      amount  BIGINT,
-                                                                      PRIMARY KEY (outpoint));                                                      
-                                   """)
-                await conn.execute("""CREATE TABLE IF NOT EXISTS 
-                                          connector_unconfirmed_p2pk_map (tx_id BYTEA,
-                                                                          address BYTEA,
-                                                                          script BYTEA,
-                                                                          PRIMARY KEY (tx_id));                                                      
-                                   """)
-                await conn.execute("""CREATE TABLE IF NOT EXISTS 
-                                          connector_unconfirmed_stxo (outpoint BYTEA, 
-                                                                      sequence  INT,
-                                                                      out_tx_id BYTEA,
-                                                                      tx_id BYTEA,
-                                                                      input_index INT,
-                                                                      address BYTEA,
-                                                                      PRIMARY KEY(outpoint, sequence));                                                      
-                                   """)
+                                                                      script BYTEA,
+                                                                      PRIMARY KEY (tx_id));                                                      
+                               """)
+            await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                      connector_unconfirmed_stxo (outpoint BYTEA, 
+                                                                  sequence  INT,
+                                                                  out_tx_id BYTEA,
+                                                                  tx_id BYTEA,
+                                                                  input_index INT,
+                                                                  address BYTEA,
+                                                                  PRIMARY KEY(outpoint, sequence));                                                      
+                               """)
 
-                await conn.execute("""CREATE TABLE IF NOT EXISTS 
-                                          connector_block_state_checkpoint (height  INT,
-                                                                            data BYTEA,
-                                                                            PRIMARY KEY (height));                                                      
-                                   """)
+            await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                      connector_block_state_checkpoint (height  INT,
+                                                                        data BYTEA,
+                                                                        PRIMARY KEY (height));                                                      
+                               """)
 
-                await conn.execute("""CREATE TABLE IF NOT EXISTS 
-                                          connector_utxo_state (name VARCHAR,
-                                                                value BIGINT,
-                                                                PRIMARY KEY(name));
-                                   """)
+            await conn.execute("""CREATE TABLE IF NOT EXISTS 
+                                      connector_utxo_state (name VARCHAR,
+                                                            value BIGINT,
+                                                            PRIMARY KEY(name));
+                               """)
 
-                await conn.execute("""CREATE INDEX IF NOT EXISTS uutxo_out_tx_id
-                                      ON connector_unconfirmed_utxo USING BTREE (out_tx_id);
-                                   """)
-                await conn.execute("""CREATE INDEX IF NOT EXISTS sutxo_out_tx_id
-                                      ON connector_unconfirmed_stxo USING BTREE (out_tx_id);
-                                   """)
-                await conn.execute("""CREATE INDEX IF NOT EXISTS sutxo_tx_id
-                                      ON connector_unconfirmed_stxo USING BTREE (tx_id);
-                                   """)
-                lb = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_block';")
-                lc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
-                if lb is None:
-                    lb = -1
-                    lc = 0
-                    await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_block', -1);")
-                    await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_cached_block', 0);")
+            await conn.execute("""CREATE INDEX IF NOT EXISTS uutxo_out_tx_id
+                                  ON connector_unconfirmed_utxo USING BTREE (out_tx_id);
+                               """)
+            await conn.execute("""CREATE INDEX IF NOT EXISTS sutxo_out_tx_id
+                                  ON connector_unconfirmed_stxo USING BTREE (out_tx_id);
+                               """)
+            await conn.execute("""CREATE INDEX IF NOT EXISTS sutxo_tx_id
+                                  ON connector_unconfirmed_stxo USING BTREE (tx_id);
+                               """)
+            lb = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_block';")
+            lc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
+            bc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
+            if lb is None:
+                lb = -1
+                lc = 0
+                bc = 0
+                await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_block', -1);")
+                await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('last_cached_block', 0);")
+                await conn.execute("INSERT INTO connector_utxo_state (name, value) VALUES ('bootstrap_completed', 0);")
 
-                self.mempool_tx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "
-                                                            "FROM connector_unconfirmed_utxo;")
-
+            self.mempool_tx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "
+                                                        "FROM connector_unconfirmed_utxo;")
+        self.bootstrap_completed = bool(bc)
         self.last_block_height = lb
         self.last_block_utxo_cached_height = lc
         if self.app_block_height_on_start:
@@ -476,6 +463,7 @@ class Connector:
     async def get_next_block(self):
         if self.active and self.active_block.done() and self.get_next_block_mutex:
             try:
+                # check synchronization state
                 if self.node_last_block <= self.last_block_height + self.backlog:
                     d = await self.rpc.getblockcount()
                     if d == self.node_last_block:
@@ -485,60 +473,62 @@ class Connector:
                         return
                     else:
                         self.node_last_block = d
-
                 self.synchronized = False
                 d = self.node_last_block - self.last_block_height
 
-                if d > self.deep_sync_limit:
-                    if not self.deep_synchronization:
-                        self.log.info("Deep synchronization mode")
-                else:
-                    if self.deep_synchronization:
-                        self.log.info("Switch from deep synchronization mode")
-                        if self.utxo_data:
-                            await self.uutxo.flush_mempool()
-                        if self.flush_app_caches_handler:
-                            await self.flush_app_caches_handler(self.last_block_height)
-                        # clear preload caches
-                        if self.utxo_data and len(self.sync_utxo.cache):
-                            self.log.info("Flush utxo cache ...")
-                            while self.app_last_block < self.last_block_height:
-                                self.log.debug("Waiting app ... Last block %s; "
-                                               "App last block %s;" % (self.last_block_height, self.app_last_block))
-                                await asyncio.sleep(5)
 
-                            self.log.info("Last block %s App last block %s" % (self.last_block_height,
-                                                                               self.app_last_block))
-                            self.log.debug("checkpoints: %s " % str(self.sync_utxo.checkpoints))
-                            self.sync_utxo.checkpoints =  deque([self.last_block_height])
+                if not self.bootstrap_completed:
+                    if d <= self.deep_sync_limit:
+                        if self.deep_synchronization:
+                            self.log.info("Switch from deep synchronization mode")
+                            if self.utxo_data:
+                                await self.uutxo.flush_mempool()
+                            if self.flush_app_caches_handler:
+                                await self.flush_app_caches_handler(self.last_block_height)
+                            # clear preload caches
+                            if self.utxo_data and len(self.sync_utxo.cache):
+                                self.log.info("Flush utxo cache ...")
+                                while self.app_last_block < self.last_block_height:
+                                    self.log.debug("Waiting app ... Last block %s; "
+                                                   "App last block %s;" % (self.last_block_height, self.app_last_block))
+                                    await asyncio.sleep(5)
 
-                            self.sync_utxo.size_limit = 0
-                            while  self.sync_utxo.save_process or self.sync_utxo.cache or self.sync_utxo.pending_saved:
-                                self.log.info("wait for utxo cache flush [%s/%s]..." % (len(self.sync_utxo.cache),
-                                                                                        len(self.sync_utxo.pending_saved)))
+                                self.log.info("Last block %s App last block %s" % (self.last_block_height,
+                                                                                   self.app_last_block))
                                 self.log.debug("checkpoints: %s " % str(self.sync_utxo.checkpoints))
-                                if not self.sync_utxo.save_process:
-                                    self.sync_utxo.create_checkpoint(self.last_block_height, self.app_last_block)
-                                await self.sync_utxo.commit()
+                                self.sync_utxo.checkpoints =  deque([self.last_block_height])
 
-                                await asyncio.sleep(10)
+                                self.sync_utxo.size_limit = 0
+                                while  self.sync_utxo.save_process or self.sync_utxo.cache or self.sync_utxo.pending_saved:
+                                    self.log.info("wait for utxo cache flush [%s/%s]..." % (len(self.sync_utxo.cache),
+                                                                                            len(self.sync_utxo.pending_saved)))
+                                    self.log.debug("checkpoints: %s " % str(self.sync_utxo.checkpoints))
+                                    if not self.sync_utxo.save_process:
+                                        self.sync_utxo.create_checkpoint(self.last_block_height, self.app_last_block)
+                                    await self.sync_utxo.commit()
+
+                                    await asyncio.sleep(10)
 
 
-                            self.log.info("Flush utxo cache completed %s %s " % (len(self.sync_utxo.cache),
-                                                                                 len(self.sync_utxo.pending_saved),))
+                                self.log.info("Flush utxo cache completed %s %s " % (len(self.sync_utxo.cache),
+                                                                                     len(self.sync_utxo.pending_saved),))
 
-                        if self.synchronization_completed_handler:
-                            try:
-                                [self.block_loader.worker[i].terminate() for i in self.block_loader.worker]
-                            except:
-                                pass
-                            await self.synchronization_completed_handler()
-                        self.deep_synchronization = False
-                        self.deep_sync_limit = self.node_last_block
-                        self.total_received_tx = 0
-                        self.total_received_tx_time = 0
+                            if self.synchronization_completed_handler:
+                                try:
+                                    [self.block_loader.worker[i].terminate() for i in self.block_loader.worker]
+                                except:
+                                    pass
+                                await self.synchronization_completed_handler()
+                            async with self.db_pool.acquire() as conn:
+                                await conn.execute("UPDATE connector_utxo_state SET value=1 "
+                                                   "WHERE name = 'bootstrap_completed';")
+                            self.bootstrap_completed = True
+                            self.deep_synchronization = False
+                            self.deep_sync_limit = self.node_last_block
+                            self.total_received_tx = 0
+                            self.total_received_tx_time = 0
 
-                block = None
+
                 if self.deep_synchronization:
                     raw_block = self.block_preload.pop(self.last_block_height + 1)
                     if raw_block:
@@ -546,10 +536,9 @@ class Connector:
                         block = loads(raw_block)
                         self.blocks_decode_time += time.time() - q
                     else:
-                        self.loop.create_task(self.retry())
+                        self.loop.create_task(self.retry_get_next_block())
                         return
-
-                if not block:
+                else:
                     h = await self.rpc.getblockhash(self.last_block_height + 1)
                     block = await self._get_block_by_hash(h)
                     block["checkpoint"] = self.last_block_height + 1
@@ -563,7 +552,7 @@ class Connector:
                 self.get_next_block_mutex = False
 
 
-    async def retry(self):
+    async def retry_get_next_block(self):
         await asyncio.sleep(1)
         self.get_next_block_mutex = True
         self.loop.create_task(self.get_next_block())
@@ -592,11 +581,12 @@ class Connector:
 
     async def _new_block(self, block):
         if not self.active: return
-        tq = time.time()
         if self.deep_synchronization:  block["height"] = self.last_block_height + 1
         if self.last_block_height >= block["height"]:  return
         if not self.active_block.done():  return
+
         try:
+            tq = time.time()
             self.active_block = asyncio.Future()
 
             if self.deep_synchronization:
@@ -612,10 +602,6 @@ class Connector:
                 if self.block_headers_cache.get(block["hash"]) is not None:
                     return
 
-            if not self.deep_synchronization:
-                mount_point_exist = await self.verify_block_position(block)
-                if not mount_point_exist:
-                    return
 
             if self.deep_synchronization:
                 await self._block_as_transactions_batch(block)
@@ -636,6 +622,9 @@ class Connector:
                                             self.loop.create_task(self.sync_utxo.commit())
 
             else:
+                mount_point_exist = await self.verify_block_position(block)
+                if not mount_point_exist: return
+
                 # call before block handler
                 if self.before_block_handler:
                     await self.before_block_handler(block)
@@ -643,24 +632,27 @@ class Connector:
                 await self.fetch_block_transactions(block)
 
                 if self.utxo_data:
-                    if self.db_type == "postgresql":
-                        async with self.db_pool.acquire() as conn:
-                            async with conn.transaction():
-                                data = await  self.uutxo.apply_block_changes([s2rh(h) for h in block["tx"]],
-                                                                             block["height"], conn)
-                                block["mempoolInvalid"] = {"tx": data["invalid_txs"],
-                                                           "inputs": data["dbs_stxo"],
-                                                           "outputs": data["dbs_uutxo"]}
-                                if self.block_handler:
-                                    await self.block_handler(block, conn)
-                                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-                                                   "WHERE name = 'last_block';", block["height"])
-                                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-                                                   "WHERE name = 'last_cached_block';", block["height"])
+                    async with self.db_pool.acquire() as conn:
+                        async with conn.transaction():
+                            data = await  self.uutxo.apply_block_changes([s2rh(h) for h in block["tx"]],
+                                                                         block["height"], conn)
+                            block["mempoolInvalid"] = {"tx": data["invalid_txs"],
+                                                       "inputs": data["dbs_stxo"],
+                                                       "outputs": data["dbs_uutxo"]}
+                            if self.option_block_filters:
+                                block["tx_filters"] = data["tx_filters"]
+                            if self.block_handler:
+                                await self.block_handler(block, conn)
+                            await conn.execute("UPDATE connector_utxo_state SET value = $1 "
+                                               "WHERE name = 'last_block';", block["height"])
+                            await conn.execute("UPDATE connector_utxo_state SET value = $1 "
+                                               "WHERE name = 'last_cached_block';", block["height"])
 
 
                 elif self.block_handler:
                     await self.block_handler(block, None)
+
+
             self.block_headers_cache.set(block["hash"], block["height"])
             self.last_block_height = block["height"]
             self.app_last_block = block["height"]
@@ -673,6 +665,7 @@ class Connector:
                         await self.after_block_handler(block)
                     except:
                         pass
+
             if not self.deep_synchronization:
                 if self.mempool_tx:
                     self.mempool_tx_count -= len(block["tx"]) + len(block["mempoolInvalid"]["tx"])
