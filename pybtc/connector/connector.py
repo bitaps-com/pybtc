@@ -207,6 +207,7 @@ class Connector:
             else:
                 d = self.node_last_block - self.last_block_height
                 self.log.info("%s blocks before synchronization" % d)
+
                 if d > self.deep_sync_limit and not self.bootstrap_completed:
                     self.log.info("Deep synchronization mode")
                     self.deep_synchronization = True
@@ -303,7 +304,7 @@ class Connector:
                                """)
             lb = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_block';")
             lc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
-            bc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
+            bc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='bootstrap_completed';")
             if lb is None:
                 lb = -1
                 lc = 0
