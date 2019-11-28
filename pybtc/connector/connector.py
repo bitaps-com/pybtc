@@ -208,7 +208,7 @@ class Connector:
                 d = self.node_last_block - self.last_block_height
                 self.log.info("%s blocks before synchronization" % d)
 
-                if d > self.deep_sync_limit and not self.bootstrap_completed:
+                if not self.bootstrap_completed:
                     self.log.info("Deep synchronization mode")
                     self.deep_synchronization = True
             break
