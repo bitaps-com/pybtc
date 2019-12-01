@@ -649,6 +649,7 @@ class Connector:
                                                        "outputs": data["dbs_uutxo"]}
                             if self.option_block_filters:
                                 block["tx_filters"] = data["tx_filters"]
+                            block["stxo"] = data["stxo"]
                             if self.block_handler:
                                 await self.block_handler(block, conn)
                             await conn.execute("UPDATE connector_utxo_state SET value = $1 "
