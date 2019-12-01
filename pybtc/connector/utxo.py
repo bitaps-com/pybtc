@@ -481,8 +481,10 @@ class UUTXO():
             stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"], r["a"]))
             outpoints.add(r["outpoint"])
             if self.block_filters:
-                tx_filters[txs.index(r["tx_id"])] = r["a"]
-
+                try:
+                    tx_filters[txs.index(r["tx_id"])].append(r["a"])
+                except:
+                    tx_filters[txs.index(r["tx_id"])] = [r["a"]]
         if outpoints:
             rows = await conn.fetch("DELETE FROM connector_utxo WHERE outpoint = ANY($1) "
                                     "RETURNING outpoint, pointer, address, amount;", outpoints)
