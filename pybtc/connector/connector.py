@@ -36,6 +36,7 @@ class Connector:
                  tx_handler=None, orphan_handler=None,
                  before_block_handler=None, block_handler=None, after_block_handler=None,
                  block_batch_handler=None,
+                 watchdog_handler=None,
                  flush_app_caches_handler=None,
                  synchronization_completed_handler=None,
                  block_timeout=30,
@@ -68,6 +69,7 @@ class Connector:
         self.rpc_batch_limit = rpc_batch_limit
         self.zmq_url = node_zerromq_url
         self.orphan_handler = orphan_handler
+        self.watchdog_handler = watchdog_handler
         self.block_timeout = block_timeout
         self.tx_handler = tx_handler
         self.skip_opreturn = skip_opreturn
@@ -451,6 +453,12 @@ class Connector:
                                               round(time.time() - t, 2))
                                 last_maintenance = time.time()
 
+                    except:
+                        pass
+
+                    try:
+                        if self.watchdog_handler:
+                            self.watchdog_handler()
                     except:
                         pass
 
