@@ -1046,6 +1046,8 @@ class Connector:
             raw_tx = await self.rpc.getrawtransaction(tx_hash)
             tx = Transaction(raw_tx, format="raw")
             self.new_tx[tx["txId"]] = (tx, int(time.time()))
+            if self.new_tx_handler is None or self.new_tx_handler.done():
+                self.new_tx_handler = self.loop.create_task(self.handle_new_tx())
         except Exception as err:
             self.log.error("get transaction failed: %s" % str(err))
 
