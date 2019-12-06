@@ -1108,6 +1108,7 @@ class Connector:
             if block_tx:
                 if not tx["coinbase"]:
                     await self.wait_block_dependences(tx)
+                    print(21)
             else:
                 if self.unconfirmed_tx_processing.done():
                     self.unconfirmed_tx_processing = asyncio.Future()
