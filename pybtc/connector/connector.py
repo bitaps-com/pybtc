@@ -1140,7 +1140,7 @@ class Connector:
                             tx["vIn"][i]["double_spent"] = self.uutxo.loaded_ustxo[tx["vIn"][i]["outpoint"]]
                             tx["double_spent"] = True
                         except:
-                            pass
+                            print(traceback.format_exc())
                 print(3)
                 for i in tx["vOut"]:
                     try:
