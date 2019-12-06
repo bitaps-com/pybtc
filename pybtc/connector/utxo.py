@@ -322,6 +322,7 @@ class UUTXO():
         #
         # load missed utxo from db
         #
+        print("load_utxo_data")
         while True:
             if not self.load_data_future.done():
                 await self.load_data_future
