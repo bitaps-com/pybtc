@@ -1202,9 +1202,9 @@ class Connector:
                 self.tx_orphan_buffer[rh2s(err.args[0][:32])].append(tx)
             except:
                 self.tx_orphan_buffer[rh2s(err.args[0][:32])] = [tx]
-            self.log.warning("tx orphaned %s" % tx_hash)
+            # self.log.warning("tx orphaned %s" % tx_hash)
             self.loop.create_task(self._get_transaction(rh2s(err.args[0][:32])))
-            self.log.warning("requested %s" % rh2s(err.args[0][:32]))
+            # self.log.warning("requested %s" % rh2s(err.args[0][:32]))
             # clear orphaned transactions buffer over limit
             while len(self.tx_orphan_buffer) > self.tx_orphan_buffer_limit:
                 key, value = self.tx_orphan_buffer.pop()

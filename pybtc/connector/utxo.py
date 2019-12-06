@@ -338,6 +338,7 @@ class UUTXO():
                                         "       amount "
                                         "FROM connector_utxo "
                                         "WHERE outpoint = ANY($1);", load_utxo)
+                print(load_utxo, rows)
             for row in rows:
                 self.loaded_utxo[row["outpoint"]] = (row["pointer"],
                                                      row["amount"],
@@ -352,6 +353,7 @@ class UUTXO():
                                             "       amount "
                                             "FROM connector_unconfirmed_utxo "
                                             "WHERE outpoint = ANY($1);", load_utxo)
+                    print(load_utxo, rows)
             for row in rows:
                 self.loaded_utxo[row["outpoint"]] = (None,
                                                      row["amount"],
