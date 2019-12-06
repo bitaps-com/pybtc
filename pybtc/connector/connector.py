@@ -1129,6 +1129,7 @@ class Connector:
                     await self.uutxo.load_utxo_data()
                     print(23)
                     for i in tx["vIn"]:
+                        print(24)
                         tx["vIn"][i]["coin"] = self.uutxo.loaded_utxo[tx["vIn"][i]["outpoint"]]
                         commit_ustxo_buffer.add((tx["vIn"][i]["outpoint"],
                                                  0,
