@@ -332,6 +332,11 @@ class UUTXO():
             self.load_data_future = asyncio.Future()
             load_utxo = set(self.load_buffer)
             load_stxo = set(self.load_buffer)
+            load_utxo.add(b'0x\x93>kc;\xb3\xd5tui<\xc7s\x02\n\xdf1\xdc\xf7O\xd5W36\x1bA\xa7\\K\x98\x02')
+            load_utxo.add(b'0x\x93>kc;\xb3\xd5tui<\xc7s\x02\n\xdf1\xdc\xf7O\xd5W36\x1bA\xa7\\K\x98\x03')
+            load_utxo.add(b'0x\x93>kc;\xb3\xd5tui<\xc7s\x02\n\xdf1\xdc\xf7O\xd5W36\x1bA\xa7\\K\x98\x04')
+            load_utxo.add(b'0x\x93>kc;\xb3\xd5tui<\xc7s\x02\n\xdf1\xdc\xf7O\xd5W36\x1bA\xa7\\K\x98\x05')
+            load_utxo.add(b'0x\x93>kc;\xb3\xd5tui<\xc7s\x02\n\xdf1\xdc\xf7O\xd5W36\x1bA\xa7\\K\x98\x06')
             async with self.db.acquire() as conn:
                 rows = await conn.fetch("SELECT outpoint, "
                                         "       pointer,"
