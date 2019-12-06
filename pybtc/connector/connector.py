@@ -1094,23 +1094,24 @@ class Connector:
 
 
     async def _new_transaction(self, tx, timestamp, block_tx = False):
-        print(">>", rh2s(tx["txId"]))
+        # print(">>", rh2s(tx["txId"]))
         tx_hash = rh2s(tx["txId"])
         if tx_hash in self.tx_in_process:
             if not block_tx:
                 self.new_tx_tasks -= 1
             return
-        print(1)
+        # print(1)
         if self.tx_cache.has_key(tx_hash):
             self.new_tx_tasks -= 1
             return
-        print(2)
+
+        conn = None
         try:
             self.tx_in_process.add(tx_hash)
             if block_tx:
                 if not tx["coinbase"]:
                     await self.wait_block_dependences(tx)
-                    print(21)
+
             else:
                 if self.unconfirmed_tx_processing.done():
                     self.unconfirmed_tx_processing = asyncio.Future()
@@ -1127,11 +1128,10 @@ class Connector:
                         tx["vIn"][i]["outpoint"] = b"".join((tx["vIn"][i]["txId"], int_to_bytes(tx["vIn"][i]["vOut"])))
                         self.uutxo.load_buffer.append(tx["vIn"][i]["outpoint"])
 
-                    print(22)
                     await self.uutxo.load_utxo_data()
-                    print(23)
+
                     for i in tx["vIn"]:
-                        print(24)
+                        # print(24)
                         tx["vIn"][i]["coin"] = self.uutxo.loaded_utxo[tx["vIn"][i]["outpoint"]]
                         commit_ustxo_buffer.add((tx["vIn"][i]["outpoint"],
                                                  0,
@@ -1144,7 +1144,7 @@ class Connector:
                             tx["double_spent"] = True
                         except:
                             print(traceback.format_exc())
-                print(3)
+
                 for i in tx["vOut"]:
                     try:
                         if tx["vOut"][i]["nType"] == 2:
@@ -1161,7 +1161,7 @@ class Connector:
                                              tx["txId"],
                                              address,
                                              tx["vOut"][i]["value"]))
-                print(4)
+
                 async with self.db_pool.acquire() as conn:
                     async with conn.transaction():
                         await self.uutxo.commit_tx(commit_uutxo_buffer,
@@ -1169,18 +1169,16 @@ class Connector:
                                                    commit_up2pk_map,
                                                    conn)
 
-                        if self.tx_handler:
-                            await self.tx_handler(tx, timestamp, conn)
-            else:
-                if self.tx_handler:
-                    await self.tx_handler(tx, timestamp, None)
+            if self.tx_handler:
+                await self.tx_handler(tx, timestamp, conn)
 
             self.tx_cache[tx_hash] = True
-            print(5)
+            self.mempool_tx_count += 1
+
             if block_tx:
                 self.await_tx.remove(tx_hash)
                 self.await_tx_future[tx["txId"]].set_result(True)
-                # self.log.debug("tx %s; left %s" % (tx_hash, len(self.await_tx)))
+                self.log.warning("tx %s; left %s" % (tx_hash, len(self.await_tx)))
 
 
             # in case recently added transaction
@@ -1191,8 +1189,8 @@ class Connector:
                 self.tx_orphan_resolved += 1
                 for row in rows:
                     self.new_tx[tx["txId"]] = (row, int(time.time()))
-            self.mempool_tx_count += 1
-            print(6)
+
+
         except asyncio.CancelledError:
             pass
 
@@ -1207,7 +1205,7 @@ class Connector:
             # self.log.warning("requested %s" % rh2s(err.args[0][:32]))
             # clear orphaned transactions buffer over limit
             while len(self.tx_orphan_buffer) > self.tx_orphan_buffer_limit:
-                key, value = self.tx_orphan_buffer.pop()
+                self.tx_orphan_buffer.pop()
 
         except Exception as err:
             try:

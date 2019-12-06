@@ -322,7 +322,7 @@ class UUTXO():
         #
         # load missed utxo from db
         #
-        print("load_utxo_data")
+        # print("load_utxo_data")
         while True:
             if not self.load_data_future.done():
                 await self.load_data_future
@@ -332,11 +332,8 @@ class UUTXO():
             self.load_data_future = asyncio.Future()
             load_utxo = set(self.load_buffer)
             load_stxo = set(self.load_buffer)
-            load_utxo.add(b'0x\x93>kc;\xb3\xd5tui<\xc7s\x02\n\xdf1\xdc\xf7O\xd5W36\x1bA\xa7\\K\x98\x02')
-            load_utxo.add(b'0x\x93>kc;\xb3\xd5tui<\xc7s\x02\n\xdf1\xdc\xf7O\xd5W36\x1bA\xa7\\K\x98\x03')
-            load_utxo.add(b'0x\x93>kc;\xb3\xd5tui<\xc7s\x02\n\xdf1\xdc\xf7O\xd5W36\x1bA\xa7\\K\x98\x04')
-            load_utxo.add(b'0x\x93>kc;\xb3\xd5tui<\xc7s\x02\n\xdf1\xdc\xf7O\xd5W36\x1bA\xa7\\K\x98\x05')
-            load_utxo.add(b'0x\x93>kc;\xb3\xd5tui<\xc7s\x02\n\xdf1\xdc\xf7O\xd5W36\x1bA\xa7\\K\x98\x06')
+            self.load_buffer = set()
+
             async with self.db.acquire() as conn:
                 rows = await conn.fetch("SELECT outpoint, "
                                         "       pointer,"
@@ -344,7 +341,7 @@ class UUTXO():
                                         "       amount "
                                         "FROM connector_utxo "
                                         "WHERE outpoint = ANY($1);", load_utxo)
-                print(load_utxo, rows)
+
             for row in rows:
                 self.loaded_utxo[row["outpoint"]] = (row["pointer"],
                                                      row["amount"],
@@ -359,22 +356,21 @@ class UUTXO():
                                             "       amount "
                                             "FROM connector_unconfirmed_utxo "
                                             "WHERE outpoint = ANY($1);", load_utxo)
-                    print(load_utxo, rows)
-            for row in rows:
-                self.loaded_utxo[row["outpoint"]] = (None,
-                                                     row["amount"],
-                                                     row["address"])
-                if row["outpoint"] in self.load_buffer:
-                    self.load_buffer.remove(row["outpoint"])
 
-            print(">>>")
+                for row in rows:
+                    self.loaded_utxo[row["outpoint"]] = (None,
+                                                         row["amount"],
+                                                         row["address"])
+                    if row["outpoint"] in self.load_buffer:
+                        self.load_buffer.remove(row["outpoint"])
+
+
             async with self.db.acquire() as conn:
                 rows = await conn.fetch("SELECT outpoint, "
                                         "       sequence,"
                                         "       tx_id "
                                         "FROM connector_unconfirmed_stxo "
                                         "WHERE outpoint = ANY($1);", load_stxo)
-                print(load_stxo, rows)
 
             for row in rows:
                 try:
@@ -384,8 +380,8 @@ class UUTXO():
                     self.loaded_ustxo[row["outpoint"]] = [(row["tx_id"],
                                                           row["sequence"])]
 
-        except:
-            raise
+        except Exception as err:
+            self.log.error("load_utxo_data failed %s" % err)
         finally:
             self.load_data_future.set_result(True)
 
