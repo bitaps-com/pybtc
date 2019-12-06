@@ -1098,11 +1098,11 @@ class Connector:
             if not block_tx:
                 self.new_tx_tasks -= 1
             return
-
+        print(1)
         if self.tx_cache.has_key(tx_hash):
             self.new_tx_tasks -= 1
             return
-
+        print(2)
         try:
             self.tx_in_process.add(tx_hash)
             if block_tx:
@@ -1139,7 +1139,7 @@ class Connector:
                             tx["double_spent"] = True
                         except:
                             pass
-
+                print(3)
                 for i in tx["vOut"]:
                     try:
                         if tx["vOut"][i]["nType"] == 2:
@@ -1156,6 +1156,7 @@ class Connector:
                                              tx["txId"],
                                              address,
                                              tx["vOut"][i]["value"]))
+                print(4)
                 async with self.db_pool.acquire() as conn:
                     async with conn.transaction():
                         await self.uutxo.commit_tx(commit_uutxo_buffer,
@@ -1170,7 +1171,7 @@ class Connector:
                     await self.tx_handler(tx, timestamp, None)
 
             self.tx_cache[tx_hash] = True
-
+            print(5)
             if block_tx:
                 self.await_tx.remove(tx_hash)
                 self.await_tx_future[tx["txId"]].set_result(True)
@@ -1186,7 +1187,7 @@ class Connector:
                 for row in rows:
                     self.new_tx[tx["txId"]] = (row, int(time.time()))
             self.mempool_tx_count += 1
-
+            print(6)
         except asyncio.CancelledError:
             pass
 
