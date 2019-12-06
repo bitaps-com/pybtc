@@ -1092,7 +1092,7 @@ class Connector:
 
 
     async def _new_transaction(self, tx, timestamp, block_tx = False):
-        print(">>", tx["txId"])
+        print(">>", rh2s(tx["txId"]))
         tx_hash = rh2s(tx["txId"])
         if tx_hash in self.tx_in_process:
             if not block_tx:
