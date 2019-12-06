@@ -369,6 +369,7 @@ class UUTXO():
                                         "       tx_id "
                                         "FROM connector_unconfirmed_stxo "
                                         "WHERE outpoint = ANY($1);", load_stxo)
+                print(load_stxo, rows)
 
             for row in rows:
                 try:
