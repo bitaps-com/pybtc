@@ -332,7 +332,7 @@ class UUTXO():
             self.load_data_future = asyncio.Future()
             load_utxo = set(self.load_buffer)
             load_stxo = set(self.load_buffer)
-            self.load_buffer = set()
+            self.load_buffer = deque()
 
             async with self.db.acquire() as conn:
                 rows = await conn.fetch("SELECT outpoint, "
