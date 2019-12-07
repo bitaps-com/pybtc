@@ -346,7 +346,6 @@ class UUTXO():
                 self.loaded_utxo[row["outpoint"]] = (row["pointer"],
                                                      row["amount"],
                                                      row["address"])
-                self.load_buffer.remove(row["outpoint"])
                 load_utxo.remove(row["outpoint"])
 
             if load_utxo:
@@ -361,8 +360,6 @@ class UUTXO():
                     self.loaded_utxo[row["outpoint"]] = (None,
                                                          row["amount"],
                                                          row["address"])
-                    if row["outpoint"] in self.load_buffer:
-                        self.load_buffer.remove(row["outpoint"])
 
 
             async with self.db.acquire() as conn:
