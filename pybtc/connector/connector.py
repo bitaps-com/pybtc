@@ -1168,8 +1168,8 @@ class Connector:
                                                    commit_ustxo_buffer,
                                                    commit_up2pk_map,
                                                    conn)
-                    if self.tx_handler:
-                        await self.tx_handler(tx, timestamp, conn)
+                        if self.tx_handler:
+                            await self.tx_handler(tx, timestamp, conn)
             else:
                 if self.tx_handler:
                     await self.tx_handler(tx, timestamp, None)
