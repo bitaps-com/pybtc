@@ -114,10 +114,5 @@ def restore_secret(shares):
             raise Exception("Invalid shares")
 
     for i in range(share_length):
-        points = []
-        for z in  shares:
-            point = (z, shares[z][i])
-            points.append(point)
-        s = _interpolation(points)
-        secret += bytes([s])
+        secret += bytes([_interpolation([(z, shares[z][i]) for z in  shares])])
     return secret

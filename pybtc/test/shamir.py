@@ -4,7 +4,9 @@ parentPath = os.path.abspath("..")
 if parentPath not in sys.path:
     sys.path.insert(0, parentPath)
 from pybtc import shamir
+import random
 
+from pybtc import *
 
 class IntegerFunctionsTests(unittest.TestCase):
     @classmethod
@@ -40,9 +42,38 @@ class IntegerFunctionsTests(unittest.TestCase):
         s = shamir.restore_secret(shares)
         self.assertEqual(s, secret)
 
-        for i in range(2,10):
+        for i in range(2,30):
             shares = shamir.split_secret(i, i, secret)
             s = shamir.restore_secret(shares)
             self.assertEqual(s, secret)
+
+        for i in range(2, 30):
+            k = random.randint(i, i + 10)
+            shares = shamir.split_secret(i, k, secret)
+            b = dict()
+            while len(b) < i:
+                q= random.randint(1, k)
+                b[q] = shares[q]
+            s = shamir.restore_secret(b)
+            self.assertEqual(s, secret)
+        print("Shamir secret sharing OK")
+
+    def test_mnemonic_secrets(self):
+        m = entropy_to_mnemonic(generate_entropy())
+        k = split_mnemonic(m, 3, 5)
+        self.assertEqual(m, combine_mnemonic(k))
+
+        for i in range(2, 30):
+            m = entropy_to_mnemonic(generate_entropy())
+            k = random.randint(i, i + 10)
+            shares = split_mnemonic(m, i, k)
+            b = dict()
+            while len(b) < i:
+                q = random.randint(1, k)
+                b[q] = shares[q]
+            self.assertEqual(m, combine_mnemonic(b))
+        print("Mnenmonic + Shamir secret sharing OK")
+
+
 
 
