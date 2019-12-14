@@ -3,15 +3,12 @@ import random
 def _precompute_gf256_exp_log():
     exp = [0 for i in range(255)]
     log = [0 for i in range(256)]
-
     poly = 1
     for i in range(255):
         exp[i] = poly
         log[poly] = i
-
         # Multiply poly by the polynomial x + 1.
         poly = (poly << 1) ^ poly
-
         # Reduce poly by x^8 + x^4 + x^3 + x + 1.
         if poly & 0x100:
             poly ^= 0x11B
@@ -31,9 +28,10 @@ def _gf256_pow(a, b):
         return 1
     if a == 0:
         return 0
+    c = a
     for i in range(b - 1):
-        a = _gf256_mul(a,a)
-    return a
+        c = _gf256_mul(c,a)
+    return c
 
 def _gf256_add(a, b):
     return a ^ b
@@ -55,19 +53,14 @@ def _gf256_div(a, b):
     assert a == _gf256_mul(r, b)
     return r
 
-#
-# for i in range(1,256) :
-#   assert(1 == _gf256_mul(i, _gf256_inverse(i)))
-#
 
-
-def fn(x, q):
+def _fn(x, q):
     r = 0
     for i, a in enumerate(q):
         r = _gf256_add(r, _gf256_mul(a,_gf256_pow(x,i)))
     return r
 
-def interpolation(points, x=0):
+def _interpolation(points, x=0):
     k = len(points)
     if k < 2:
         raise Exception("Minimum 2 points required")
@@ -91,7 +84,12 @@ def interpolation(points, x=0):
     return p_x
 
 def split_secret(threshold, total,  secret):
-
+    if not isinstance(secret, bytes):
+        raise TypeError("Secret as byte string required")
+    if threshold > 255:
+        raise ValueError("threshold <= 255")
+    if total > 255:
+        raise ValueError("total shares <= 255")
     shares = dict()
     for i in range(total):
         shares[i+1] = b""
@@ -102,7 +100,7 @@ def split_secret(threshold, total,  secret):
             q.append(a)
 
         for x in range(total):
-            shares[x+1] += bytes([fn(x + 1, q)])
+            shares[x+1] += bytes([_fn(x + 1, q)])
 
     return shares
 
@@ -120,6 +118,6 @@ def restore_secret(shares):
         for z in  shares:
             point = (z, shares[z][i])
             points.append(point)
-        s = interpolation(points)
+        s = _interpolation(points)
         secret += bytes([s])
     return secret
