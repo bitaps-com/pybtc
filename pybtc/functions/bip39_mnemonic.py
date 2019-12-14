@@ -2,6 +2,7 @@ from pybtc.constants import *
 import time
 import hashlib
 from pybtc.functions.hash import sha256
+from pybtc.functions.shamir import split_secret, restore_secret
 from pybtc.functions.tools import int_from_bytes
 import random
 
@@ -83,7 +84,7 @@ def entropy_to_mnemonic(entropy, language='english', word_list_dir=None, word_li
 
 
 def mnemonic_to_entropy(mnemonic, language='english', word_list_dir=None,
-                        word_list=None, hex=True):
+                        word_list=None, hex=True, checksum = True):
     """
     Converting mnemonic words to entropy.
     
@@ -115,8 +116,9 @@ def mnemonic_to_entropy(mnemonic, language='english', word_list_dir=None,
     chk_sum = entropy_int & (2 ** chk_sum_bit_len - 1)
     entropy_int = entropy_int >> chk_sum_bit_len
     entropy = entropy_int.to_bytes((bit_size - chk_sum_bit_len) // 8, byteorder="big")
-    if (sha256(entropy)[0] >> (8 - chk_sum_bit_len)) != chk_sum:
-        raise ValueError("invalid mnemonic checksum")
+    if checksum:
+        if (sha256(entropy)[0] >> (8 - chk_sum_bit_len)) != chk_sum:
+            raise ValueError("invalid mnemonic checksum")
     return entropy if not hex else entropy.hex()
 
 
@@ -137,3 +139,26 @@ def mnemonic_to_seed(mnemonic, passphrase="", hex=True):
 
     seed = hashlib.pbkdf2_hmac('sha512', mnemonic.encode(), ("mnemonic"+passphrase).encode(), 2048)
     return seed if not hex else seed.hex()
+
+
+def split_mnemonic(mnemonic, threshold, total, language='english', word_list_dir=None, word_list=None):
+    entropy = mnemonic_to_entropy(mnemonic, language=language,
+                                  hex=False, word_list_dir=word_list_dir, word_list=word_list)
+    shares = split_secret(threshold, total, entropy)
+    result = dict()
+    for share in shares:
+        result[share] = entropy_to_mnemonic(shares[share], language=language,
+                                            word_list_dir=word_list_dir, word_list=word_list)
+    return result
+
+def combine_mnemonic(shares, language='english', word_list_dir=None, word_list=None):
+    s = dict()
+    for share in shares:
+        s[share] = mnemonic_to_entropy(shares[share], language=language, hex=False,
+                                       word_list_dir=word_list_dir, word_list=word_list)
+    entropy = restore_secret(s)
+    return entropy_to_mnemonic(entropy, language=language, word_list_dir=word_list_dir,
+                               word_list=word_list)
+
+
+

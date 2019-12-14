@@ -8,3 +8,4 @@ from .encode import *
 from .bip39_mnemonic import *
 from .bip32 import *
 from .filters import *
+from .shamir import split_secret, restore_secret
