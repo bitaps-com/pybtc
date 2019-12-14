@@ -141,9 +141,10 @@ def mnemonic_to_seed(mnemonic, passphrase="", hex=True):
     return seed if not hex else seed.hex()
 
 
-def split_mnemonic(mnemonic, threshold, total, language='english', word_list_dir=None, word_list=None):
-    entropy = mnemonic_to_entropy(mnemonic, language=language,
-                                  hex=False, word_list_dir=word_list_dir, word_list=word_list)
+def split_mnemonic(mnemonic, threshold, total, language='english',
+                   word_list_dir=None, word_list=None, checksum=False):
+    entropy = mnemonic_to_entropy(mnemonic, language=language, hex=False,
+                                  word_list_dir=word_list_dir, word_list=word_list, checksum=checksum)
     shares = split_secret(threshold, total, entropy)
     result = dict()
     for share in shares:
@@ -151,11 +152,11 @@ def split_mnemonic(mnemonic, threshold, total, language='english', word_list_dir
                                             word_list_dir=word_list_dir, word_list=word_list)
     return result
 
-def combine_mnemonic(shares, language='english', word_list_dir=None, word_list=None):
+def combine_mnemonic(shares, language='english', word_list_dir=None, word_list=None, checksum=False):
     s = dict()
     for share in shares:
-        s[share] = mnemonic_to_entropy(shares[share], language=language, hex=False,
-                                       word_list_dir=word_list_dir, word_list=word_list)
+        s[share] = mnemonic_to_entropy(shares[share], language=language, hex=False, word_list_dir=word_list_dir,
+                                       word_list=word_list, checksum=checksum)
     entropy = restore_secret(s)
     return entropy_to_mnemonic(entropy, language=language, word_list_dir=word_list_dir,
                                word_list=word_list)
