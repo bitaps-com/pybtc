@@ -109,6 +109,9 @@ def split_secret(threshold, total,  secret):
 def restore_secret(shares):
     secret = b""
     share_length = None
+    for share in shares:
+        if share < 1 or share > 255:
+            raise Exception("Invalid share index %s" % share)
     for share in shares.values():
         if share_length is None:
             share_length = len(share)
