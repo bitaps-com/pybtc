@@ -1,4 +1,5 @@
 import random
+import time
 
 def _precompute_gf256_exp_log():
     exp = [0 for i in range(255)]
@@ -97,7 +98,8 @@ def split_secret(threshold, total,  secret):
         q = [b]
         for i in range(threshold - 1):
             a = random.SystemRandom().randint(0, 255)
-            q.append(a)
+            i = int((time.time() % 0.0001) * 1000000) + 1
+            q.append((a * i) % 255)
 
         for x in range(total):
             shares[x+1] += bytes([_fn(x + 1, q)])
