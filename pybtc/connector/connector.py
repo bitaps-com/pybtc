@@ -118,6 +118,10 @@ class Connector:
         self.total_received_tx_stat = 0
         self.blocks_processed_count = 0
         self.rollback_counter = test_orphans
+        if test_orphans:
+            self.test_rollback = True
+        else:
+            self.test_rollback = False
         self.blocks_decode_time = 0
         self.blocks_download_time = 0
         self.blocks_processing_time = 0
