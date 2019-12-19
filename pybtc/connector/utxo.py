@@ -463,7 +463,6 @@ class UUTXO():
                 except:
                     tx_filters[txs.index(r["t"])] = [r["address"]]
 
-
         await conn.copy_records_to_table('connector_utxo',
                                          columns=["outpoint", "pointer",
                                                   "address", "amount"], records=batch)
@@ -479,9 +478,7 @@ class UUTXO():
                                 "          tx_id,"
                                 "          input_index as i,"
                                 "          address as a;", txs)
-        stxo = deque()
-        utxo = deque()
-        outpoints = set()
+        stxo, utxo, outpoints = deque(), deque(), set()
         for r in rows:
             stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"], r["a"]))
             outpoints.add(r["outpoint"])
@@ -498,13 +495,8 @@ class UUTXO():
                 if r["pointer"] >> 39 < h:
                     utxo.append((r["outpoint"], r["pointer"], r["address"], r["amount"]))
 
-
-
         #    delete dbs records
-
-        dbs_stxo = deque()
-        dbs_uutxo = deque()
-        invalid_txs = set()
+        dbs_stxo, dbs_uutxo, invalid_txs = deque(), deque(), set()
 
         if outpoints:
             rows = await conn.fetch("DELETE FROM connector_unconfirmed_stxo "
@@ -575,40 +567,45 @@ class UUTXO():
                                   "(SELECT height FROM connector_block_state_checkpoint"
                                   " ORDER BY height DESC LIMIT 1) RETURNING "
                                   "height, data;")
+        print("deleted from connector_block_state_checkpoint %s" % row["height"])
 
         data = pickle.loads(row["data"])
 
-        outpoints = deque(r[0] for r in data["uutxo"])
-        await conn.execute("DELETE FROM connector_utxo WHERE outpoint = ANY($1);", outpoints)
-        tx = set(r[0][:32] for r in data["uutxo"])
-
-
-        await conn.copy_records_to_table('connector_utxo',
-                                         columns=["outpoint", "pointer",
-                                                  "address", "amount"], records=data["utxo"])
         if data["p2pk_map"]:
             await conn.copy_records_to_table('connector_unconfirmed_p2pk_map',
                                              columns=["tx_id", "address", "script"],
                                              records=data["p2pk_map"])
+            # skip delete from connector_p2pk_map, we can't determine if connector_p2pk_map
+            # records was before recent block
 
         await conn.copy_records_to_table('connector_unconfirmed_utxo',
                                          columns=["outpoint", "out_tx_id",
                                                   "address", "amount"], records=data["uutxo"])
 
-        await conn.copy_records_to_table('connector_unconfirmed_utxo',
-                                         columns=["outpoint", "out_tx_id",
-                                                  "address", "amount"], records=data["dbs_uutxo"])
+        await conn.execute("DELETE FROM connector_utxo WHERE outpoint = ANY($1);",
+                           deque(r[0] for r in data["uutxo"]))
+
         await conn.copy_records_to_table('connector_unconfirmed_stxo',
                                          columns=["outpoint", "sequence",
                                                   "out_tx_id", "tx_id", "input_index"], records=data["stxo"])
+
+        await conn.copy_records_to_table('connector_utxo',
+                                         columns=["outpoint", "pointer",
+                                                  "address", "amount"], records=data["utxo"])
+
         await conn.copy_records_to_table('connector_unconfirmed_stxo',
                                          columns=["outpoint", "sequence",
                                                   "out_tx_id", "tx_id", "input_index"], records=data["dbs_stxo"])
+
+        await conn.copy_records_to_table('connector_unconfirmed_utxo',
+                                         columns=["outpoint", "out_tx_id",
+                                                  "address", "amount"], records=data["dbs_uutxo"])
+
         return {"height": row["height"],
                 "mempool": {"tx": data["invalid_txs"],
                             "inputs": data["dbs_uutxo"],
                             "outputs": data["dbs_stxo"]},
-                "block_tx_count": len(tx)}
+                "block_tx_count": len(set(r[0][:32] for r in data["uutxo"]))}
 
 
     async def flush_mempool(self):
