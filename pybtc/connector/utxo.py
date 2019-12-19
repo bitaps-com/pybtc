@@ -587,7 +587,8 @@ class UUTXO():
 
         await conn.copy_records_to_table('connector_unconfirmed_stxo',
                                          columns=["outpoint", "sequence",
-                                                  "out_tx_id", "tx_id", "input_index"], records=data["stxo"])
+                                                  "out_tx_id", "tx_id", "input_index", "address"],
+                                         records=data["stxo"])
 
         await conn.copy_records_to_table('connector_utxo',
                                          columns=["outpoint", "pointer",
@@ -595,7 +596,8 @@ class UUTXO():
 
         await conn.copy_records_to_table('connector_unconfirmed_stxo',
                                          columns=["outpoint", "sequence",
-                                                  "out_tx_id", "tx_id", "input_index"], records=data["dbs_stxo"])
+                                                  "out_tx_id", "tx_id", "input_index", "address"],
+                                         records=data["dbs_stxo"])
 
         await conn.copy_records_to_table('connector_unconfirmed_utxo',
                                          columns=["outpoint", "out_tx_id",
