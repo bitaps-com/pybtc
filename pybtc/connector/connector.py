@@ -55,6 +55,7 @@ class Connector:
                  block_preload_batch_size_limit = 200000000,
                  block_hashes_cache_limit= 200 * 1000000,
                  db_type=None,
+                 test_orphans=False,
                  db=None,
                  app_proc_title="Connector"):
 
@@ -88,6 +89,7 @@ class Connector:
         self.backlog = backlog
         self.mempool_tx = mempool_tx
         self.tx_orphan_buffer_limit = tx_orphan_buffer_limit
+        self.test_orphans = test_orphans
         self.db_type = db_type
         self.db = db
         self.utxo_cache_size = utxo_cache_size
@@ -115,6 +117,7 @@ class Connector:
         self.total_received_tx = 0
         self.total_received_tx_stat = 0
         self.blocks_processed_count = 0
+        self.rollback_counter = test_orphans
         self.blocks_decode_time = 0
         self.blocks_download_time = 0
         self.blocks_processing_time = 0
@@ -693,6 +696,13 @@ class Connector:
                                                             self.tx_orphan_resolved))
                 self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"],len(block["tx"])))
 
+            if self.test_orphans:
+                if not self.test_rollback:
+                    if self.rollback_counter < self.test_orphans:
+                        self.rollback_counter += 1
+                    else:
+                        self.test_rollback = True
+
         except Exception as err:
             if self.await_tx:
                 self.await_tx = set()
@@ -716,16 +726,12 @@ class Connector:
             self.active_block.set_result(True)
 
 
+
     async def verify_block_position(self, block):
         try:
-            previousblockhash = block["previousBlockHash"]
-            block["previousblockhash"] = previousblockhash
+            block["previousblockhash"] = block["previousBlockHash"]
         except:
-            try:
-                previousblockhash = block["previousblockhash"]
-                block["previousBlockHash"] = previousblockhash
-            except:
-                return
+            pass
 
         if self.block_headers_cache.len() == 0:
             if self.chain_tail_start_len and self.last_block_height:
@@ -736,32 +742,37 @@ class Connector:
             else:
                 return True
 
-        if self.block_headers_cache.get_last_key() != block["previousblockhash"]:
-            if self.orphan_handler:
-                if self.utxo_data:
-                    if self.db_type == "postgresql":
-                        async with self.db_pool.acquire() as conn:
-                            async with conn.transaction():
-                                data = await self.uutxo.rollback_block(conn)
-                                if self.mempool_tx:
-                                    self.mempool_tx_count += data["block_tx_count"] + len(data["mempool"]["tx"])
-                                await self.orphan_handler(data, conn)
-                                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-                                                   "WHERE name = 'last_block';",
-                                                   self.last_block_height - 1)
-                                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
-                                                   "WHERE name = 'last_cached_block';",
-                                                   self.last_block_height - 1)
-                            self.mempool_tx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "
-                                                                        "FROM connector_unconfirmed_utxo;")
-                            self.log.debug("Mempool transactions %s; "
-                                           "orphaned transactions: %s; "
-                                           "resolved orphans %s" % (self.mempool_tx_count,
-                                                                    len(self.tx_orphan_buffer),
-                                                                    self.tx_orphan_resolved))
+        if self.block_headers_cache.get_last_key() != block["previousblockhash"] or \
+                (self.test_orphans and self.test_rollback):
+            if self.utxo_data:
+                async with self.db_pool.acquire() as conn:
+                    async with conn.transaction():
+                        if  self.test_orphans:
+                            if self.test_rollback and self.rollback_counter:
+                                self.log.warning("Rollback last block")
+                                self.rollback_counter -= 1
+                                if  self.rollback_counter < 1:
+                                    self.test_rollback = False
+                        data = await self.uutxo.rollback_block(conn)
+                        if self.mempool_tx:
+                            self.mempool_tx_count += data["block_tx_count"] + len(data["mempool"]["tx"])
+                        if self.orphan_handler:
+                            await self.orphan_handler(data, conn)
+                        await conn.execute("UPDATE connector_utxo_state SET value = $1 "
+                                           "WHERE name = 'last_block';",
+                                           self.last_block_height - 1)
+                        await conn.execute("UPDATE connector_utxo_state SET value = $1 "
+                                           "WHERE name = 'last_cached_block';",
+                                           self.last_block_height - 1)
+                    self.mempool_tx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "
+                                                                "FROM connector_unconfirmed_utxo;")
+                    self.log.debug("Mempool transactions %s; "
+                                   "orphaned transactions: %s; "
+                                   "resolved orphans %s" % (self.mempool_tx_count,
+                                                            len(self.tx_orphan_buffer),
+                                                            self.tx_orphan_resolved))
 
-
-                else:
+            elif self.orphan_handler:
                     await self.orphan_handler(self.last_block_height, None)
             b_hash, _ = self.block_headers_cache.pop_last()
 
@@ -1094,18 +1105,16 @@ class Connector:
 
 
     async def _new_transaction(self, tx, timestamp, block_tx = False):
-        # print(">>", rh2s(tx["txId"]))
         tx_hash = rh2s(tx["txId"])
         if tx_hash in self.tx_in_process:
             if not block_tx:
                 self.new_tx_tasks -= 1
             return
-        # print(1)
         if self.tx_cache.has_key(tx_hash):
             self.new_tx_tasks -= 1
             return
 
-        conn = None
+
         try:
             self.tx_in_process.add(tx_hash)
             if block_tx:
@@ -1131,7 +1140,6 @@ class Connector:
                     await self.uutxo.load_utxo_data()
 
                     for i in tx["vIn"]:
-                        # print(24)
                         tx["vIn"][i]["coin"] = self.uutxo.loaded_utxo[tx["vIn"][i]["outpoint"]]
                         commit_ustxo_buffer.add((tx["vIn"][i]["outpoint"],
                                                  0,
@@ -1223,7 +1231,7 @@ class Connector:
 
             if block_tx:
                 self.log.critical("new transaction error %s" % err)
-                print(traceback.format_exc())
+                # print(traceback.format_exc())
                 self.await_tx = set()
                 self.block_txs_request.cancel()
                 for i in self.await_tx_future:
