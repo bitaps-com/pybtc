@@ -758,8 +758,6 @@ class Connector:
                                 if  self.rollback_counter < 1:
                                     self.test_rollback = False
                         data = await self.uutxo.rollback_block(conn)
-                        if self.mempool_tx:
-                            self.mempool_tx_count += data["block_tx_count"]
                         if self.orphan_handler:
                             await self.orphan_handler(data, conn)
                         await conn.execute("UPDATE connector_utxo_state SET value = $1 "
@@ -768,7 +766,8 @@ class Connector:
                         await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                            "WHERE name = 'last_cached_block';",
                                            self.last_block_height - 1)
-                    del self.tx_cache[data["coinbase_tx_id"]]
+                    if data["coinbase_tx_id"] in self.tx_cache:
+                        del self.tx_cache[data["coinbase_tx_id"]]
                     self.mempool_tx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "
                                                                 "FROM connector_unconfirmed_utxo;")
                     self.log.debug("Mempool transactions %s; "

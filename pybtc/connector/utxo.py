@@ -456,9 +456,7 @@ class UUTXO():
             batch.append((r["outpoint"],
                          (h << 39) + (txs.index(r["t"]) << 20) + (1 << 19) + bytes_to_int(r[32:]),
                          r["address"], r["amount"]))
-            if txs[0] != r["t"]:
-                # skip coinbase tx
-                uutxo.append((r["outpoint"], r["t"], r["address"], r["amount"]))
+            uutxo.append((r["outpoint"], r["t"], r["address"], r["amount"]))
             if self.block_filters:
                 try:
                     tx_filters[txs.index(r["t"])].append(r["address"])
@@ -596,8 +594,7 @@ class UUTXO():
                                                   "address", "amount"], records=data["utxo"])
 
         return {"height": row["height"],
-                "coinbase_tx_id": data["coinbase_tx_id"],
-                "block_tx_count": len(set(r[0][:32] for r in data["uutxo"]))}
+                "coinbase_tx_id": data["coinbase_tx_id"]}
 
 
     async def flush_mempool(self):
