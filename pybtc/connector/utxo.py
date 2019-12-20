@@ -549,16 +549,14 @@ class UUTXO():
                            "VALUES ($1, $2);", h, pickle.dumps({"utxo": utxo,
                                                                 "uutxo": uutxo,
                                                                 "stxo": stxo,
-                                                                "dbs_uutxo": dbs_uutxo,
-                                                                "dbs_stxo": dbs_stxo,
-                                                                "invalid_txs": block_invalid_txs,
                                                                 "p2pk_map": p2pk_map_backup}))
 
-        return {"dbs_uutxo": dbs_uutxo,
-                "dbs_stxo": dbs_stxo,
+        return {"invalid_uutxo": dbs_uutxo,
+                "invalid_stxo": dbs_stxo,
                 "invalid_txs": block_invalid_txs,
                 "stxo": stxo,
-                "tx_filters": tx_filters}
+                "tx_filters": tx_filters,
+                "coinbase_tx_id": txs[0]}
 
 
     async def rollback_block(self, conn):
@@ -594,19 +592,7 @@ class UUTXO():
                                          columns=["outpoint", "pointer",
                                                   "address", "amount"], records=data["utxo"])
 
-        await conn.copy_records_to_table('connector_unconfirmed_stxo',
-                                         columns=["outpoint", "sequence",
-                                                  "out_tx_id", "tx_id", "input_index", "address"],
-                                         records=data["dbs_stxo"])
-
-        await conn.copy_records_to_table('connector_unconfirmed_utxo',
-                                         columns=["outpoint", "out_tx_id",
-                                                  "address", "amount"], records=data["dbs_uutxo"])
-
         return {"height": row["height"],
-                "mempool": {"tx": data["invalid_txs"],
-                            "inputs": data["dbs_uutxo"],
-                            "outputs": data["dbs_stxo"]},
                 "block_tx_count": len(set(r[0][:32] for r in data["uutxo"]))}
 
 

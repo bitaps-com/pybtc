@@ -660,8 +660,8 @@ class Connector:
                             data = await  self.uutxo.apply_block_changes([s2rh(h) for h in block["tx"]],
                                                                          block["height"], conn)
                             block["mempoolInvalid"] = {"tx": data["invalid_txs"],
-                                                       "inputs": data["dbs_stxo"],
-                                                       "outputs": data["dbs_uutxo"]}
+                                                       "inputs": data["invalid_stxo"],
+                                                       "outputs": data["invalid_uutxo"]}
                             if self.option_block_filters:
                                 block["tx_filters"] = data["tx_filters"]
                             block["stxo"] = data["stxo"]
@@ -759,7 +759,7 @@ class Connector:
                                     self.test_rollback = False
                         data = await self.uutxo.rollback_block(conn)
                         if self.mempool_tx:
-                            self.mempool_tx_count += data["block_tx_count"] + len(data["mempool"]["tx"])
+                            self.mempool_tx_count += data["block_tx_count"]
                         if self.orphan_handler:
                             await self.orphan_handler(data, conn)
                         await conn.execute("UPDATE connector_utxo_state SET value = $1 "
@@ -1014,19 +1014,18 @@ class Connector:
 
 
         if self.utxo_data:
-            if self.db_type == "postgresql":
-                async with self.db_pool.acquire() as conn:
-                    rows = await conn.fetch("SELECT distinct tx_id FROM  connector_unconfirmed_stxo "
-                                            "WHERE tx_id = ANY($1);", set(s2rh(t) for t in missed))
+            async with self.db_pool.acquire() as conn:
+                rows = await conn.fetch("SELECT distinct tx_id FROM  connector_unconfirmed_stxo "
+                                        "WHERE tx_id = ANY($1);", set(s2rh(t) for t in missed))
 
-                    for row in rows:
-                        missed.remove(rh2s(row["tx_id"]))
-                    if missed:
-                        coinbase = await conn.fetchval("SELECT   out_tx_id FROM connector_unconfirmed_utxo "
-                                                  "WHERE out_tx_id  = $1 LIMIT 1;", s2rh(block["tx"][0]))
-                        if coinbase:
-                            if block["tx"][0] in missed:
-                                missed.remove(block["tx"][0])
+                for row in rows:
+                    missed.remove(rh2s(row["tx_id"]))
+                if missed:
+                    coinbase = await conn.fetchval("SELECT   out_tx_id FROM connector_unconfirmed_utxo "
+                                              "WHERE out_tx_id  = $1 LIMIT 1;", s2rh(block["tx"][0]))
+                    if coinbase:
+                        if block["tx"][0] in missed:
+                            missed.remove(block["tx"][0])
 
         self.log.debug("Block missed transactions  %s from %s" % (len(missed), tx_count))
 
