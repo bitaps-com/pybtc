@@ -551,7 +551,8 @@ class UUTXO():
                            "VALUES ($1, $2);", h, pickle.dumps({"utxo": utxo,
                                                                 "uutxo": uutxo,
                                                                 "stxo": stxo,
-                                                                "p2pk_map": p2pk_map_backup}))
+                                                                "p2pk_map": p2pk_map_backup,
+                                                                "coinbase_tx_id": txs[0]}))
 
         return {"invalid_uutxo": dbs_uutxo,
                 "invalid_stxo": dbs_stxo,
@@ -595,6 +596,7 @@ class UUTXO():
                                                   "address", "amount"], records=data["utxo"])
 
         return {"height": row["height"],
+                "coinbase_tx_id": data["coinbase_tx_id"],
                 "block_tx_count": len(set(r[0][:32] for r in data["uutxo"]))}
 
 
