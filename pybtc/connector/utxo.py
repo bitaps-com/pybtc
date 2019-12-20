@@ -456,7 +456,9 @@ class UUTXO():
             batch.append((r["outpoint"],
                          (h << 39) + (txs.index(r["t"]) << 20) + (1 << 19) + bytes_to_int(r[32:]),
                          r["address"], r["amount"]))
-            uutxo.append((r["outpoint"], r["t"], r["address"], r["amount"]))
+            if txs[0] != r["t"]:
+                # skip coinbase tx
+                uutxo.append((r["outpoint"], r["t"], r["address"], r["amount"]))
             if self.block_filters:
                 try:
                     tx_filters[txs.index(r["t"])].append(r["address"])
