@@ -756,7 +756,7 @@ class Connector:
                             print("??", data)
                             del self.tx_cache[data["coinbase_tx_id"]]
                         except Exception as err:
-                            print(err)
+                            pass
                         if self.orphan_handler:
                             await self.orphan_handler(data, conn)
                         await conn.execute("UPDATE connector_utxo_state SET value = $1 "
