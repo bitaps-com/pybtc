@@ -753,6 +753,7 @@ class Connector:
                     async with conn.transaction():
                         data = await self.uutxo.rollback_block(conn)
                         try:
+                            print("??", data)
                             del self.tx_cache[data["coinbase_tx_id"]]
                         except Exception as err:
                             print(err)
