@@ -566,7 +566,6 @@ class UUTXO():
                                   "(SELECT height FROM connector_block_state_checkpoint"
                                   " ORDER BY height DESC LIMIT 1) RETURNING "
                                   "height, data;")
-        print("deleted from connector_block_state_checkpoint %s" % row["height"])
 
         data = pickle.loads(row["data"])
 
@@ -576,6 +575,7 @@ class UUTXO():
                                              records=data["p2pk_map"])
             # skip delete from connector_p2pk_map, we can't determine if connector_p2pk_map
             # records was before recent block
+
         r = deque()
         for t in data["uutxo"]:
             if t[1] != data["coinbase_tx_id"]:
@@ -596,14 +596,6 @@ class UUTXO():
                                          columns=["outpoint", "pointer",
                                                   "address", "amount"], records=data["utxo"])
 
-        # await conn.copy_records_to_table('connector_unconfirmed_stxo',
-        #                                  columns=["outpoint", "sequence",
-        #                                           "out_tx_id", "tx_id", "input_index", "address"],
-        #                                  records=data["dbs_stxo"])
-
-        # await conn.copy_records_to_table('connector_unconfirmed_utxo',
-        #                                  columns=["outpoint", "out_tx_id",
-        #                                           "address", "amount"], records=data["dbs_uutxo"])
 
         return {"height": int(row["height"]), "coinbase_tx_id": bytes(data["coinbase_tx_id"])}
 
