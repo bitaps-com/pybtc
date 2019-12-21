@@ -751,12 +751,6 @@ class Connector:
             if self.utxo_data:
                 async with self.db_pool.acquire() as conn:
                     async with conn.transaction():
-                        if  self.test_orphans:
-                            if self.test_rollback and self.rollback_counter:
-                                self.log.warning("Rollback last block")
-                                self.rollback_counter -= 1
-                                if  self.rollback_counter < 1:
-                                    self.test_rollback = False
                         data = await self.uutxo.rollback_block(conn)
                         if self.orphan_handler:
                             await self.orphan_handler(data, conn)
@@ -766,10 +760,17 @@ class Connector:
                         await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                            "WHERE name = 'last_cached_block';",
                                            self.last_block_height - 1)
-                    # if data["coinbase_tx_id"] in self.tx_cache:
-                    #     del self.tx_cache[data["coinbase_tx_id"]]
-                    self.mempool_tx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "
-                                                                "FROM connector_unconfirmed_utxo;")
+                        # if data["coinbase_tx_id"] in self.tx_cache:
+                        #     del self.tx_cache[data["coinbase_tx_id"]]
+                        self.mempool_tx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "
+                                                                    "FROM connector_unconfirmed_utxo;")
+                        if  self.test_orphans:
+                            if self.test_rollback and self.rollback_counter:
+                                self.log.warning("Rollback last block")
+                                self.rollback_counter -= 1
+                                if  self.rollback_counter < 1:
+                                    self.test_rollback = False
+
                     self.log.debug("Mempool transactions %s; "
                                    "orphaned transactions: %s; "
                                    "resolved orphans %s" % (self.mempool_tx_count,

@@ -549,8 +549,7 @@ class UUTXO():
                            "VALUES ($1, $2);", h, pickle.dumps({"utxo": utxo,
                                                                 "uutxo": uutxo,
                                                                 "stxo": stxo,
-                                                                "p2pk_map": p2pk_map_backup,
-                                                                "coinbase_tx_id": txs[0]}))
+                                                                "p2pk_map": p2pk_map_backup}))
 
         return {"invalid_uutxo": dbs_uutxo,
                 "invalid_stxo": dbs_stxo,
@@ -593,8 +592,16 @@ class UUTXO():
                                          columns=["outpoint", "pointer",
                                                   "address", "amount"], records=data["utxo"])
 
-        return {"height": row["height"],
-                "coinbase_tx_id": data["coinbase_tx_id"]}
+        # await conn.copy_records_to_table('connector_unconfirmed_stxo',
+        #                                  columns=["outpoint", "sequence",
+        #                                           "out_tx_id", "tx_id", "input_index", "address"],
+        #                                  records=data["dbs_stxo"])
+
+        # await conn.copy_records_to_table('connector_unconfirmed_utxo',
+        #                                  columns=["outpoint", "out_tx_id",
+        #                                           "address", "amount"], records=data["dbs_uutxo"])
+
+        return {"height": row["height"]}
 
 
     async def flush_mempool(self):
