@@ -549,7 +549,8 @@ class UUTXO():
                            "VALUES ($1, $2);", h, pickle.dumps({"utxo": utxo,
                                                                 "uutxo": uutxo,
                                                                 "stxo": stxo,
-                                                                "p2pk_map": p2pk_map_backup}))
+                                                                "p2pk_map": p2pk_map_backup,
+                                                                "coinbase_tx_id": txs[0]}))
 
         return {"invalid_uutxo": dbs_uutxo,
                 "invalid_stxo": dbs_stxo,
@@ -575,10 +576,13 @@ class UUTXO():
                                              records=data["p2pk_map"])
             # skip delete from connector_p2pk_map, we can't determine if connector_p2pk_map
             # records was before recent block
-
+        r = deque()
+        for t in data["uutxo"]:
+            if t[1] != data["coinbase_tx_id"]:
+                r.append(t)
         await conn.copy_records_to_table('connector_unconfirmed_utxo',
                                          columns=["outpoint", "out_tx_id",
-                                                  "address", "amount"], records=data["uutxo"])
+                                                  "address", "amount"], records=r)
 
         await conn.execute("DELETE FROM connector_utxo WHERE outpoint = ANY($1);",
                            deque(r[0] for r in data["uutxo"]))
@@ -601,7 +605,7 @@ class UUTXO():
         #                                  columns=["outpoint", "out_tx_id",
         #                                           "address", "amount"], records=data["dbs_uutxo"])
 
-        return {"height": row["height"]}
+        return {"height": row["height"], "coinbase_tx_id": data["coinbase_tx_id"]}
 
 
     async def flush_mempool(self):
