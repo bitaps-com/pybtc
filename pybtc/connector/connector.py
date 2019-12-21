@@ -753,7 +753,7 @@ class Connector:
                     async with conn.transaction():
                         d = await self.uutxo.rollback_block(conn)
                         try:
-                            self.tx_cache.delete([d["coinbase_tx_id"]])
+                            self.tx_cache.delete(d["coinbase_tx_id"])
                         except Exception as err:
                             pass
                         if self.orphan_handler:
