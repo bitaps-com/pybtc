@@ -1012,6 +1012,7 @@ class Connector:
 
         for h in block["tx"]:
             try:
+                missed.add(h)
                 self.tx_cache[h]
             except:
                 missed.add(h)
