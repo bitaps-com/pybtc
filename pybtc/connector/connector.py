@@ -751,14 +751,14 @@ class Connector:
             if self.utxo_data:
                 async with self.db_pool.acquire() as conn:
                     async with conn.transaction():
-                        data = await self.uutxo.rollback_block(conn)
+                        d = await self.uutxo.rollback_block(conn)
                         try:
-                            print("??", data)
-                            del self.tx_cache[data["coinbase_tx_id"]]
+                            print("??", d)
+                            del self.tx_cache[d["coinbase_tx_id"]]
                         except Exception as err:
                             pass
                         if self.orphan_handler:
-                            await self.orphan_handler(data, conn)
+                            await self.orphan_handler(d, conn)
                         await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                            "WHERE name = 'last_block';",
                                            self.last_block_height - 1)
