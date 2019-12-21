@@ -766,8 +766,8 @@ class Connector:
                         await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                            "WHERE name = 'last_cached_block';",
                                            self.last_block_height - 1)
-                    if data["coinbase_tx_id"] in self.tx_cache:
-                        del self.tx_cache[data["coinbase_tx_id"]]
+                    # if data["coinbase_tx_id"] in self.tx_cache:
+                    #     del self.tx_cache[data["coinbase_tx_id"]]
                     self.mempool_tx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "
                                                                 "FROM connector_unconfirmed_utxo;")
                     self.log.debug("Mempool transactions %s; "
