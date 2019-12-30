@@ -465,7 +465,7 @@ class Connector:
 
                     try:
                         if self.watchdog_handler:
-                            self.watchdog_handler()
+                            await self.watchdog_handler()
                     except:
                         pass
 
