@@ -4,6 +4,7 @@ parentPath = os.path.abspath("..")
 if parentPath not in sys.path:
     sys.path.insert(0, parentPath)
 from pybtc.functions import *
+from pybtc.crypto import __sha3_256__
 from binascii import unhexlify, hexlify
 
 
@@ -12,6 +13,15 @@ class HashFunctionsTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         print("\nTesting hash functions:\n")
+
+
+    def test_sha3(self):
+        print("SHA3 256 Keccak")
+        self.assertEqual(sha3_256(bytes_from_hex("0000002040dee9142842cfd14796055fc8f16e48454b3"
+                                                       "1e1c1f34c69be4834f40b000000f2e8d5499863e98272"
+                                                       "006d82dab93645902a255b279b0e98add955f66b5b9b3"
+                                                       "cc7f1195e82670f1d9bc3ab00")),
+                         s2rh("0000000b1ab864338f2ac7fd9d6b833be3a113031f09c30e9c944c161635e0db"))
 
     def test_double_sha256(self):
         print("Double SHA256")

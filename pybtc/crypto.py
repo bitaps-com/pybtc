@@ -1,3 +1,4 @@
+import _sha3_hash
 import _crypto
 import _secp256k1
 from os import urandom
@@ -24,6 +25,9 @@ def __double_sha256__(h):
 
 def __sha256__(h):
     return _crypto.__sha256__(h)
+
+def __sha3_256__(h):
+    return _sha3_hash.__sha3_256__(h)
 
 
 def __secp256k1_context_randomize__(seed = None):

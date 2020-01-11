@@ -5,6 +5,7 @@ from pybtc.crypto import __double_sha256__
 from pybtc.crypto import __sha256__
 from pybtc.crypto import __siphash__
 from pybtc.crypto import __murmurhash3__
+from pybtc.crypto import __sha3_256__
 import hmac
 
 bytes_from_hex = bytes.fromhex
@@ -43,6 +44,12 @@ def sha256(h, hex=False):
         h = bytes_from_hex(h)
     # return hashlib_sha256(h).hexdigest() if hex else hashlib_sha256(h).digest()
     return __sha256__(h).hex() if hex else __sha256__(h)
+
+
+def sha3_256(h, hex=False):
+    if isinstance(h, str):
+        h = bytes_from_hex(h)
+    return __sha3_256__(h).hex() if hex else __sha3_256__(h)
 
 
 def double_sha256(h, hex=False):
