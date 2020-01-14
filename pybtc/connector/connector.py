@@ -1084,6 +1084,7 @@ class Connector:
                     while self.missed_tx:
                         h = self.missed_tx.pop()
                         batch.append(["getrawtransaction", h])
+                        print(h)
                         if len(batch) >= self.rpc_batch_limit:
                             break
                     result = await self.rpc.batch(batch)
