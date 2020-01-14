@@ -1091,6 +1091,7 @@ class Connector:
                     for r in result:
                         try:
                             tx = Transaction(r["result"], format="raw")
+                            print(tx)
                         except:
                             self.log.error("Transaction decode failed: %s" % r["result"])
                             raise Exception("Transaction decode failed")
