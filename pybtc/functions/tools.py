@@ -1,6 +1,6 @@
 from math import ceil, floor
 from io import BytesIO
-фы
+from struct import pack, unpack
 from pybtc.crypto import __map_into_range__
 
 
