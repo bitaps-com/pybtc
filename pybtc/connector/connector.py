@@ -1084,7 +1084,7 @@ class Connector:
                     while self.missed_tx:
                         h = self.missed_tx.pop()
                         batch.append(["getrawtransaction", h])
-                        print(h)
+                        print("get missed ", h)
                         if len(batch) >= self.rpc_batch_limit:
                             break
                     result = await self.rpc.batch(batch)
@@ -1115,7 +1115,6 @@ class Connector:
 
     async def _new_transaction(self, tx, timestamp, block_tx = False):
         tx_hash = rh2s(tx["txId"])
-        print(">", tx_hash)
         if tx_hash in self.tx_in_process:
             if not block_tx:
                 self.new_tx_tasks -= 1
@@ -1222,7 +1221,7 @@ class Connector:
             except:
                 self.tx_orphan_buffer[rh2s(err.args[0][:32])] = [tx]
             self.log.warning("tx orphaned %s" % tx_hash)
-            print(rh2s(err.args[0][:32]))
+            print("dep ",rh2s(err.args[0][:32]))
             self.loop.create_task(self._get_transaction(rh2s(err.args[0][:32])))
             # self.log.warning("requested %s" % rh2s(err.args[0][:32]))
             # clear orphaned transactions buffer over limit

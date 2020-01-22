@@ -451,6 +451,7 @@ class UUTXO():
                                 "           address, "
                                 "           amount;", txs)
 
+
         batch, uutxo = deque(), deque()
         for r in rows:
             batch.append((r["outpoint"],
@@ -492,6 +493,8 @@ class UUTXO():
                                     "RETURNING outpoint, pointer, address, amount;", outpoints)
             for r in rows:
                 # save deleted utxo except utxo created in recent block
+                # debug
+                print("destroy:", rh2s(r["outpoint"][:32]), r["outpoint"][32:], " - ", r["amount"] )
                 if r["pointer"] >> 39 < h:
                     utxo.append((r["outpoint"], r["pointer"], r["address"], r["amount"]))
 
