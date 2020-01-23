@@ -1006,59 +1006,59 @@ class Connector:
         tx_count = len(block["tx"])
 
         self.block_txs_request = asyncio.Future()
-        self.log.debug("Wait unconfirmed tx tasks  %s" % len(self.tx_in_process))
-        if not self.unconfirmed_tx_processing.done():
-            await self.unconfirmed_tx_processing
+        try:
+            self.log.debug("Wait unconfirmed tx tasks  %s" % len(self.tx_in_process))
+            if not self.unconfirmed_tx_processing.done():
+                await self.unconfirmed_tx_processing
 
-        for h in block["tx"]:
-            try:
-                self.tx_cache[h]
-            except:
-                missed.add(h)
-
-
-
-        if self.utxo_data:
-            async with self.db_pool.acquire() as conn:
-                rows = await conn.fetch("SELECT distinct tx_id FROM  connector_unconfirmed_stxo "
-                                        "WHERE tx_id = ANY($1);", set(s2rh(t) for t in missed))
-
-                for row in rows:
-                    missed.remove(rh2s(row["tx_id"]))
-                if missed:
-                    coinbase = await conn.fetchval("SELECT   out_tx_id FROM connector_unconfirmed_utxo "
-                                              "WHERE out_tx_id  = $1 LIMIT 1;", s2rh(block["tx"][0]))
-                    if coinbase:
-                        if block["tx"][0] in missed:
-                            missed.remove(block["tx"][0])
-
-        self.log.debug("Block missed transactions  %s from %s" % (len(missed), tx_count))
-
-        if missed:
-            self.missed_tx = set(missed)
-            self.await_tx = set(missed)
-            self.await_tx_future = {s2rh(i): asyncio.Future() for i in missed}
-            self.block_timestamp = block["time"]
-            self.loop.create_task(self._get_missed())
-            try:
-                await asyncio.wait_for(self.block_txs_request, timeout=self.block_timeout)
-            except asyncio.CancelledError:
-                # refresh rpc connection session
+            for h in block["tx"]:
                 try:
-                    await self.rpc.close()
-                    self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
+                    self.tx_cache[h]
                 except:
-                    pass
-                raise RuntimeError("block transaction request timeout")
-        else:
+                    missed.add(h)
+
+
+
+            if self.utxo_data:
+                async with self.db_pool.acquire() as conn:
+                    rows = await conn.fetch("SELECT distinct tx_id FROM  connector_unconfirmed_stxo "
+                                            "WHERE tx_id = ANY($1);", set(s2rh(t) for t in missed))
+
+                    for row in rows:
+                        missed.remove(rh2s(row["tx_id"]))
+                    if missed:
+                        coinbase = await conn.fetchval("SELECT   out_tx_id FROM connector_unconfirmed_utxo "
+                                                  "WHERE out_tx_id  = $1 LIMIT 1;", s2rh(block["tx"][0]))
+                        if coinbase:
+                            if block["tx"][0] in missed:
+                                missed.remove(block["tx"][0])
+
+            self.log.debug("Block missed transactions  %s from %s" % (len(missed), tx_count))
+
+            if missed:
+                self.missed_tx = set(missed)
+                self.await_tx = set(missed)
+                self.await_tx_future = {s2rh(i): asyncio.Future() for i in missed}
+                self.block_timestamp = block["time"]
+                self.loop.create_task(self._get_missed())
+                try:
+                    await asyncio.wait_for(self.block_txs_request, timeout=self.block_timeout)
+                except asyncio.CancelledError:
+                    # refresh rpc connection session
+                    try:
+                        await self.rpc.close()
+                        self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
+                    except:
+                        pass
+                    raise RuntimeError("block transaction request timeout")
+
+            self.total_received_tx += tx_count
+            self.total_received_tx_last += tx_count
+            self.total_received_tx_time += time.time() - q
+            rate = round(self.total_received_tx/self.total_received_tx_time)
+            self.log.debug("Transactions received: %s [%s] received tx rate tx/s ->> %s <<" % (tx_count, time.time() - q, rate))
+        finally:
             self.block_txs_request.set_result(True)
-
-        self.total_received_tx += tx_count
-        self.total_received_tx_last += tx_count
-        self.total_received_tx_time += time.time() - q
-        rate = round(self.total_received_tx/self.total_received_tx_time)
-        self.log.debug("Transactions received: %s [%s] received tx rate tx/s ->> %s <<" % (tx_count, time.time() - q, rate))
-
 
     async def _get_transaction(self, tx_hash):
         try:
@@ -1132,6 +1132,8 @@ class Connector:
 
             else:
                 if self.unconfirmed_tx_processing.done():
+                    if not self.block_txs_request.done():
+                        await self.block_txs_request
                     self.unconfirmed_tx_processing = asyncio.Future()
 
             if self.utxo_data:
