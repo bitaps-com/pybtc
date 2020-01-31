@@ -530,7 +530,9 @@ class UUTXO():
                                     "           out_tx_id as t,"
                                     "           address, "
                                     "           amount;", invalid_txs)
-            print("destroy:", rh2s(r["outpoint"][:32]), r["outpoint"][32:], " - ", r["amount"])
+            for r in rows:
+
+                print("destroy inv:", rh2s(r["outpoint"][:32]), r["outpoint"][32:], " - ", r["amount"])
             outpoints = set()
             for r in rows:
                 dbs_uutxo.append((r["outpoint"], r["t"], r["address"], r["amount"]))
