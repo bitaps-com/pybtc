@@ -47,7 +47,7 @@ class Wallet():
             e = generate_entropy()
             m = entropy_to_mnemonic(e)
             self.mnemonic = m
-            self.seed = mnemonic_to_seed(m)
+            self.seed = mnemonic_to_seed(m, passphrase=passphrase)
             self._init_vector = create_master_xprivate_key(self.seed, base58=False, testnet=testnet)
             self._init_vector_type = "xprivate_key"
         else:
