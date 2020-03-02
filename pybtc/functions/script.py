@@ -304,7 +304,7 @@ def script_to_hash(script, witness=False, hex=True):
     :return: script in bytes or HEX encoded string corresponding to the format of target script.
     """
     if isinstance(script, str):
-        s = bytes_from_hex(script)
+        script = bytes_from_hex(script)
     if witness:
         return sha256(script, hex)
     else:
