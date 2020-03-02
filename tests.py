@@ -4,8 +4,10 @@ import pybtc
 # from pybtc.test.filters  import filters
 # from pybtc.test.filters  import filters
 # from pybtc.test.wallet_class import *
-# from pybtc.test.shamir import *
-from pybtc.test.hash_functions import *
+from pybtc.test.shamir import *
+# from pybtc.test.hash_functions import *
+# from pybtc.test.sighash   import *
+# from pybtc.test.transaction_constructor   import *
 # testLoad = unittest.TestLoader()
 # suites = testLoad.loadTestsFromModule(pybtc.test)
 #

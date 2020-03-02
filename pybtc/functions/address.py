@@ -13,6 +13,36 @@ from pybtc.functions.encode import (encode_base58,
                                     base32charset,
                                     base32charset_upcase)
 
+def public_key_to_address(pubkey, testnet=False, p2sh_p2wpkh=False, witness_version=0):
+    """
+    Get address from public key/script hash. In case PUBKEY, P2PKH, P2PKH public key/script hash is SHA256+RIPEMD160,
+    P2WSH script hash is SHA256.
+
+    :param pubkey: public key HEX or bytes string format.
+    :param testnet: (optional) flag for testnet network, by default is False.
+    :param p2sh_p2wpkh: (optional) flag for P2WPKH inside P2SH address, by default is False.
+    :param witness_version: (optional) witness program version, by default is 0, for legacy
+                            address format use None.
+    :return: address in base58 or bech32 format.
+    """
+    if isinstance(pubkey, str):
+        pubkey = bytes.fromhex(pubkey)
+    if not isinstance(pubkey, bytes):
+        raise TypeError("public key invalid, expected bytes or str")
+    if p2sh_p2wpkh:
+        if len(pubkey) != 33:
+            raise ValueError("public key invalid")
+        h = hash160(b'\x00\x14%s' % hash160(pubkey))
+        witness_version = None
+    else:
+        if witness_version is not None:
+            if len(pubkey) != 33:
+                raise ValueError("public key invalid")
+        h = hash160(pubkey)
+    return hash_to_address(h, testnet=testnet,
+                           script_hash=p2sh_p2wpkh,
+                           witness_version=witness_version)
+
 
 def hash_to_address(address_hash, testnet=False, script_hash=False, witness_version=0):
     """
@@ -68,37 +98,6 @@ def hash_to_address(address_hash, testnet=False, script_hash=False, witness_vers
     checksum = bech32_polymod(b"%s%s%s" % (prefix, address_hash, b"\x00" * 6))
     checksum = rebase_8_to_5(checksum.to_bytes(5, "big"))[2:]
     return "%s1%s" % (hrp, rebase_5_to_32(address_hash + checksum).decode())
-
-
-def public_key_to_address(pubkey, testnet=False, p2sh_p2wpkh=False, witness_version=0):
-    """
-    Get address from public key/script hash. In case PUBKEY, P2PKH, P2PKH public key/script hash is SHA256+RIPEMD160,
-    P2WSH script hash is SHA256.
-
-    :param pubkey: public key HEX or bytes string format.
-    :param testnet: (optional) flag for testnet network, by default is False.
-    :param p2sh_p2wpkh: (optional) flag for P2WPKH inside P2SH address, by default is False.
-    :param witness_version: (optional) witness program version, by default is 0, for legacy
-                            address format use None.
-    :return: address in base58 or bech32 format.
-    """
-    if isinstance(pubkey, str):
-        pubkey = bytes.fromhex(pubkey)
-    if not isinstance(pubkey, bytes):
-        raise TypeError("public key invalid, expected bytes or str")
-    if p2sh_p2wpkh:
-        if len(pubkey) != 33:
-            raise ValueError("public key invalid")
-        h = hash160(b'\x00\x14%s' % hash160(pubkey))
-        witness_version = None
-    else:
-        if witness_version is not None:
-            if len(pubkey) != 33:
-                raise ValueError("public key invalid")
-        h = hash160(pubkey)
-    return hash_to_address(h, testnet=testnet,
-                           script_hash=p2sh_p2wpkh,
-                           witness_version=witness_version)
 
 
 def address_to_hash(address, hex=True):

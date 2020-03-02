@@ -5,6 +5,7 @@ from pybtc.functions.hash import sha256
 from pybtc.functions.shamir import split_secret, restore_secret
 from pybtc.functions.tools import int_from_bytes
 import random
+import math
 
 def generate_entropy(strength=256, hex=True):
     """
@@ -76,7 +77,7 @@ def entropy_to_mnemonic(entropy, language='english', word_list_dir=None, word_li
 
     i = int.from_bytes(entropy, byteorder="big")
     # append checksum
-    b = len(entropy) * 8 // 32
+    b = math.ceil(len(entropy) * 8 / 32)
     i = (i << b) | (sha256(entropy)[0] >>  (8 - b))
 
     return " ".join([word_list[i.__rshift__(((d - 1) * 11)) & 2047]
@@ -117,8 +118,12 @@ def mnemonic_to_entropy(mnemonic, language='english', word_list_dir=None,
     entropy_int = entropy_int >> chk_sum_bit_len
     entropy = entropy_int.to_bytes((bit_size - chk_sum_bit_len) // 8, byteorder="big")
     if checksum:
+        print((sha256(entropy)[0] >> (8 - chk_sum_bit_len)))
+        print(entropy)
+        print(sha256(entropy)[0])
+        print((8 - chk_sum_bit_len))
         if (sha256(entropy)[0] >> (8 - chk_sum_bit_len)) != chk_sum:
-            raise ValueError("invalid mnemonic checksum")
+            raise ValueError("invalid mnemonic checksum %s" % chk_sum)
     return entropy if not hex else entropy.hex()
 
 

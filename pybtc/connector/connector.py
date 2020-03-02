@@ -1063,7 +1063,10 @@ class Connector:
             rate = round(self.total_received_tx/self.total_received_tx_time)
             self.log.debug("Transactions received: %s [%s] received tx rate tx/s ->> %s <<" % (tx_count, time.time() - q, rate))
         finally:
-            self.block_txs_request.set_result(True)
+            print(self.block_txs_request)
+            if not self.block_txs_request.done():
+                print( self.block_txs_request)
+                self.block_txs_request.set_result(True)
 
     async def _get_transaction(self, tx_hash):
         try:
@@ -1103,7 +1106,8 @@ class Connector:
                 except Exception as err:
                     self.log.error("_get_missed exception %s " % str(err))
                     self.await_tx = set()
-                    self.block_txs_request.cancel()
+                    if not self.block_txs_request.done():
+                        self.block_txs_request.cancel()
             self.get_missed_tx_threads -= 1
 
 
@@ -1250,7 +1254,8 @@ class Connector:
                 self.log.critical("new transaction error %s" % err)
                 # print(traceback.format_exc())
                 self.await_tx = set()
-                self.block_txs_request.cancel()
+                if not self.block_txs_request.done():
+                    self.block_txs_request.cancel()
                 for i in self.await_tx_future:
                     if not self.await_tx_future[i].done():
                         self.await_tx_future[i].cancel()

@@ -252,7 +252,7 @@ static PyObject *secp256k1_secp256k1_ec_pubkey_create(PyObject *self, PyObject *
     unsigned char pubkeyo[outl];
 
 
-    r = secp256k1_ec_pubkey_serialize(secp256k1_context_no_precomp, pubkeyo, &outl, &pubkey, flag);
+    r = secp256k1_ec_pubkey_serialize(secp256k1_precomp_context_verify, pubkeyo, &outl, &pubkey, flag);
     if (r != 1) {
       return Py_BuildValue("b", (Py_ssize_t)0);
     }

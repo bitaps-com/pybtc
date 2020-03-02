@@ -972,6 +972,7 @@ class Transaction(dict):
         pm = bytearray()
         pm += b"%s%s" % (pack('<L', self["version"]),
                          b'\x01' if sighash_type & SIGHASH_ANYONECANPAY else int_to_var_int(len(self["vIn"])))
+
         for i in self["vIn"]:
             # skip all other inputs for SIGHASH_ANYONECANPAY case
             if (sighash_type & SIGHASH_ANYONECANPAY) and (n != i):
@@ -983,14 +984,18 @@ class Transaction(dict):
             if isinstance(tx_id, str):
                 tx_id = s2rh(tx_id)
 
+
             if n == i:
                 pm += b"%s%s%s%s%s" % (tx_id, pack('<L', self["vIn"][i]["vOut"]),
                                        int_to_var_int(len(script_code)),
                                        script_code, pack('<L', sequence))
+
             else:
                 pm += b'%s%s\x00%s' % (tx_id,
                                        pack('<L', self["vIn"][i]["vOut"]),
                                        pack('<L', sequence))
+
+
         if (sighash_type & 31) == SIGHASH_NONE:
             pm += b'\x00'
         else:
@@ -1012,10 +1017,13 @@ class Transaction(dict):
                     pm += b"%s%s%s" % (self["vOut"][i]["value"].to_bytes(8, 'little'),
                                        int_to_var_int(len(script_pub_key)),
                                        script_pub_key)
+
         pm += b"%s%s" % (self["lockTime"].to_bytes(4, 'little'), pack(b"<i", sighash_type))
+
         if not preimage:
             pm = double_sha256(pm)
-        return pm if self["format"] == "raw" else rh2s(pm)
+            return pm if self["format"] == "raw" else rh2s(pm)
+        return pm if self["format"] == "raw" else pm.hex()
 
     def sig_hash_segwit(self, n, amount, script_pub_key=None, sighash_type=SIGHASH_ALL, preimage=False):
         try:

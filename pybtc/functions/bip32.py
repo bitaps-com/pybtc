@@ -266,6 +266,8 @@ def is_xpublic_key_valid(key):
         return False
     return True
 
+
+
 def path_xkey_to_bip32_xkey(key, base58=True, hex=False):
     if isinstance(key, str):
         try:

@@ -38,9 +38,10 @@ class IntegerFunctionsTests(unittest.TestCase):
 
     def test_secrets(self):
         secret = b"wtw5heywrhsrhrtht"
-        shares = shamir.split_secret(5, 5, secret)
-        s = shamir.restore_secret(shares)
-        self.assertEqual(s, secret)
+        for i in range(1000):
+            shares = shamir.split_secret(5, 5, secret)
+            s = shamir.restore_secret(shares)
+            self.assertEqual(s, secret)
 
         for i in range(2,30):
             shares = shamir.split_secret(i, i, secret)
