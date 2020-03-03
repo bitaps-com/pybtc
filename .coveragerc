@@ -9,6 +9,12 @@ omit =
 source = pybtc, tests
 branch = True
 
+data_file = coverage/.coverage
+
 [coverage:report]
 show_missing = true
 precision = 2
+
+[html]
+
+directory = coverage
