@@ -3,7 +3,7 @@ from io import BytesIO
 from pybtc.functions.block import bits_to_target, target_to_difficulty
 from pybtc.functions.hash import double_sha256
 from pybtc.functions.tools import var_int_to_int, read_var_int, var_int_len, rh2s
-from pybtc.transaction import Transaction
+from pybtc.classes.transaction import Transaction
 
 
 class Block(dict):

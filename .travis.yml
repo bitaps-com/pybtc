@@ -1,7 +1,21 @@
+sudo: false
+
 language: python
 
-before_install:
-  - python3 setup.py install
+python:
+    - 3.6
+    - 3.7
+    - 3.8
+
+
+install:
+    - pip install -Ur requirements-dev.txt
+    - pip install .
+    - pip install codecov
+    - python3 setup.py install
 
 script:
-  - pytest
+  - make cov
+
+  after_success:
+    - codecov

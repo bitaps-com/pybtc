@@ -4,7 +4,7 @@ from pybtc.connector.utxo import UTXO, UUTXO
 from pybtc.connector.utils import decode_block_tx
 from pybtc.connector.utils import Cache
 from pybtc.connector.utils import seconds_to_age
-from pybtc.transaction import Transaction
+from pybtc.classes.transaction import Transaction
 from pybtc import int_to_bytes, bytes_to_int, bytes_from_hex
 from pybtc import MRU, parse_script
 from collections import deque

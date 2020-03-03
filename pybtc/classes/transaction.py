@@ -16,7 +16,7 @@ from pybtc.functions.script import get_multisig_public_keys, read_opcode, is_val
 from pybtc.functions.script import public_key_recovery, delete_from_script
 from pybtc.functions.hash import hash160, sha256, double_sha256
 from pybtc.functions.address import  hash_to_address, address_net_type, address_to_script
-from pybtc.address import  PrivateKey, Address, ScriptAddress, PublicKey
+from pybtc.classes.address import  PrivateKey, Address, ScriptAddress, PublicKey
 from collections import deque
 
 

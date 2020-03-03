@@ -1,5 +1,5 @@
 from struct import unpack
-from .functions import *
+from pybtc.functions import *
 
 
 # Hierarchical Deterministic Wallets (HD Wallets)
