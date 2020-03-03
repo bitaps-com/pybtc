@@ -17,5 +17,5 @@ install:
 script:
   - make cov
 
-  after_success:
+after_success:
     - codecov
