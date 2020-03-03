@@ -2,7 +2,12 @@
 
 ## Python bitcoin library
 
-Current version is 2.2
+
+[![travis build](https://img.shields.io/travis/bitaps-com/pybtc?)](https://travis-ci.org/bitaps-com/pybtc)
+[![codecov coverage](https://img.shields.io/codecov/c/github/bitaps-com/pybtc/no_analityca)](https://codecov.io/gh/bitaps-com/pybtc)
+[![version](https://img.shields.io/pypi/v/pybtc)](https://pypi.org/project/pybtc/)
+
+
 
 
 ### Feature Support
