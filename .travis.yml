@@ -1,3 +1,7 @@
 language: python
+
+before_install:
+  - python3 setup.py install
+
 script:
   - pytest
