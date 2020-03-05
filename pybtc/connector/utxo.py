@@ -313,6 +313,7 @@ class UUTXO():
         self.db_type = db_type
         self.db = db
         self.block_filters = block_filters
+        self.cm = 0
 
 
 
@@ -387,7 +388,7 @@ class UUTXO():
         if commit_uutxo:
             for t in commit_uutxo:
                 print("create uutxo: ", rh2s(t[0][:32]), t[0][32:])
-            print("len block uutxo:", len(commit_uutxo))
+            self.cm += len(commit_uutxo)
             await conn.copy_records_to_table('connector_unconfirmed_utxo',
                                              columns=["outpoint",
                                                       "out_tx_id",
@@ -456,7 +457,8 @@ class UUTXO():
 
 
         batch, uutxo = deque(), deque()
-        print("move to utxo len", len(rows))
+        print("move to utxo len", len(rows), self.cm)
+        self.cm = 0
         for r in rows:
             batch.append((r["outpoint"],
                          (h << 39) + (txs.index(r["t"]) << 20) + (1 << 19) + bytes_to_int(r["outpoint"][32:]),
