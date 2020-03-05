@@ -457,7 +457,7 @@ class UUTXO():
         batch, uutxo = deque(), deque()
         for r in rows:
             batch.append((r["outpoint"],
-                         (h << 39) + (txs.index(r["t"]) << 20) + (1 << 19) + bytes_to_int(r[32:]),
+                         (h << 39) + (txs.index(r["t"]) << 20) + (1 << 19) + bytes_to_int(r["outpoint"][32:]),
                          r["address"], r["amount"]))
             uutxo.append((r["outpoint"], r["t"], r["address"], r["amount"]))
             if self.block_filters:
@@ -465,7 +465,7 @@ class UUTXO():
                     tx_filters[txs.index(r["t"])].append(r["address"])
                 except:
                     tx_filters[txs.index(r["t"])] = [r["address"]]
-            print("move tu utxo:", rh2s(r["outpoint"][:32]), bytes_to_int(r[32:]), (h << 39) + (txs.index(r["t"]) << 20) + (1 << 19) + bytes_to_int(r[32:]))
+            print("move tu utxo:", rh2s(r["outpoint"][:32]), bytes_to_int(r["outpoint"][32:]), (h << 39) + (txs.index(r["t"]) << 20) + (1 << 19) + bytes_to_int(r["outpoint"][32:]))
 
         await conn.copy_records_to_table('connector_utxo',
                                          columns=["outpoint", "pointer",
