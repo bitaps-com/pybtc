@@ -385,6 +385,8 @@ class UUTXO():
 
     async def commit_tx(self, commit_uutxo, commit_ustxo, commit_up2pk_map, conn):
         if commit_uutxo:
+            for t in commit_uutxo:
+                print("create uutxo: ", rh2s(commit_uutxo[0][:32]), commit_uutxo[0][32:])
             await conn.copy_records_to_table('connector_unconfirmed_utxo',
                                              columns=["outpoint",
                                                       "out_tx_id",
@@ -463,6 +465,7 @@ class UUTXO():
                     tx_filters[txs.index(r["t"])].append(r["address"])
                 except:
                     tx_filters[txs.index(r["t"])] = [r["address"]]
+            print("move tu utxo:", rh2s(r["outpoint"][:32]), bytes_to_int(r[32:]), (h << 39) + (txs.index(r["t"]) << 20) + (1 << 19) + bytes_to_int(r[32:]))
 
         await conn.copy_records_to_table('connector_utxo',
                                          columns=["outpoint", "pointer",

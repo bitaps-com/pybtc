@@ -6,7 +6,7 @@ bytes_from_hex = bytes.fromhex
 from pybtc.crypto import __secp256k1_ec_pubkey_create__
 
 
-def create_private_key(compressed=True, testnet=False, wif=True, hex=False):
+def create_private_key(compressed=True, testnet=False, wif=None, hex=None):
     """
     Create private key
 
@@ -20,6 +20,12 @@ def create_private_key(compressed=True, testnet=False, wif=True, hex=False):
              raw bytes string in case wif and hex flags set to False.
 
     """
+    if wif is None:
+        if hex is None:
+            wif = True
+        else:
+            wif = False
+
     if wif:
         return private_key_to_wif(generate_entropy(hex=False), compressed=compressed, testnet=testnet)
     elif hex:
@@ -73,7 +79,7 @@ def is_wif_valid(wif):
     :return: boolean.
     """
     if not isinstance(wif, str):
-        raise TypeError("invalid wif key")
+        return False
     if wif[0] not in PRIVATE_KEY_PREFIX_LIST:
         return False
     try:

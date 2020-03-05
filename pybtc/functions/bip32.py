@@ -1,9 +1,7 @@
 from struct import pack
 from pybtc.functions.key import private_to_public_key, private_key_to_wif
 from pybtc.functions.hash import hmac_sha512, double_sha256, hash160
-from pybtc.functions.encode import (encode_base58,
-                                    decode_base58_with_checksum,
-                                    encode_base58_with_checksum)
+from pybtc.functions.encode import encode_base58, decode_base58
 from pybtc.constants import *
 from pybtc.crypto import __secp256k1_ec_pubkey_tweak_add__
 
@@ -53,7 +51,7 @@ def xprivate_to_xpublic_key(xprivate_key, base58=True, hex=False):
             if len(xprivate_key) == 156:
                 xprivate_key = bytes.fromhex(xprivate_key)
             else:
-                xprivate_key = decode_base58_with_checksum(xprivate_key)
+                xprivate_key = decode_base58(xprivate_key, checksum=True)
         except:
             raise ValueError("invalid extended private key")
     if not isinstance(xprivate_key, bytes):
@@ -89,7 +87,7 @@ def derive_xkey(xkey, *path_level, base58=True, hex=False):
     :return: extended child private/public key  in base58, HEX or bytes string format.
     """
     if isinstance(xkey, str):
-        xkey = decode_base58_with_checksum(xkey)
+        xkey = decode_base58(xkey, checksum=True)
     if xkey[:4] in [MAINNET_XPRIVATE_KEY_PREFIX, TESTNET_XPRIVATE_KEY_PREFIX]:
         for i in path_level:
             xkey = derive_child_xprivate_key(xkey, i)
@@ -103,7 +101,7 @@ def derive_xkey(xkey, *path_level, base58=True, hex=False):
     if hex:
         return xkey.hex()
     elif base58:
-        return encode_base58_with_checksum(xkey)
+        return encode_base58(xkey, checksum=True)
     else:
         return xkey
 
@@ -171,7 +169,7 @@ def public_from_xpublic_key(xpublic_key, hex=True):
         if len(xpublic_key) == 156:
             xpublic_key = bytes.fromhex(xpublic_key)
         else:
-            xpublic_key = decode_base58_with_checksum(xpublic_key)
+            xpublic_key = decode_base58(xpublic_key, checksum=True)
     if not isinstance(xpublic_key, bytes):
         raise TypeError("xpublic_key should be HEX, Base58 or bytes string")
     if xpublic_key[:4] not in [MAINNET_XPUBLIC_KEY_PREFIX,
@@ -195,7 +193,7 @@ def private_from_xprivate_key(xprivate_key, wif=True, hex=False):
         if len(xprivate_key) == 156:
             xprivate_key = bytes.fromhex(xprivate_key)
         else:
-            xprivate_key = decode_base58_with_checksum(xprivate_key)
+            xprivate_key = decode_base58(xprivate_key, checksum=True)
     if not isinstance(xprivate_key, bytes):
         raise TypeError("xprivate_key should be HEX, Base58 or bytes string")
     if xprivate_key[:4] not in [MAINNET_XPRIVATE_KEY_PREFIX,
@@ -222,7 +220,7 @@ def is_xprivate_key_valid(key):
     """
     if isinstance(key, str):
         try:
-            key = decode_base58_with_checksum(key)
+            key = decode_base58(key, checksum=True)
         except:
             try:
                 key = bytes.fromhex(key)
@@ -249,7 +247,7 @@ def is_xpublic_key_valid(key):
     """
     if isinstance(key, str):
         try:
-            key = decode_base58_with_checksum(key)
+            key = decode_base58(key, verify_checksum = True)
         except:
             try:
                 key = bytes.fromhex(key)
@@ -271,7 +269,7 @@ def is_xpublic_key_valid(key):
 def path_xkey_to_bip32_xkey(key, base58=True, hex=False):
     if isinstance(key, str):
         try:
-            key = decode_base58_with_checksum(key)
+            key = decode_base58(key, verify_checksum = True)
         except:
             try:
                 key = bytes.fromhex(key)
@@ -297,7 +295,7 @@ def path_xkey_to_bip32_xkey(key, base58=True, hex=False):
     if hex:
         return key.hex()
     elif base58:
-        return encode_base58_with_checksum(key)
+        return encode_base58(key, checksum=True)
     else:
         return key
 
@@ -307,7 +305,7 @@ def bip32_xkey_to_path_xkey(key, path_type, base58=True, hex=False):
 
     if isinstance(key, str):
         try:
-            key = decode_base58_with_checksum(key)
+            key = decode_base58(key, verify_checksum = True)
         except:
             try:
                 key = bytes.fromhex(key)
@@ -352,7 +350,7 @@ def bip32_xkey_to_path_xkey(key, path_type, base58=True, hex=False):
     if hex:
         return key.hex()
     elif base58:
-        return encode_base58_with_checksum(key)
+        return encode_base58(key, checksum = True)
     else:
         return key
 

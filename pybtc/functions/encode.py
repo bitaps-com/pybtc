@@ -1,4 +1,5 @@
 from pybtc.functions.hash import double_sha256
+from pybtc.functions.tools import get_bytes
 from pybtc.crypto import __decode_base58__, __encode_base58__
 
 b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
@@ -13,6 +14,35 @@ for n, i in enumerate(base32charset):
     base32_int_map[n] = ord(i)
 for n, i in enumerate(base32charset_upcase):
     int_base32_map[i] = n
+
+
+def encode_base58(b, checksum = False):
+
+    """Encode bytes to a base58-encoded string"""
+    # Convert big-endian bytes to integer
+    if not b:
+        return ''
+    b = get_bytes(b)
+    if checksum:
+        return __encode_base58__(b"%s%s" % (b, double_sha256(b)[:4]))
+    return __encode_base58__(b)
+
+
+def decode_base58(s, hex = False, checksum = False, verify_checksum = False):
+    """Decode a base58-encoding string, returning bytes"""
+    if verify_checksum:
+        checksum = True
+    if not s:
+        return b''
+    if not isinstance(s, str):
+        raise ValueError("base58 string required")
+    b = __decode_base58__(s)
+    if checksum:
+        if verify_checksum:
+            if double_sha256(b[:-4])[:4] != b[-4:]:
+                raise Exception("invalid checksum")
+        return b[:-4].hex() if hex else b[:-4]
+    return b.hex() if hex else b
 
 
 def rebasebits(data, frombits, tobits, pad=True):
@@ -48,7 +78,7 @@ def rebase_8_to_5(data, pad = True):
 
 
 def rebase_32_to_5(data):
-    if isinstance(data, bytes):
+    if isinstance(data, bytes) or isinstance(data, bytearray):
         data = data.decode()
     b = bytearray()
     append = b.append
@@ -76,35 +106,3 @@ def bech32_polymod(values):
         for i in range(5):
             chk ^= generator[i] if ((top >> i) & 1) else 0
     return chk ^ 1
-
-
-def encode_base58(b):
-
-    """Encode bytes to a base58-encoded string"""
-    # Convert big-endian bytes to integer
-    if not b:
-        return ''
-    if not isinstance(b, bytes):
-        raise ValueError("encode_base58 bytes required")
-
-    return __encode_base58__(b)
-
-
-def decode_base58(s):
-    """Decode a base58-encoding string, returning bytes"""
-    if not s:
-        return b''
-    if not isinstance(s, str):
-        raise ValueError("decode_base58 string required")
-    return __decode_base58__(s)
-
-
-def encode_base58_with_checksum(b):
-    return encode_base58(b"%s%s" % (b, double_sha256(b)[:4]))
-
-
-def decode_base58_with_checksum(s):
-    b = decode_base58(s)
-    if double_sha256(b[:-4])[:4] != b[-4:]:
-        raise Exception("invalid checksum")
-    return b[:-4]
