@@ -1227,6 +1227,7 @@ class Connector:
             pass
 
         except KeyError as err:
+            print("ex1")
             # transaction orphaned
             try:
                 self.tx_orphan_buffer[rh2s(err.args[0][:32])].append(tx)
@@ -1241,6 +1242,7 @@ class Connector:
                 self.tx_orphan_buffer.pop()
 
         except Exception as err:
+            print("ex2")
             try:
                 # check if transaction already exist
                 if err.detail.find("already exists") != -1:
