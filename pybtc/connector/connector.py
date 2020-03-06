@@ -1243,6 +1243,7 @@ class Connector:
 
         except Exception as err:
             print("ex2")
+            print(traceback.format_exc())
             try:
                 # check if transaction already exist
                 if err.detail.find("already exists") != -1:
