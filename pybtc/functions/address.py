@@ -1,7 +1,7 @@
 from pybtc.opcodes import *
 from pybtc.constants import *
 
-from pybtc.functions.tools import bytes_from_hex
+from pybtc.functions.tools import bytes_from_hex, get_bytes
 from pybtc.functions.hash import double_sha256, hash160
 from pybtc.functions.encode import (encode_base58,
                                     rebase_8_to_5,
@@ -12,6 +12,7 @@ from pybtc.functions.encode import (encode_base58,
                                     rebase_32_to_5,
                                     base32charset,
                                     base32charset_upcase)
+
 
 def public_key_to_address(pubkey, testnet=False, p2sh_p2wpkh=False, witness_version=0):
     """
@@ -25,10 +26,7 @@ def public_key_to_address(pubkey, testnet=False, p2sh_p2wpkh=False, witness_vers
                             address format use None.
     :return: address in base58 or bech32 format.
     """
-    if isinstance(pubkey, str):
-        pubkey = bytes.fromhex(pubkey)
-    if not isinstance(pubkey, bytes):
-        raise TypeError("public key invalid, expected bytes or str")
+    pubkey = get_bytes(pubkey, encoding='hex')
     if p2sh_p2wpkh:
         if len(pubkey) != 33:
             raise ValueError("public key invalid")
@@ -57,10 +55,7 @@ def hash_to_address(address_hash, testnet=False, script_hash=False, witness_vers
                             address format use None.
     :return: address in base58 or bech32 format.
     """
-    if isinstance(address_hash, str):
-        address_hash = bytes_from_hex(address_hash)
-    if not isinstance(address_hash, bytes):
-        raise TypeError("address hash must be HEX encoded string or bytes")
+    address_hash = get_bytes(address_hash, encoding='hex')
 
     if not script_hash:
         if witness_version is None:
@@ -111,7 +106,7 @@ def address_to_hash(address, hex=True):
     if address[0] in ADDRESS_PREFIX_LIST:
         h = decode_base58(address)[1:-4]
     elif address.split("1")[0] in (MAINNET_SEGWIT_ADDRESS_PREFIX,
-                         TESTNET_SEGWIT_ADDRESS_PREFIX):
+                                   TESTNET_SEGWIT_ADDRESS_PREFIX):
         address = address.split("1")[1]
         h = rebase_5_to_8(rebase_32_to_5(address)[1:-6], False)
     else:
@@ -176,6 +171,9 @@ def address_to_script(address, hex=False):
     :param hex:  (optional) If set to True return key in HEX format, by default is True.
     :return: public key script in HEX or bytes string.
     """
+    if not isinstance(address, str):
+        raise TypeError("address invalid")
+
     if address[0] in (TESTNET_SCRIPT_ADDRESS_PREFIX,
                       MAINNET_SCRIPT_ADDRESS_PREFIX):
         s = [OP_HASH160,
@@ -202,6 +200,7 @@ def address_to_script(address, hex=False):
     s = b''.join(s)
     return s.hex() if hex else s
 
+
 def hash_to_script(address_hash, script_type, hex=False):
     """
     Get public key script from hash.
@@ -210,16 +209,18 @@ def hash_to_script(address_hash, script_type, hex=False):
     :param hex:  (optional) If set to True return key in HEX format, by default is True.
     :return: public key script in HEX or bytes string.
     """
-    if isinstance(address_hash, str):
-        address_hash = bytes_from_hex(address_hash)
-    if not isinstance(address_hash, bytes):
-        raise TypeError("address hash must be HEX encoded string or bytes")
+    address_hash = get_bytes(address_hash)
+    if isinstance(script_type, str):
+        try:
+            script_type = SCRIPT_TYPES[script_type]
+        except:
+            script_type = ""
 
     if script_type == 1:
         s = [OP_HASH160, b'\x14', address_hash, OP_EQUAL]
     elif script_type == 0:
         s = [OP_DUP, OP_HASH160, b'\x14', address_hash, OP_EQUALVERIFY, OP_CHECKSIG]
-    elif script_type in (5,6):
+    elif script_type in (5, 6):
         s = [OP_0,
              bytes([len(address_hash)]),
              address_hash]
@@ -229,11 +230,12 @@ def hash_to_script(address_hash, script_type, hex=False):
     return s.hex() if hex else s
 
 
-
-def public_key_to_p2sh_p2wpkh_script(pubkey):
+def public_key_to_p2sh_p2wpkh_script(pubkey, hex=False):
+    pubkey = get_bytes(pubkey)
     if len(pubkey) != 33:
         raise ValueError("public key len invalid")
-    return b'\x00\x14%s' % hash160(pubkey)
+    r = b'\x00\x14%s' % hash160(pubkey)
+    return r.hex() if hex else r
 
 
 def is_address_valid(address, testnet=False):
@@ -301,11 +303,10 @@ def is_address_valid(address, testnet=False):
         if checksum != checksum2:
             return False
         return True
+    return False
 
 
 def get_witness_version(address):
     address = address.split("1")[1]
     h = rebase_32_to_5(address)
     return h[0]
-
-

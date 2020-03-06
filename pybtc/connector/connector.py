@@ -1223,6 +1223,7 @@ class Connector:
 
 
         except asyncio.CancelledError:
+            print("cancelled")
             pass
 
         except KeyError as err:

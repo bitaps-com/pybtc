@@ -40,7 +40,10 @@ def __secp256k1_context_create__():
     return bool(_secp256k1.secp256k1_context_create())
 
 def __secp256k1_ec_pubkey_create__(private_key, compressed = True):
-    return _secp256k1.secp256k1_ec_pubkey_create(private_key, int(compressed))
+    k = _secp256k1.secp256k1_ec_pubkey_create(private_key, int(compressed))
+    if not k:
+        raise RuntimeError("secp256k1 error")
+    return k
 
 def __secp256k1_ecdsa_sign__(message, private_key, der_encoding = True):
     return _secp256k1.secp256k1_ecdsa_sign(message, private_key, int(der_encoding))

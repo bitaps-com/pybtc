@@ -1,4 +1,3 @@
-from pybtc.functions.tools import s2rh
 from pybtc.functions.tools import bytes_from_hex
 import pytest
 
@@ -7,6 +6,7 @@ from pybtc.functions.key import wif_to_private_key
 from pybtc.functions.key import private_key_to_wif
 from pybtc.functions.key import is_wif_valid
 from pybtc.functions.key import private_to_public_key
+from pybtc.functions.key import is_public_key_valid
 
 
 
@@ -78,4 +78,45 @@ def test_is_wif_valid():
 
 
 def test_private_to_public_key():
-    pass
+    priv = "ceda1ae4286015d45ec5147fe3f63e9377ccd6d4e98bcf0847df9937da1944a4"
+    pu = "04b635dbdc16dbdf4bb9cf5b55e7d03e514fb04dcef34208155c7d3ec88e9045f4" \
+         "c8cbe28702911260f2a1da099a338bed4ee98f66bb8dba8031a76ab537ff6663"
+    pk = "03b635dbdc16dbdf4bb9cf5b55e7d03e514fb04dcef34208155c7d3ec88e9045f4"
+
+    assert private_to_public_key(priv) == pk
+    assert private_to_public_key(bytes_from_hex(priv)) == pk
+    assert private_to_public_key(bytearray(bytes_from_hex(priv))) == pk
+    assert private_to_public_key(priv) == pk
+    assert private_to_public_key(priv, hex=True) == pk
+    assert private_to_public_key(priv, hex=False).hex() == pk
+    assert private_to_public_key(priv, compressed=False) == pu
+    assert private_to_public_key("L49obCXV7fGz2YRzLCSJgeZBYmGeBbKPT7xiehUeYX2S4URkPFZX", pk)
+    assert private_to_public_key("5KPPLXhtga99qqMceRo4Z6LXV3Kx6a9hRx3ez2U7EwP5KZfy2Wf", pu)
+    assert private_to_public_key("93A1vGXSGoDHotruGmgyRgtV8hgfFjgtmtuc4epcag886W9d44L", pu)
+    with pytest.raises(ValueError):
+        assert private_to_public_key("ceda1ae4286015d45ec5147fe3f63e9377ccd6d4e98bcf0847df9937da1944a411", pu)
+    with pytest.raises(ValueError):
+        private_to_public_key(3738)
+    with pytest.raises(Exception):
+        private_to_public_key("L49obCXV7fGz2YRzLCSJgeZBYmGeBbKPT7xiehUeYX2S4URkPFZQ")
+
+
+def test_is_public_key_valid():
+    pu = "04b635dbdc16dbdf4bb9cf5b55e7d03e514fb04dcef34208155c7d3ec88e9045f4" + \
+         "c8cbe28702911260f2a1da099a338bed4ee98f66bb8dba8031a76ab537ff6663"
+    pk = "03b635dbdc16dbdf4bb9cf5b55e7d03e514fb04dcef34208155c7d3ec88e9045f4"
+
+    assert is_public_key_valid(pu) == True
+    assert is_public_key_valid(pk) == True
+    assert is_public_key_valid(bytes_from_hex(pk)) == True
+    assert is_public_key_valid(bytes_from_hex(pu)) == True
+    pu = "63qdbdc16dbdf4bb9cf45b55e7d03e514fb04dcef34208155c7d3ec88e9045f4c8c" + \
+         "be28702911260f2a1da099a338bed4ee98f66bb8dba8031a76ab537ff6663"
+    pk = "02b635dbdc16dbdf455bb9cf5b55e7d03e514fb04dcef34208155c7d3ec88e9045f4"
+
+    assert is_public_key_valid(pu) == False
+    assert is_public_key_valid(pk) == False
+    assert is_public_key_valid("8989") == False
+
+    pu = "04b635dbdc16dbdf455bb9cf5b55e7d03e514fb04dcef34208155c7d3ec88e902245f4"
+    assert is_public_key_valid(pu) == False
