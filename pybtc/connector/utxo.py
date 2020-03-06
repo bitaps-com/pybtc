@@ -458,7 +458,8 @@ class UUTXO():
 
         batch, uutxo = deque(), deque()
         print("move to utxo len", len(rows), self.cm)
-        assert len(rows) == self.cm
+        if self.cm:
+          assert len(rows) == self.cm
         self.cm = 0
         for r in rows:
             batch.append((r["outpoint"],
