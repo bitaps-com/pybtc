@@ -1063,9 +1063,7 @@ class Connector:
             rate = round(self.total_received_tx/self.total_received_tx_time)
             self.log.debug("Transactions received: %s [%s] received tx rate tx/s ->> %s <<" % (tx_count, time.time() - q, rate))
         finally:
-            print(self.block_txs_request)
             if not self.block_txs_request.done():
-                print( self.block_txs_request)
                 self.block_txs_request.set_result(True)
 
     async def _get_transaction(self, tx_hash):
@@ -1092,7 +1090,6 @@ class Connector:
                     while self.missed_tx:
                         h = self.missed_tx.pop()
                         batch.append(["getrawtransaction", h])
-                        print("get missed ", h)
                         if len(batch) >= self.rpc_batch_limit:
                             break
                     result = await self.rpc.batch(batch)
@@ -1223,18 +1220,15 @@ class Connector:
 
 
         except asyncio.CancelledError:
-            print("cancelled")
             pass
 
         except KeyError as err:
-            print("ex1")
             # transaction orphaned
             try:
                 self.tx_orphan_buffer[rh2s(err.args[0][:32])].append(tx)
             except:
                 self.tx_orphan_buffer[rh2s(err.args[0][:32])] = [tx]
             self.log.warning("tx orphaned %s" % tx_hash)
-            print("dep ",rh2s(err.args[0][:32]))
             self.loop.create_task(self._get_transaction(rh2s(err.args[0][:32])))
             # self.log.warning("requested %s" % rh2s(err.args[0][:32]))
             # clear orphaned transactions buffer over limit
@@ -1242,8 +1236,6 @@ class Connector:
                 self.tx_orphan_buffer.pop()
 
         except Exception as err:
-            print("ex2")
-            print(traceback.format_exc())
             try:
                 # check if transaction already exist
                 if err.detail.find("already exists") != -1:
@@ -1256,7 +1248,6 @@ class Connector:
 
             if block_tx:
                 self.log.critical("new transaction error %s" % err)
-                # print(traceback.format_exc())
                 self.await_tx = set()
                 if not self.block_txs_request.done():
                     self.block_txs_request.cancel()

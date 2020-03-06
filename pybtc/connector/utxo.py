@@ -313,17 +313,12 @@ class UUTXO():
         self.db_type = db_type
         self.db = db
         self.block_filters = block_filters
-        self.cm = 0
-
-
-
 
 
     async def load_utxo_data(self):
         #
         # load missed utxo from db
         #
-        # print("load_utxo_data")
         while True:
             if not self.load_data_future.done():
                 await self.load_data_future
@@ -386,9 +381,6 @@ class UUTXO():
 
     async def commit_tx(self, commit_uutxo, commit_ustxo, commit_up2pk_map, conn):
         if commit_uutxo:
-            for t in commit_uutxo:
-                print("create uutxo: ", rh2s(t[0][:32]), t[0][32:])
-            self.cm += len(commit_uutxo)
             await conn.copy_records_to_table('connector_unconfirmed_utxo',
                                              columns=["outpoint",
                                                       "out_tx_id",
@@ -458,10 +450,7 @@ class UUTXO():
 
 
         batch, uutxo = deque(), deque()
-        print("move to utxo len", len(rows), self.cm)
-        if self.cm:
-          assert len(rows) == self.cm
-        self.cm = 0
+
         for r in rows:
             batch.append((r["outpoint"],
                          (h << 39) + (txs.index(r["t"]) << 20) + (1 << 19) + bytes_to_int(r["outpoint"][32:]),
@@ -472,7 +461,6 @@ class UUTXO():
                     tx_filters[txs.index(r["t"])].append(r["address"])
                 except:
                     tx_filters[txs.index(r["t"])] = [r["address"]]
-            print("move tu utxo:", rh2s(r["outpoint"][:32]), bytes_to_int(r["outpoint"][32:]), (h << 39) + (txs.index(r["t"]) << 20) + (1 << 19) + bytes_to_int(r["outpoint"][32:]))
 
         await conn.copy_records_to_table('connector_utxo',
                                          columns=["outpoint", "pointer",
@@ -503,8 +491,6 @@ class UUTXO():
                                     "RETURNING outpoint, pointer, address, amount;", outpoints)
             for r in rows:
                 # save deleted utxo except utxo created in recent block
-                # debug
-                print("destroy:", rh2s(r["outpoint"][:32]), r["outpoint"][32:], " - ", r["amount"] )
                 if r["pointer"] >> 39 < h:
                     utxo.append((r["outpoint"], r["pointer"], r["address"], r["amount"]))
 
@@ -540,9 +526,6 @@ class UUTXO():
                                     "           out_tx_id as t,"
                                     "           address, "
                                     "           amount;", invalid_txs)
-            for r in rows:
-
-                print("destroy inv:", rh2s(r["outpoint"][:32]), r["outpoint"][32:], " - ", r["amount"])
             outpoints = set()
             for r in rows:
                 dbs_uutxo.append((r["outpoint"], r["t"], r["address"], r["amount"]))
