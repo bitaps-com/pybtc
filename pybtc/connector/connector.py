@@ -443,6 +443,8 @@ class Connector:
                     except:
                         pass
                     try:
+                        print(self.last_block_height > self.deep_sync_limit)
+                        print(self.last_block_height - self.deep_sync_limit)
                         if self.last_block_height > self.deep_sync_limit:
                             async with self.db_pool.acquire() as conn:
                                 await conn.execute("DELETE FROM connector_block_state_checkpoint "
@@ -461,7 +463,7 @@ class Connector:
                                 last_maintenance = time.time()
 
                     except:
-                        pass
+                        print(">>", traceback.format_exc())
 
                     try:
                         if self.watchdog_handler:
