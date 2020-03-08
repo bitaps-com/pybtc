@@ -422,7 +422,7 @@ class Connector:
         while True:
             try:
                 while True:
-                    await asyncio.sleep(20)
+                    await asyncio.sleep(30)
                     if self.mempool_tx:
                         if int(time.time()) - self.last_zmq_msg > 300 and self.zmqContext:
                             self.log.error("ZerroMQ no messages about 5 minutes")
@@ -700,6 +700,7 @@ class Connector:
                                    "resolved orphans %s" % (self.mempool_tx_count,
                                                             len(self.tx_orphan_buffer),
                                                             self.tx_orphan_resolved))
+                print(self.last_block_height, self.app_last_block)
                 self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"],len(block["tx"])))
 
             if self.test_orphans:
