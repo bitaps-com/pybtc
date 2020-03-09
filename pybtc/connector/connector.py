@@ -638,7 +638,9 @@ class Connector:
 
 
             if self.deep_synchronization:
+                q = time.time()
                 await self._block_as_transactions_batch(block)
+                print("block processed", time.time() - q)
                 if not self.cache_loading or block["height"] > self.app_block_height_on_start:
                     if self.block_batch_handler:
                         t = time.time()
