@@ -883,10 +883,12 @@ class Connector:
             if missed:
                 t2 = time.time()
                 await self.sync_utxo.load_utxo()
+                print("load utxo ", time.time() - t2)
                 t2 =time.time() - t2
                 self.batch_load_utxo += t2
                 if  self.cache_loading:
                     if height > self.app_block_height_on_start:
+                        print("load_utxo_from_daemon")
                         await self.sync_utxo.load_utxo_from_daemon()
                 for o, s, q, i in missed:
                     block["rawTx"][q]["vIn"][i]["coin"] = self.sync_utxo.get_loaded(o)
