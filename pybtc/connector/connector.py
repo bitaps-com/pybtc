@@ -567,6 +567,7 @@ class Connector:
                         q = time.time()
                         block = loads(raw_block)
                         self.blocks_decode_time += time.time() - q
+                        print("get block ", time.time() - q)
                     else:
                         print("no block")
                         self.loop.create_task(self.retry_get_next_block())
