@@ -68,8 +68,6 @@ class BlockLoader:
                         if next(iter(self.parent.block_preload._store)) <= self.parent.last_block_height:
                             for i in range(next(iter(self.parent.block_preload._store)),
                                            self.parent.last_block_height + 1):
-                                print("clear block cache ", i)
-
                                 try:
                                     self.parent.block_preload.remove(i)
                                 except:
