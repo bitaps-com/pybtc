@@ -1,7 +1,7 @@
 from struct import unpack
 from pybtc.opcodes import *
 
-from pybtc.functions.tools import bytes_from_hex, int_to_bytes, get_stream
+from pybtc.functions.tools import bytes_from_hex, int_to_bytes, get_stream, get_bytes, bytes_to_int
 from pybtc.functions.hash import hash160, sha256
 from pybtc.functions.address import hash_to_address
 from pybtc.functions.key import is_wif_valid, wif_to_private_key
@@ -11,8 +11,7 @@ from pybtc.crypto import __secp256k1_ecdsa_recover__
 
 
 def public_key_to_pubkey_script(key, hex=True):
-    if isinstance(key, str):
-        key = bytes_from_hex(key)
+    key = get_bytes(key)
     s = b"%s%s%s" % (bytes([len(key)]), key, OP_CHECKSIG)
     return s.hex() if hex else s
 
@@ -34,11 +33,7 @@ def parse_script(script, segwit=True):
     """
     if not script:
         return {"nType": 7, "type": "NON_STANDARD", "reqSigs": 0, "script": b""}
-    if isinstance(script, str):
-        try:
-            script = bytes_from_hex(script)
-        except:
-            raise ValueError("hex encoded string required")
+    script = get_bytes(script)
     l = len(script)
     if segwit:
         if l == 22 and script[0] == 0:
@@ -87,16 +82,16 @@ def parse_script(script, segwit=True):
 
     s, m, n, last, req_sigs = 0, 0, 0, 0, 0
     while l - s > 0:
+        # OP_1 -> OP_16
         if script[s] >= 81 and script[s] <= 96:
             if not n:
                 n = script[s] - 80
-            else:
-                if m == 0:
-                    n, m = script[s] - 80, 0
-                elif n > m:
-                    n, m = script[s] - 80, 0
-                elif m == script[s] - 80:
-                    last = 0 if last else 2
+            elif not m:
+                n, m = script[s] - 80, 0
+            elif n > m:
+                n, m = script[s] - 80, 0
+            elif m == script[s] - 80:
+                last = 0 if last else 2
         elif script[s] < 0x4c:
             s += script[s]
             m += 1
@@ -109,12 +104,12 @@ def parse_script(script, segwit=True):
                 break
         elif script[s] == OPCODE["OP_PUSHDATA2"]:
             try:
-                s += 2 + unpack('<H', script[s: s + 2])[0]
+                s += 2 + unpack('<H', script[s+1: s + 3])[0]
             except:
                 break
         elif script[s] == OPCODE["OP_PUSHDATA4"]:
             try:
-                s += 4 + unpack('<L', script[s: s + 4])[0]
+                s += 4 + unpack('<L', script[s+1: s + 5])[0]
             except:
                 break
         else:
@@ -159,13 +154,7 @@ def decode_script(script, asm=False):
     :return: script in ASM format string or OPCODES string.
     """
 
-    if isinstance(script, str):
-        try:
-            script = bytes_from_hex(script)
-        except:
-            pass
-    if not isinstance(script, bytes):
-        raise TypeError("script invalid")
+    script = get_bytes(script)
     l = len(script)
     s = 0
     result = []
@@ -193,7 +182,6 @@ def decode_script(script, asm=False):
                 s += 1 + script[s + 1] + 1
             elif script[s] == OPCODE["OP_PUSHDATA2"]:
                 if asm:
-
                     ld = unpack('<H', script[s + 1: s + 3])[0]
                     append("OP_PUSHDATA2[%s]" % ld)
                     append(script[s + 3:s + 3 + ld].hex())

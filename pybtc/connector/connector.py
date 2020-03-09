@@ -615,6 +615,7 @@ class Connector:
             self.active_block = asyncio.Future()
 
             if self.deep_synchronization:
+                print(">>>>", self.last_block_height, self.last_block_utxo_cached_height)
                 if self.last_block_height < self.last_block_utxo_cached_height:
                     if not self.cache_loading:
                         self.log.info("Bootstrap UTXO cache ...")
