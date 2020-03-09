@@ -555,6 +555,10 @@ class Connector:
 
 
                 if self.deep_synchronization:
+                    print(">>>>", self.last_block_height + 1, self.last_block_height, self.last_block_utxo_cached_height)
+                    self.log.debug("    Cache first block %s; "
+                                   "cache last block %s;" % (next(iter(self.block_preload._store)),
+                                                             next(reversed(self.block_preload._store))))
                     raw_block = self.block_preload.pop(self.last_block_height + 1)
                     if raw_block:
                         q = time.time()
@@ -616,10 +620,6 @@ class Connector:
             self.active_block = asyncio.Future()
 
             if self.deep_synchronization:
-                print(">>>>", block["height"], self.last_block_height, self.last_block_utxo_cached_height)
-                self.log.debug("    Cache first block %s; "
-                               "cache last block %s;" % (next(iter(self.block_preload._store)),
-                                                         next(reversed(self.block_preload._store))))
                 if self.last_block_height < self.last_block_utxo_cached_height:
                     if not self.cache_loading:
                         self.log.info("Bootstrap UTXO cache ...")
