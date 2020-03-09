@@ -616,7 +616,7 @@ class Connector:
             self.active_block = asyncio.Future()
 
             if self.deep_synchronization:
-                print(">>>>", self.last_block_height, self.last_block_utxo_cached_height)
+                print(">>>>", block["height"], self.last_block_height, self.last_block_utxo_cached_height)
                 self.log.debug("    Cache first block %s; "
                                "cache last block %s;" % (next(iter(self.block_preload._store)),
                                                          next(reversed(self.block_preload._store))))
