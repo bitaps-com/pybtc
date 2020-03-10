@@ -553,12 +553,6 @@ class Connector:
 
 
                 if self.deep_synchronization:
-                    try:
-                        self.log.debug("    Cache first block %s; "
-                                       "cache last block %s;" % (next(iter(self.block_preload._store)),
-                                                                 next(reversed(self.block_preload._store))))
-                    except:
-                        pass
                     raw_block = self.block_preload.pop(self.last_block_height + 1)
                     if raw_block:
                         q = time.time()
