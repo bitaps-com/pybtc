@@ -455,8 +455,12 @@ def test_delete_from_script():
     d = "03fe"
     e = "0001"
     delete_from_script(s, d)
-    s = "000000000003feed"
-    d = "0003feed"
-    e = "0001"
-    print(delete_from_script(s, d))
+    s = "0003feed"
+    d = "03fe"
+    print("----")
+    print(decode_script(d))
+    print(decode_script(s))
+    print(decode_script(delete_from_script(s, d)))
+    e = "03fe"
+    print(delete_from_script(s, d), len(s)/2, len(delete_from_script(s, d))/2)
     # assert delete_from_script(s, d) == e

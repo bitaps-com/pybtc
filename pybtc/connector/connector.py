@@ -435,6 +435,7 @@ class Connector:
                                 pass
                     try:
                         h = await self.rpc.getblockcount()
+                        print(">>", self.node_last_block, h, self.get_next_block_mutex)
                         if self.node_last_block < h:
                             self.node_last_block = h
                             self.log.info("watchdog -> bitcoind node last block %s" % h)

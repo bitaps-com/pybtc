@@ -258,10 +258,10 @@ def delete_from_script(script, sub_script):
                 t = stack.pop(0)
                 result_append(script[k:k + t])
                 k += t
-    print(script[k:s][:ls], sub_script)
-    print(bool(script[k:s][:ls] ==sub_script), s, k , ls)
+    # print(script[k:s][:ls], sub_script)
+    # print(bool(script[k:s][:ls] ==sub_script), s, k , ls)
     if script[k:s][:ls] == sub_script:
-        print(">>", s - k > ls, s-k,ls)
+        # print(">>", s - k > ls, s-k,ls)
         if s - k > ls:
             result_append(script[k + ls:s])
     else:
