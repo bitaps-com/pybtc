@@ -603,6 +603,7 @@ class Connector:
 
 
     async def _new_block(self, block):
+        print(block["height"])
         if not self.active: return
         if self.deep_synchronization:  block["height"] = self.last_block_height + 1
         if self.last_block_height >= block["height"]:  return
