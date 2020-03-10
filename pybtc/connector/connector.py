@@ -111,6 +111,7 @@ class Connector:
         self.block_dependency_tx = 0 # counter of tx that have dependencies in block
         self.active = True
         self.get_next_block_mutex = False
+        self.get_block_attempt = 0
         self.active_block = asyncio.Future()
         self.active_block.set_result(True)
         self.last_zmq_msg = int(time.time())
@@ -555,14 +556,20 @@ class Connector:
                             self.total_received_tx = 0
                             self.total_received_tx_time = 0
 
-
+                print("->2", self.deep_synchronization)
                 if self.deep_synchronization:
                     raw_block = self.block_preload.pop(self.last_block_height + 1)
                     if raw_block:
+                        self.get_block_attempt = 0
                         q = time.time()
                         block = loads(raw_block)
                         self.blocks_decode_time += time.time() - q
+                    elif self.get_block_attempt > 3:
+                        h = await self.rpc.getblockhash(self.last_block_height + 1)
+                        block = await self._get_block_by_hash(h)
                     else:
+                        self.get_block_attempt += 1
+                        print("wait block")
                         self.loop.create_task(self.retry_get_next_block())
                         return
                 else:

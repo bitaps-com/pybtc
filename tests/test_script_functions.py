@@ -9,6 +9,7 @@ from pybtc.functions.script import parse_script
 from pybtc.functions.script import script_to_address
 from pybtc.functions.script import decode_script
 from pybtc.functions.script import delete_from_script
+from pybtc.functions.script import script_to_hash
 from pybtc.functions.key import wif_to_private_key
 from pybtc.functions.key import private_key_to_wif
 from pybtc.functions.key import is_wif_valid
@@ -370,13 +371,21 @@ def test_delete_from_script():
     assert delete_from_script([OP_1, OP_2, OP_3], [OP_2]) == get_bytes([OP_1, OP_3])
     assert delete_from_script([OP_3, OP_1, OP_3,OP_3, OP_4, OP_3 ], [OP_3]) == get_bytes([OP_1, OP_4])
     assert delete_from_script([b"\x03", b"\x02\xff\x03"], [b"\x03", b"\x02\xff\x03"]) == get_bytes([])
+    assert delete_from_script([b"\x03", b"\x02\xff\x03", b"\x03", b"\x02\xff\x03"],
+                              [b"\x03", b"\x02\xff\x03"]) == get_bytes([])
+    assert delete_from_script([b"\x03", b"\x02\xff\x03", b"\x03", b"\x02\xff\x03"],
+                              [b"\x02"]) == get_bytes([b"\x03", b"\x02\xff\x03", b"\x03", b"\x02\xff\x03"])
+    assert delete_from_script([b"\x03", b"\x02\xff\x03", b"\x03", b"\x02\xff\x03"],
+                              [b"\xff"]) == get_bytes([b"\x03", b"\x02\xff\x03", b"\x03", b"\x02\xff\x03"])
 
+    assert delete_from_script([b"\x03", b"\x02\xff\x03", b"\x03", b"\x02\xff\x03"],
+                              [b"\x03"]) == get_bytes([b"\x02\xff\x03", b"\x02\xff\x03"])
+    assert delete_from_script([b"\x02", b"\xfe\xed", OP_1, OP_VERIFY],
+                              [b"\xfe\xed", OP_1]) == \
+           get_bytes([b"\x02", b"\xfe\xed", OP_1, OP_VERIFY])
 
-
-    s = "0302ff03"
-    d = "0302ff03"
-    e = ""
-    assert delete_from_script(s, d) == e
+    assert delete_from_script([b"\x02", b"\xfe\xed", OP_1, OP_VERIFY],
+                              [b"\x02", b"\xfe\xed", OP_1]) == get_bytes([OP_VERIFY])
 
     s = "0302ff030302ff03"
     d = "0302ff03"
@@ -390,7 +399,6 @@ def test_delete_from_script():
     s = "0302ff030302ff03"
     d = "ff"
     assert delete_from_script(s, d) == s
-    print("----", decode_script("0302ff030302ff03"))
     s = "0302ff030302ff03"
     d = "03"
     e = "02ff0302ff03"
@@ -444,16 +452,9 @@ def test_delete_from_script():
     assert delete_from_script([OP_PUSHDATA4, pack('<L', 20),b"12345678901234567890"], "00").hex() == \
            "4e140000003132333435363738393031323334353637383930"
 
-    s = "0003feed"
-    d = "03fe"
-    e = "0001"
-    delete_from_script(s, d)
-    s = "0003feed"
-    d = "03fe"
-    print("----")
-    print(decode_script(d))
-    print(decode_script(s))
-    print(decode_script(delete_from_script(s, d)))
-    e = "03fe"
-    print(delete_from_script(s, d), len(s)/2, len(delete_from_script(s, d))/2)
-    # assert delete_from_script(s, d) == e
+def test_script_to_hash():
+    assert script_to_hash("76a914751e76e8199196d454941c45d1b3a323f1433bd688ac") == \
+           "cd7b44d0b03f2d026d1e586d7ae18903b0d385f6"
+
+    assert script_to_hash("0014751e76e8199196d454941c45d1b3a323f1433bd6", witness=True) == \
+           "8838f796bf4970b148779c05b74b8c49515b322d04035f7faa5d9b2375df2396"

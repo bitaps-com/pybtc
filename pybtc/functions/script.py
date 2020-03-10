@@ -229,80 +229,14 @@ def delete_from_script(script, sub_script):
     while o:
         if script[offset:offset + len(sub_script)] == sub_script:
             skip_until = offset + len(sub_script)
+            r += d[len(sub_script) - 1:] if d is not None else b""
         if offset >= skip_until:
-           r += o
-           r += d if d is not None else b""
+            r += o
+            r += d if d is not None else b""
         offset += 1
         offset += len(d) if d is not None else 0
         o, d = read_opcode(stream)
     return r.hex() if s_hex else r
-
-
-
-
-    # for (opcode, data, sop_idx) in script.raw_iter():
-    #     if not skip:
-    #         r += script[last_sop_idx:sop_idx]
-    #     last_sop_idx = sop_idx
-    #     if script[sop_idx:sop_idx + len(sig)] == sig:
-    #         skip = True
-    #     else:
-    #         skip = False
-    # if not skip:
-    #     r += script[last_sop_idx:]
-    #
-    # return r if not s_hex else r.hex()
-    #
-
-
-
-
-    # l = len(script)
-    # ls = len(sub_script)
-    # s = 0
-    # k = 0
-    # stack = []
-    # stack_append = stack.append
-    # result = []
-    # result_append = result.append
-    # while l - s > 0:
-    #     if script[s] < 0x4c and script[s]:
-    #         stack_append(script[s] + 1)
-    #         s += script[s] + 1
-    #     elif script[s] == OPCODE["OP_PUSHDATA1"]:
-    #         stack_append(1 + script[s + 1])
-    #         s += 1 + script[s + 1]
-    #     elif script[s] == OPCODE["OP_PUSHDATA2"]:
-    #         stack_append(2 + unpack('<H', script[s: s + 2])[0])
-    #         s += 2 + unpack('<H', script[s: s + 2])[0]
-    #     elif script[s] == OPCODE["OP_PUSHDATA4"]:
-    #         stack_append(4 + unpack('<L', script[s: s + 4])[0])
-    #         s += 4 + unpack('<L', script[s: s + 4])[0]
-    #     else:
-    #         stack_append(1)
-    #         s += 1
-    #     if s - k >= ls:
-    #         if script[k:s][:ls] == sub_script:
-    #             if s - k > ls:
-    #                 result_append(script[k + ls:s])
-    #             t = 0
-    #             while t != s - k:
-    #                 t += stack.pop(0)
-    #             k = s
-    #         else:
-    #             t = stack.pop(0)
-    #             result_append(script[k:k + t])
-    #             k += t
-    # # print(script[k:s][:ls], sub_script)
-    # # print(bool(script[k:s][:ls] ==sub_script), s, k , ls)
-    # if script[k:s][:ls] == sub_script:
-    #     # print(">>", s - k > ls, s-k,ls)
-    #     if s - k > ls:
-    #         result_append(script[k + ls:s])
-    # else:
-    #     result_append(script[k:k + ls])
-    #
-    # return b''.join(result) if not s_hex else b''.join(result).hex()
 
 
 def script_to_hash(script, witness=False, hex=True):
@@ -315,13 +249,8 @@ def script_to_hash(script, witness=False, hex=True):
     :param sub_script:  sub_script which is necessary to remove from target script in bytes or HEX encoded string.
     :return: script in bytes or HEX encoded string corresponding to the format of target script.
     """
-    if isinstance(script, str):
-        script = bytes_from_hex(script)
-    if witness:
-        return sha256(script, hex)
-    else:
-        return hash160(script, hex)
-
+    script = get_bytes(script)
+    return sha256(script, hex) if witness else hash160(script, hex)
 
 def op_push_data(data):
     if len(data) <= 0x4b:
