@@ -443,8 +443,6 @@ class Connector:
                     except:
                         pass
                     try:
-                        print(self.last_block_height > self.deep_sync_limit)
-                        print(self.last_block_height - self.deep_sync_limit)
                         if self.last_block_height > self.deep_sync_limit:
                             async with self.db_pool.acquire() as conn:
                                 await conn.execute("DELETE FROM connector_block_state_checkpoint "
@@ -555,7 +553,6 @@ class Connector:
 
 
                 if self.deep_synchronization:
-                    print(">>>>", self.last_block_height + 1, self.last_block_height, self.last_block_utxo_cached_height)
                     try:
                         self.log.debug("    Cache first block %s; "
                                        "cache last block %s;" % (next(iter(self.block_preload._store)),
@@ -567,9 +564,7 @@ class Connector:
                         q = time.time()
                         block = loads(raw_block)
                         self.blocks_decode_time += time.time() - q
-                        print("get block ", time.time() - q)
                     else:
-                        print("no block")
                         self.loop.create_task(self.retry_get_next_block())
                         return
                 else:
@@ -640,7 +635,6 @@ class Connector:
             if self.deep_synchronization:
                 q = time.time()
                 await self._block_as_transactions_batch(block)
-                print("block processed", time.time() - q)
                 if not self.cache_loading or block["height"] > self.app_block_height_on_start:
                     if self.block_batch_handler:
                         t = time.time()
@@ -711,9 +705,6 @@ class Connector:
                                    "resolved orphans %s" % (self.mempool_tx_count,
                                                             len(self.tx_orphan_buffer),
                                                             self.tx_orphan_resolved))
-                print(self.last_block_height, self.app_last_block)
-                self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"],len(block["tx"])))
-
             if self.test_orphans:
                 if not self.test_rollback:
                     if self.rollback_counter < self.test_orphans:
@@ -883,12 +874,10 @@ class Connector:
             if missed:
                 t2 = time.time()
                 await self.sync_utxo.load_utxo()
-                print("load utxo ", time.time() - t2)
                 t2 =time.time() - t2
                 self.batch_load_utxo += t2
                 if  self.cache_loading:
                     if height > self.app_block_height_on_start:
-                        print("load_utxo_from_daemon")
                         await self.sync_utxo.load_utxo_from_daemon()
                 for o, s, q, i in missed:
                     block["rawTx"][q]["vIn"][i]["coin"] = self.sync_utxo.get_loaded(o)
