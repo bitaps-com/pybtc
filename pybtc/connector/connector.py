@@ -480,7 +480,9 @@ class Connector:
 
 
     async def get_next_block(self):
+        print("get_next_block", self.active,  self.active_block.done(), self.get_next_block_mutex)
         if self.active and self.active_block.done() and self.get_next_block_mutex:
+            print("->")
             try:
                 # check synchronization state
                 if self.node_last_block <= self.last_block_height + self.backlog:
