@@ -1,4 +1,5 @@
 from pybtc.functions.tools import bytes_from_hex as b2h
+from pybtc.functions.tools import get_bytes
 from struct import pack
 import pytest
 
@@ -365,20 +366,12 @@ def test_decode_script():
     assert decode_script([OP_PUSHDATA2]) == "[SCRIPT_DECODE_FAILED]"
 
 def test_delete_from_script():
-    s = BYTE_OPCODE["OP_FALSE"] + BYTE_OPCODE["OP_1"]
-    d = b""
-    assert delete_from_script(s, d) == s
+    assert delete_from_script([OP_1, OP_2], []) == get_bytes([OP_1, OP_2])
+    assert delete_from_script([OP_1, OP_2, OP_3], [OP_2]) == get_bytes([OP_1, OP_3])
+    assert delete_from_script([OP_3, OP_1, OP_3,OP_3, OP_4, OP_3 ], [OP_3]) == get_bytes([OP_1, OP_4])
+    assert delete_from_script([b"\x03", b"\x02\xff\x03"], [b"\x03", b"\x02\xff\x03"]) == get_bytes([])
 
-    s = BYTE_OPCODE["OP_1"] + BYTE_OPCODE["OP_2"] + BYTE_OPCODE["OP_3"]
-    d = BYTE_OPCODE["OP_2"]
-    e = BYTE_OPCODE["OP_1"] + BYTE_OPCODE["OP_3"]
-    assert delete_from_script(s, d) == e
 
-    s = BYTE_OPCODE["OP_3"] + BYTE_OPCODE["OP_1"] + BYTE_OPCODE["OP_3"]
-    s += BYTE_OPCODE["OP_3"] + BYTE_OPCODE["OP_4"] + BYTE_OPCODE["OP_3"]
-    d = BYTE_OPCODE["OP_3"]
-    e = BYTE_OPCODE["OP_1"] + BYTE_OPCODE["OP_4"]
-    assert delete_from_script(s, d) == e
 
     s = "0302ff03"
     d = "0302ff03"
@@ -397,7 +390,7 @@ def test_delete_from_script():
     s = "0302ff030302ff03"
     d = "ff"
     assert delete_from_script(s, d) == s
-
+    print("----", decode_script("0302ff030302ff03"))
     s = "0302ff030302ff03"
     d = "03"
     e = "02ff0302ff03"

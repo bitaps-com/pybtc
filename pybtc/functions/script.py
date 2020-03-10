@@ -216,32 +216,43 @@ def delete_from_script(script, sub_script):
     :param sub_script:  sub_script which is necessary to remove from target script in bytes or HEX encoded string.
     :return: script in bytes or HEX encoded string corresponding to the format of target script.
     """
-    if not sub_script:
-        return script
     s_hex = isinstance(script, str)
     script = get_bytes(script)
     sub_script = get_bytes(sub_script)
-    script = get_stream(script)
-
+    stream = get_stream(script)
+    if not sub_script:
+        return script.hex() if s_hex else script
     r = b''
-    skip = True
-    o, d = read_opcode(script)
+    offset = 0
+    skip_until = 0
+    o, d = read_opcode(stream)
     while o:
+        if script[offset:offset + len(sub_script)] == sub_script:
+            skip_until = offset + len(sub_script)
+        if offset >= skip_until:
+           r += o
+           r += d if d is not None else b""
+        offset += 1
+        offset += len(d) if d is not None else 0
+        o, d = read_opcode(stream)
+    return r.hex() if s_hex else r
 
 
-    for (opcode, data, sop_idx) in script.raw_iter():
-        if not skip:
-            r += script[last_sop_idx:sop_idx]
-        last_sop_idx = sop_idx
-        if script[sop_idx:sop_idx + len(sig)] == sig:
-            skip = True
-        else:
-            skip = False
-    if not skip:
-        r += script[last_sop_idx:]
 
-    return r if not s_hex else r.hex()
 
+    # for (opcode, data, sop_idx) in script.raw_iter():
+    #     if not skip:
+    #         r += script[last_sop_idx:sop_idx]
+    #     last_sop_idx = sop_idx
+    #     if script[sop_idx:sop_idx + len(sig)] == sig:
+    #         skip = True
+    #     else:
+    #         skip = False
+    # if not skip:
+    #     r += script[last_sop_idx:]
+    #
+    # return r if not s_hex else r.hex()
+    #
 
 
 
