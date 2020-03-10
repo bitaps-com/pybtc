@@ -423,6 +423,7 @@ class Connector:
             try:
                 while True:
                     await asyncio.sleep(30)
+                    print(">>", 30)
                     if self.mempool_tx:
                         if int(time.time()) - self.last_zmq_msg > 300 and self.zmqContext:
                             self.log.error("ZerroMQ no messages about 5 minutes")
@@ -441,7 +442,7 @@ class Connector:
                                 self.get_next_block_mutex = True
                                 self.loop.create_task(self.get_next_block())
                     except:
-                        pass
+                        print(traceback.format_exc())
                     try:
                         if self.last_block_height > self.deep_sync_limit:
                             async with self.db_pool.acquire() as conn:

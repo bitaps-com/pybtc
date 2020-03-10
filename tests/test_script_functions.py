@@ -7,6 +7,7 @@ from pybtc.opcodes import *
 from pybtc.functions.script import parse_script
 from pybtc.functions.script import script_to_address
 from pybtc.functions.script import decode_script
+from pybtc.functions.script import delete_from_script
 from pybtc.functions.key import wif_to_private_key
 from pybtc.functions.key import private_key_to_wif
 from pybtc.functions.key import is_wif_valid
@@ -85,7 +86,8 @@ def test_parse_script():
     assert parse_script(b2h("76a9143053ef41e2106fb5fea261c8ee3fd44f007b5ee688ac"))["nType"] == 0
     assert parse_script(b2h("76a9143053ef41e2106fb5fea261c8ee3fd44f007b5ee688ac"))["reqSigs"] == 1
     assert parse_script(b2h("76a9143053ef41e2106fb5fea261"
-                            "c8ee3fd44f007b5ee688ac"))["addressHash"].hex() == "3053ef41e2106fb5fea261c8ee3fd44f007b5ee6"
+                            "c8ee3fd44f007b5ee688ac"))["addressHash"].hex() == \
+           "3053ef41e2106fb5fea261c8ee3fd44f007b5ee6"
 
     p = "410496b538e853519c726a2c91e61ec11600ae1390813a627c66fb8be7947be63c52da7589379515d4e0a604" \
         "f8141781e62294721166bf621e73a82cbf2342c858eeac"
@@ -354,3 +356,107 @@ def test_decode_script():
                                          'OP_CHECKMULTISIG'
     assert decode_script("00144160bb1870159a08724557f75c7bb665a3a132e0") == "OP_0 [20]"
     assert decode_script("0020cdbf909e935c855d3e8d1b61aeb9c5e3c03ae8021b286839b1a72f2e48fdba70") == "OP_0 [32]"
+    assert decode_script([OP_PUSHDATA2, pack('<H', 20),b"12345678901234567890"]) == "OP_PUSHDATA2 [20]"
+    assert decode_script([OP_PUSHDATA2, pack('<H', 20),b"12345678901234567890"], asm=True) == "OP_PUSHDATA2[20] "+ \
+           b"12345678901234567890".hex()
+    assert decode_script([OP_PUSHDATA4, pack('<L', 20),b"12345678901234567890"]) == "OP_PUSHDATA4 [20]"
+    assert decode_script([OP_PUSHDATA4, pack('<L', 20),b"12345678901234567890"], asm=True) == "OP_PUSHDATA4[20] "+ \
+           b"12345678901234567890".hex()
+    assert decode_script([OP_PUSHDATA2]) == "[SCRIPT_DECODE_FAILED]"
+
+def test_delete_from_script():
+    s = BYTE_OPCODE["OP_FALSE"] + BYTE_OPCODE["OP_1"]
+    d = b""
+    assert delete_from_script(s, d) == s
+
+    s = BYTE_OPCODE["OP_1"] + BYTE_OPCODE["OP_2"] + BYTE_OPCODE["OP_3"]
+    d = BYTE_OPCODE["OP_2"]
+    e = BYTE_OPCODE["OP_1"] + BYTE_OPCODE["OP_3"]
+    assert delete_from_script(s, d) == e
+
+    s = BYTE_OPCODE["OP_3"] + BYTE_OPCODE["OP_1"] + BYTE_OPCODE["OP_3"]
+    s += BYTE_OPCODE["OP_3"] + BYTE_OPCODE["OP_4"] + BYTE_OPCODE["OP_3"]
+    d = BYTE_OPCODE["OP_3"]
+    e = BYTE_OPCODE["OP_1"] + BYTE_OPCODE["OP_4"]
+    assert delete_from_script(s, d) == e
+
+    s = "0302ff03"
+    d = "0302ff03"
+    e = ""
+    assert delete_from_script(s, d) == e
+
+    s = "0302ff030302ff03"
+    d = "0302ff03"
+    e = ""
+    assert delete_from_script(s, d) == e
+
+    s = "0302ff030302ff03"
+    d = "02"
+    assert delete_from_script(s, d) == s
+
+    s = "0302ff030302ff03"
+    d = "ff"
+    assert delete_from_script(s, d) == s
+
+    s = "0302ff030302ff03"
+    d = "03"
+    e = "02ff0302ff03"
+    assert delete_from_script(s, d) == e
+
+    s = "02feed5169"
+    d = "feed51"
+    e = s
+    assert delete_from_script(s, d) == e
+
+    s = "02feed5169"
+    d = "02feed51"
+    e = "69"
+    assert delete_from_script(s, d) == e
+    #
+    s = "516902feed5169"
+    d = "feed51"
+    e = s
+    assert delete_from_script(s, d) == e
+
+    s = "516902feed5169"
+    d = "02feed51"
+    e = "516969"
+    assert delete_from_script(s, d)== e
+
+    s = BYTE_OPCODE["OP_0"] + BYTE_OPCODE["OP_0"] + BYTE_OPCODE["OP_1"]
+    s += BYTE_OPCODE["OP_1"]
+    d = BYTE_OPCODE["OP_0"] + BYTE_OPCODE["OP_1"]
+    e = d
+    assert delete_from_script(s, d) == e
+
+    s = BYTE_OPCODE["OP_0"] + BYTE_OPCODE["OP_0"] + BYTE_OPCODE["OP_1"]
+    s += BYTE_OPCODE["OP_0"] + BYTE_OPCODE["OP_1"] + BYTE_OPCODE["OP_1"]
+    d = BYTE_OPCODE["OP_0"] + BYTE_OPCODE["OP_1"]
+    e = d
+    assert delete_from_script(s, d) == e
+
+    s = "0003feed"
+    d = "03feed"
+    e = "00"
+    assert delete_from_script(s, d) == e
+
+    s = "0003feed"
+    d = "00"
+    e = "03feed"
+    assert delete_from_script(s, d) == e
+    assert delete_from_script([OP_PUSHDATA1, pack('<B', 20),b"12345678901234567890"], "00").hex() == \
+           "4c143132333435363738393031323334353637383930"
+    assert delete_from_script([OP_PUSHDATA2, pack('<H', 20),b"12345678901234567890"], "00").hex() == \
+           "4d14003132333435363738393031323334353637383930"
+    assert delete_from_script([OP_PUSHDATA4, pack('<L', 20),b"12345678901234567890"], "00").hex() == \
+           "4e140000003132333435363738393031323334353637383930"
+
+    s = "0003feed"
+    d = "03fe"
+    e = "0001"
+    delete_from_script(s, d)
+    s = "000000000003feed"
+    d = "0003feed"
+    e = "0001"
+    print(delete_from_script(s, d))
+    # assert delete_from_script(s, d) == e

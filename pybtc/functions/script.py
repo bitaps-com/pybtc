@@ -218,23 +218,9 @@ def delete_from_script(script, sub_script):
     """
     if not sub_script:
         return script
-    s_hex = False
-    if isinstance(script, str):
-        try:
-            script = bytes_from_hex(script)
-            s_hex = True
-        except:
-            pass
-    if isinstance(sub_script, str):
-        try:
-            sub_script = bytes_from_hex(sub_script)
-        except:
-            pass
-
-    if not isinstance(script, bytes):
-        raise TypeError("script invalid")
-    if not isinstance(sub_script, bytes):
-        raise TypeError("sub_script invalid")
+    s_hex = isinstance(script, str)
+    script = get_bytes(script)
+    sub_script = get_bytes(sub_script)
 
     l = len(script)
     ls = len(sub_script)
@@ -272,7 +258,10 @@ def delete_from_script(script, sub_script):
                 t = stack.pop(0)
                 result_append(script[k:k + t])
                 k += t
+    print(script[k:s][:ls], sub_script)
+    print(bool(script[k:s][:ls] ==sub_script), s, k , ls)
     if script[k:s][:ls] == sub_script:
+        print(">>", s - k > ls, s-k,ls)
         if s - k > ls:
             result_append(script[k + ls:s])
     else:
