@@ -438,10 +438,11 @@ class Connector:
                         self.node_last_block > self.last_block_height + self.backlog:
                             self.get_next_block_mutex = True
                             self.loop.create_task(self.get_next_block())
-                            self.log.warning("watchdog bitcoin node last block %s; "
-                                             "connector last block %s; "
-                                             "force get next block ..." % (self.node_last_block,
-                                                                           self.last_block_height))
+                            if self.synchronized:
+                                self.log.warning("watchdog bitcoin node last block %s; "
+                                                 "connector last block %s; "
+                                                 "force get next block ..." % (self.node_last_block,
+                                                                               self.last_block_height))
 
                     # db tasks
                     if self.utxo_data:

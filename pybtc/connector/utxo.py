@@ -136,7 +136,7 @@ class UTXO():
         #  load missed utxo from bitcoind daemon
         #
         if not self.missed_failed: return
-        missed = chunks_by_count(self.missed_failed, 50)
+        missed = chunks_by_count(self.missed_failed, 100)
         for m in missed:
             result = await self.rpc.batch([["getrawtransaction", rh2s(i[:32]), 1] for i in m])
             hash_list = set()

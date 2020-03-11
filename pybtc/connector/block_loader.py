@@ -110,7 +110,7 @@ class BlockLoader:
                             self.height += self.rpc_batch_limit
                             if self.height > target_height:
                                 self.height = target_height
-                                break
+
 
                 if self.last_batch_size < self.parent.block_preload_batch_size_limit:
                     self.rpc_batch_limit += 40
