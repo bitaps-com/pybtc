@@ -143,10 +143,11 @@ class UTXO():
             for r in result:
                 if r["result"]["blockhash"] not in self.restore_blocks_cache:
                     hash_list.add(r["result"]["blockhash"])
-
-            result2 = await self.rpc.batch([["getblock", r] for r in hash_list])
-            for r in result2:
-               self.restore_blocks_cache[r["result"]["hash"]] = r["result"]
+            hash_list = chunks_by_count(hash_list, 20)
+            for hl in hash_list:
+                result2 = await self.rpc.batch([["getblock", r] for r in hl])
+                for r in result2:
+                   self.restore_blocks_cache[r["result"]["hash"]] = r["result"]
 
             for key, r in zip(m, result):
                 out_index = bytes_to_int(key[32:])
