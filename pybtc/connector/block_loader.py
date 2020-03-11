@@ -96,10 +96,12 @@ class BlockLoader:
                 continue
 
             try:
+                n = False
                 for i in self.worker_busy:
                     if self.height < target_height:
                         if not self.worker_busy[i]:
                             self.worker_busy[i] = True
+                            n = True
                             if self.height <= self.parent.last_block_height:
                                 self.height = self.parent.last_block_height + 1
                             await self.pipe_sent_msg(self.worker[i].writer, b'rpc_batch_limit',
@@ -110,6 +112,7 @@ class BlockLoader:
                             self.height += self.rpc_batch_limit
                             if self.height > target_height:
                                 self.height = target_height
+                if n: continue
 
 
                 if self.last_batch_size < self.parent.block_preload_batch_size_limit:

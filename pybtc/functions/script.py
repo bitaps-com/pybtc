@@ -1,4 +1,4 @@
-from struct import unpack
+from struct import unpack, pack
 from pybtc.opcodes import *
 
 from pybtc.functions.tools import bytes_from_hex, int_to_bytes, get_stream, get_bytes, bytes_to_int
@@ -253,25 +253,28 @@ def script_to_hash(script, witness=False, hex=True):
     return sha256(script, hex) if witness else hash160(script, hex)
 
 def op_push_data(data):
+    data = get_bytes(data)
     if len(data) <= 0x4b:
         return b''.join([bytes([len(data)]), data])
     elif len(data) <= 0xff:
         return b''.join([OP_PUSHDATA1, bytes([len(data)]), data])
     elif len(data) <= 0xffff:
-        return b''.join([OP_PUSHDATA2, int_to_bytes(len(data), byteorder="little"), data])
+        return b''.join([OP_PUSHDATA2, pack('<H',len(data)), data])
 
     else:
-        return b''.join([OP_PUSHDATA4, int_to_bytes(len(data), byteorder="little"), data])
+
+        return b''.join([OP_PUSHDATA4, pack('<L',len(data)), data])
 
 
-def get_multisig_public_keys(script):
+def get_multisig_public_keys(script, hex=False):
+    script = get_bytes(script)
     pub_keys = []
     s = get_stream(script)
     o, d = read_opcode(s)
     while o:
         o, d = read_opcode(s)
         if d:
-            pub_keys.append(d)
+            pub_keys.append(d.hex() if hex else d)
     return pub_keys
 
 

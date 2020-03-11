@@ -10,6 +10,8 @@ from pybtc.functions.script import script_to_address
 from pybtc.functions.script import decode_script
 from pybtc.functions.script import delete_from_script
 from pybtc.functions.script import script_to_hash
+from pybtc.functions.script import op_push_data
+from pybtc.functions.script import get_multisig_public_keys
 from pybtc.functions.key import wif_to_private_key
 from pybtc.functions.key import private_key_to_wif
 from pybtc.functions.key import is_wif_valid
@@ -458,3 +460,27 @@ def test_script_to_hash():
 
     assert script_to_hash("0014751e76e8199196d454941c45d1b3a323f1433bd6", witness=True) == \
            "8838f796bf4970b148779c05b74b8c49515b322d04035f7faa5d9b2375df2396"
+
+def test_op_push_data():
+    assert op_push_data("") == b"\x00"
+    assert op_push_data(b"1234567890") == b'\n1234567890'
+    assert op_push_data(b"1"*75) == b'K' + b"1" * 75
+    assert op_push_data(b"1"*76) != b'\x4c' + b"1" * 76
+    assert op_push_data(b"1"*76) == get_bytes([OP_PUSHDATA1, b"\x4c", b"1" * 76])
+    assert op_push_data(b"1"*256) == get_bytes([OP_PUSHDATA2, pack('<H' ,256), b"1" * 256])
+    p = b"1" * 65537
+    l = op_push_data(p) == OP_PUSHDATA4 + pack('<L' ,65537) + p
+    assert l
+
+def test_get_multisig_public_keys():
+    s = "512102953397b893148acec2a9da8341159e9e7fb3d32987c3563e8bdf22116213623"
+    s += "441048da561da64584fb1457e906bc2840a1f963b401b632ab98761d12d74dd795bbf"
+    s += "410c7b6d6fd39acf9d870cb9726578eaf8ba430bb296eac24957f3fb3395b8b042060"
+    s += "466616fb675310aeb024f957b4387298dc28305bc7276bf1f7f662a6764bcdffb6a97"
+    s += "40de596f89ad8000f8fa6741d65ff1338f53eb39e98179dd18c6e6be8e3953ae"
+    k = ['02953397b893148acec2a9da8341159e9e7fb3d32987c3563e8bdf221162136234',
+         '048da561da64584fb1457e906bc2840a1f963b401b632ab98761d12d74dd795bbf'
+         '410c7b6d6fd39acf9d870cb9726578eaf8ba430bb296eac24957f3fb3395b8b0',
+         '060466616fb675310aeb024f957b4387298dc28305bc7276bf1f7f662a6764bcdf'
+         'fb6a9740de596f89ad8000f8fa6741d65ff1338f53eb39e98179dd18c6e6be8e39']
+    assert "".join(get_multisig_public_keys(s, 1)) == "".join(k)

@@ -564,7 +564,7 @@ class Connector:
                         q = time.time()
                         block = loads(raw_block)
                         self.blocks_decode_time += time.time() - q
-                    elif self.get_block_attempt > 30:
+                    elif self.get_block_attempt > 100:
                         self.block_loader.restart()
                         self.get_block_attempt = 0
                         self.loop.create_task(self.retry_get_next_block())
