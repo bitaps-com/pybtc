@@ -21,7 +21,7 @@ except: pass
 
 class UTXO():
 
-    def __init__(self, db_type, db,  rpc, loop, log, cache_size):
+    def __init__(self, db,  rpc, loop, log, cache_size):
         self.cache = MRU()  # utxo cache
         self.restore_blocks_cache = LRU()  # blocks cache for restore utxo cache
 
@@ -41,9 +41,7 @@ class UTXO():
         self.checkpoints = deque()
         self.log = log
 
-
         self.size_limit = cache_size
-        self.db_type = db_type
         self.db = db
         self.loop = loop
 
@@ -301,7 +299,7 @@ class UTXO():
 
 
 class UUTXO():
-    def __init__(self, db_type, db, block_filters, log):
+    def __init__(self, db, block_filters, log):
         self.load_buffer = deque()
         self.loaded_utxo = LRU(100000)  # loaded from db missed records
         self.loaded_ustxo = LRU(100000)  # loaded from db missed records
@@ -310,7 +308,6 @@ class UUTXO():
         self.load_data_future.set_result(True)
 
         self.log = log
-        self.db_type = db_type
         self.db = db
         self.block_filters = block_filters
 

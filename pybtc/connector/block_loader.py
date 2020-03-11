@@ -1,10 +1,3 @@
-from pybtc.functions.tools import bytes_to_int
-from pybtc.functions.address import hash_to_script
-from pybtc.functions.hash import siphash
-from pybtc.functions.tools import int_to_bytes, int_to_c_int
-from pybtc.functions.block import merkle_tree, merkle_proof
-from pybtc.connector.utils import decode_block_tx
-from pybtc import MRU, parse_script, rh2s, MINER_COINBASE_TAG, MINER_PAYOUT_TAG, hash_to_address
 import asyncio
 import os
 from multiprocessing import Process
@@ -33,6 +26,14 @@ try:
 except:
     pass
 
+from pybtc.functions.tools import bytes_to_int
+from pybtc.functions.tools import int_to_bytes
+from pybtc.functions.block import merkle_tree, merkle_proof
+from pybtc.connector.utils import decode_block_tx
+from pybtc import MRU, parse_script, rh2s, MINER_COINBASE_TAG, MINER_PAYOUT_TAG, hash_to_address
+
+
+
 
 
 
@@ -44,6 +45,8 @@ class BlockLoader:
         self.worker_busy = dict()
         self.parent = parent
         self.last_batch_size = 0
+        self.loading_completed = False
+        self.height = 0
         self.reached_height = 0
         self.loading_task = None
         self.dsn = dsn
@@ -53,25 +56,21 @@ class BlockLoader:
         self.rpc_timeout = parent.rpc_timeout
         self.rpc_batch_limit = parent.rpc_batch_limit
         self.loop.set_default_executor(ThreadPoolExecutor(workers * 2))
-        self.watchdog_task = self.loop.create_task(self.watchdog())
+        self.loading_task = self.loop.create_task(self.loading())
 
 
     async def watchdog(self):
-        while True:
+        while self.parent.deep_synchronization:
             try:
-                if self.loading_task is None or self.loading_task.done():
-                    if self.parent.deep_synchronization and not self.parent.cache_loading:
-                        self.loading_task = self.loop.create_task(self.loading())
-                else:
-                    # clear unused cache
-                    if self.parent.block_preload._store:
-                        if next(iter(self.parent.block_preload._store)) <= self.parent.last_block_height:
-                            for i in range(next(iter(self.parent.block_preload._store)),
-                                           self.parent.last_block_height + 1):
-                                try:
-                                    self.parent.block_preload.remove(i)
-                                except:
-                                    pass
+                # clear unused cache
+                if self.parent.block_preload._store:
+                    if next(iter(self.parent.block_preload._store)) <= self.parent.last_block_height:
+                        for i in range(next(iter(self.parent.block_preload._store)),
+                                       self.parent.last_block_height + 1):
+                            try:
+                                self.parent.block_preload.remove(i)
+                            except:
+                                pass
 
             except asyncio.CancelledError:
                 self.log.info("block loader watchdog stopped")
@@ -79,6 +78,7 @@ class BlockLoader:
             except Exception as err:
                 self.log.error(str(traceback.format_exc()))
                 self.log.error("watchdog error %s " % err)
+
             await asyncio.sleep(10)
 
 
@@ -89,43 +89,45 @@ class BlockLoader:
         self.height = self.parent.last_block_height + 1
 
         while self.height < target_height:
+            await  asyncio.sleep(1)
             target_height = self.parent.node_last_block - self.parent.deep_sync_limit
-            new_requests = 0
-            if self.parent.block_preload._store_size < self.parent.block_preload_cache_limit:
-                try:
-                    for i in self.worker_busy:
-                        if self.height < target_height:
-                            if not self.worker_busy[i]:
-                                self.worker_busy[i] = True
-                                if self.height <= self.parent.last_block_height:
-                                    self.height = self.parent.last_block_height + 1
-                                await self.pipe_sent_msg(self.worker[i].writer, b'rpc_batch_limit',
-                                                         int_to_bytes(self.rpc_batch_limit))
-                                await self.pipe_sent_msg(self.worker[i].writer, b'target_height',
-                                                         int_to_bytes(target_height))
-                                await self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(self.height))
-                                self.height += self.rpc_batch_limit
-                                if self.height > target_height: self.height = target_height
-                                new_requests += 1
-                    if not new_requests:
-                        await asyncio.sleep(1)
-                        continue
-                    if self.last_batch_size < self.parent.block_preload_batch_size_limit:
-                        self.rpc_batch_limit += 40
-                    elif self.last_batch_size >  self.parent.block_preload_batch_size_limit and \
-                            self.rpc_batch_limit > 60:
-                        self.rpc_batch_limit -= 40
-                except asyncio.CancelledError:
-                    self.log.info("Loading task terminated")
-                    [self.worker[p].terminate() for p in self.worker]
-                    for p in self.worker_busy: self.worker_busy[p] = False
-                    return
-                except Exception as err:
-                    self.log.error("Loading task  error %s " % err)
-            else:
-                await  asyncio.sleep(1)
 
-        self.watchdog_task.cancel()
+            if self.parent.block_preload._store_size >= self.parent.block_preload_cache_limit:
+                continue
+
+            try:
+                for i in self.worker_busy:
+                    if self.height < target_height:
+                        if not self.worker_busy[i]:
+                            self.worker_busy[i] = True
+                            if self.height <= self.parent.last_block_height:
+                                self.height = self.parent.last_block_height + 1
+                            await self.pipe_sent_msg(self.worker[i].writer, b'rpc_batch_limit',
+                                                     int_to_bytes(self.rpc_batch_limit))
+                            await self.pipe_sent_msg(self.worker[i].writer, b'target_height',
+                                                     int_to_bytes(target_height))
+                            await self.pipe_sent_msg(self.worker[i].writer, b'get', int_to_bytes(self.height))
+                            self.height += self.rpc_batch_limit
+                            if self.height > target_height:
+                                self.height = target_height
+                                break
+
+                if self.last_batch_size < self.parent.block_preload_batch_size_limit:
+                    self.rpc_batch_limit += 40
+                elif self.last_batch_size >  self.parent.block_preload_batch_size_limit and \
+                        self.rpc_batch_limit > 60:
+                    self.rpc_batch_limit -= 40
+
+            except asyncio.CancelledError:
+                self.log.info("Loading task terminated")
+                [self.worker[p].terminate() for p in self.worker]
+                for p in self.worker_busy: self.worker_busy[p] = False
+                return
+
+            except Exception as err:
+                self.log.error("Loading task  error %s " % err)
+
+
         if self.parent.block_preload._store:
             while next(reversed(self.parent.block_preload._store)) < target_height:
                 await asyncio.sleep(1)
@@ -142,6 +144,10 @@ class BlockLoader:
 
         [self.worker[p].terminate() for p in self.worker]
         for p in self.worker_busy: self.worker_busy[p] = False
+
+    def restart(self):
+        self.loading_task.cancel()
+        self.loading_task = self.loop.create_task(self.loading())
 
 
     async def start_worker(self,index):
@@ -442,61 +448,61 @@ class Worker:
                                                print(traceback.format_exc())
 
                                         except:
-                                            if self.dsn: missed.append(outpoint)
+                                            if self.dsn:
+                                                missed.append(outpoint)
 
                         blocks[x] = block
 
             m, n = 0, 0
             if self.utxo_data and missed and self.dsn:
-                if self.dsn:
-                   async with self.db.acquire() as conn:
-                       rows = await conn.fetch("SELECT outpoint, "
-                                               "       pointer,"
-                                               "       address,"
-                                               "       amount "
-                                               "FROM connector_utxo "
-                                               "WHERE outpoint = ANY($1);", missed)
-                   m += len(rows)
+               async with self.db.acquire() as conn:
+                   rows = await conn.fetch("SELECT outpoint, "
+                                           "       pointer,"
+                                           "       address,"
+                                           "       amount "
+                                           "FROM connector_utxo "
+                                           "WHERE outpoint = ANY($1);", missed)
+               m += len(rows)
 
-                   p = dict()
-                   for row in rows:
-                        p[row["outpoint"]] = (row["pointer"],  row["amount"], row["address"])
+               p = dict()
+               for row in rows:
+                    p[row["outpoint"]] = (row["pointer"],  row["amount"], row["address"])
 
-                   for h in  blocks:
-                       for z in blocks[h]["rawTx"]:
-                           if not blocks[h]["rawTx"][z]["coinbase"]:
-                               for i in blocks[h]["rawTx"][z]["vIn"]:
-                                   outpoint = blocks[h]["rawTx"][z]["vIn"][i]["_outpoint"]
+               for h in  blocks:
+                   for z in blocks[h]["rawTx"]:
+                       if not blocks[h]["rawTx"][z]["coinbase"]:
+                           for i in blocks[h]["rawTx"][z]["vIn"]:
+                               outpoint = blocks[h]["rawTx"][z]["vIn"][i]["_outpoint"]
+                               try:
+                                   blocks[h]["rawTx"][z]["vIn"][i]["_l_"] = p[outpoint]
                                    try:
-                                       blocks[h]["rawTx"][z]["vIn"][i]["_l_"] = p[outpoint]
-                                       try:
-                                           out_type = p[outpoint][2][0]
-                                           if self.option_block_filters:
-                                               if out_type in (0, 1, 5, 6):
-                                                   e = b"".join((bytes([out_type]),
-                                                                 z.to_bytes(4, byteorder="little"),
-                                                                 p[outpoint][2][1:21]))
-                                                   blocks[h]["filter"].add(e)
-                                               elif out_type == 2:
-                                                   a = parse_script(p[outpoint][2][1:])["addressHash"]
-                                                   e = b"".join((bytes([out_type]),
-                                                                 z.to_bytes(4, byteorder="little"),
-                                                                 a[:20]))
-                                                   blocks[h]["filter"].add(e)
+                                       out_type = p[outpoint][2][0]
+                                       if self.option_block_filters:
+                                           if out_type in (0, 1, 5, 6):
+                                               e = b"".join((bytes([out_type]),
+                                                             z.to_bytes(4, byteorder="little"),
+                                                             p[outpoint][2][1:21]))
+                                               blocks[h]["filter"].add(e)
+                                           elif out_type == 2:
+                                               a = parse_script(p[outpoint][2][1:])["addressHash"]
+                                               e = b"".join((bytes([out_type]),
+                                                             z.to_bytes(4, byteorder="little"),
+                                                             a[:20]))
+                                               blocks[h]["filter"].add(e)
 
 
-                                           if self.option_tx_map:
-                                               blocks[h]["txMap"].append(((h<<39)+(z<<20)+i,
-                                                                          p[outpoint][2], p[outpoint][1]))
-                                               blocks[h]["stxo"].append((p[outpoint][0], (h<<39)+(z<<20)+i))
+                                       if self.option_tx_map:
+                                           blocks[h]["txMap"].append(((h<<39)+(z<<20)+i,
+                                                                      p[outpoint][2], p[outpoint][1]))
+                                           blocks[h]["stxo"].append((p[outpoint][0], (h<<39)+(z<<20)+i))
 
-                                           t += 1
-                                           n += 1
+                                       t += 1
+                                       n += 1
 
-                                       except:
-                                           print(traceback.format_exc())
                                    except:
-                                       pass
+                                       print(traceback.format_exc())
+                               except:
+                                   pass
 
             if self.utxo_data and blocks:
                 blocks[x]["checkpoint"] = x

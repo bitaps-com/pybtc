@@ -54,7 +54,6 @@ class Connector:
                  block_preload_cache_limit= 1000 * 1000000,
                  block_preload_batch_size_limit = 200000000,
                  block_hashes_cache_limit= 200 * 1000000,
-                 db_type=None,
                  test_orphans=False,
                  db=None,
                  app_proc_title="Connector"):
@@ -90,7 +89,6 @@ class Connector:
         self.mempool_tx = mempool_tx
         self.tx_orphan_buffer_limit = tx_orphan_buffer_limit
         self.test_orphans = test_orphans
-        self.db_type = db_type
         self.db = db
         self.utxo_cache_size = utxo_cache_size
         self.block_cache_workers = block_cache_workers
@@ -212,6 +210,7 @@ class Connector:
                 self.log.error("Waiting for node sync")
                 await asyncio.sleep(20)
                 continue
+
             elif self.node_last_block == self.last_block_height:
                 self.log.info("Blockchain is synchronized")
             else:
@@ -219,17 +218,15 @@ class Connector:
                 self.log.info("%s blocks before synchronization" % d)
 
                 if not self.bootstrap_completed:
-                    self.log.info("Deep synchronization mode")
+                    self.log.info("Bootstrap blockchain in deep synchronization mode")
                     self.deep_synchronization = True
+                    self.block_loader = BlockLoader(self,workers=self.block_cache_workers,
+                                                    dsn=self.db if self.utxo_data else None)
             break
 
         if self.utxo_data:
-            if self.db_type == "postgresql":
-                db = self.db_pool
-            else:
-                db = self.db
-            self.sync_utxo = UTXO(self.db_type, db, self.rpc, self.loop, self.log, self.utxo_cache_size)
-            self.uutxo = UUTXO(self.db_type, db, self.option_block_filters, self.log)
+            self.sync_utxo = UTXO(self.db_pool, self.rpc, self.loop, self.log, self.utxo_cache_size)
+            self.uutxo = UUTXO(self.db_pool, self.option_block_filters, self.log)
 
 
         h = self.last_block_height
@@ -237,10 +234,7 @@ class Connector:
         for row in reversed(self.chain_tail):
             self.block_headers_cache.set(row, h)
             h -= 1
-        if self.utxo_data:
-            self.block_loader = BlockLoader(self, workers=self.block_cache_workers, dsn = self.db)
-        else:
-            self.block_loader = BlockLoader(self,workers = self.block_cache_workers)
+
         self.zeromq_task = self.loop.create_task(self.zeromq_handler())
         self.tasks.append(self.loop.create_task(self.watchdog()))
         self.get_next_block_mutex = True
@@ -248,10 +242,8 @@ class Connector:
 
 
     async def utxo_init(self):
-        if self.db_type is None:
+        if self.db is None:
             raise Exception("UTXO data required  db connection")
-        if self.db_type != "postgresql":
-            raise Exception("Connector supported database engine is: postgresql")
         self.db_pool = await asyncpg.create_pool(dsn=self.db, min_size=1, max_size=20)
         async with self.db_pool.acquire() as conn:
             await conn.execute("""CREATE TABLE IF NOT EXISTS 
@@ -424,53 +416,63 @@ class Connector:
             try:
                 while True:
                     await asyncio.sleep(30)
-                    print(">>", 30)
+
+                    # check ZeroMQ state
                     if self.mempool_tx:
                         if int(time.time()) - self.last_zmq_msg > 300 and self.zmqContext:
-                            self.log.error("ZerroMQ no messages about 5 minutes")
+                            self.log.error("ZeroMQ no messages about 5 minutes")
                             try:
                                 self.zeromq_task.cancel()
                                 await asyncio.wait([self.zeromq_task])
                                 self.zeromq_task(self.loop.create_task(self.zeromq_handler()))
                             except:
                                 pass
+
+                    # check blockchain state
                     try:
-                        h = await self.rpc.getblockcount()
-                        print(">>", self.node_last_block, h, self.get_next_block_mutex)
-                        if self.node_last_block < h or self.get_block_attempt:
-                            self.node_last_block = h
-                            self.log.info("watchdog -> bitcoind node last block %s" % h)
-                            if not self.get_next_block_mutex:
-                                self.get_next_block_mutex = True
-                                self.loop.create_task(self.get_next_block())
-                    except:
-                        print(traceback.format_exc())
-                    try:
-                        if self.last_block_height > self.deep_sync_limit:
+                        self.node_last_block = await self.rpc.getblockcount()
+                    except Exception as err:
+                        self.log.error("watchdog get block count failed: %s" % err)
+
+                    if  not self.get_next_block_mutex and \
+                        self.node_last_block > self.last_block_height + self.backlog:
+                            self.get_next_block_mutex = True
+                            self.loop.create_task(self.get_next_block())
+                            self.log.warning("watchdog bitcoin node last block %s; "
+                                             "connector last block %s; "
+                                             "force get next block ..." % (self.node_last_block,
+                                                                           self.last_block_height))
+
+                    # db tasks
+                    if self.utxo_data:
+                        try:
+                            if self.last_block_height > self.deep_sync_limit:
+                                async with self.db_pool.acquire() as conn:
+                                    await conn.execute("DELETE FROM connector_block_state_checkpoint "
+                                                       "WHERE height < $1;",
+                                                       self.last_block_height - self.deep_sync_limit)
                             async with self.db_pool.acquire() as conn:
-                                await conn.execute("DELETE FROM connector_block_state_checkpoint "
-                                                   "WHERE height < $1;",
-                                                   self.last_block_height - self.deep_sync_limit)
-                        async with self.db_pool.acquire() as conn:
-                            d = await conn.fetchval("SELECT n_dead_tup FROM pg_stat_user_tables "
-                                                    "WHERE relname = 'connector_utxo' LIMIT 1;")
-                            if d > 10000000 and (time.time() - last_maintenance) > 60*30 :
-                                self.log.info("Maintenance connector_utxo table ...")
-                                t = time.time()
-                                await conn.execute("VACUUM FULL connector_utxo;")
-                                await conn.execute("ANALYZE connector_utxo;")
-                                self.log.info("Maintenance connector_utxo table completed %s",
-                                              round(time.time() - t, 2))
-                                last_maintenance = time.time()
+                                d = await conn.fetchval("SELECT n_dead_tup FROM pg_stat_user_tables "
+                                                        "WHERE relname = 'connector_utxo' LIMIT 1;")
+                                if d > 10000000 and (time.time() - last_maintenance) > 60*30 :
+                                    self.log.warning("Maintenance connector_utxo table ...")
+                                    t = time.time()
+                                    await conn.execute("VACUUM FULL connector_utxo;")
+                                    await conn.execute("ANALYZE connector_utxo;")
+                                    self.log.warning("Maintenance connector_utxo table completed %s",
+                                                  round(time.time() - t, 2))
+                                    last_maintenance = time.time()
 
-                    except:
-                        print(">>", traceback.format_exc())
+                        except Exception as err:
+                            self.log.warning("watchdog connector db tasks failed: %s" % err)
 
-                    try:
-                        if self.watchdog_handler:
+                    # app watchdog tasks
+                    if self.watchdog_handler:
+                        try:
                             await self.watchdog_handler()
-                    except:
-                        pass
+                        except Exception as err:
+                                self.log.warning("watchdog app handler failed: %s" % err)
+
 
 
             except asyncio.CancelledError:
@@ -481,9 +483,8 @@ class Connector:
 
 
     async def get_next_block(self):
-        print("get_next_block", self.active,  self.active_block.done(), self.get_next_block_mutex)
         if self.active and self.active_block.done() and self.get_next_block_mutex:
-            print("->")
+            print("get_next_block")
             try:
                 # check synchronization state
                 if self.node_last_block <= self.last_block_height + self.backlog:
@@ -495,9 +496,8 @@ class Connector:
                         return
                     else:
                         self.node_last_block = d
-                self.synchronized = False
                 d = self.node_last_block - self.last_block_height
-
+                self.synchronized = False
 
                 if not self.bootstrap_completed:
                     if d <= self.deep_sync_limit:
@@ -556,7 +556,6 @@ class Connector:
                             self.total_received_tx = 0
                             self.total_received_tx_time = 0
 
-                print("->2", self.deep_synchronization)
                 if self.deep_synchronization:
                     raw_block = self.block_preload.pop(self.last_block_height + 1)
                     if raw_block:
@@ -564,13 +563,14 @@ class Connector:
                         q = time.time()
                         block = loads(raw_block)
                         self.blocks_decode_time += time.time() - q
-                    elif self.get_block_attempt > 3:
-                        h = await self.rpc.getblockhash(self.last_block_height + 1)
-                        block = await self._get_block_by_hash(h)
+                    elif self.get_block_attempt > 10:
+                        self.block_loader.restart()
                         self.get_block_attempt = 0
+                        self.loop.create_task(self.retry_get_next_block())
+                        return
                     else:
                         self.get_block_attempt += 1
-                        print("wait block")
+                        print("get block failed waiting ...")
                         self.loop.create_task(self.retry_get_next_block())
                         return
                 else:
@@ -582,13 +582,13 @@ class Connector:
                 self.loop.create_task(self._new_block(block))
 
             except Exception as err:
-                self.log.error("get next block failed %s" % str(err))
+                self.log.error("get next block failed %s" % err)
             finally:
                 self.get_next_block_mutex = False
 
 
     async def retry_get_next_block(self):
-        await asyncio.sleep(1)
+        await asyncio.sleep(5)
         self.get_next_block_mutex = True
         self.loop.create_task(self.get_next_block())
 
