@@ -437,7 +437,7 @@ class Connector:
                     try:
                         h = await self.rpc.getblockcount()
                         print(">>", self.node_last_block, h, self.get_next_block_mutex)
-                        if self.node_last_block < h:
+                        if self.node_last_block < h or self.get_block_attempt:
                             self.node_last_block = h
                             self.log.info("watchdog -> bitcoind node last block %s" % h)
                             if not self.get_next_block_mutex:
@@ -567,6 +567,7 @@ class Connector:
                     elif self.get_block_attempt > 3:
                         h = await self.rpc.getblockhash(self.last_block_height + 1)
                         block = await self._get_block_by_hash(h)
+                        self.get_block_attempt = 0
                     else:
                         self.get_block_attempt += 1
                         print("wait block")
