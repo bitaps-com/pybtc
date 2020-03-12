@@ -340,6 +340,7 @@ class Worker:
         start_limit = limit
         self.destroyed_coins = MRU()
         self.coins = MRU()
+        print("start load_blocks", height, limit)
 
         try:
             self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
@@ -538,6 +539,7 @@ class Worker:
 
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
+            print("completed load_blocks", height, limit)
         except concurrent.futures.CancelledError:
             pass
         except Exception as err:
