@@ -87,7 +87,7 @@ class BlockLoader:
         self.worker_tasks = [self.loop.create_task(self.start_worker(i)) for i in range(self.worker_limit)]
         target_height = self.parent.node_last_block - self.parent.deep_sync_limit
         self.height = self.parent.last_block_height + 1
-
+        last_last_batch_size = 0
         while self.height < target_height:
             print("self.rpc_batch_limit", self.rpc_batch_limit)
             await  asyncio.sleep(1)
@@ -116,11 +116,14 @@ class BlockLoader:
                 if n: continue
 
                 print("self.last_batch_size", self.last_batch_size, self.parent.block_preload_batch_size_limit)
-                if self.last_batch_size < self.parent.block_preload_batch_size_limit:
-                    self.rpc_batch_limit += 40
-                elif self.last_batch_size >  self.parent.block_preload_batch_size_limit and \
-                        self.rpc_batch_limit > 80:
-                    self.rpc_batch_limit -= 40
+
+                if self.last_batch_size and last_last_batch_size != self.last_batch_size:
+                    last_last_batch_size = self.last_batch_size
+                    if self.last_batch_size < self.parent.block_preload_batch_size_limit:
+                        self.rpc_batch_limit += 40
+                    elif self.last_batch_size >  self.parent.block_preload_batch_size_limit and \
+                            self.rpc_batch_limit > 80:
+                        self.rpc_batch_limit -= 40
 
                 if self.parent.block_preload._store:
                     if next(iter(self.parent.block_preload._store)) <= self.parent.last_block_height:
