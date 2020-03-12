@@ -136,7 +136,7 @@ class UTXO():
         #  load missed utxo from bitcoind daemon
         #
         if not self.missed_failed: return
-        missed = chunks_by_count(self.missed_failed, 50)
+        missed = chunks_by_count(self.missed_failed, 1)
         print("load_utxo_from_daemon", len(self.missed_failed))
         for m in missed:
             q = time.time()
