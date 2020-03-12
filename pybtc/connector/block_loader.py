@@ -122,6 +122,14 @@ class BlockLoader:
                         self.rpc_batch_limit > 60:
                     self.rpc_batch_limit -= 40
 
+                if self.parent.block_preload._store:
+                    if next(iter(self.parent.block_preload._store)) <= self.parent.last_block_height:
+                        for i in range(next(iter(self.parent.block_preload._store)),
+                                       self.parent.last_block_height + 1):
+                            try:
+                                self.parent.block_preload.remove(i)
+                            except:
+                                pass
 
             except asyncio.CancelledError:
                 self.log.info("Loading task terminated")
