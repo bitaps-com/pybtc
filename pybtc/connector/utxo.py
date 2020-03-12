@@ -140,7 +140,11 @@ class UTXO():
         print("load_utxo_from_daemon", len(self.missed_failed))
         for m in missed:
             q = time.time()
-            result = await self.rpc.batch([["getrawtransaction", rh2s(i[:32]), 1] for i in m])
+            try:
+                result = await self.rpc.batch([["getrawtransaction", rh2s(i[:32]), 1] for i in m])
+            except:
+                print(">>>>>>>>>>", [["getrawtransaction", rh2s(i[:32]), 1] for i in m])
+                raise
             print("getrawtransaction", q - time.time())
             hash_list = set()
             for r in result:
