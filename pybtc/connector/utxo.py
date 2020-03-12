@@ -136,16 +136,21 @@ class UTXO():
         #  load missed utxo from bitcoind daemon
         #
         if not self.missed_failed: return
-        missed = chunks_by_count(self.missed_failed, 100)
+        missed = chunks_by_count(self.missed_failed, 200)
+        print("load_utxo_from_daemon", len(self.missed_failed))
         for m in missed:
+            q = time.time()
             result = await self.rpc.batch([["getrawtransaction", rh2s(i[:32]), 1] for i in m])
+            print("getrawtransaction", q - time.time())
             hash_list = set()
             for r in result:
                 if r["result"]["blockhash"] not in self.restore_blocks_cache:
                     hash_list.add(r["result"]["blockhash"])
-            hash_list = chunks_by_count(list(hash_list), 20)
+            hash_list = chunks_by_count(list(hash_list), 50)
             for hl in hash_list:
+                q = time.time()
                 result2 = await self.rpc.batch([["getblock", r] for r in hl])
+                print("getblock", q - time.time())
                 for r in result2:
                    self.restore_blocks_cache[r["result"]["hash"]] = r["result"]
 
