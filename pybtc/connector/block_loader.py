@@ -89,7 +89,6 @@ class BlockLoader:
         self.height = self.parent.last_block_height + 1
         last_last_batch_size = 0
         while self.height < target_height:
-            print("self.rpc_batch_limit", self.rpc_batch_limit)
             await  asyncio.sleep(1)
             target_height = self.parent.node_last_block - self.parent.deep_sync_limit
 
@@ -113,8 +112,6 @@ class BlockLoader:
                             self.height += self.rpc_batch_limit
                             if self.height > target_height:
                                 self.height = target_height
-
-                print("self.last_batch_size", self.last_batch_size, self.parent.block_preload_batch_size_limit)
 
                 if self.last_batch_size and last_last_batch_size != self.last_batch_size:
                     last_last_batch_size = self.last_batch_size
@@ -341,7 +338,6 @@ class Worker:
         start_limit = limit
         self.destroyed_coins = MRU()
         self.coins = MRU()
-        print("start load_blocks", height, limit)
 
         try:
             self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
@@ -540,7 +536,6 @@ class Worker:
 
                 blocks[x] = pickle.dumps(blocks[x])
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
-            print("completed load_blocks", height, limit)
         except concurrent.futures.CancelledError:
             pass
         except Exception as err:

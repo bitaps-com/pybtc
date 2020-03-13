@@ -485,7 +485,6 @@ class Connector:
 
     async def get_next_block(self):
         if self.active and self.active_block.done() and self.get_next_block_mutex:
-            print("get_next_block")
             try:
                 # check synchronization state
                 if self.node_last_block <= self.last_block_height + self.backlog:
@@ -571,7 +570,6 @@ class Connector:
                         return
                     else:
                         self.get_block_attempt += 1
-                        print("get block failed waiting ...")
                         self.loop.create_task(self.retry_get_next_block())
                         return
                 else:
@@ -616,7 +614,6 @@ class Connector:
 
 
     async def _new_block(self, block):
-        print(self.last_block_height)
         if not self.active: return
         if self.deep_synchronization:  block["height"] = self.last_block_height + 1
         if self.last_block_height >= block["height"]:  return
@@ -728,7 +725,6 @@ class Connector:
                     self.await_tx_future[i].cancel()
             self.await_tx_future = dict()
             self.log.error("block %s error %s" % (block["height"], str(err)))
-            print(traceback.format_exc())
             self.get_next_block_mutex = False
 
 
