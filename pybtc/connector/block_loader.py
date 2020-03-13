@@ -113,7 +113,6 @@ class BlockLoader:
                             self.height += self.rpc_batch_limit
                             if self.height > target_height:
                                 self.height = target_height
-                if n: continue
 
                 print("self.last_batch_size", self.last_batch_size, self.parent.block_preload_batch_size_limit)
 
@@ -124,6 +123,8 @@ class BlockLoader:
                     elif self.last_batch_size >  self.parent.block_preload_batch_size_limit and \
                             self.rpc_batch_limit > 80:
                         self.rpc_batch_limit -= 40
+
+                if n: continue
 
                 if self.parent.block_preload._store:
                     if next(iter(self.parent.block_preload._store)) <= self.parent.last_block_height:
