@@ -436,6 +436,9 @@ class Connector:
                         self.log.error("watchdog get block count failed: %s" % err)
                     print("self.node_last_block", self.node_last_block, not self.get_next_block_mutex and \
                         self.node_last_block > self.last_block_height + self.backlog)
+                    print("self.get_next_block_mutex", self.get_next_block_mutex)
+                    print("self.node_last_block", self.node_last_block)
+                    print("self.last_block_height + self.backlog", self.last_block_height + self.backlog)
 
                     if  not self.get_next_block_mutex and \
                         self.node_last_block > self.last_block_height + self.backlog:
