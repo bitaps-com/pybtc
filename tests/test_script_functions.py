@@ -1,5 +1,7 @@
 from pybtc.functions.tools import bytes_from_hex as b2h
 from pybtc.functions.tools import get_bytes
+from pybtc.functions.tools import get_stream
+from pybtc.classes.address import PrivateKey
 from struct import pack
 import pytest
 
@@ -12,11 +14,13 @@ from pybtc.functions.script import delete_from_script
 from pybtc.functions.script import script_to_hash
 from pybtc.functions.script import op_push_data
 from pybtc.functions.script import get_multisig_public_keys
-from pybtc.functions.key import wif_to_private_key
-from pybtc.functions.key import private_key_to_wif
-from pybtc.functions.key import is_wif_valid
+from pybtc.functions.script import read_opcode
+from pybtc.functions.script import sign_message
+from pybtc.functions.script import verify_signature
+from pybtc.functions.script import public_key_recovery
+from pybtc.functions.script import is_valid_signature_encoding
+from pybtc.functions.script import parse_signature
 from pybtc.functions.key import private_to_public_key
-from pybtc.functions.key import is_public_key_valid
 
 
 def test_public_key_to_pubkey_script():
@@ -368,6 +372,18 @@ def test_decode_script():
            b"12345678901234567890".hex()
     assert decode_script([OP_PUSHDATA2]) == "[SCRIPT_DECODE_FAILED]"
 
+
+def test_read_opcode():
+    assert read_opcode(get_stream(get_bytes([b"\x08", b"1" * 8]))) == (b"\x08", b"1" * 8)
+    assert read_opcode(get_stream(get_bytes([OP_PUSHDATA1, b"\x4c", b"1" * 76]))) == (OP_PUSHDATA1, b"1" * 76)
+    assert read_opcode(get_stream(get_bytes([OP_PUSHDATA2, pack('<H' ,256), b"1" * 256]))) == \
+           (OP_PUSHDATA2, b"1" * 256)
+    p = b"1" * 65537
+    l =  OP_PUSHDATA4 + pack('<L' ,65537) + p
+    assert read_opcode(get_stream(l)) == (OP_PUSHDATA4, p)
+
+
+
 def test_delete_from_script():
     assert delete_from_script([OP_1, OP_2], []) == get_bytes([OP_1, OP_2])
     assert delete_from_script([OP_1, OP_2, OP_3], [OP_2]) == get_bytes([OP_1, OP_3])
@@ -484,3 +500,96 @@ def test_get_multisig_public_keys():
          '060466616fb675310aeb024f957b4387298dc28305bc7276bf1f7f662a6764bcdf'
          'fb6a9740de596f89ad8000f8fa6741d65ff1338f53eb39e98179dd18c6e6be8e39']
     assert "".join(get_multisig_public_keys(s, 1)) == "".join(k)
+
+def test_sign_message():
+    s = "3044022047ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794d12d48" \
+        "2f0220217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb"
+    p = PrivateKey("eb696a065ef48a2192da5b28b694f87544b30fae8327c4510137a922f32c6dcf")
+
+    assert sign_message("64f3b0f4dd2bb3aa1ce8566d220cc74dda9df97d8490cc81d89d735c92e59fb6",
+                        "eb696a065ef48a2192da5b28b694f87544b30fae8327c4510137a922f32c6dcf") == s
+    assert sign_message("64f3b0f4dd2bb3aa1ce8566d220cc74dda9df97d8490cc81d89d735c92e59fb6",
+                        bytearray(p.key)) == s
+    assert sign_message("64f3b0f4dd2bb3aa1ce8566d220cc74dda9df97d8490cc81d89d735c92e59fb6",
+                        p.wif) == s
+    with pytest.raises(TypeError):
+        assert sign_message("64f3b0f4dd2bb3aa1ce8566d220cc74dda9df97d8490cc81d89d735c92e59fb6",
+                            "werwefwefwe") == s
+
+def test_verify_signature():
+    p = "eb696a065ef48a2192da5b28b694f87544b30fae8327c4510137a922f32c6dcf"
+    p2 = "eb296a065ef48a2192da5b28b694f87544b30fae8327c4510137a922f32c6dcf"
+    s = "3044022047ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0220217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb"
+    msg = "64f3b0f4dd2bb3aa1ce8566d220cc74dda9df97d8490cc81d89d735c92e59fb6"
+    assert verify_signature(s, private_to_public_key(p), msg)
+    assert verify_signature(s, private_to_public_key(p2), msg) == False
+
+def test_public_key_recovery():
+    s = "3044022047ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0220217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb"
+    p = "eb696a065ef48a2192da5b28b694f87544b30fae8327c4510137a922f32c6dcf"
+    msg = "64f3b0f4dd2bb3aa1ce8566d220cc74dda9df97d8490cc81d89d735c92e59fb6"
+    assert public_key_recovery(s, msg, 0) == private_to_public_key(p, hex=True)
+    assert public_key_recovery(s, msg, 1) != private_to_public_key(p, hex=True)
+    assert public_key_recovery(s, msg, 2) != private_to_public_key(p, hex=True)
+    assert public_key_recovery(s, msg, 3) is None
+    s = "1044022047ac8e878252d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0220217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb"
+    with pytest.raises(RuntimeError):
+        assert public_key_recovery(s, msg, 3) is None
+
+def test_is_valid_signature_encoding():
+    s = "3044022047ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0220217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb01"
+    assert is_valid_signature_encoding(s)
+    s = "3044022047ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0220217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb01010101"
+    assert is_valid_signature_encoding(s) == False
+    s = "8044022047ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0220217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb01"
+    assert is_valid_signature_encoding(s) == False
+    s = "3080022047ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0220217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb01"
+    assert is_valid_signature_encoding(s) == False
+    s = "3044020947ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0220217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb01"
+    assert is_valid_signature_encoding(s) == False
+    s = "3044029047ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0220217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb01"
+    assert is_valid_signature_encoding(s) == False
+    s = "3044992047ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0220217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb01"
+    assert is_valid_signature_encoding(s) == False
+    s = "3044020047ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0220217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb01"
+    assert is_valid_signature_encoding(s) == False
+    s = "3044022080ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0220217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb01"
+    assert is_valid_signature_encoding(s) == False
+    s = "3044022000098e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0220217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb01"
+    assert is_valid_signature_encoding(s) == False
+    s = "3044022047ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0320217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb01"
+    assert is_valid_signature_encoding(s) == False
+    s = "3044022047ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0200217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb01"
+    assert is_valid_signature_encoding(s) == False
+    s = "3044022047ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0220807f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb01"
+    assert is_valid_signature_encoding(s) == False
+    s = "3044022047ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0220007f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb01"
+    assert is_valid_signature_encoding(s) == False
+
+def test_parse_signature():
+    s = "3044022047ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0220217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb01"
+    assert parse_signature(s) == \
+           (b'\xac\x8e\x87\x83R\xd3\xeb\xbd\xe1\xc9L\xe3\xa1\r\x05|$\x17WG\x11o\x82\x88\xe5\xd7\x94\xd1-H/',
+            b'!\x7f6\xa4\x85\xca\xe9\x03\xc7\x133\x1d\x87|\x1fdg~6"\xad@\x10rhpT\x06V\xfe\x9d\xcb')
+    s = "3044022047ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794" \
+        "d12d482f0220007f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb01"
+    with pytest.raises(ValueError):
+        parse_signature(s)

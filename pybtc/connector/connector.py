@@ -710,6 +710,7 @@ class Connector:
                                    "resolved orphans %s" % (self.mempool_tx_count,
                                                             len(self.tx_orphan_buffer),
                                                             self.tx_orphan_resolved))
+                self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"], len(block["tx"])))
             if self.test_orphans:
                 if not self.test_rollback:
                     if self.rollback_counter < self.test_orphans:

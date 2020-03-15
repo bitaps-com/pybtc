@@ -58,30 +58,6 @@ class BlockLoader:
         self.loop.set_default_executor(ThreadPoolExecutor(workers * 2))
         self.loading_task = self.loop.create_task(self.loading())
 
-
-    async def watchdog(self):
-        while self.parent.deep_synchronization:
-            try:
-                # clear unused cache
-                if self.parent.block_preload._store:
-                    if next(iter(self.parent.block_preload._store)) <= self.parent.last_block_height:
-                        for i in range(next(iter(self.parent.block_preload._store)),
-                                       self.parent.last_block_height + 1):
-                            try:
-                                self.parent.block_preload.remove(i)
-                            except:
-                                pass
-
-            except asyncio.CancelledError:
-                self.log.info("block loader watchdog stopped")
-                break
-            except Exception as err:
-                self.log.error(str(traceback.format_exc()))
-                self.log.error("watchdog error %s " % err)
-
-            await asyncio.sleep(10)
-
-
     async def loading(self):
         self.rpc_batch_limit = 30
         self.worker_tasks = [self.loop.create_task(self.start_worker(i)) for i in range(self.worker_limit)]

@@ -232,9 +232,25 @@ def delete_from_script(script, sub_script):
             r += d[len(sub_script) - 1:] if d is not None else b""
         if offset >= skip_until:
             r += o
-            r += d if d is not None else b""
+            if d is not None:
+                if o == OP_PUSHDATA1:
+                    r += bytes([len(d)])
+                elif o == OP_PUSHDATA2:
+                    r += pack('<H',len(d))
+                elif o == OP_PUSHDATA4:
+                    r += pack('<L',len(d))
+                r += d
+
         offset += 1
-        offset += len(d) if d is not None else 0
+        if d is not None:
+            offset += len(d)
+            if o == OP_PUSHDATA1:
+                offset += 1
+            elif o == OP_PUSHDATA2:
+                offset += 2
+            elif o == OP_PUSHDATA4:
+                offset += 4
+
         o, d = read_opcode(stream)
     return r.hex() if s_hex else r
 
@@ -260,9 +276,7 @@ def op_push_data(data):
         return b''.join([OP_PUSHDATA1, bytes([len(data)]), data])
     elif len(data) <= 0xffff:
         return b''.join([OP_PUSHDATA2, pack('<H',len(data)), data])
-
     else:
-
         return b''.join([OP_PUSHDATA4, pack('<L',len(data)), data])
 
 
@@ -285,55 +299,15 @@ def read_opcode(stream):
         return None, None
     if b[0] <= 0x4b:
         return b, read(b[0])
-    elif b[0] == OP_PUSHDATA1:
+    elif b == OP_PUSHDATA1:
         return b, read(read(1)[0])
-    elif b[0] == OP_PUSHDATA2:
-        return b, read(unpack("<H", read(2)[0]))
-    elif b[0] == OP_PUSHDATA4:
-        return b, read(unpack("<L", read(4)[0]))
+    elif b == OP_PUSHDATA2:
+        return b, read(unpack("<H", read(2))[0])
+    elif b == OP_PUSHDATA4:
+        return b, read(unpack("<L", read(4))[0])
     else:
         return b, None
 
-
-def verify_signature(sig, pub_key, msg):
-    """
-    Verify signature for message and given public key
-
-    :param sig: signature in bytes or HEX encoded string.
-    :param pub_key:  public key in bytes or HEX encoded string.
-    :param msg:  message in bytes or HEX encoded string.
-    :return: boolean.
-    """
-    if not isinstance(sig, bytes):
-        if isinstance(sig, bytearray):
-            sig = bytes(sig)
-        elif isinstance(sig, str):
-            sig = bytes.fromhex(sig)
-        else:
-            raise TypeError("signature must be a bytes or hex encoded string")
-    if not isinstance(pub_key, bytes):
-        if isinstance(pub_key, bytearray):
-            pub_key = bytes(pub_key)
-        elif isinstance(pub_key, str):
-            pub_key = bytes.fromhex(pub_key)
-        else:
-            raise TypeError("public key must be a bytes or hex encoded string")
-    if not isinstance(msg, bytes):
-        if isinstance(msg, bytearray):
-            msg = bytes(msg)
-        elif isinstance(msg, str):
-            msg = bytes.fromhex(msg)
-        else:
-            raise TypeError("message must be a bytes or hex encoded string")
-    r = __secp256k1_ecdsa_verify__(sig, pub_key, msg)
-    if r == 1:
-        return True
-    elif r == 0:
-        return False
-    elif r == -1:
-        raise TypeError("DER signature format decode failed")
-    else:
-        raise TypeError("public key format error")
 
 
 def sign_message(msg, private_key, hex=True):
@@ -345,15 +319,7 @@ def sign_message(msg, private_key, hex=True):
         :param hex:  (optional) If set to True return key in HEX format, by default is True.
         :return:  DER encoded signature in bytes or HEX encoded string.
         """
-        if isinstance(msg, bytearray):
-            msg = bytes(msg)
-        if isinstance(msg, str):
-            try:
-                msg = bytes_from_hex(msg)
-            except:
-                pass
-        if not isinstance(msg, bytes):
-            raise TypeError("message must be a bytes or hex encoded string")
+        msg = get_bytes(msg)
 
         if isinstance(private_key, bytearray):
             private_key = bytes(private_key)
@@ -370,12 +336,29 @@ def sign_message(msg, private_key, hex=True):
         return signature.hex() if hex else signature
 
 
-def public_key_recovery(signature, messsage, rec_id, compressed=True, hex=True):
-    if isinstance(signature, str):
-        signature = bytes_from_hex(signature)
-    if isinstance(messsage, str):
-        messsage = bytes_from_hex(messsage)
 
+def verify_signature(sig, pub_key, msg, encoding="hex"):
+    """
+    Verify signature for message and given public key
+
+    :param sig: signature in bytes or HEX encoded string.
+    :param pub_key:  public key in bytes or HEX encoded string.
+    :param msg:  message in bytes or HEX encoded string.
+    :return: boolean.
+    """
+    sig = get_bytes(sig)
+    pub_key = get_bytes(pub_key)
+    msg = get_bytes(msg, encoding=encoding)
+    r = __secp256k1_ecdsa_verify__(sig, pub_key, msg)
+    if r == 1:
+        return True
+    return False
+
+
+
+def public_key_recovery(signature, messsage, rec_id, compressed=True, hex=True):
+    signature = get_bytes(signature)
+    messsage = get_bytes(messsage)
     pub = __secp256k1_ecdsa_recover__(signature, messsage, rec_id, compressed)
     if isinstance(pub, int):
         if pub == 0:
@@ -403,6 +386,7 @@ def is_valid_signature_encoding(sig):
     # * S: arbitrary-length big-endian encoded S value. The same rules apply.
     # * sighash: 1-byte value indicating what data is hashed (not part of the DER
     #   signature)
+    sig = get_bytes(sig)
     length = len(sig)
     # Minimum and maximum size constraints.
     if (length < 9) or (length > 73):
@@ -415,33 +399,36 @@ def is_valid_signature_encoding(sig):
         return False
     # Extract the length of the R element.
     len_r = sig[3]
+    # Zero-length integers are not allowed for R.
+    if len_r == 0:
+        return False
     # Make sure the length of the S element is still inside the signature.
     if (5 + len_r) >= length:
         return False
+
     # Extract the length of the S element.
     len_s = sig[5 + len_r]
     # Verify that the length of the signature matches the sum of the length
     # of the elements.
+    # Zero-length integers are not allowed for S.
+    if len_s == 0:
+        return False
+
     if (len_r + len_s + 7) != length:
         return False
     # Check whether the R element is an integer.
     if sig[2] != 0x02:
-        return False
-    # Zero-length integers are not allowed for R.
-    if len_r == 0:
         return False
     # Negative numbers are not allowed for R.
     if sig[4] & 0x80:
         return False
     # Null bytes at the start of R are not allowed, unless R would
     # otherwise be interpreted as a negative number.
+
     if (len_r > 1) and (sig[4] == 0x00) and (not sig[5] & 0x80):
         return False
     # Check whether the S element is an integer.
     if sig[len_r + 4] != 0x02:
-        return False
-    # Zero-length integers are not allowed for S.
-    if len_s == 0:
         return False
     # Negative numbers are not allowed for S.
     if sig[len_r + 6] & 0x80:
@@ -470,54 +457,11 @@ def parse_signature(sig):
     # * S: arbitrary-length big-endian encoded S value. The same rules apply.
     # * sighash: 1-byte value indicating what data is hashed (not part of the DER
     #   signature)
-    length = len(sig)
-    # Minimum and maximum size constraints.
-    if (length < 9) or (length > 73):
+    sig = get_bytes(sig)
+    if not is_valid_signature_encoding(sig):
         raise ValueError("invalid signature")
-    # A signature is of type 0x30 (compound).
-    if sig[0] != 0x30:
-        raise ValueError("invalid signature")
-    # Make sure the length covers the entire signature.
-    if sig[1] != (length - 3):
-        raise ValueError("invalid signature")
-    # Extract the length of the R element.
     len_r = sig[3]
-    # Make sure the length of the S element is still inside the signature.
-    if (5 + len_r) >= length:
-        raise ValueError("invalid signature")
     r =  sig[5:4+ len_r]
-    # Extract the length of the S element.
-    len_s = sig[5 + len_r]
-    # Verify that the length of the signature matches the sum of the length
-    # of the elements.
-    if (len_r + len_s + 7) != length:
-        raise ValueError("invalid signature")
     s = sig[len_r + 6:-1]
-    # Check whether the R element is an integer.
-    if sig[2] != 0x02:
-        raise ValueError("invalid signature")
-    # Zero-length integers are not allowed for R.
-    if len_r == 0:
-        raise ValueError("invalid signature")
-    # Negative numbers are not allowed for R.
-    if sig[4] & 0x80:
-        raise ValueError("invalid signature")
-    # Null bytes at the start of R are not allowed, unless R would
-    # otherwise be interpreted as a negative number.
-    if (len_r > 1) and (sig[4] == 0x00) and (not sig[5] & 0x80):
-        raise ValueError("invalid signature")
-    # Check whether the S element is an integer.
-    if sig[len_r + 4] != 0x02:
-        raise ValueError("invalid signature")
-    # Zero-length integers are not allowed for S.
-    if len_s == 0:
-        raise ValueError("invalid signature")
-    # Negative numbers are not allowed for S.
-    if sig[len_r + 6] & 0x80:
-        raise ValueError("invalid signature")
-    # Null bytes at the start of S are not allowed, unless S would otherwise be
-    # interpreted as a negative number.
-    if (len_s > 1) and (sig[len_r + 6] == 0x00) and (not sig[len_r + 7] & 0x80):
-        raise ValueError("invalid signature")
     return r, s
 
