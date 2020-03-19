@@ -644,7 +644,6 @@ class Connector:
 
 
             if self.deep_synchronization:
-                q = time.time()
                 await self._block_as_transactions_batch(block)
                 if not self.cache_loading or block["height"] > self.app_block_height_on_start:
                     if self.block_batch_handler:
@@ -697,6 +696,7 @@ class Connector:
 
             self.block_headers_cache.set(block["hash"], block["height"])
             self.last_block_height = block["height"]
+            print("self.app_last_block", self.app_last_block, "->", block["height"])
             self.app_last_block = block["height"]
             self.blocks_processed_count += 1
 
