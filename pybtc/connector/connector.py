@@ -697,7 +697,6 @@ class Connector:
 
             self.block_headers_cache.set(block["hash"], block["height"])
             self.last_block_height = block["height"]
-            print("self.app_last_block", self.app_last_block, "->", block["height"])
             self.app_last_block = block["height"]
             self.blocks_processed_count += 1
 
