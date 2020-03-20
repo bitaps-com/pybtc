@@ -280,6 +280,7 @@ class Connector:
                                                                   tx_id BYTEA,
                                                                   input_index INT,
                                                                   address BYTEA,
+                                                                  amount BIGINT,
                                                                   PRIMARY KEY(outpoint, sequence));                                                      
                                """)
 
@@ -1181,7 +1182,8 @@ class Connector:
                                                  tx["vIn"][i]["txId"],
                                                  tx["txId"],
                                                  i,
-                                                 tx["vIn"][i]["coin"][2]))
+                                                 tx["vIn"][i]["coin"][2],
+                                                 tx["vIn"][i]["coin"][1]))
                         try:
                             tx["vIn"][i]["double_spent"] = self.uutxo.loaded_ustxo[tx["vIn"][i]["outpoint"]]
                             tx["double_spent"] = True

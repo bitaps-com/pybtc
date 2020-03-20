@@ -69,26 +69,22 @@ def _interpolation(points, x=0):
     points = sorted(points, key=lambda z: z[0])
     if len(set(z[0] for z in points)) != k:
         raise Exception("Unique points required")
-    print(points)
+
     p_x = 0
     for j in range(k):
         p_j_x  = 1
         for m in range(k):
-            print("j", j, "m", m)
-            if m == j: continue
+
+            if m == j:
+                continue
             a =  _gf256_sub(x, points[m][0])
-            # print("a", a)
             b =  _gf256_sub(points[j][0], points[m][0])
-            # print("b", b)
             c = _gf256_div(a, b)
-            # print("c", a)
             p_j_x = _gf256_mul(p_j_x, c)
-            # print(">", p_j_x)
 
         p_j_x = _gf256_mul( points[j][1], p_j_x)
-        print(p_x,p_j_x, "=>", _gf256_add(p_x , p_j_x))
         p_x  = _gf256_add(p_x , p_j_x)
-        print("-->", j, ":", p_x, j)
+
 
     return p_x
 

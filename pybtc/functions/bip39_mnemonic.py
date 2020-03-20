@@ -3,7 +3,7 @@ import time
 import hashlib
 from pybtc.functions.hash import sha256
 from pybtc.functions.shamir import split_secret, restore_secret
-from pybtc.functions.tools import int_from_bytes
+from pybtc.functions.tools import int_from_bytes, get_bytes
 import random
 import math
 
@@ -24,7 +24,7 @@ def generate_entropy(strength=256, hex=True):
     while i:
         h = hashlib.sha256(h).digest()
         i -= 1
-        if not i and int_from_bytes(h, byteorder="big") > ECDSA_SEC256K1_ORDER:
+        if not i and int_from_bytes(h, byteorder="big") > ECDSA_SEC256K1_ORDER: # pragma: no cover
             i += 1
     return h[:int(strength/8)] if not hex else h[:int(strength/8)].hex()
 
@@ -39,14 +39,14 @@ def load_word_list(language='english', word_list_dir=None):
                               by default None (use BIP39 standard list)
     :return: list of words.
     """
-    if not word_list_dir:
+    if not word_list_dir: # pragma: no cover
         word_list_dir = BIP0039_DIR
     path = os.path.join(word_list_dir, '.'.join((language, 'txt')))
     if not os.path.exists(path):
         raise ValueError("word list not exist")
     with open(path) as f:
         word_list = f.read().rstrip('\n').split('\n')
-    if len(word_list) != 2048:
+    if len(word_list) != 2048: # pragma: no cover
         raise ValueError("word list invalid, should contain 2048 words")
     return word_list
 
@@ -63,13 +63,9 @@ def entropy_to_mnemonic(entropy, language='english', word_list_dir=None, word_li
     :param list word_list: (optional) already loaded word list, by default None    
     :return: mnemonic words string.
     """
-    if isinstance(entropy, str):
-        entropy = bytes.fromhex(entropy)
-    if not isinstance(entropy, bytes):
-        raise TypeError("entropy should be bytes or hex encoded string")
+    entropy = get_bytes(entropy)
     if len(entropy) not in [16, 20, 24, 28, 32]:
-        raise ValueError(
-            'entropy length should be one of the following: [16, 20, 24, 28, 32]')
+        raise ValueError('entropy length should be one of the following: [16, 20, 24, 28, 32]')
     if word_list is None:
         word_list = load_word_list(language, word_list_dir)
     elif not isinstance(word_list, list) or len(word_list) != 2048:
@@ -85,7 +81,7 @@ def entropy_to_mnemonic(entropy, language='english', word_list_dir=None, word_li
 
 
 def mnemonic_to_entropy(mnemonic, language='english', word_list_dir=None,
-                        word_list=None, hex=True, checksum = True):
+                        word_list=None, hex=True):
     """
     Converting mnemonic words to entropy.
     
@@ -117,14 +113,33 @@ def mnemonic_to_entropy(mnemonic, language='english', word_list_dir=None,
     chk_sum = entropy_int & (2 ** chk_sum_bit_len - 1)
     entropy_int = entropy_int >> chk_sum_bit_len
     entropy = entropy_int.to_bytes((bit_size - chk_sum_bit_len) // 8, byteorder="big")
-    if checksum:
-        print((sha256(entropy)[0] >> (8 - chk_sum_bit_len)))
-        print(entropy)
-        print(sha256(entropy)[0])
-        print((8 - chk_sum_bit_len))
-        if (sha256(entropy)[0] >> (8 - chk_sum_bit_len)) != chk_sum:
-            raise ValueError("invalid mnemonic checksum %s" % chk_sum)
     return entropy if not hex else entropy.hex()
+
+
+def is_mnemonic_checksum_valid(mnemonic, language='english', word_list_dir=None, word_list=None):
+    if word_list is None:
+        word_list = load_word_list(language, word_list_dir)
+    elif not isinstance(word_list, list) or len(word_list) != 2048:
+        raise TypeError("invalid word list type")
+
+    mnemonic = mnemonic.split()
+    word_count = len(mnemonic)
+    if word_count not in [12, 15, 18, 21, 24]:
+        raise ValueError('Number of words must be one of the following: [12, 15, 18, 21, 24]')
+
+    codes = {w: c for c, w in enumerate(word_list)}
+    entropy_int = 0
+    bit_size = word_count * 11
+    chk_sum_bit_len = word_count * 11 % 32
+    for w in mnemonic:
+        entropy_int = (entropy_int << 11) | codes[w]
+    chk_sum = entropy_int & (2 ** chk_sum_bit_len - 1)
+    entropy_int = entropy_int >> chk_sum_bit_len
+    entropy = entropy_int.to_bytes((bit_size - chk_sum_bit_len) // 8, byteorder="big")
+
+    if (sha256(entropy)[0] >> (8 - chk_sum_bit_len)) != chk_sum:
+        return False
+    return True
 
 
 def mnemonic_to_seed(mnemonic, passphrase="", hex=True):
