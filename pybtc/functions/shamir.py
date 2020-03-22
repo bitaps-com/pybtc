@@ -67,8 +67,6 @@ def _interpolation(points, x=0):
         raise Exception("Minimum 2 points required")
 
     points = sorted(points, key=lambda z: z[0])
-    if len(set(z[0] for z in points)) != k:
-        raise Exception("Unique points required")
 
     p_x = 0
     for j in range(k):

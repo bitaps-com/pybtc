@@ -6,6 +6,8 @@ from pybtc.functions.bip39_mnemonic import entropy_to_mnemonic
 from pybtc.functions.bip39_mnemonic import mnemonic_to_entropy
 from pybtc.functions.bip39_mnemonic import mnemonic_to_seed
 from pybtc.functions.bip39_mnemonic import is_mnemonic_checksum_valid
+from pybtc.functions.bip39_mnemonic import split_mnemonic
+from pybtc.functions.bip39_mnemonic import combine_mnemonic
 
 def test_generate_entropy():
     assert len(generate_entropy()) == 64
@@ -105,3 +107,10 @@ def test_mnemonic_to_seed():
         mnemonic_to_seed(b"ddjj")
     with pytest.raises(TypeError):
         mnemonic_to_seed(m, passphrase=b"djj")
+
+def test_split_mnemonic():
+    m = entropy_to_mnemonic(generate_entropy())
+    s = split_mnemonic(m, 3, 5)
+    assert combine_mnemonic(s) == m
+    with pytest.raises(TypeError):
+        split_mnemonic(3, 3, 5)

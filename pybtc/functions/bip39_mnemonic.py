@@ -161,22 +161,51 @@ def mnemonic_to_seed(mnemonic, passphrase="", hex=True):
     return seed if not hex else seed.hex()
 
 
+def __combinations(a, n):
+        results = []
+        total = len(a) ** 2
+        for m in range(n, total):
+            r = []
+            i = len(a) - 1
+            while i:
+                if (m & (1 << i)) != 0:
+                    r.append(a[i])
+                i -= 1
+
+            if len(r) >= n:
+                results.append(r)
+
+        return results
+
+
 def split_mnemonic(mnemonic, threshold, total, language='english',
-                   word_list_dir=None, word_list=None, checksum=False):
+                   word_list_dir=None, word_list=None):
+    if not isinstance(mnemonic, str):
+        raise TypeError("invalid mnemonic")
     entropy = mnemonic_to_entropy(mnemonic, language=language, hex=False,
-                                  word_list_dir=word_list_dir, word_list=word_list, checksum=checksum)
+                                  word_list_dir=word_list_dir, word_list=word_list)
     shares = split_secret(threshold, total, entropy)
+
+    a = [(i, shares[i]) for i in shares]
+    combinations = __combinations(a, threshold)
+    for c in combinations:
+        d = dict()
+        for q in c:
+            d[q[0]] = q[1]
+        s = restore_secret(d)
+        if s != entropy: # pragma: no cover
+            raise Exception("split secret failed")
     result = dict()
     for share in shares:
         result[share] = entropy_to_mnemonic(shares[share], language=language,
                                             word_list_dir=word_list_dir, word_list=word_list)
     return result
 
-def combine_mnemonic(shares, language='english', word_list_dir=None, word_list=None, checksum=False):
+def combine_mnemonic(shares, language='english', word_list_dir=None, word_list=None):
     s = dict()
     for share in shares:
         s[share] = mnemonic_to_entropy(shares[share], language=language, hex=False, word_list_dir=word_list_dir,
-                                       word_list=word_list, checksum=checksum)
+                                       word_list=word_list)
     entropy = restore_secret(s)
     return entropy_to_mnemonic(entropy, language=language, word_list_dir=word_list_dir,
                                word_list=word_list)
