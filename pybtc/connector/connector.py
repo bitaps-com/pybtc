@@ -690,6 +690,7 @@ class Connector:
                         async with conn.transaction():
                             data = await  self.uutxo.apply_block_changes([s2rh(h) for h in block["tx"]],
                                                                          block["height"], conn)
+                            block["amount"] = data["blockAmount"]
                             block["mempoolInvalid"] = {"tx": data["invalid_txs"],
                                                        "inputs": data["invalid_stxo"],
                                                        "outputs": data["invalid_uutxo"]}

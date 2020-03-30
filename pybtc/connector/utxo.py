@@ -457,12 +457,14 @@ class UUTXO():
 
 
         batch, uutxo = deque(), deque()
+        block_amount = 0
 
         for r in rows:
             batch.append((r["outpoint"],
                          (h << 39) + (txs.index(r["t"]) << 20) + (1 << 19) + bytes_to_int(r["outpoint"][32:]),
                          r["address"], r["amount"]))
             uutxo.append((r["outpoint"], r["t"], r["address"], r["amount"]))
+            block_amount += r["amount"]
             if self.block_filters:
                 try:
                     tx_filters[txs.index(r["t"])].append(r["address"])
@@ -566,7 +568,8 @@ class UUTXO():
                 "invalid_txs": block_invalid_txs,
                 "stxo": stxo,
                 "tx_filters": tx_filters,
-                "coinbase_tx_id": txs[0]}
+                "coinbase_tx_id": txs[0],
+                "block_amount": block_amount}
 
 
     async def rollback_block(self, conn):
