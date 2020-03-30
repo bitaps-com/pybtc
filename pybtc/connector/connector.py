@@ -1,14 +1,17 @@
 from pybtc.functions.tools import rh2s, s2rh
+from pybtc.functions.address import hash_to_address
 from pybtc.connector.block_loader import BlockLoader
 from pybtc.connector.utxo import UTXO, UUTXO
 from pybtc.connector.utils import decode_block_tx
 from pybtc.connector.utils import Cache
 from pybtc.connector.utils import seconds_to_age
 from pybtc.classes.transaction import Transaction
+from pybtc.constants import MINER_PAYOUT_TAG, MINER_COINBASE_TAG
 from pybtc import int_to_bytes, bytes_to_int, bytes_from_hex
 from pybtc import MRU, parse_script
 from collections import deque
 import traceback
+import json
 import asyncio
 import time
 from _pickle import loads
@@ -417,8 +420,6 @@ class Connector:
             try:
                 while True:
                     await asyncio.sleep(30)
-                    print("zmq", int(time.time()) - self.last_zmq_msg)
-
                     # check ZeroMQ state
                     if self.mempool_tx:
                         if int(time.time()) - self.last_zmq_msg > 300 and self.zmqContext:
@@ -664,8 +665,25 @@ class Connector:
                 # call before block handler
                 if self.before_block_handler:
                     await self.before_block_handler(block)
-
+                raw_coinbase_tx = await self.rpc.getrawtransaction(block["tx"][0])
                 await self.fetch_block_transactions(block)
+                coinbase_tx = Transaction(raw_coinbase_tx, format="raw")
+                coinbase = coinbase_tx["vIn"][0]["scriptSig"]
+
+                block["miner"] = None
+                for tag in MINER_COINBASE_TAG:
+                    if coinbase.find(tag) != -1:
+                        block["miner"] = json.dumps(MINER_COINBASE_TAG[tag])
+                        break
+                else:
+                    try:
+                        address_hash = block["rawTx"][0]["vOut"][0]["addressHash"]
+                        script_hash = False if block["rawTx"][0]["vOut"][0]["nType"] == 1 else True
+                        a = hash_to_address(address_hash, script_hash=script_hash)
+                        if a in MINER_PAYOUT_TAG:
+                            block["miner"] = json.dumps(MINER_PAYOUT_TAG[a])
+                    except:
+                        pass
 
                 if self.utxo_data:
                     async with self.db_pool.acquire() as conn:

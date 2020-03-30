@@ -4,8 +4,9 @@ from pybtc.functions.hash import hmac_sha512, double_sha256, hash160
 from pybtc.functions.encode import encode_base58, decode_base58
 from pybtc.constants import *
 from pybtc.crypto import __secp256k1_ec_pubkey_tweak_add__
+from pybtc.functions.tools import get_bytes
 
-def create_master_xprivate_key(seed, testnet=False, base58=True, hex=False):
+def create_master_xprivate_key(seed, testnet=False, base58=None, hex=None):
     """
     Create extended private key from seed
 
@@ -15,24 +16,25 @@ def create_master_xprivate_key(seed, testnet=False, base58=True, hex=False):
                         In case True base58 flag value will be ignored.
     :return: extended private key  in base58, HEX or bytes string format.
     """
-    if isinstance(seed, str):
-        seed = bytes.fromhex(seed)
-    if not isinstance(seed, bytes):
-        raise TypeError("seed should be bytes or hex encoded string")
+    seed = get_bytes(seed)
     i = hmac_sha512(b"Bitcoin seed", seed)
     m, c = i[:32], i[32:]
     m_int = int.from_bytes(m, byteorder="big")
 
-    if m_int <= 0 or m_int > ECDSA_SEC256K1_ORDER:
+    if m_int <= 0 or m_int > ECDSA_SEC256K1_ORDER: # pragma: no cover
         return None
     prefix = TESTNET_XPRIVATE_KEY_PREFIX if testnet else MAINNET_XPRIVATE_KEY_PREFIX
     key = b''.join([prefix,
                     b'\x00\x00\x00\x00\x00\x00\x00\x00\x00',
                     c, b'\x00', m])
+    if base58 is None and hex is None:
+        base58 = True
     if base58:
         key = b"".join([key, double_sha256(key)[:4]])
         return encode_base58(key)
     else:
+        if hex is None:
+            hex = False
         return key if not hex else key.hex()
 
 
@@ -73,6 +75,22 @@ def xprivate_to_xpublic_key(xprivate_key, base58=True, hex=False):
         return encode_base58(key)
     else:
         return key
+
+def decode_path(path, sub_path=False):
+    path = path.split('/')
+    if sub_path:
+        if path[0] != 'm':
+            raise ValueError("invalid path")
+    r = []
+    for k in path:
+        if k[0] == "'":
+            k = int(k[1:]) + HARDENED_KEY
+        else:
+            k = int(k)
+        r.append(k)
+    return r
+
+
 
 
 def derive_xkey(xkey, *path_level, base58=True, hex=False):

@@ -74,7 +74,7 @@ class Wallet():
                     if len(init_vector) == 156:
                         self._init_vector = bytes.fromhex(init_vector)
                     else:
-                        self._init_vector = decode_base58_with_checksum(init_vector)
+                        self._init_vector = decode_base58(init_vector)
                     self._init_vector_type = "xpublic_key"
                     if path_type is None:
                         if self._init_vector[:4] in (MAINNET_M49_XPUBLIC_KEY_PREFIX,

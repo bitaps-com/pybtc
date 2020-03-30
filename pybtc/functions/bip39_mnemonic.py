@@ -110,7 +110,7 @@ def mnemonic_to_entropy(mnemonic, language='english', word_list_dir=None,
     chk_sum_bit_len = word_count * 11 % 32
     for w in mnemonic:
         entropy_int = (entropy_int << 11) | codes[w]
-    chk_sum = entropy_int & (2 ** chk_sum_bit_len - 1)
+
     entropy_int = entropy_int >> chk_sum_bit_len
     entropy = entropy_int.to_bytes((bit_size - chk_sum_bit_len) // 8, byteorder="big")
     return entropy if not hex else entropy.hex()
