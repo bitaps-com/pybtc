@@ -836,7 +836,8 @@ class Connector:
             #  fetch information about destroyed coins
             #  save new coins to utxo table
             #
-
+            if block["p2pkMapHash"]:
+                self.sync_utxo.p2pkMapHash.extend(block["p2pkMapHash"])
             for q in block["rawTx"]:
                 tx = block["rawTx"][q]
                 for i in tx["vOut"]:
