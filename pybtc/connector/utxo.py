@@ -31,6 +31,7 @@ class UTXO():
 
         self.utxo_records = deque()  # prepared utxo records for write to db
         self.p2pkMapHash = deque()  # prepared utxo records for write to db
+        self.pending_p2pkMapHash = deque()  # prepared utxo records for write to db
         self.pending_saved = dict()  # temp hash table, while records write process
 
         self.scheduled_to_delete = deque()
@@ -151,7 +152,6 @@ class UTXO():
                     hash_list.add(r["result"]["blockhash"])
             hash_list = chunks_by_count(list(hash_list), 30)
             for hl in hash_list:
-                q = time.time()
                 result2 = await self.rpc.batch([["getblock", r] for r in hl])
                 for r in result2:
                    self.restore_blocks_cache[r["result"]["hash"]] = r["result"]
@@ -257,6 +257,8 @@ class UTXO():
             self.write_to_db = True
             t = time.time()
             if not self.checkpoint: return
+            self.pending_p2pkMapHash = deque(self.p2pkMapHash)
+            self.p2pkMapHash = deque()
             await self.postgresql_atomic_batch()
             self.log.debug("utxo checkpoint saved time %s" % round(time.time()-t, 4))
             self.saved_utxo_count += len(self.utxo_records)
@@ -264,8 +266,9 @@ class UTXO():
             self.pending_deleted = deque()
             self.utxo_records = deque()
             self.pending_saved = dict()
-
+            self.pending_p2pkMapHash = deque()
         except Exception as err:
+            self.p2pkMapHash = deque(self.pending_p2pkMapHash)
             self.log.critical("save_checkpoint error: %s" % str(err))
         finally:
             self.save_process = False
@@ -287,8 +290,7 @@ class UTXO():
                                                     records=self.utxo_records)
                if self.p2pkMapHash:
                    await conn.executemany("INSERT INTO connector_p2pk_map (address, script) "
-                                          "VALUES ($1, $2) ON CONFLICT DO NOTHING;", self.p2pkMapHash)
-                   self.p2pkMapHash = deque()
+                                          "VALUES ($1, $2) ON CONFLICT DO NOTHING;", self.pending_p2pkMapHash)
                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                   "WHERE name = 'last_block';", self.checkpoint)
                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
