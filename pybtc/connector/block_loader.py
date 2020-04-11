@@ -395,7 +395,6 @@ class Worker:
                                             block["filter"].add(e)
 
                                         if self.option_tx_map:
-                                            print("txmap", x)
                                             va = txMap.get((address, tx_pointer), 0)
                                             txMap[(address, tx_pointer)] = va + out["value"]
 
@@ -515,7 +514,7 @@ class Worker:
                                 blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                             except: pass
                 if self.option_tx_map:
-                    block["_txMap"] = txMap
+                    blocks[x]["_txMap"] = txMap
 
 
                 if self.option_block_filters:
