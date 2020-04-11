@@ -746,6 +746,7 @@ class Connector:
                     self.await_tx_future[i].cancel()
             self.await_tx_future = dict()
             self.log.error("block %s error %s" % (block["height"], str(err)))
+            print(traceback.format_exc())
             self.get_next_block_mutex = False
 
 
