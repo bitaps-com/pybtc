@@ -897,7 +897,7 @@ class Connector:
                                             va = block["_txMap"].get((r[2], tx_pointer), 0)
                                             block["_txMap"][(r[2], tx_pointer)] = va - r[1]
 
-                                            block["stxo"].append((r[0], (height << 39) + (q << 20) + i), r[2],  r[1])
+                                            block["stxo"].append(((r[0], (height << 39) + (q << 20) + i), r[2],  r[1]))
                                     else:
                                         missed.append((inp["_outpoint"], (height<<39)+(q<<20)+i, q, i))
 
@@ -924,10 +924,10 @@ class Connector:
                             block["_txMap"][(block["rawTx"][q]["vIn"][i]["coin"][2], tx_pointer)] = \
                                 va - block["rawTx"][q]["vIn"][i]["coin"][1]
 
-                            block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
+                            block["stxo"].append(((block["rawTx"][q]["vIn"][i]["coin"][0],
                                                  (height << 39)+(q<<20)+i),
                                                  block["rawTx"][q]["vIn"][i]["coin"][2],
-                                                 block["rawTx"][q]["vIn"][i]["coin"][1])
+                                                 block["rawTx"][q]["vIn"][i]["coin"][1]))
 
                         r = block["rawTx"][q]["vIn"][i]["coin"][2]
 
