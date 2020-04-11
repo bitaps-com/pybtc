@@ -490,9 +490,9 @@ class Worker:
                                            va = txMap.get((p[outpoint][2], tx_pointer), 0)
                                            txMap[(p[outpoint][2], tx_pointer)] = va - p[outpoint][1]
                                            blocks[h]["stxo"].append((p[outpoint][0],
-                                                                     (h<<39)+(z<<20)+i),
+                                                                     (h<<39)+(z<<20)+i,
                                                                      p[outpoint][2],
-                                                                     p[outpoint][1])
+                                                                     p[outpoint][1]))
 
                                        t += 1
                                        n += 1
