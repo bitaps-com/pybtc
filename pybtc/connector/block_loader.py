@@ -395,8 +395,9 @@ class Worker:
                                             block["filter"].add(e)
 
                                         if self.option_tx_map:
-                                                va = txMap.get((address, tx_pointer), 0)
-                                                txMap[(address, tx_pointer)] = va + out["value"]
+                                            print("txmap", x)
+                                            va = txMap.get((address, tx_pointer), 0)
+                                            txMap[(address, tx_pointer)] = va + out["value"]
 
 
                                     out["_address"] = address
