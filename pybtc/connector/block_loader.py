@@ -341,7 +341,7 @@ class Worker:
                     if y["result"] is not None:
                         block = decode_block_tx(y["result"])
                         block["p2pkMapHash"] = []
-                        if self.option_tx_map: block["txMap"], block["stxo"] = deque(), deque()
+                        if self.option_tx_map: txMap, block["stxo"] = dict(), deque()
 
                         if self.option_block_filters:
                             block["filter"] = set()
@@ -372,7 +372,7 @@ class Worker:
                             for z in block["rawTx"]:
                                 if self.option_merkle_proof:
                                     block["rawTx"][z]["merkleProof"] = b''.join(merkle_proof(mt, z, return_hex=False))
-
+                                tx_pointer = (x << 39)+(z << 20)
                                 for i in block["rawTx"][z]["vOut"]:
                                     out= block["rawTx"][z]["vOut"][i]
                                     o = b"".join((block["rawTx"][z]["txId"], int_to_bytes(i)))
@@ -395,7 +395,9 @@ class Worker:
                                             block["filter"].add(e)
 
                                         if self.option_tx_map:
-                                                block["txMap"].append((pointer, address, out["value"]))
+                                                va = txMap.get((address, tx_pointer), 0)
+                                                txMap[(address, tx_pointer)] = va + out["value"]
+
 
                                     out["_address"] = address
                                     self.coins[o] = (pointer, out["value"], address)
@@ -408,7 +410,7 @@ class Worker:
                                         inp = block["rawTx"][z]["vIn"][i]
                                         outpoint = b"".join((inp["txId"], int_to_bytes(inp["vOut"])))
                                         block["rawTx"][z]["vIn"][i]["_outpoint"] = outpoint
-
+                                        tx_pointer = (x<<39)+(z<<20)
                                         try:
                                            r = self.coins.delete(outpoint)
                                            try:
@@ -430,8 +432,10 @@ class Worker:
                                                        block["filter"].add(e)
 
                                                if self.option_tx_map:
-                                                   block["txMap"].append(((x<<39)+(z<<20)+i, r[2], r[1]))
-                                                   block["stxo"].append((r[0], (x<<39)+(z<<20)+i))
+                                                   va = txMap.get((r[2], tx_pointer), 0)
+                                                   txMap[(r[2], tx_pointer)] = va - r[1]
+                                                   block["stxo"].append((r[0], (x<<39)+(z<<20)+i, r[2], r[1]))
+
 
                                                t += 1
                                            except:
@@ -460,6 +464,7 @@ class Worker:
 
                for h in  blocks:
                    for z in blocks[h]["rawTx"]:
+                       tx_pointer = (h<<39)+(z<<20)
                        if not blocks[h]["rawTx"][z]["coinbase"]:
                            for i in blocks[h]["rawTx"][z]["vIn"]:
                                outpoint = blocks[h]["rawTx"][z]["vIn"][i]["_outpoint"]
@@ -482,9 +487,12 @@ class Worker:
 
 
                                        if self.option_tx_map:
-                                           blocks[h]["txMap"].append(((h<<39)+(z<<20)+i,
-                                                                      p[outpoint][2], p[outpoint][1]))
-                                           blocks[h]["stxo"].append((p[outpoint][0], (h<<39)+(z<<20)+i))
+                                           va = txMap.get((p[outpoint][2], tx_pointer), 0)
+                                           txMap[(p[outpoint][2], tx_pointer)] = va - p[outpoint][1]
+                                           blocks[h]["stxo"].append((p[outpoint][0],
+                                                                     (h<<39)+(z<<20)+i),
+                                                                     p[outpoint][2],
+                                                                     p[outpoint][1])
 
                                        t += 1
                                        n += 1
@@ -505,6 +513,9 @@ class Worker:
                                 r = self.destroyed_coins.delete((x<<39)+(y<<20)+(1<<19)+i)
                                 blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
                             except: pass
+                if self.option_tx_map:
+                    block["_txMap"] = txMap
+
 
                 if self.option_block_filters:
                     blocks[x]["filter"] = bytearray(b"".join(blocks[x]["filter"]))

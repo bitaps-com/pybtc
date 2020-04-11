@@ -828,8 +828,6 @@ class Connector:
         t, t2 = time.time(), 0
         height = block["height"]
 
-        if self.option_tx_map:
-            tx_map_append = block["txMap"].append
         if self.utxo_data:
             #
             #  utxo mode
@@ -854,7 +852,7 @@ class Connector:
                                            out["value"],
                                            out["_address"])
 
-            stxo, missed = dict(), deque()
+            missed = deque()
             for q in block["rawTx"]:
                 tx = block["rawTx"][q]
                 if not tx["coinbase"]:
@@ -894,8 +892,11 @@ class Connector:
 
 
                                         if self.option_tx_map:
-                                            tx_map_append(((height << 39) + (q << 20) + i, r[2],  r[1]))
-                                            block["stxo"].append((r[0], (height << 39) + (q << 20) + i))
+                                            tx_pointer = (height << 39) + (q << 20)
+                                            va = block["_txMap"].get((r[2], tx_pointer), 0)
+                                            block["_txMap"][(r[2], tx_pointer)] = va - r[1]
+
+                                            block["stxo"].append((r[0], (height << 39) + (q << 20) + i), r[2],  r[1])
                                     else:
                                         missed.append((inp["_outpoint"], (height<<39)+(q<<20)+i, q, i))
 
@@ -917,11 +918,15 @@ class Connector:
                             raise Exception("utxo get failed %s" % rh2s(block["rawTx"][q]["vIn"][i]["txId"]))
                     if height > self.app_block_height_on_start:
                         if self.option_tx_map:
-                            tx_map_append(((height << 39)+(q<<20)+i,
-                                           block["rawTx"][q]["vIn"][i]["coin"][2],
-                                           block["rawTx"][q]["vIn"][i]["coin"][1]))
+                            tx_pointer = (height << 39) + (q << 20)
+                            va = block["_txMap"].get((block["rawTx"][q]["vIn"][i]["coin"][2], tx_pointer), 0)
+                            block["_txMap"][(block["rawTx"][q]["vIn"][i]["coin"][2], tx_pointer)] = \
+                                va - block["rawTx"][q]["vIn"][i]["coin"][1]
+
                             block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
-                                                 (height << 39)+(q<<20)+i))
+                                                 (height << 39)+(q<<20)+i),
+                                                 block["rawTx"][q]["vIn"][i]["coin"][2],
+                                                 block["rawTx"][q]["vIn"][i]["coin"][1])
 
                         r = block["rawTx"][q]["vIn"][i]["coin"][2]
 
@@ -940,6 +945,11 @@ class Connector:
                                     raise
                                 e = b"".join((bytes([2]), q.to_bytes(4, byteorder="little"), a[:20]))
                                 block["filter"] += e
+
+        block["txMap"] = deque()
+        for tq in block["_txMap"]:
+            block["txMap"].append((tq[0], tq[1], block["_txMap"][tq]))
+        del block["_txMap"]
 
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])
