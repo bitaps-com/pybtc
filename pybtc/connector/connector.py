@@ -894,8 +894,7 @@ class Connector:
 
                                         if self.option_tx_map:
                                             tx_pointer = (height << 39) + (q << 20)
-                                            va = block["_txMap"].get((r[2], tx_pointer), 0)
-                                            block["_txMap"][(r[2], tx_pointer)] = va - r[1]
+                                            block["txMap"].add((r[2], tx_pointer))
 
                                             block["stxo"].append((r[0], (height << 39) + (q << 20) + i, r[2],  r[1]))
                                     else:
@@ -920,10 +919,7 @@ class Connector:
                     if height > self.app_block_height_on_start:
                         if self.option_tx_map:
                             tx_pointer = (height << 39) + (q << 20)
-                            va = block["_txMap"].get((block["rawTx"][q]["vIn"][i]["coin"][2], tx_pointer), 0)
-                            block["_txMap"][(block["rawTx"][q]["vIn"][i]["coin"][2], tx_pointer)] = \
-                                va - block["rawTx"][q]["vIn"][i]["coin"][1]
-
+                            block["txMap"].add((block["rawTx"][q]["vIn"][i]["coin"][2], tx_pointer))
                             block["stxo"].append((block["rawTx"][q]["vIn"][i]["coin"][0],
                                                  (height << 39)+(q<<20)+i,
                                                  block["rawTx"][q]["vIn"][i]["coin"][2],
@@ -946,11 +942,6 @@ class Connector:
                                     raise
                                 e = b"".join((bytes([2]), q.to_bytes(4, byteorder="little"), a[:20]))
                                 block["filter"] += e
-
-        block["txMap"] = deque()
-        for tq in block["_txMap"]:
-            block["txMap"].append((tq[0], tq[1], block["_txMap"][tq]))
-        del block["_txMap"]
 
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])
@@ -1293,6 +1284,7 @@ class Connector:
 
             if block_tx:
                 self.log.critical("new transaction error %s" % err)
+                print(traceback.format_exc())
                 self.await_tx = set()
                 if not self.block_txs_request.done():
                     self.block_txs_request.cancel()

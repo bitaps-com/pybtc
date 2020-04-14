@@ -78,13 +78,14 @@ def xprivate_to_xpublic_key(xprivate_key, base58=True, hex=False):
 
 def decode_path(path, sub_path=False):
     path = path.split('/')
-    if sub_path:
+    if not sub_path:
         if path[0] != 'm':
             raise ValueError("invalid path")
+
     r = []
-    for k in path:
-        if k[0] == "'":
-            k = int(k[1:]) + HARDENED_KEY
+    for k in path if sub_path else path[1:]:
+        if k[-1] == "'":
+            k = int(k[:-1]) + HARDENED_KEY
         else:
             k = int(k)
         r.append(k)
@@ -93,7 +94,7 @@ def decode_path(path, sub_path=False):
 
 
 
-def derive_xkey(xkey, *path_level, base58=True, hex=False):
+def derive_xkey(xkey, path, base58=None, hex=None):
     """
     Child Key derivation for extended private/public keys
     
@@ -104,17 +105,23 @@ def derive_xkey(xkey, *path_level, base58=True, hex=False):
                         In case True base58 flag value will be ignored.
     :return: extended child private/public key  in base58, HEX or bytes string format.
     """
+    if isinstance(path, str):
+        path = decode_path(path)
     if isinstance(xkey, str):
         xkey = decode_base58(xkey, checksum=True)
     if xkey[:4] in [MAINNET_XPRIVATE_KEY_PREFIX, TESTNET_XPRIVATE_KEY_PREFIX]:
-        for i in path_level:
+        for i in path:
             xkey = derive_child_xprivate_key(xkey, i)
 
     elif xkey[:4] in [MAINNET_XPUBLIC_KEY_PREFIX, TESTNET_XPUBLIC_KEY_PREFIX]:
-        for i in path_level:
+        for i in path:
             xkey = derive_child_xpublic_key(xkey, i)
     else:
         raise ValueError("invalid extended key")
+
+    if base58 is None and hex is None:
+        base58 = True
+        hex = False
 
     if hex:
         return xkey.hex()
@@ -128,6 +135,7 @@ def derive_child_xprivate_key(xprivate_key, i):
     c = xprivate_key[13:45]
     k = xprivate_key[45:]
     depth = xprivate_key[4] + 1
+
     if depth > 255:
         raise ValueError("path depth should be <= 255")
     pub = private_to_public_key(k[1:], hex=False)
