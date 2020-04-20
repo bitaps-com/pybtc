@@ -404,14 +404,15 @@ class UUTXO():
 
         while commit_ustxo:
             rows = await conn.fetch("INSERT  INTO connector_unconfirmed_stxo "
-                                    "(outpoint, sequence, out_tx_id, tx_id, input_index, address, amount) "
+                                    "(outpoint, sequence, out_tx_id, tx_id, input_index, address, amount, pointer) "
                                     " (SELECT r.outpoint,"
                                     "         r.sequence,"
                                     "         r.out_tx_id,"
                                     "         r.tx_id,"
                                     "         r.input_index, "
                                     "         r.address, "
-                                    "         r.amount "
+                                    "         r.amount, "
+                                    "         r.pointer "
                                     "FROM unnest($1::connector_unconfirmed_stxo[]) as r ) "
                                     "ON CONFLICT (outpoint, sequence) DO NOTHING "
                                     "            RETURNING outpoint as o,"
@@ -420,13 +421,14 @@ class UUTXO():
                                     "                      tx_id as t,"
                                     "                      input_index as i,"
                                     "                      address as a,"
-                                    "                      amount as am;" , commit_ustxo)
+                                    "                      amount as am, " 
+                                    "                      pointer as pt;" , commit_ustxo)
 
             for row in rows:
-                commit_ustxo.remove((row["o"], row["s"], row["ot"], row["t"], row["i"], row["a"], row["am"]))
+                commit_ustxo.remove((row["o"], row["s"], row["ot"], row["t"], row["i"], row["a"], row["am"], row["pt"]))
 
             # in case double spend increment sequence
-            commit_ustxo = set((i[0], i[1] + 1, i[2], i[3], i[4], i[5], i[6]) for i in commit_ustxo)
+            commit_ustxo = set((i[0], i[1] + 1, i[2], i[3], i[4], i[5], i[6], i[7]) for i in commit_ustxo)
 
     async def apply_block_changes(self, txs, h, conn):
 
@@ -488,10 +490,11 @@ class UUTXO():
                                 "          tx_id,"
                                 "          input_index as i,"
                                 "          address as a,"
-                                "          amount as am;", txs)
+                                "          amount as am,"
+                                "          pointer as pt;", txs)
         stxo, utxo, outpoints = deque(), deque(), set()
         for r in rows:
-            stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"], r["a"], r["am"]))
+            stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"], r["a"], r["am"], r["pt"]))
             outpoints.add(r["outpoint"])
             if self.block_filters:
                 try:
@@ -518,9 +521,11 @@ class UUTXO():
                                     "          tx_id,"
                                     "          input_index as i, "
                                     "          address as a,"
-                                    "          amount as am;", outpoints)
+                                    "          amount as am,"
+                                    "          pointer as pt;", outpoints)
             for r in rows:
-                dbs_stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"], r["a"], r["am"]))
+                dbs_stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"],
+                                 r["i"], r["a"], r["am"], r["pt"]))
                 invalid_txs.add(r["tx_id"])
 
         # handle invalid transactions while invalid transactions list not empty
@@ -552,10 +557,12 @@ class UUTXO():
                                     "          tx_id,"
                                     "          input_index as i,"
                                     "          address as a, "
-                                    "          amount as am;", outpoints)
+                                    "          amount as am,"
+                                    "          pointer as pt;", outpoints)
             invalid_txs = set()
             for r in rows:
-                dbs_stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"], r["a"], r["am"]))
+                dbs_stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"],
+                                 r["i"], r["a"], r["am"], r["pt"]))
                 invalid_txs.add(r["tx_id"])
 
         await conn.execute("INSERT INTO connector_block_state_checkpoint (height, data) "
@@ -603,7 +610,7 @@ class UUTXO():
 
         await conn.copy_records_to_table('connector_unconfirmed_stxo',
                                          columns=["outpoint", "sequence",
-                                                  "out_tx_id", "tx_id", "input_index", "address", "amount"],
+                                                  "out_tx_id", "tx_id", "input_index", "address", "amount", "pointer"],
                                          records=data["stxo"])
 
         await conn.copy_records_to_table('connector_utxo',

@@ -120,16 +120,6 @@ def merkle_root_from_proof(merkle_proof, tx_id, index, return_hex=True, receive_
         return rh2s(root)
     return root
 
-
-
-
-
-
-
-
-
-
-
 def bits_to_target(bits):
     """
     Calculate target from bits
@@ -146,7 +136,6 @@ def bits_to_target(bits):
         target = (bits & 0xffffff) * (1 << (8 * (shift - 3)))
         return target
 
-
 def target_to_difficulty(target):
     """
     Calculate difficulty from target
@@ -156,7 +145,6 @@ def target_to_difficulty(target):
     """
     return 0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target
 
-
 def bits_to_difficulty(bits):
     """
     Calculate difficulty from bits
@@ -165,7 +153,6 @@ def bits_to_difficulty(bits):
     :return: integer.
     """
     return target_to_difficulty(bits_to_target(bits))
-
 
 def difficulty_to_target(difficulty):
     """

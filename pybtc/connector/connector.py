@@ -282,6 +282,7 @@ class Connector:
                                                                   out_tx_id BYTEA,
                                                                   tx_id BYTEA,
                                                                   input_index INT,
+                                                                  height INT,
                                                                   address BYTEA,
                                                                   amount BIGINT,
                                                                   PRIMARY KEY(outpoint, sequence));                                                      
@@ -308,6 +309,16 @@ class Connector:
             await conn.execute("""CREATE INDEX IF NOT EXISTS sutxo_tx_id
                                   ON connector_unconfirmed_stxo USING BTREE (tx_id);
                                """)
+            await conn.execute("""CREATE INDEX IF NOT EXISTS sutxo_address
+                                  ON connector_unconfirmed_stxo USING BTREE (address);
+                               """)
+            await conn.execute("""CREATE INDEX IF NOT EXISTS up2pk_map_address
+                                  ON connector_unconfirmed_p2pk_map USING BTREE (address);
+                               """)
+
+
+
+
             lb = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_block';")
             lc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='last_cached_block';")
             bc = await conn.fetchval("SELECT value FROM connector_utxo_state WHERE name='bootstrap_completed';")
@@ -1199,7 +1210,8 @@ class Connector:
                                                  tx["txId"],
                                                  i,
                                                  tx["vIn"][i]["coin"][2],
-                                                 tx["vIn"][i]["coin"][1]))
+                                                 tx["vIn"][i]["coin"][1],
+                                                 tx["vIn"][i]["coin"][0]))
                         try:
                             tx["vIn"][i]["double_spent"] = self.uutxo.loaded_ustxo[tx["vIn"][i]["outpoint"]]
                             tx["double_spent"] = True
