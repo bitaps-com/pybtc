@@ -282,9 +282,9 @@ class Connector:
                                                                   out_tx_id BYTEA,
                                                                   tx_id BYTEA,
                                                                   input_index INT,
-                                                                  height INT,
                                                                   address BYTEA,
                                                                   amount BIGINT,
+                                                                  pointer BIGINT,
                                                                   PRIMARY KEY(outpoint, sequence));                                                      
                                """)
 
