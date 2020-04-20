@@ -43,6 +43,7 @@ class Transaction(dict):
         self["format"] = format
         self["testnet"] = testnet
         self["segwit"] = False
+        self["rbf"] = False
         self["txId"] = None
         self["hash"] = None
         self["version"] = version
@@ -103,6 +104,8 @@ class Transaction(dict):
             t = read(4)
             rtx(t)
             self["vIn"][k]["sequence"] = unpack('<L', t)[0]
+            if self["vIn"][k]["sequence"] < 0xfffffffe:
+                self["rbf"] = True
         # outputs
         t = read_var_int(stream)
         rtx(t)
@@ -1119,9 +1122,12 @@ class Transaction(dict):
             self["rawTx"] = self["rawTx"].hex()
 
         input_sum = 0
+        self["rbf"] = False
         for i in self["vIn"]:
             if "value" in self["vIn"][i]:
                 input_sum += self["vIn"][i]["value"]
+                if self["vIn"][i]["sequence"] < 0xfffffffe:
+                    self["rbf"] = True
             else:
                 input_sum = None
                 break
