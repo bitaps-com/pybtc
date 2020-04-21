@@ -120,6 +120,7 @@ MINER_COINBASE_TAG = {
     b"mmpool": {"name": "mmpool", "link": "http://mmpool.org/pool"},
     b"KnCMiner": {"name": "KnCMiner", "link": "http://www.kncminer.com/"},
     "七彩神仙鱼".encode(): {"name": "F2Pool", "link": "https://www.f2pool.com/"},
+    b'\xf0\x9f\x90\x9f': {"name": "F2Pool", "link": "https://www.f2pool.com/"},
     b"/slush/": {"name": "Slush", "link": "http://mining.bitcoin.cz/"},
     b"Mined by AntPool": {"name": "AntPool", "link": "https://www.antpool.com/"},
     b"AntPool/": {"name": "AntPool", "link": "https://www.antpool.com/"},
