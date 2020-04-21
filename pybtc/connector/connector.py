@@ -695,7 +695,7 @@ class Connector:
                             block["miner"] = json.dumps(MINER_PAYOUT_TAG[a])
                     except:
                         pass
-
+                print(">>", block["miner"])
                 if self.utxo_data:
                     async with self.db_pool.acquire() as conn:
                         async with conn.transaction():
