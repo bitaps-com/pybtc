@@ -501,6 +501,7 @@ class UUTXO():
                     tx_filters[txs.index(r["tx_id"])].append(r["a"])
                 except:
                     tx_filters[txs.index(r["tx_id"])] = [r["a"]]
+
         if outpoints:
             rows = await conn.fetch("DELETE FROM connector_utxo WHERE outpoint = ANY($1) "
                                     "RETURNING outpoint, pointer, address, amount;", outpoints)
@@ -509,8 +510,8 @@ class UUTXO():
                 if r["pointer"] >> 39 < h:
                     utxo.append((r["outpoint"], r["pointer"], r["address"], r["amount"]))
 
-        #    delete dbs records
-        dbs_stxo, dbs_uutxo, invalid_txs = deque(), deque(), set()
+        #  delete dbs records
+        dbs_stxo, dbs_uutxo, block_invalid_txs = deque(), deque(), set()
 
         if outpoints:
             rows = await conn.fetch("DELETE FROM connector_unconfirmed_stxo "
@@ -526,18 +527,17 @@ class UUTXO():
             for r in rows:
                 dbs_stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"],
                                  r["i"], r["a"], r["am"], r["pt"]))
-                invalid_txs.add(r["tx_id"])
+                block_invalid_txs.add(r["tx_id"])
 
         # handle invalid transactions while invalid transactions list not empty
         #    remove coins for transactions list from connector_unconfirmed_utxo
         #    remove destroy records for transactions list from connector_unconfirmed_stxo
         #        get new invalid transactions list from deleted records
-
-        block_invalid_txs = set()
+        invalid_txs = set(block_invalid_txs)
 
         while invalid_txs:
-            block_invalid_txs = block_invalid_txs | invalid_txs
 
+            # delete outputs for invalid tx
             rows = await conn.fetch("DELETE FROM connector_unconfirmed_utxo  "
                                     "WHERE out_tx_id = ANY($1) "
                                     "RETURNING  outpoint, "
@@ -549,6 +549,7 @@ class UUTXO():
                 dbs_uutxo.append((r["outpoint"], r["t"], r["address"], r["amount"]))
                 outpoints.add(r["outpoint"])
 
+            # delete inputs for invalid tx using outpoint
             rows = await conn.fetch("DELETE FROM connector_unconfirmed_stxo "
                                     "WHERE outpoint = ANY($1) "
                                     "RETURNING outpoint,"
@@ -559,11 +560,29 @@ class UUTXO():
                                     "          address as a, "
                                     "          amount as am,"
                                     "          pointer as pt;", outpoints)
+            # collect new list of invalid tx
             invalid_txs = set()
             for r in rows:
                 dbs_stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"],
                                  r["i"], r["a"], r["am"], r["pt"]))
                 invalid_txs.add(r["tx_id"])
+                block_invalid_txs.add(r["tx_id"])
+
+            #  delete inputs for invalid tx using tx
+            rows = await conn.fetch("DELETE FROM connector_unconfirmed_stxo "
+                                    "WHERE tx_id = ANY($1) "
+                                    "RETURNING outpoint,"
+                                    "          sequence,"
+                                    "          out_tx_id,"
+                                    "          tx_id,"
+                                    "          input_index as i,"
+                                    "          address as a, "
+                                    "          amount as am,"
+                                    "          pointer as pt;", invalid_txs)
+            for r in rows:
+                dbs_stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"],
+                                 r["i"], r["a"], r["am"], r["pt"]))
+
 
         await conn.execute("INSERT INTO connector_block_state_checkpoint (height, data) "
                            "VALUES ($1, $2);", h, pickle.dumps({"utxo": utxo,
