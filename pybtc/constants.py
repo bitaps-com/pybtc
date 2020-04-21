@@ -113,6 +113,7 @@ PATH_LEVEL_BIP0044 = [0x8000002C, 0x80000000, 0x80000000, 0, 0]
 TESTNET_PATH_LEVEL_BIP0044 = [0x8000002C, 0x80000001, 0x80000000, 0, 0]
 
 MINER_COINBASE_TAG = {
+    b"OKEX": {"name": "okex.com", "link": "https://www.okex.com/"},
     b"BitMinter": {"name": "BitMinter", "link": "https://bitminter.com/"},
     b"Eligius": {"name": "Eligius", "link": "http://eligius.st/"},
     b"ghash.io": {"name": "GHash.IO", "link": "https://ghash.io/"},
@@ -145,8 +146,11 @@ MINER_COINBASE_TAG = {
     b"ckpool": {"name": "CKPool", "link": "http://ckpool.org"},
     b"KanoPool": {"name": "KanoPool", "link": "https://kano.is/"},
     b"Huobi": {"name": "Huobi", "link": "https://www.poolhb.com"},
+    b"/HuoBi/": {"name": "Huobi", "link": "https://www.poolhb.com"},
     b"HuoBi": {"name": "Huobi", "link": "https://www.poolhb.com"},
     b"58coin.com": {"name": "58coin", "link": "http://58coin.com"},
+    b"1THash": {"name": "1THash", "link": "https://www.1thash.com/"},
+    b"NovaBlock": {"name": "NovaBlock", "link": "https://novablock.com/"},
     b"pool.bitcoin.com": {"name": "Bitcoin.com", "link": "https://pool.bitcoin.com"},
     b"BTC.COM": {"name": "BTC.COM", "link": "http://btc.com/"},
     b"gbminers": {"name": "gbminers", "link": "http://gbminers.com"},
