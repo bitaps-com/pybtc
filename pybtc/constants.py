@@ -113,6 +113,7 @@ PATH_LEVEL_BIP0044 = [0x8000002C, 0x80000000, 0x80000000, 0, 0]
 TESTNET_PATH_LEVEL_BIP0044 = [0x8000002C, 0x80000001, 0x80000000, 0, 0]
 
 MINER_COINBASE_TAG = {
+    b"SpiderPool": {"name": "SpiderPool", "link": "https://www.spiderpool.com/"},
     b"okex.com": {"name": "OKEX", "link": "https://www.okex.com/"},
     b"BitMinter": {"name": "BitMinter", "link": "https://bitminter.com/"},
     b"Eligius": {"name": "Eligius", "link": "http://eligius.st/"},
