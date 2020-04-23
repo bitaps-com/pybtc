@@ -1232,7 +1232,8 @@ class Connector:
                                                  i,
                                                  tx["vIn"][i]["coin"][2],
                                                  tx["vIn"][i]["coin"][1],
-                                                 tx["vIn"][i]["coin"][0]))
+                                                 tx["vIn"][i]["coin"][0],
+                                                 None))
                         try:
                             tx["vIn"][i]["double_spent"] = self.uutxo.loaded_ustxo[tx["vIn"][i]["outpoint"]]
                             tx["double_spent"] = True

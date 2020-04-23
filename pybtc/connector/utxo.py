@@ -425,10 +425,11 @@ class UUTXO():
                                     "                      pointer as pt;" , commit_ustxo)
 
             for row in rows:
-                commit_ustxo.remove((row["o"], row["s"], row["ot"], row["t"], row["i"], row["a"], row["am"], row["pt"]))
+                commit_ustxo.remove((row["o"], row["s"], row["ot"], row["t"],
+                                     row["i"], row["a"], row["am"], row["pt"], None))
 
             # in case double spend increment sequence
-            commit_ustxo = set((i[0], i[1] + 1, i[2], i[3], i[4], i[5], i[6], i[7]) for i in commit_ustxo)
+            commit_ustxo = set((i[0], i[1] + 1, i[2], i[3], i[4], i[5], i[6], i[7], None) for i in commit_ustxo)
 
     async def apply_block_changes(self, txs, h, conn):
 
