@@ -268,6 +268,7 @@ class Connector:
                                                                   out_tx_id BYTEA,
                                                                   address BYTEA,
                                                                   amount  BIGINT,
+                                                                  id BIGSERIAL, 
                                                                   PRIMARY KEY (outpoint));                                                      
                                """)
             await conn.execute("""CREATE TABLE IF NOT EXISTS 
@@ -285,6 +286,7 @@ class Connector:
                                                                   address BYTEA,
                                                                   amount BIGINT,
                                                                   pointer BIGINT,
+                                                                  id BIGSERIAL,
                                                                   PRIMARY KEY(outpoint, sequence));                                                      
                                """)
 
@@ -306,6 +308,17 @@ class Connector:
             await conn.execute("""CREATE INDEX IF NOT EXISTS sutxo_out_tx_id
                                   ON connector_unconfirmed_stxo USING BTREE (out_tx_id);
                                """)
+
+
+            await conn.execute("""CREATE INDEX IF NOT EXISTS uutxo_out_tx_id_s
+                                  ON connector_unconfirmed_utxo USING BTREE (id);
+                               """)
+            await conn.execute("""CREATE INDEX IF NOT EXISTS sutxo_out_tx_id_s
+                                  ON connector_unconfirmed_stxo USING BTREE (id);
+                               """)
+
+
+
             await conn.execute("""CREATE INDEX IF NOT EXISTS sutxo_tx_id
                                   ON connector_unconfirmed_stxo USING BTREE (tx_id);
                                """)
@@ -1312,6 +1325,7 @@ class Connector:
                     if not self.await_tx_future[i].done():
                         self.await_tx_future[i].cancel()
             self.log.critical("failed tx - %s [%s]" % (tx_hash, str(err)))
+            print(traceback.format_exc())
 
         finally:
             self.tx_in_process.remove(tx_hash)
