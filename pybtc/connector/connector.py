@@ -1201,7 +1201,6 @@ class Connector:
 
             else:
                 if tx["coinbase"]:
-                    print("skipp coinbase tx without block")
                     return
 
                 if self.unconfirmed_tx_processing.done():
