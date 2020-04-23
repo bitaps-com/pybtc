@@ -1258,7 +1258,7 @@ class Connector:
             if block_tx:
                 self.await_tx.remove(tx_hash)
                 self.await_tx_future[tx["txId"]].set_result(True)
-                self.log.warning("tx %s; left %s" % (tx_hash, len(self.await_tx)))
+                self.log.debug("tx %s; left %s" % (tx_hash, len(self.await_tx)))
 
 
             # in case recently added transaction
@@ -1280,7 +1280,7 @@ class Connector:
                 self.tx_orphan_buffer[rh2s(err.args[0][:32])].append(tx)
             except:
                 self.tx_orphan_buffer[rh2s(err.args[0][:32])] = [tx]
-            self.log.warning("tx orphaned %s" % tx_hash)
+            self.log.debug("tx orphaned %s" % tx_hash)
             self.loop.create_task(self._get_transaction(rh2s(err.args[0][:32])))
             # self.log.warning("requested %s" % rh2s(err.args[0][:32]))
             # clear orphaned transactions buffer over limit
