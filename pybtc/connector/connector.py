@@ -1183,6 +1183,10 @@ class Connector:
                     await self.wait_block_dependences(tx)
 
             else:
+                if tx["coinbase"]:
+                    print("skipp coinbase tx without block")
+                    return
+
                 if self.unconfirmed_tx_processing.done():
                     if not self.block_txs_request.done():
                         await self.block_txs_request
