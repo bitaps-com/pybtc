@@ -628,6 +628,7 @@ class Connector:
 
 
     async def _new_block(self, block):
+        qt = time.time()
         if not self.active: return
         if self.deep_synchronization:  block["height"] = self.last_block_height + 1
         if self.last_block_height >= block["height"]:  return
@@ -742,7 +743,9 @@ class Connector:
                                    "resolved orphans %s" % (self.mempool_tx_count,
                                                             len(self.tx_orphan_buffer),
                                                             self.tx_orphan_resolved))
-                self.log.info("Block %s -> %s; tx count %s;" % (block["height"], block["hash"], len(block["tx"])))
+                self.log.info("Block %s -> %s; tx  %s; time %s;" % (block["height"], block["hash"],
+                                                                    len(block["tx"]),
+                                                                    round(time.time() - qt, 2)))
             if self.test_orphans:
                 if not self.test_rollback:
                     if self.rollback_counter < self.test_orphans:
