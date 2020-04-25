@@ -113,6 +113,7 @@ PATH_LEVEL_BIP0044 = [0x8000002C, 0x80000000, 0x80000000, 0, 0]
 TESTNET_PATH_LEVEL_BIP0044 = [0x8000002C, 0x80000001, 0x80000000, 0, 0]
 
 MINER_COINBASE_TAG = {
+    b"Buffett": {"name": "Buffett", "link": ""},
     b"binance.com": {"name": "Binance.com", "link": "https://binance.com/"},
     b"bytepool.com": {"name": "Bytepool", "link": "https://bytepool.com/"},
     b"ukrpool.com": {"name": "Ukrpool", "link": "https://ukrpool.com/"},
@@ -129,6 +130,7 @@ MINER_COINBASE_TAG = {
     b"/slush/": {"name": "Slush", "link": "http://mining.bitcoin.cz/"},
     b"Mined by AntPool": {"name": "AntPool", "link": "https://www.antpool.com/"},
     b"AntPool/": {"name": "AntPool", "link": "https://www.antpool.com/"},
+    b"AntPool": {"name": "AntPool", "link": "https://www.antpool.com/"},
     b"/Kano": {"name": "Kano CK", "link": "https://kano.is/"},
     b"/NiceHashSolo": {"name": "NiceHash Solo", "link": "https://solo.nicehash.com/"},
     b"/BitClub Network/": {"name": "BitClub", "link": "https://bitclubpool.com/"},
