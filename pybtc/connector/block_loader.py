@@ -461,7 +461,6 @@ class Worker:
                                         try:
                                             out_stat["amountMap"][key]["count"] += 1
                                             out_stat["amountMap"][key]["amount"] += out["value"]
-                                            out_stat["amountMap"][key]["size"] += out["size"]
                                         except:
                                             out_stat["amountMap"][key] = {"count": 1,
                                                                           "amount": out["value"]}
@@ -469,7 +468,6 @@ class Worker:
                                         try:
                                             out_stat["typeMap"][out_type]["count"] += 1
                                             out_stat["typeMap"][out_type]["amount"] += out["value"]
-                                            out_stat["typeMap"][out_type]["size"] += out["size"]
                                         except:
                                             out_stat["typeMap"][out_type] = {"count": 1,
                                                                              "amount": out["value"]}
@@ -669,8 +667,7 @@ class Worker:
                                                input_stat["typeMap"][in_type]["count"] += 1
                                                input_stat["typeMap"][in_type]["amount"] += a
                                            except:
-                                               input_stat["typeMap"][in_type] = {"count": 1,
-                                                                                 "amount": a}
+                                               input_stat["typeMap"][in_type] = {"count": 1, "amount": a}
 
                                        t += 1
                                        n += 1
