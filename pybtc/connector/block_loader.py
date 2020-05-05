@@ -507,13 +507,13 @@ class Worker:
 
                                     if tx["segwit"]:
                                         tx_stat["typeMap"]["segwit"]["count"] += 1
-                                        tx_stat["typeMap"]["segwit"]["amount"] += 1
-                                        tx_stat["typeMap"]["segwit"]["size"] += 1
+                                        tx_stat["typeMap"]["segwit"]["amount"] += tx["amount"]
+                                        tx_stat["typeMap"]["segwit"]["size"] += tx["size"]
 
                                     if tx["rbf"]:
                                         tx_stat["typeMap"]["rbf"]["count"] += 1
-                                        tx_stat["typeMap"]["rbf"]["amount"] += 1
-                                        tx_stat["typeMap"]["rbf"]["size"] += 1
+                                        tx_stat["typeMap"]["rbf"]["amount"] += tx["amount"]
+                                        tx_stat["typeMap"]["rbf"]["size"] += tx["size"]
 
 
                             # handle inputs
@@ -558,7 +558,6 @@ class Worker:
                                                 tx = block["rawTx"][z]
                                                 input_stat = block["stat"]["inputs"]
                                                 tx["inputsAmount"] += a
-                                                input_stat["count"] += 1
                                                 input_stat["amount"]["total"] += a
 
                                                 if input_stat["amount"]["min"]["value"] is None or \
@@ -646,7 +645,6 @@ class Worker:
                                            input_stat = blocks[h]["stat"]["inputs"]
 
                                            tx["inputsAmount"] += a
-                                           input_stat["count"] += 1
                                            input_stat["amount"]["total"] += a
 
                                            if input_stat["amount"]["min"]["value"] is None or \
@@ -733,8 +731,8 @@ class Worker:
                                     tx_stat["feeRateMap"][key]["vSize"] += tx["vSize"]
                                 except:
                                     tx_stat["feeRateMap"][key] = {"count": 1,
-                                                                       "size": tx["size"],
-                                                                       "vSize":  tx["vSize"]}
+                                                                  "size": tx["size"],
+                                                                  "vSize":  tx["vSize"]}
 
 
                 if self.option_block_filters:

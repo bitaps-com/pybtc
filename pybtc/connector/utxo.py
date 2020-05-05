@@ -596,6 +596,7 @@ class UUTXO():
                 "invalid_stxo": dbs_stxo,
                 "invalid_txs": block_invalid_txs,
                 "stxo": stxo,
+                "utxo": uutxo,
                 "tx_filters": tx_filters,
                 "coinbase_tx_id": txs[0],
                 "block_amount": block_amount}
