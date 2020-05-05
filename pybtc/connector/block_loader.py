@@ -464,8 +464,7 @@ class Worker:
                                             out_stat["amountMap"][key]["size"] += out["size"]
                                         except:
                                             out_stat["amountMap"][key] = {"count": 1,
-                                                                          "amount": out["value"],
-                                                                          "size": out["size"]}
+                                                                          "amount": out["value"]}
 
                                         try:
                                             out_stat["typeMap"][out_type]["count"] += 1
@@ -473,8 +472,7 @@ class Worker:
                                             out_stat["typeMap"][out_type]["size"] += out["size"]
                                         except:
                                             out_stat["typeMap"][out_type] = {"count": 1,
-                                                                             "amount": out["value"],
-                                                                             "size": out["size"]}
+                                                                             "amount": out["value"]}
 
 
                                 if self.option_analytica:

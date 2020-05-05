@@ -648,7 +648,8 @@ class Connector:
         if not self.active_block.done():  return
 
         try:
-            self.log.warning("Processing block %s ..." % block["height"])
+            if not self.deep_synchronization:
+                self.log.warning("Processing block %s ..." % block["height"])
             tq = time.time()
             self.active_block = asyncio.Future()
 
