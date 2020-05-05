@@ -480,8 +480,8 @@ class Worker:
                                     tx = block["rawTx"][z]
                                     tx_stat = block["stat"]["transactions"]
 
-                                    block["inputs"]["count"] += len(tx["vOut"])
-                                    block["outputs"]["count"] += len(tx["vIn"])
+                                    block["stat"]["inputs"]["count"] += len(tx["vOut"])
+                                    block["stat"]["outputs"]["count"] += len(tx["vIn"])
 
                                     tx_stat["count"] += 1
 
