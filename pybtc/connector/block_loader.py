@@ -711,7 +711,8 @@ class Worker:
                                     tx_stat["fee"]["max"]["txId"] = rh2s(tx["txId"])
 
                                 if tx_stat["feeRate"]["min"]["value"] is None or tx_stat["feeRate"]["min"]["value"] > feeRate:
-                                    if tx_stat["feeRate"]["min"]["value"] > 0:
+                                    if tx_stat["feeRate"]["min"]["value"] is None or \
+                                            tx_stat["feeRate"]["min"]["value"] > 0:
                                         tx_stat["feeRate"]["min"]["value"] = feeRate
                                         tx_stat["feeRate"]["min"]["txId"] = rh2s(tx["txId"])
 
