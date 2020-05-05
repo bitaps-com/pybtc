@@ -657,7 +657,7 @@ class Worker:
                                            if input_stat["amount"]["max"]["value"] is None or \
                                                    input_stat["amount"]["max"]["value"] < a:
                                                input_stat["amount"]["max"]["value"] = a
-                                               input_stat["amount"]["max"]["value"] = rh2s(tx["txId"])
+                                               input_stat["amount"]["max"]["txId"] = rh2s(tx["txId"])
 
                                            key = None if a == 0 else str(math.floor(math.log10(a)))
 
