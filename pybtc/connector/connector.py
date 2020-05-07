@@ -6,7 +6,7 @@ from pybtc.connector.utils import decode_block_tx
 from pybtc.connector.utils import Cache
 from pybtc.connector.utils import seconds_to_age
 from pybtc.classes.transaction import Transaction
-from pybtc.constants import MINER_PAYOUT_TAG, MINER_COINBASE_TAG
+from pybtc.constants import MINER_PAYOUT_TAG, MINER_COINBASE_TAG, SCRIPT_N_TYPES
 from pybtc import int_to_bytes, bytes_to_int, bytes_from_hex
 from pybtc import MRU, parse_script
 from collections import deque
@@ -14,6 +14,7 @@ import traceback
 import json
 import asyncio
 import time
+import math
 from _pickle import loads
 
 try:
@@ -927,6 +928,42 @@ class Connector:
                                             block["txMap"].add((r[2], tx_pointer))
 
                                             block["stxo"].append((r[0], (height << 39) + (q << 20) + i, r[2],  r[1]))
+
+                                        if self.option_analytica:
+                                           a = r[1]
+                                           in_type = SCRIPT_N_TYPES[r[2][0]]
+                                           input_stat = block["stat"]["inputs"]
+                                           input_stat["count"] += 1
+                                           tx["inputsAmount"] += a
+                                           input_stat["amount"]["total"] += a
+
+                                           if input_stat["amount"]["min"]["value"] is None or \
+                                                   input_stat["amount"]["min"]["value"] > a:
+                                               input_stat["amount"]["min"]["value"] = a
+                                               input_stat["amount"]["min"]["txId"] = rh2s(tx["txId"])
+                                               input_stat["amount"]["min"]["vIn"] = i
+
+                                           if input_stat["amount"]["max"]["value"] is None or \
+                                                   input_stat["amount"]["max"]["value"] < a:
+                                               input_stat["amount"]["max"]["value"] = a
+                                               input_stat["amount"]["max"]["txId"] = rh2s(tx["txId"])
+                                               input_stat["amount"]["max"]["vIn"] = i
+
+                                           key = None if a == 0 else str(math.floor(math.log10(a)))
+
+                                           try:
+                                               input_stat["amountMap"][key]["count"] += 1
+                                               input_stat["amountMap"][key]["amount"] += a
+                                           except:
+                                               input_stat["amountMap"][key] = {"count": 1, "amount": a}
+
+                                           try:
+                                               input_stat["typeMap"][in_type]["count"] += 1
+                                               input_stat["typeMap"][in_type]["amount"] += a
+                                           except:
+                                               input_stat["typeMap"][in_type] = {"count": 1, "amount": a}
+
+
                                     else:
                                         missed.append((inp["_outpoint"], (height<<39)+(q<<20)+i, q, i))
 
@@ -972,6 +1009,87 @@ class Connector:
                                     raise
                                 e = b"".join((bytes([2]), q.to_bytes(4, byteorder="little"), a[:20]))
                                 block["filter"] += e
+                        if self.option_analytica:
+                            r = block["rawTx"][q]["vIn"][i]["coin"]
+                            tx = block["rawTx"][q]
+                            a = r[1]
+                            in_type = SCRIPT_N_TYPES[r[2][0]]
+                            input_stat = block["stat"]["inputs"]
+                            input_stat["count"] += 1
+                            tx["inputsAmount"] += a
+                            input_stat["amount"]["total"] += a
+
+                            if input_stat["amount"]["min"]["value"] is None or \
+                                    input_stat["amount"]["min"]["value"] > a:
+                                input_stat["amount"]["min"]["value"] = a
+                                input_stat["amount"]["min"]["txId"] = rh2s(tx["txId"])
+                                input_stat["amount"]["min"]["vIn"] = i
+
+                            if input_stat["amount"]["max"]["value"] is None or \
+                                    input_stat["amount"]["max"]["value"] < a:
+                                input_stat["amount"]["max"]["value"] = a
+                                input_stat["amount"]["max"]["txId"] = rh2s(tx["txId"])
+                                input_stat["amount"]["max"]["vIn"] = i
+
+                            key = None if a == 0 else str(math.floor(math.log10(a)))
+
+                            try:
+                                input_stat["amountMap"][key]["count"] += 1
+                                input_stat["amountMap"][key]["amount"] += a
+                            except:
+                                input_stat["amountMap"][key] = {"count": 1, "amount": a}
+
+                            try:
+                                input_stat["typeMap"][in_type]["count"] += 1
+                                input_stat["typeMap"][in_type]["amount"] += a
+                            except:
+                                input_stat["typeMap"][in_type] = {"count": 1, "amount": a}
+
+        if self.option_analytica:
+            tx_stat = block["stat"]["transactions"]
+            for y in block["rawTx"]:
+                tx = block["rawTx"][y]
+                if not tx["coinbase"]:
+                    fee = tx["inputsAmount"] - tx["amount"]
+                    assert fee >= 0
+                    feeRate = round(fee / tx["vSize"], 2)
+                    tx_stat["fee"]["total"] += fee
+
+                    if tx_stat["fee"]["min"]["value"] is None or tx_stat["fee"]["min"]["value"] > fee:
+                        tx_stat["fee"]["min"]["value"] = fee
+                        tx_stat["fee"]["min"]["txId"] = rh2s(tx["txId"])
+
+                    if tx_stat["fee"]["max"]["value"] is None or tx_stat["fee"]["max"]["value"] < fee:
+                        tx_stat["fee"]["max"]["value"] = fee
+                        tx_stat["fee"]["max"]["txId"] = rh2s(tx["txId"])
+
+                    if tx_stat["feeRate"]["min"]["value"] is None or tx_stat["feeRate"]["min"]["value"] > feeRate:
+                        if tx_stat["feeRate"]["min"]["value"] is None or \
+                                tx_stat["feeRate"]["min"]["value"] > 0:
+                            tx_stat["feeRate"]["min"]["value"] = feeRate
+                            tx_stat["feeRate"]["min"]["txId"] = rh2s(tx["txId"])
+
+                    if tx_stat["feeRate"]["max"]["value"] is None or tx_stat["feeRate"]["max"]["value"] < feeRate:
+                        tx_stat["feeRate"]["max"]["value"] = feeRate
+                        tx_stat["feeRate"]["max"]["txId"] = rh2s(tx["txId"])
+
+                    key = feeRate
+                    if key > 10 and key < 20:
+                        key = math.floor(key / 2) * 2
+                    elif key > 20 and key < 200:
+                        key = math.floor(key / 10) * 10
+                    elif key > 200:
+                        key = math.floor(key / 25) * 25
+                    try:
+                        tx_stat["feeRateMap"][key]["count"] += 1
+                        tx_stat["feeRateMap"][key]["size"] += tx["size"]
+                        tx_stat["feeRateMap"][key]["vSize"] += tx["vSize"]
+                    except:
+                        tx_stat["feeRateMap"][key] = {"count": 1,
+                                                      "size": tx["size"],
+                                                      "vSize":  tx["vSize"]}
+
+
 
         self.total_received_tx += len(block["rawTx"])
         self.total_received_tx_last += len(block["rawTx"])

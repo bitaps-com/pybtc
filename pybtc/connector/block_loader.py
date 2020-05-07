@@ -30,7 +30,7 @@ from pybtc.functions.tools import bytes_to_int
 from pybtc.functions.tools import int_to_bytes
 from pybtc.functions.block import merkle_tree, merkle_proof
 from pybtc.connector.utils import decode_block_tx
-from pybtc import MRU, parse_script, rh2s, MINER_COINBASE_TAG, MINER_PAYOUT_TAG, hash_to_address
+from pybtc import MRU, parse_script, rh2s, MINER_COINBASE_TAG, MINER_PAYOUT_TAG, hash_to_address, SCRIPT_N_TYPES
 
 
 
@@ -444,17 +444,21 @@ class Worker:
                                     if self.option_analytica:
                                         tx = block["rawTx"][z]
                                         out_stat = block["stat"]["outputs"]
-
+                                        out_stat["count"] += 1
                                         out_stat["amount"]["total"] += out["value"]
+
                                         if out_stat["amount"]["min"]["value"] is None or \
                                                 out_stat["amount"]["min"]["value"] > out["value"]:
                                             if out["value"] > 0:
                                                 out_stat["amount"]["min"]["value"] = out["value"]
                                                 out_stat["amount"]["min"]["txId"] = rh2s(tx["txId"])
+                                                out_stat["amount"]["max"]["vOut"] = i
+
                                         if out_stat["amount"]["max"]["value"] is None or \
                                                 out_stat["amount"]["max"]["value"] < out["value"]:
                                             out_stat["amount"]["max"]["value"] = out["value"]
                                             out_stat["amount"]["max"]["txId"] = rh2s(tx["txId"])
+                                            out_stat["amount"]["max"]["vOut"] = i
 
                                         key = None if out["value"] == 0 else str(math.floor(math.log10(out["value"])))
 
@@ -464,7 +468,7 @@ class Worker:
                                         except:
                                             out_stat["amountMap"][key] = {"count": 1,
                                                                           "amount": out["value"]}
-
+                                        out_type = SCRIPT_N_TYPES[out_type]
                                         try:
                                             out_stat["typeMap"][out_type]["count"] += 1
                                             out_stat["typeMap"][out_type]["amount"] += out["value"]
@@ -472,15 +476,10 @@ class Worker:
                                             out_stat["typeMap"][out_type] = {"count": 1,
                                                                              "amount": out["value"]}
 
-
                                 if self.option_analytica:
-                                    block["rawTx"][z]["inputsAmount"] = 0
                                     tx = block["rawTx"][z]
+                                    tx["inputsAmount"] = 0
                                     tx_stat = block["stat"]["transactions"]
-
-                                    block["stat"]["inputs"]["count"] += len(tx["vOut"])
-                                    block["stat"]["outputs"]["count"] += len(tx["vIn"])
-
                                     tx_stat["count"] += 1
 
                                     for k in ("amount", "size", "vSize"):
@@ -514,6 +513,7 @@ class Worker:
                                         tx_stat["typeMap"]["rbf"]["size"] += tx["size"]
 
 
+
                             # handle inputs
                             for z in block["rawTx"]:
                                 if not block["rawTx"][z]["coinbase"]:
@@ -524,64 +524,69 @@ class Worker:
                                         tx_pointer = (x<<39)+(z<<20)
                                         try:
                                             r = self.coins.delete(outpoint)
-                                            try:
-                                               block["rawTx"][z]["vIn"][i]["_a_"] = r
-                                               self.destroyed_coins[r[0]] = True
-                                               out_type = r[2][0]
 
-                                               if self.option_block_filters:
-                                                   if out_type in (0, 1, 5, 6):
-                                                       e = b"".join((bytes([out_type]),
-                                                                     z.to_bytes(4, byteorder="little"),
-                                                                     r[2][1:21]))
-                                                       block["filter"].add(e)
-                                                   elif out_type == 2:
-                                                       a = parse_script(r[2][1:])["addressHash"]
-                                                       e = b"".join((bytes([out_type]),
-                                                                     z.to_bytes(4, byteorder="little"),
-                                                                     a[:20]))
-                                                       block["filter"].add(e)
+                                            block["rawTx"][z]["vIn"][i]["_a_"] = r
+                                            self.destroyed_coins[r[0]] = True
+                                            out_type = r[2][0]
 
-                                               if self.option_tx_map:
-                                                   block["txMap"].add((r[2], tx_pointer))
-                                                   block["stxo"].append((r[0], (x<<39)+(z<<20)+i, r[2], r[1]))
+                                            if self.option_block_filters:
+                                                if out_type in (0, 1, 5, 6):
+                                                    e = b"".join((bytes([out_type]),
+                                                                  z.to_bytes(4, byteorder="little"),
+                                                                  r[2][1:21]))
+                                                    block["filter"].add(e)
+                                                elif out_type == 2:
+                                                    a = parse_script(r[2][1:])["addressHash"]
+                                                    e = b"".join((bytes([out_type]),
+                                                                  z.to_bytes(4, byteorder="little"),
+                                                                  a[:20]))
+                                                    block["filter"].add(e)
 
-                                               t += 1
-                                            except:
-                                               print(traceback.format_exc())
-                                            a = r[1]
-                                            in_type = r[2][1]
+                                            if self.option_tx_map:
+                                                block["txMap"].add((r[2], tx_pointer))
+                                                block["stxo"].append((r[0], (x<<39)+(z<<20)+i, r[2], r[1]))
+
+                                            t += 1
+
 
                                             if self.option_analytica:
-                                                tx = block["rawTx"][z]
-                                                input_stat = block["stat"]["inputs"]
-                                                tx["inputsAmount"] += a
-                                                input_stat["amount"]["total"] += a
-
-                                                if input_stat["amount"]["min"]["value"] is None or \
-                                                        input_stat["amount"]["min"]["value"] > a:
-                                                    input_stat["amount"]["min"]["value"] = a
-                                                    input_stat["amount"]["min"]["txId"] = rh2s(tx["txId"])
-
-                                                if input_stat["amount"]["max"]["value"] is None or \
-                                                        input_stat["amount"]["max"]["value"] < a:
-                                                    input_stat["amount"]["max"]["value"] = a
-                                                    input_stat["amount"]["max"]["txId"] = rh2s(tx["txId"])
-
-                                                key = None if a == 0 else str(math.floor(math.log10(a)))
-
+                                                a = r[1]
+                                                in_type = SCRIPT_N_TYPES[r[2][0]]
                                                 try:
-                                                    input_stat["amountMap"][key]["count"] += 1
-                                                    input_stat["amountMap"][key]["amount"] += a
-                                                except:
-                                                    input_stat["amountMap"][key] = {"count": 1, "amount": a}
+                                                    tx = block["rawTx"][z]
+                                                    input_stat = block["stat"]["inputs"]
+                                                    input_stat["count"] += 1
+                                                    tx["inputsAmount"] += a
+                                                    input_stat["amount"]["total"] += a
 
-                                                try:
-                                                    input_stat["typeMap"][in_type]["count"] += 1
-                                                    input_stat["typeMap"][in_type]["amount"] += a
+                                                    if input_stat["amount"]["min"]["value"] is None or \
+                                                            input_stat["amount"]["min"]["value"] > a:
+                                                        input_stat["amount"]["min"]["value"] = a
+                                                        input_stat["amount"]["min"]["txId"] = rh2s(tx["txId"])
+                                                        input_stat["amount"]["min"]["vIn"] = i
+
+                                                    if input_stat["amount"]["max"]["value"] is None or \
+                                                            input_stat["amount"]["max"]["value"] < a:
+                                                        input_stat["amount"]["max"]["value"] = a
+                                                        input_stat["amount"]["max"]["txId"] = rh2s(tx["txId"])
+                                                        input_stat["amount"]["max"]["vIn"] = i
+
+                                                    key = None if a == 0 else str(math.floor(math.log10(a)))
+
+                                                    try:
+                                                        input_stat["amountMap"][key]["count"] += 1
+                                                        input_stat["amountMap"][key]["amount"] += a
+                                                    except:
+                                                        input_stat["amountMap"][key] = {"count": 1, "amount": a}
+
+                                                    try:
+                                                        input_stat["typeMap"][in_type]["count"] += 1
+                                                        input_stat["typeMap"][in_type]["amount"] += a
+                                                    except:
+                                                        input_stat["typeMap"][in_type] = {"count": 1,
+                                                                                          "amount": a}
                                                 except:
-                                                    input_stat["typeMap"][in_type] = {"count": 1,
-                                                                                      "amount": a}
+                                                    print(traceback.format_exc())
 
                                         except:
                                             if self.dsn:
@@ -635,13 +640,13 @@ class Worker:
                                                                      (h<<39)+(z<<20)+i,
                                                                      p[outpoint][2],
                                                                      p[outpoint][1]))
-                                       a = p[outpoint][1]
-                                       in_type = p[outpoint][2][0]
 
                                        if self.option_analytica:
+                                           a = p[outpoint][1]
+                                           in_type = SCRIPT_N_TYPES[p[outpoint][2][0]]
                                            tx = blocks[h]["rawTx"][z]
                                            input_stat = blocks[h]["stat"]["inputs"]
-
+                                           input_stat["count"] += 1
                                            tx["inputsAmount"] += a
                                            input_stat["amount"]["total"] += a
 
@@ -649,11 +654,13 @@ class Worker:
                                                    input_stat["amount"]["min"]["value"] > a:
                                                input_stat["amount"]["min"]["value"] = a
                                                input_stat["amount"]["min"]["txId"] = rh2s(tx["txId"])
+                                               input_stat["amount"]["min"]["vIn"] = i
 
                                            if input_stat["amount"]["max"]["value"] is None or \
                                                    input_stat["amount"]["max"]["value"] < a:
                                                input_stat["amount"]["max"]["value"] = a
                                                input_stat["amount"]["max"]["txId"] = rh2s(tx["txId"])
+                                               input_stat["amount"]["max"]["vIn"] = i
 
                                            key = None if a == 0 else str(math.floor(math.log10(a)))
 
@@ -687,50 +694,8 @@ class Worker:
                             try:
                                 r = self.destroyed_coins.delete((x<<39)+(y<<20)+(1<<19)+i)
                                 blocks[x]["rawTx"][y]["vOut"][i]["_s_"] = r
-                            except: pass
-                        if self.option_analytica:
-                            if not blocks[x]["rawTx"][y]["coinbase"]:
-                                tx = blocks[x]["rawTx"][y]
-                                tx_stat = blocks[x]["stat"]["transactions"]
-                                fee = tx["inputsAmount"] - tx["amount"]
-                                feeRate = round(fee / tx["vSize"], 2)
-
-                                tx_stat["fee"]["total"] += fee
-
-                                if tx_stat["fee"]["min"]["value"] is None or tx_stat["fee"]["min"]["value"] > fee:
-                                    tx_stat["fee"]["min"]["value"] = fee
-                                    tx_stat["fee"]["min"]["txId"] = rh2s(tx["txId"])
-
-                                if tx_stat["fee"]["max"]["value"] is None or tx_stat["fee"]["max"]["value"] < fee:
-                                    tx_stat["fee"]["max"]["value"] = fee
-                                    tx_stat["fee"]["max"]["txId"] = rh2s(tx["txId"])
-
-                                if tx_stat["feeRate"]["min"]["value"] is None or tx_stat["feeRate"]["min"]["value"] > feeRate:
-                                    if tx_stat["feeRate"]["min"]["value"] is None or \
-                                            tx_stat["feeRate"]["min"]["value"] > 0:
-                                        tx_stat["feeRate"]["min"]["value"] = feeRate
-                                        tx_stat["feeRate"]["min"]["txId"] = rh2s(tx["txId"])
-
-                                if tx_stat["feeRate"]["max"]["value"] is None or tx_stat["feeRate"]["max"]["value"] < feeRate:
-                                    tx_stat["feeRate"]["max"]["value"] = feeRate
-                                    tx_stat["feeRate"]["max"]["txId"] = rh2s(tx["txId"])
-
-                                key = feeRate
-                                if key > 10 and key < 20:
-                                    key = math.floor(key / 2) * 2
-                                elif key > 20 and key < 200:
-                                    key = math.floor(key / 10) * 10
-                                elif key > 200:
-                                    key = math.floor(key / 25) * 25
-                                try:
-                                    tx_stat["feeRateMap"][key]["count"] += 1
-                                    tx_stat["feeRateMap"][key]["size"] += tx["size"]
-                                    tx_stat["feeRateMap"][key]["vSize"] += tx["vSize"]
-                                except:
-                                    tx_stat["feeRateMap"][key] = {"count": 1,
-                                                                  "size": tx["size"],
-                                                                  "vSize":  tx["vSize"]}
-
+                            except:
+                                pass
 
                 if self.option_block_filters:
                     blocks[x]["filter"] = bytearray(b"".join(blocks[x]["filter"]))
