@@ -1045,7 +1045,7 @@ class Connector:
                             except:
                                 input_stat["typeMap"][in_type] = {"count": 1, "amount": a}
 
-        if self.option_analytica:
+        if self.option_analytica and not self.cache_loading:
             tx_stat = block["stat"]["transactions"]
             for y in block["rawTx"]:
                 tx = block["rawTx"][y]
