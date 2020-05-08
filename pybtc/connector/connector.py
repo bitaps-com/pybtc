@@ -975,6 +975,7 @@ class Connector:
                 if  self.cache_loading:
                     if height > self.app_block_height_on_start:
                         await self.sync_utxo.load_utxo_from_daemon()
+                        print("load_utxo_from_daemon")
                 for o, s, q, i in missed:
                     block["rawTx"][q]["vIn"][i]["coin"] = self.sync_utxo.get_loaded(o)
                     if  block["rawTx"][q]["vIn"][i]["coin"] is None:
