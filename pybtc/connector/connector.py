@@ -968,8 +968,6 @@ class Connector:
                                         missed.append((inp["_outpoint"], (height<<39)+(q<<20)+i, q, i))
 
             if missed:
-                print("missed", missed)
-                print(height, self.app_block_height_on_start)
                 t2 = time.time()
                 await self.sync_utxo.load_utxo()
                 t2 =time.time() - t2
@@ -977,7 +975,6 @@ class Connector:
                 if  self.cache_loading:
                     if height > self.app_block_height_on_start:
                         await self.sync_utxo.load_utxo_from_daemon()
-                        print("load_utxo_from_daemon")
                 for o, s, q, i in missed:
                     block["rawTx"][q]["vIn"][i]["coin"] = self.sync_utxo.get_loaded(o)
                     if  block["rawTx"][q]["vIn"][i]["coin"] is None:
@@ -1054,9 +1051,6 @@ class Connector:
                 tx = block["rawTx"][y]
                 if not tx["coinbase"]:
                     fee = tx["inputsAmount"] - tx["amount"]
-                    if fee < 0:
-                        from pprint import pprint
-                        pprint(tx)
                     assert fee >= 0
                     feeRate = round(fee / tx["vSize"], 2)
                     tx_stat["fee"]["total"] += fee
