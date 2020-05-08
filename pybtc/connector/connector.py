@@ -968,6 +968,7 @@ class Connector:
                                         missed.append((inp["_outpoint"], (height<<39)+(q<<20)+i, q, i))
 
             if missed:
+                pprint("missed", missed)
                 t2 = time.time()
                 await self.sync_utxo.load_utxo()
                 t2 =time.time() - t2
