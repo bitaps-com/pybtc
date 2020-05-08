@@ -1052,6 +1052,9 @@ class Connector:
                 tx = block["rawTx"][y]
                 if not tx["coinbase"]:
                     fee = tx["inputsAmount"] - tx["amount"]
+                    if fee < 0:
+                        from pprint import pprint
+                        pprint(tx)
                     assert fee >= 0
                     feeRate = round(fee / tx["vSize"], 2)
                     tx_stat["fee"]["total"] += fee
