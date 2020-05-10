@@ -113,6 +113,7 @@ PATH_LEVEL_BIP0044 = [0x8000002C, 0x80000000, 0x80000000, 0, 0]
 TESTNET_PATH_LEVEL_BIP0044 = [0x8000002C, 0x80000001, 0x80000000, 0, 0]
 
 MINER_COINBASE_TAG = {
+    b"lubian.com": {"name": "Lubian.com", "link": "https://lubian.com/"},
     b"MiningCity": {"name": "MiningCity", "link": "https://www.miningcity.com/"},
     b"Buffett": {"name": "Buffett", "link": ""},
     b"binance": {"name": "Binance.com", "link": "https://binance.com/"},
