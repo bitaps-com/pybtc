@@ -1056,22 +1056,26 @@ class Connector:
                     tx_stat["fee"]["total"] += fee
 
                     if tx_stat["fee"]["min"]["value"] is None or tx_stat["fee"]["min"]["value"] > fee:
-                        tx_stat["fee"]["min"]["value"] = fee
-                        tx_stat["fee"]["min"]["txId"] = rh2s(tx["txId"])
+                        if fee > 0:
+                            tx_stat["fee"]["min"]["value"] = fee
+                            tx_stat["fee"]["min"]["txId"] = rh2s(tx["txId"])
 
                     if tx_stat["fee"]["max"]["value"] is None or tx_stat["fee"]["max"]["value"] < fee:
-                        tx_stat["fee"]["max"]["value"] = fee
-                        tx_stat["fee"]["max"]["txId"] = rh2s(tx["txId"])
+                        if fee > 0:
+                            tx_stat["fee"]["max"]["value"] = fee
+                            tx_stat["fee"]["max"]["txId"] = rh2s(tx["txId"])
 
                     if tx_stat["feeRate"]["min"]["value"] is None or tx_stat["feeRate"]["min"]["value"] > feeRate:
                         if tx_stat["feeRate"]["min"]["value"] is None or \
                                 tx_stat["feeRate"]["min"]["value"] > 0:
-                            tx_stat["feeRate"]["min"]["value"] = feeRate
-                            tx_stat["feeRate"]["min"]["txId"] = rh2s(tx["txId"])
+                            if feeRate > 0:
+                                tx_stat["feeRate"]["min"]["value"] = feeRate
+                                tx_stat["feeRate"]["min"]["txId"] = rh2s(tx["txId"])
 
                     if tx_stat["feeRate"]["max"]["value"] is None or tx_stat["feeRate"]["max"]["value"] < feeRate:
-                        tx_stat["feeRate"]["max"]["value"] = feeRate
-                        tx_stat["feeRate"]["max"]["txId"] = rh2s(tx["txId"])
+                        if feeRate > 0:
+                            tx_stat["feeRate"]["max"]["value"] = feeRate
+                            tx_stat["feeRate"]["max"]["txId"] = rh2s(tx["txId"])
 
                     key = feeRate
                     if key > 10 and key < 20:
