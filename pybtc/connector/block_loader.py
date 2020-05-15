@@ -460,7 +460,7 @@ class Worker:
 
                                         key = None if out["value"] == 0 else str(math.floor(math.log10(out["value"])))
                                         out_type = SCRIPT_N_TYPES[out_type]
-
+                                        a = out["value"]
                                         try:
                                             out_stat["typeMap"][out_type]["count"] += 1
                                             out_stat["typeMap"][out_type]["amount"] += a
