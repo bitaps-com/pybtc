@@ -318,7 +318,7 @@ class Worker:
         try:
             self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
             blocks, missed = dict(), deque()
-            v, t, limit = height + limit, 0, 40
+            v, t, limit = height + limit, 0, 30
 
             while height < v and height <= self.target_height:
                 batch, h_list = list(), list()
