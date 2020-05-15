@@ -352,16 +352,14 @@ class Worker:
                                                         "amount": {"max": {"value": None, "txId": None},
                                                                    "min": {"value": None, "txId": None},
                                                                    "total": 0},
-                                                        "typeMap": {},
-                                                        "amountMap": {}},
+                                                        "typeMap": {}},
                                              "outputs": {"count": 0,
                                                          "amount": {"max": {"value": None,
                                                                             "txId": None},
                                                                     "min": {"value": None,
                                                                             "txId": None},
                                                                     "total": 0},
-                                                          "typeMap": {},
-                                                          "amountMap": {}},
+                                                          "typeMap": {}},
                                              "transactions": {"count": 0,
                                                               "amount": {"max": {"value": None, "txId": None},
                                                                          "min": {"value": None, "txId": None},
@@ -461,20 +459,20 @@ class Worker:
                                             out_stat["amount"]["max"]["vOut"] = i
 
                                         key = None if out["value"] == 0 else str(math.floor(math.log10(out["value"])))
+                                        out_type = SCRIPT_N_TYPES[out_type]
 
                                         try:
-                                            out_stat["amountMap"][key]["count"] += 1
-                                            out_stat["amountMap"][key]["amount"] += out["value"]
-                                        except:
-                                            out_stat["amountMap"][key] = {"count": 1,
-                                                                          "amount": out["value"]}
-                                        out_type = SCRIPT_N_TYPES[out_type]
-                                        try:
                                             out_stat["typeMap"][out_type]["count"] += 1
-                                            out_stat["typeMap"][out_type]["amount"] += out["value"]
+                                            out_stat["typeMap"][out_type]["amount"] += a
                                         except:
-                                            out_stat["typeMap"][out_type] = {"count": 1,
-                                                                             "amount": out["value"]}
+                                            out_stat["typeMap"][out_type] = {"count": 1, "amount": a, "amountMap": {}}
+
+                                        try:
+                                            out_stat["typeMap"][out_type]["amountMap"][key]["count"] += 1
+                                            out_stat["typeMap"][out_type]["amountMap"][key]["amount"] += a
+                                        except:
+                                            out_stat["typeMap"][out_type]["amountMap"][key] = {"count": 1, "amount": a}
+
 
                                 if self.option_analytica:
                                     tx = block["rawTx"][z]
@@ -574,17 +572,18 @@ class Worker:
                                                     key = None if a == 0 else str(math.floor(math.log10(a)))
 
                                                     try:
-                                                        input_stat["amountMap"][key]["count"] += 1
-                                                        input_stat["amountMap"][key]["amount"] += a
-                                                    except:
-                                                        input_stat["amountMap"][key] = {"count": 1, "amount": a}
-
-                                                    try:
                                                         input_stat["typeMap"][in_type]["count"] += 1
                                                         input_stat["typeMap"][in_type]["amount"] += a
                                                     except:
-                                                        input_stat["typeMap"][in_type] = {"count": 1,
-                                                                                          "amount": a}
+                                                        input_stat["typeMap"][in_type] = {"count": 1, "amount": a,
+                                                                                          "amountMap": {}}
+
+                                                    try:
+                                                        input_stat["typeMap"][in_type]["amountMap"][key]["count"] += 1
+                                                        input_stat["typeMap"][in_type]["amountMap"][key]["amount"] += a
+                                                    except:
+                                                        input_stat["typeMap"][in_type]["amountMap"][key] = {"count": 1,
+                                                                                                            "amount": a}
                                                 except:
                                                     print(traceback.format_exc())
 
@@ -665,16 +664,18 @@ class Worker:
                                            key = None if a == 0 else str(math.floor(math.log10(a)))
 
                                            try:
-                                               input_stat["amountMap"][key]["count"] += 1
-                                               input_stat["amountMap"][key]["amount"] += a
-                                           except:
-                                               input_stat["amountMap"][key] = {"count": 1, "amount": a}
-
-                                           try:
                                                input_stat["typeMap"][in_type]["count"] += 1
                                                input_stat["typeMap"][in_type]["amount"] += a
                                            except:
-                                               input_stat["typeMap"][in_type] = {"count": 1, "amount": a}
+                                               input_stat["typeMap"][in_type] = {"count": 1, "amount": a,
+                                                                                 "amountMap": {}}
+
+                                           try:
+                                               input_stat["typeMap"][in_type]["amountMap"][key]["count"] += 1
+                                               input_stat["typeMap"][in_type]["amountMap"][key]["amount"] += a
+                                           except:
+                                               input_stat["typeMap"][in_type]["amountMap"][key] = {"count": 1,
+                                                                                                   "amount": a}
 
                                        t += 1
                                        n += 1

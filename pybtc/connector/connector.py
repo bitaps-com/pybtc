@@ -952,16 +952,18 @@ class Connector:
                                            key = None if a == 0 else str(math.floor(math.log10(a)))
 
                                            try:
-                                               input_stat["amountMap"][key]["count"] += 1
-                                               input_stat["amountMap"][key]["amount"] += a
-                                           except:
-                                               input_stat["amountMap"][key] = {"count": 1, "amount": a}
-
-                                           try:
                                                input_stat["typeMap"][in_type]["count"] += 1
                                                input_stat["typeMap"][in_type]["amount"] += a
                                            except:
-                                               input_stat["typeMap"][in_type] = {"count": 1, "amount": a}
+                                               input_stat["typeMap"][in_type] = {"count": 1, "amount": a,
+                                                                                 "amountMap": {}}
+
+                                           try:
+                                               input_stat["typeMap"][in_type]["amountMap"][key]["count"] += 1
+                                               input_stat["typeMap"][in_type]["amountMap"][key]["amount"] += a
+                                           except:
+                                               input_stat["typeMap"][in_type]["amountMap"][key] = {"count": 1,
+                                                                                                   "amount": a}
 
 
                                     else:
@@ -1034,16 +1036,16 @@ class Connector:
                             key = None if a == 0 else str(math.floor(math.log10(a)))
 
                             try:
-                                input_stat["amountMap"][key]["count"] += 1
-                                input_stat["amountMap"][key]["amount"] += a
-                            except:
-                                input_stat["amountMap"][key] = {"count": 1, "amount": a}
-
-                            try:
                                 input_stat["typeMap"][in_type]["count"] += 1
                                 input_stat["typeMap"][in_type]["amount"] += a
                             except:
-                                input_stat["typeMap"][in_type] = {"count": 1, "amount": a}
+                                input_stat["typeMap"][in_type] = {"count": 1, "amount": a, "amountMap": {}}
+
+                            try:
+                                input_stat["typeMap"][in_type]["amountMap"][key]["count"] += 1
+                                input_stat["typeMap"][in_type]["amountMap"][key]["amount"] += a
+                            except:
+                                input_stat["typeMap"][in_type]["amountMap"][key] = {"count": 1, "amount": a}
 
         if self.option_analytica and not self.cache_loading:
             tx_stat = block["stat"]["transactions"]
