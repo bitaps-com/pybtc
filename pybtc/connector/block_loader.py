@@ -231,6 +231,8 @@ class BlockLoader:
 
     async def message_loop(self, index):
         while True:
+            if index not in self.worker:
+                return
             msg_type, msg = await self.pipe_get_msg(self.worker[index].reader)
             if msg_type ==  b'pipe_read_error':
                 return
