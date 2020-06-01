@@ -641,7 +641,8 @@ class UUTXO():
 
         return {"height": int(row["height"]),
                 "coinbase_tx_id": bytes(data["coinbase_tx_id"]),
-                "stxo": data["stxo"]}
+                "stxo": data["stxo"],
+                "uutxo": data["uutxo"]}
 
 
     async def flush_mempool(self):
