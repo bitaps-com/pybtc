@@ -563,10 +563,6 @@ class Connector:
                                 self.log.info("Flush utxo cache completed %s %s " % (len(self.sync_utxo.cache),
                                                                                      len(self.sync_utxo.pending_saved),))
 
-                            async with self.db_pool.acquire() as conn:
-                                await conn.execute("UPDATE connector_utxo_state SET value=0 "
-                                                   "WHERE name = 'deep_synchronization';")
-
                             if self.synchronization_completed_handler:
                                 try:
                                     [self.block_loader.worker[i].terminate() for i in self.block_loader.worker]
@@ -577,6 +573,8 @@ class Connector:
                             async with self.db_pool.acquire() as conn:
                                 await conn.execute("UPDATE connector_utxo_state SET value=1 "
                                                    "WHERE name = 'bootstrap_completed';")
+                                await conn.execute("UPDATE connector_utxo_state SET value=0 "
+                                                   "WHERE name = 'deep_synchronization';")
 
                             self.bootstrap_completed = True
                             self.deep_synchronization = False
