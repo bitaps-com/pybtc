@@ -174,6 +174,7 @@ MINER_COINBASE_TAG = {
     b"BW.com": {"name": "BW.com", "link": "https://bw.com"},
     b"bw.com": {"name": "BW.com", "link": "https://bw.com"},
     b"SigmaPool": {"name": "SigmaPool", "link": "https://btc.sigmapool.com/"},
+    b"Sigmapool": {"name": "SigmaPool", "link": "https://btc.sigmapool.com/"},
     b"BTPOOL": {"name": "BTPool", "link": ""},
     b"Bitcoin-Russia.ru": {"name": "Bitcoin Russia", "link": "https://bitcoin-russia.ru/"},
     b"Kanpool.com": {"name": "Kanpool", "link": "http://kanpool.com"},
