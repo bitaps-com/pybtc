@@ -911,7 +911,7 @@ class Connector:
                                             if r[2][0] in (0, 1, 5, 6):
                                                 e = b"".join((bytes([r[2][0]]),
                                                               q.to_bytes(4, byteorder="little"),
-                                                              r[2][1:21]))
+                                                              r[2][1:]))
                                                 block["filter"] += e
                                             elif r[2][0] == 2:
                                                 a = parse_script(r[2][1:])["addressHash"]
@@ -998,7 +998,7 @@ class Connector:
                             if r[0] in (0, 1, 5, 6):
                                 e = b"".join((bytes([r[0]]),
                                               q.to_bytes(4, byteorder="little"),
-                                              r[1:21]))
+                                              r[1:]))
                                 block["filter"] += e
                             elif r[0] == 2:
                                 try:

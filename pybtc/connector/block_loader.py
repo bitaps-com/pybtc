@@ -432,7 +432,7 @@ class Worker:
                                         if self.option_block_filters:
                                             e = b"".join((bytes([out_type]),
                                                           z.to_bytes(4, byteorder="little"),
-                                                          out["addressHash"][:20]))
+                                                          out["addressHash"]))
                                             block["filter"].add(e)
 
                                         if self.option_tx_map:
@@ -533,7 +533,7 @@ class Worker:
                                                 if out_type in (0, 1, 5, 6):
                                                     e = b"".join((bytes([out_type]),
                                                                   z.to_bytes(4, byteorder="little"),
-                                                                  r[2][1:21]))
+                                                                  r[2][1:]))
                                                     block["filter"].add(e)
                                                 elif out_type == 2:
                                                     a = parse_script(r[2][1:])["addressHash"]
@@ -625,7 +625,7 @@ class Worker:
                                            if out_type in (0, 1, 5, 6):
                                                e = b"".join((bytes([out_type]),
                                                              z.to_bytes(4, byteorder="little"),
-                                                             p[outpoint][2][1:21]))
+                                                             p[outpoint][2][1:]))
                                                blocks[h]["filter"].add(e)
                                            elif out_type == 2:
                                                a = parse_script(p[outpoint][2][1:])["addressHash"]
