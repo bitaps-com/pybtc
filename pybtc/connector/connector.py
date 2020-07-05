@@ -36,7 +36,7 @@ except:
 class Connector:
 
     def __init__(self, node_rpc_url, node_zerromq_url, logger,
-                 last_block_height=0, chain_tail=None,
+                 last_block_height=0, chain_tail=None, zmq_timeout = 300,
                  tx_handler=None, orphan_handler=None,
                  before_block_handler=None, block_handler=None, after_block_handler=None,
                  block_batch_handler=None,
@@ -72,6 +72,7 @@ class Connector:
         self.rpc_timeout = rpc_timeout
         self.rpc_batch_limit = rpc_batch_limit
         self.zmq_url = node_zerromq_url
+        self.zmq_timeout = zmq_timeout
         self.orphan_handler = orphan_handler
         self.watchdog_handler = watchdog_handler
         self.block_timeout = block_timeout
@@ -447,12 +448,12 @@ class Connector:
                     await asyncio.sleep(30)
                     # check ZeroMQ state
                     if self.mempool_tx:
-                        if int(time.time()) - self.last_zmq_msg > 300 and self.zmqContext:
-                            self.log.error("ZeroMQ no messages about 5 minutes")
+                        if int(time.time()) - self.last_zmq_msg > self.zmq_timeout and self.zmqContext:
+                            self.log.error("ZeroMQ no messages about % minutes" % self.zmq_timeout)
                             try:
                                 self.zeromq_task.cancel()
                                 await asyncio.wait([self.zeromq_task])
-                                self.zeromq_task(self.loop.create_task(self.zeromq_handler()))
+                                self.zeromq_task = self.loop.create_task(self.zeromq_handler())
                             except:
                                 pass
 
