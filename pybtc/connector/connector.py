@@ -1235,22 +1235,23 @@ class Connector:
                 self.block_timestamp = block["time"]
                 if len(missed) < 100:
                     self.loop.create_task(self._get_missed())
-                    try:
-                        await asyncio.wait_for(self.block_txs_request, timeout=self.block_timeout)
-                    except asyncio.CancelledError:
-                        # refresh rpc connection session
-                        try:
-                            await self.rpc.close()
-                            self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
-                        except:
-                            pass
-                        raise RuntimeError("block transaction request timeout")
                 else:
                     raw_block = await self.rpc.getblock(block["hash"], 0)
                     b = decode_block_tx(raw_block)
                     for tx in b["rawTx"].values():
                         if rh2s(tx["txId"]) in missed:
                             self.loop.create_task(self._new_transaction(tx, self.block_timestamp, True))
+
+                try:
+                    await asyncio.wait_for(self.block_txs_request, timeout=self.block_timeout)
+                except asyncio.CancelledError:
+                    # refresh rpc connection session
+                    try:
+                        await self.rpc.close()
+                        self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
+                    except:
+                        pass
+                    raise RuntimeError("block transaction request timeout")
 
 
             self.total_received_tx += tx_count
