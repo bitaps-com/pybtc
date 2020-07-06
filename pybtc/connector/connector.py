@@ -45,7 +45,7 @@ class Connector:
                  synchronization_completed_handler=None,
                  block_timeout=30,
                  deep_sync_limit=100, backlog=0, mempool_tx=True,
-                 rpc_batch_limit=50, rpc_threads_limit=100, rpc_timeout=100,
+                 rpc_batch_limit=50, rpc_threads_limit=10, rpc_timeout=100,
                  utxo_data=False,
                  utxo_cache_size=1000000,
                  tx_orphan_buffer_limit=1000,
