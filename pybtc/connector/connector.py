@@ -1236,6 +1236,7 @@ class Connector:
                 if len(missed) < 100:
                     self.loop.create_task(self._get_missed())
                 else:
+                    self.log.debug("request block %s" % block["hash"])
                     raw_block = await self.rpc.getblock(block["hash"], 0)
                     b = decode_block_tx(raw_block)
                     for tx in b["rawTx"].values():
