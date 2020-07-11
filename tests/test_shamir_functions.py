@@ -68,14 +68,15 @@ def test_secret_spliting():
         shamir.split_secret(905,5, secret)
     with pytest.raises(ValueError):
         shamir.split_secret(5,905, secret)
-    shares = shamir.split_secret(5, 5, secret)
 
     shares = shamir.split_secret(5, 5, secret)
     shares[1] = b"55"
     with pytest.raises(Exception):
         shamir.restore_secret(shares)
-
-
+    with pytest.raises(Exception):
+        shamir.restore_secret({0:b"33", 1:b"34"})
+    with pytest.raises(Exception):
+        shamir.split_secret(20, 20, secret, index_bits = 2)
 
 
 

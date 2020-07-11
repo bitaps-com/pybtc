@@ -19,7 +19,7 @@ def get_bytes(s, encoding = None):
                 try:
                     s = [n if isinstance(n,bytes) else bytes_from_hex(n) for n in s]
                     s = b"".join(s)
-                except:
+                except: # pragma: no cover
                     raise ValueError("invalid list")
     if isinstance(s, bytes) or isinstance(s, bytearray):
         return s
@@ -188,7 +188,7 @@ def read_var_int(stream):
     return b"".join((l, stream.read(s - 1)))
 
 
-def read_var_list(stream, data_type):
+def read_var_list(stream, data_type): # pragma: no cover
     """
     Read variable integer list from io.BytesIO stream to bytes
 
@@ -228,7 +228,7 @@ def int_to_c_int(n, base_bytes=1):
     extra_bytes = int(ceil((l+payload_bytes)/8) - base_bytes)
     for i in range(extra_bytes):
         prefix += 2 ** i
-    if l < base_bytes * 8:
+    if l < base_bytes * 8: # pragma: no cover
         l = base_bytes * 8
     prefix = prefix << l
     if prefix.bit_length() % 8:
