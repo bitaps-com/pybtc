@@ -86,16 +86,29 @@ def _interpolation(points, x=0):
 
     return p_x
 
-def split_secret(threshold, total,  secret):
+def split_secret(threshold, total,  secret, index_bits=8):
     if not isinstance(secret, bytes):
         raise TypeError("Secret as byte string required")
     if threshold > 255:
         raise ValueError("threshold <= 255")
     if total > 255:
         raise ValueError("total shares <= 255")
+    index_max = 2 ** index_bits - 1
+    if total > index_max:
+        raise ValueError("index bits is to low")
+
     shares = dict()
-    for i in range(total):
-        shares[i+1] = b""
+    shares_indexes = []
+
+
+    while len(shares) != total:
+        q = random.SystemRandom().randint(1, index_max)
+        if q in shares:
+            continue
+        shares_indexes.append(q)
+        shares[q] = b""
+
+
     for b in secret:
         q = [b]
         for i in range(threshold - 1):
@@ -103,8 +116,8 @@ def split_secret(threshold, total,  secret):
             i = int((time.time() % 0.0001) * 1000000) + 1
             q.append((a * i) % 255)
 
-        for x in range(total):
-            shares[x+1] += bytes([_fn(x + 1, q)])
+        for z in shares_indexes:
+            shares[z] += bytes([_fn(z, q)])
 
     return shares
 

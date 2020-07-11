@@ -52,15 +52,16 @@ def test_secret_spliting():
     for i in range(2, 20):
         k = random.randint(i, i + 10)
         shares = shamir.split_secret(i, k, secret)
+        keys = [q for q in shares]
         b = dict()
         while len(b) < i:
-            q = random.randint(1, k)
+            q = random.randint(0, len(keys)-1)
+            q = keys[q]
+
             b[q] = shares[q]
         s = shamir.restore_secret(b)
         assert s ==secret
-    shares[1]= "1" * len(shares[2])
-    with pytest.raises(TypeError):
-        shamir.restore_secret(shares)
+
     with pytest.raises(TypeError):
         shamir.split_secret(5,5, "ee11")
     with pytest.raises(ValueError):
@@ -68,13 +69,16 @@ def test_secret_spliting():
     with pytest.raises(ValueError):
         shamir.split_secret(5,905, secret)
     shares = shamir.split_secret(5, 5, secret)
-    shares[0] = shares[1]
-    with pytest.raises(Exception):
-        shamir.restore_secret(shares)
+
     shares = shamir.split_secret(5, 5, secret)
     shares[1] = b"55"
     with pytest.raises(Exception):
         shamir.restore_secret(shares)
+
+
+
+
+
 
 def test__interpolation():
     with pytest.raises(Exception):

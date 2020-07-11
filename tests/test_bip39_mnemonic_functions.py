@@ -114,3 +114,25 @@ def test_split_mnemonic():
     assert combine_mnemonic(s) == m
     with pytest.raises(TypeError):
         split_mnemonic(3, 3, 5)
+
+    shares = ["chest wing flight crazy crush core pottery unaware category marine skull ski",
+              "never cotton main promote arena grape cat avocado session chef shoulder risk",
+              "supply hub picnic badge exact wonder master second measure virtual road grocery"]
+    assert combine_mnemonic(shares) == "flavor relief total decorate flash notice road enter zone tattoo barrel budget"
+    shares = ["chest wing flight crazy crush core pottery unaware category marine skull ski",
+              "supply hub picnic badge exact wonder master second measure virtual road grocery"]
+    assert combine_mnemonic(shares) == "flavor relief total decorate flash notice road enter zone tattoo barrel budget"
+
+    shares = ["edge outer hurry embody faith regular tower plate screen phrase lake pink cloud duty sheriff depart "
+              "tube carpet zone suit embrace bar license doll",
+              "amused artwork trust cruise ugly want occur change hill cactus half discover attack better loan soul "
+              "worth legend smoke brush turkey sweet scorpion liberty",
+              "surge evolve math type punch grape build tunnel curve alert rookie valve adjust vibrant wrestle "
+              "fashion income endless sunset expect laptop worry hello life",
+              "two toilet blood treat oil they concert scrap neglect scrap play glow alert trim song below cricket "
+              "credit chaos word replace impact early thrive",
+              "salt wear ill butter fade purpose parent pause rose frame era shrug caution invite demand seven cry "
+              "wagon unique pilot subject cactus behave tide"]
+
+    assert combine_mnemonic(shares) == "enforce north frost swear trial burst girl soccer rent town sea express other " \
+                                       "oblige insect youth swarm violin stable push twin close clump extra"
