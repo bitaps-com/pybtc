@@ -472,9 +472,9 @@ class UUTXO():
             block_amount += r["amount"]
             if self.block_filters:
                 try:
-                    tx_filters[txs.index(r["t"])].append(r["address"])
+                    tx_filters[txs.index(r["t"])].add(r["address"])
                 except:
-                    tx_filters[txs.index(r["t"])] = [r["address"]]
+                    tx_filters[txs.index(r["t"])] = {r["address"]}
 
         await conn.copy_records_to_table('connector_utxo',
                                          columns=["outpoint", "pointer",
