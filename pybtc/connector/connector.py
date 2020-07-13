@@ -569,7 +569,7 @@ class Connector:
                                     [self.block_loader.worker[i].terminate() for i in self.block_loader.worker]
                                 except:
                                     pass
-
+                                print("synchronization_completed_handler >")
                                 await self.synchronization_completed_handler()
                             async with self.db_pool.acquire() as conn:
                                 await conn.execute("UPDATE connector_utxo_state SET value=1 "
