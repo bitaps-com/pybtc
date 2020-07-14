@@ -141,7 +141,7 @@ class BlockLoader:
     def restart(self):
         print("restart")
         self.loading_task.cancel()
-        asyncio.wait(self.loading_task)
+        await asyncio.wait(self.loading_task)
         self.loading_task = self.loop.create_task(self.loading())
 
 
