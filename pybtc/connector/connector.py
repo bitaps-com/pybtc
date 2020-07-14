@@ -609,6 +609,7 @@ class Connector:
 
             except Exception as err:
                 self.log.error("get next block failed %s" % err)
+                print(traceback.format_exc())
             finally:
                 self.get_next_block_mutex = False
 
