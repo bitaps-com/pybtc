@@ -60,6 +60,7 @@ class BlockLoader:
 
     async def loading(self):
         self.rpc_batch_limit = 30
+        print("loading ...")
         self.worker_tasks = [self.loop.create_task(self.start_worker(i)) for i in range(self.worker_limit)]
         target_height = self.parent.node_last_block - self.parent.deep_sync_limit
         self.height = self.parent.last_block_height + 1
@@ -138,7 +139,9 @@ class BlockLoader:
         for p in self.worker_busy: self.worker_busy[p] = False
 
     def restart(self):
+        print("restart")
         self.loading_task.cancel()
+        asyncio.wait(self.loading_task)
         self.loading_task = self.loop.create_task(self.loading())
 
 
