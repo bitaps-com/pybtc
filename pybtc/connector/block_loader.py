@@ -705,6 +705,7 @@ class Worker:
 
 
                 blocks[x] = pickle.dumps(blocks[x])
+            print(len(blocks))
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except concurrent.futures.CancelledError:
             pass
@@ -802,10 +803,9 @@ class Worker:
 
 
     async def pipe_sent_msg(self, msg_type, msg):
+        print(">", len(msg))
         msg_type = msg_type[:20].ljust(20)
         msg = msg_type + msg
         msg = b''.join((b'ME', len(msg).to_bytes(4, byteorder='little'), msg))
         self.writer.write(msg)
         await self.writer.drain()
-
-
