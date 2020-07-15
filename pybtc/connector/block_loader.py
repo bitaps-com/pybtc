@@ -97,8 +97,8 @@ class BlockLoader:
                     elif self.last_batch_size >  self.parent.block_preload_batch_size_limit and \
                             self.rpc_batch_limit > 80:
                         self.rpc_batch_limit -= 40
-                    if self.rpc_batch_limit > 500:
-                        self.rpc_batch_limit = 500
+                    if self.rpc_batch_limit > 1000:
+                        self.rpc_batch_limit = 1000
 
                 if n: continue
 
@@ -112,6 +112,7 @@ class BlockLoader:
                                 pass
 
             except asyncio.CancelledError:
+                print("canceled")
                 self.log.info("Loading task terminated")
                 [self.worker[p].terminate() for p in self.worker]
                 for p in self.worker_busy: self.worker_busy[p] = False
@@ -142,6 +143,8 @@ class BlockLoader:
         print("restart")
         self.loading_task.cancel()
         await asyncio.wait([self.loading_task])
+        [self.worker[p].terminate() for p in self.worker]
+        for p in self.worker_busy: self.worker_busy[p] = False
         self.loading_task = self.loop.create_task(self.loading())
 
 
