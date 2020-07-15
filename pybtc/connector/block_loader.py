@@ -137,15 +137,25 @@ class BlockLoader:
             await asyncio.sleep(1)
 
         [self.worker[p].terminate() for p in self.worker]
-        for p in self.worker_busy: self.worker_busy[p] = False
+        while len(self.worker):
+            await asyncio.sleep(1)
+        self.worker = dict()
+        self.worker_tasks = list()
+        self.worker_busy = dict()
+
 
     async def restart(self):
         print("restart")
         self.loading_task.cancel()
         await asyncio.wait([self.loading_task])
-        for p in self.worker:
-            await self.worker[p].terminate_coroutine()
-        for p in self.worker_busy: self.worker_busy[p] = False
+        [self.worker[p].terminate() for p in self.worker]
+        while len(self.worker):
+            await asyncio.sleep(1)
+
+        self.worker = dict()
+        self.worker_tasks = list()
+        self.worker_busy = dict()
+
         self.loading_task = self.loop.create_task(self.loading())
 
 
