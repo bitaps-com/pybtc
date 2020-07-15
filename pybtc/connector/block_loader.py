@@ -97,8 +97,8 @@ class BlockLoader:
                     elif self.last_batch_size >  self.parent.block_preload_batch_size_limit and \
                             self.rpc_batch_limit > 80:
                         self.rpc_batch_limit -= 40
-                    if self.rpc_batch_limit > 1000:
-                        self.rpc_batch_limit = 1000
+                    if self.rpc_batch_limit > 500:
+                        self.rpc_batch_limit = 500
 
                 if n: continue
 
