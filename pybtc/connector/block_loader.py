@@ -44,6 +44,7 @@ class BlockLoader:
         self.worker_tasks = list()
         self.worker_busy = dict()
         self.parent = parent
+        self.retstart_in_process = False
         self.last_batch_size = 0
         self.loading_completed = False
         self.height = 0
@@ -145,18 +146,25 @@ class BlockLoader:
 
 
     async def restart(self):
-        print("restart")
-        self.loading_task.cancel()
-        await asyncio.wait([self.loading_task])
-        [self.worker[p].terminate() for p in self.worker]
-        while len(self.worker):
-            await asyncio.sleep(1)
+        if self.retstart_in_process:
+            return
+        self.retstart_in_process = True
+        try:
+            print("restart")
 
-        self.worker = dict()
-        self.worker_tasks = list()
-        self.worker_busy = dict()
+            self.loading_task.cancel()
+            await asyncio.wait([self.loading_task])
+            [self.worker[p].terminate() for p in self.worker]
+            while len(self.worker):
+                await asyncio.sleep(1)
 
-        self.loading_task = self.loop.create_task(self.loading())
+            self.worker = dict()
+            self.worker_tasks = list()
+            self.worker_busy = dict()
+
+            self.loading_task = self.loop.create_task(self.loading())
+        finally:
+            self.retstart_in_process = False
 
 
     async def start_worker(self,index):
