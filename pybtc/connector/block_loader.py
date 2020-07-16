@@ -10,6 +10,7 @@ from collections import deque
 import pickle
 import json, math
 import concurrent
+from pybtc.connector.utils import Cache
 
 try:
     import asyncpg
@@ -66,10 +67,12 @@ class BlockLoader:
         target_height = self.parent.node_last_block - self.parent.deep_sync_limit
         self.height = self.parent.last_block_height + 1
         last_last_batch_size = 0
+        print("self.height", self.height)
+        print("target_height", target_height)
         while self.height < target_height:
             await  asyncio.sleep(1)
             target_height = self.parent.node_last_block - self.parent.deep_sync_limit
-
+            print("target_height", target_height)
             if self.parent.block_preload._store_size >= self.parent.block_preload_cache_limit:
                 continue
 
@@ -161,7 +164,7 @@ class BlockLoader:
             self.worker = dict()
             self.worker_tasks = list()
             self.worker_busy = dict()
-
+            self.parent.block_preload = Cache(max_size=self.parent.block_preload_cache_limit, clear_tail=False)
             self.loading_task = self.loop.create_task(self.loading())
         finally:
             self.retstart_in_process = False
