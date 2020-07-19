@@ -476,6 +476,7 @@ class UUTXO():
                     tx_filters[txs.index(r["t"])].add(r["address"])
                 except:
                     tx_filters[txs.index(r["t"])] = {r["address"]}
+        print("tx_filters 1", tx_filters)
 
         await conn.copy_records_to_table('connector_utxo',
                                          columns=["outpoint", "pointer",
@@ -504,6 +505,7 @@ class UUTXO():
                     tx_filters[txs.index(r["tx_id"])].append(r["a"])
                 except:
                     tx_filters[txs.index(r["tx_id"])] = [r["a"]]
+        print("tx_filters 2", tx_filters)
 
         if outpoints:
             rows = await conn.fetch("DELETE FROM connector_utxo WHERE outpoint = ANY($1) "
