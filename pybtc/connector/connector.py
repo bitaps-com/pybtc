@@ -1006,8 +1006,6 @@ class Connector:
                                 try:
                                     a = parse_script(r[1:])["addressHash"]
                                 except:
-                                    print(parse_script(r[1:]))
-                                    print(block["rawTx"][q]["vIn"][i])
                                     raise
                                 e = b"".join((bytes([2]), q.to_bytes(4, byteorder="little"), a[:20]))
                                 block["filter"] += e

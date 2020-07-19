@@ -471,12 +471,10 @@ class UUTXO():
             uutxo.append((r["outpoint"], r["t"], r["address"], r["amount"]))
             block_amount += r["amount"]
             if self.block_filters:
-                print("utxo a", r["address"].hex())
                 try:
                     tx_filters[txs.index(r["t"])].add(r["address"])
                 except:
                     tx_filters[txs.index(r["t"])] = {r["address"]}
-        print("tx_filters 1", tx_filters)
 
         await conn.copy_records_to_table('connector_utxo',
                                          columns=["outpoint", "pointer",
@@ -500,12 +498,10 @@ class UUTXO():
             stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"], r["a"], r["am"], r["pt"]))
             outpoints.add(r["outpoint"])
             if self.block_filters:
-                print("ustxo a", r["a"].hex())
                 try:
                     tx_filters[txs.index(r["tx_id"])].add(r["a"])
                 except:
                     tx_filters[txs.index(r["tx_id"])] = [r["a"]]
-        print("tx_filters 2", tx_filters)
 
         if outpoints:
             rows = await conn.fetch("DELETE FROM connector_utxo WHERE outpoint = ANY($1) "
