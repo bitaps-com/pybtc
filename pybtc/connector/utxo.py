@@ -471,6 +471,7 @@ class UUTXO():
             uutxo.append((r["outpoint"], r["t"], r["address"], r["amount"]))
             block_amount += r["amount"]
             if self.block_filters:
+                print("utxo a", r["address"].hex())
                 try:
                     tx_filters[txs.index(r["t"])].add(r["address"])
                 except:
@@ -498,6 +499,7 @@ class UUTXO():
             stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"], r["a"], r["am"], r["pt"]))
             outpoints.add(r["outpoint"])
             if self.block_filters:
+                print("ustxo a", r["a"].hex())
                 try:
                     tx_filters[txs.index(r["tx_id"])].append(r["a"])
                 except:
