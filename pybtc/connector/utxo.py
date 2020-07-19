@@ -502,7 +502,7 @@ class UUTXO():
             if self.block_filters:
                 print("ustxo a", r["a"].hex())
                 try:
-                    tx_filters[txs.index(r["tx_id"])].append(r["a"])
+                    tx_filters[txs.index(r["tx_id"])].add(r["a"])
                 except:
                     tx_filters[txs.index(r["tx_id"])] = [r["a"]]
         print("tx_filters 2", tx_filters)
