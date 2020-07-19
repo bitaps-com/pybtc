@@ -62,17 +62,14 @@ class BlockLoader:
 
     async def loading(self):
         self.rpc_batch_limit = 30
-        print("loading ...")
         self.worker_tasks = [self.loop.create_task(self.start_worker(i)) for i in range(self.worker_limit)]
         target_height = self.parent.node_last_block - self.parent.deep_sync_limit
         self.height = self.parent.last_block_height + 1
         last_last_batch_size = 0
-        print("self.height", self.height)
-        print("target_height", target_height)
+
         while self.height < target_height:
             await  asyncio.sleep(1)
             target_height = self.parent.node_last_block - self.parent.deep_sync_limit
-            print("target_height", target_height)
             if self.parent.block_preload._store_size >= self.parent.block_preload_cache_limit:
                 continue
 
@@ -116,7 +113,6 @@ class BlockLoader:
                                 pass
 
             except asyncio.CancelledError:
-                print("canceled")
                 self.log.info("Loading task terminated")
                 [self.worker[p].terminate() for p in self.worker]
                 for p in self.worker_busy: self.worker_busy[p] = False
@@ -153,8 +149,6 @@ class BlockLoader:
             return
         self.retstart_in_process = True
         try:
-            print("restart")
-
             self.loading_task.cancel()
             await asyncio.wait([self.loading_task])
             [self.worker[p].terminate() for p in self.worker]
@@ -735,7 +729,6 @@ class Worker:
 
 
                 blocks[x] = pickle.dumps(blocks[x])
-            print(len(blocks))
             await self.pipe_sent_msg(b'result', pickle.dumps(blocks))
         except concurrent.futures.CancelledError:
             pass
@@ -833,7 +826,6 @@ class Worker:
 
 
     async def pipe_sent_msg(self, msg_type, msg):
-        print(">", len(msg))
         msg_type = msg_type[:20].ljust(20)
         msg = msg_type + msg
         msg = b''.join((b'ME', len(msg).to_bytes(4, byteorder='little'), msg))
