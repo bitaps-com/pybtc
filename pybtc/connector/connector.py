@@ -178,6 +178,7 @@ class Connector:
         self.tx_in_process = set()
         self.zmqContext = None
         self.tasks = list()
+        self.bootstrap_completed = True
         self.unconfirmed_tx_processing = asyncio.Future()
         self.unconfirmed_tx_processing.set_result(True)
 
