@@ -98,7 +98,7 @@ class Connector:
         self.utxo_cache_size = utxo_cache_size
         self.block_cache_workers = block_cache_workers
         self.utxo_data = utxo_data
-        self.chain_tail = list(chain_tail) if chain_tail else []
+        self.chain_tail = list(chain_tail) if chain_tail is not None else []
 
 
         # state and stats
