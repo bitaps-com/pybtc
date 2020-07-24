@@ -159,7 +159,7 @@ class Connector:
         self.new_tx = MRU()
         self.tx_orphan_resolved = 0
         self.block_headers_cache = Cache(max_size=self.block_headers_cache_limit)
-        self.chain_tail_start_len = len(chain_tail)
+        self.chain_tail_start_len = len(self.chain_tail)
         self.mempool_tx_count = 0
 
 
