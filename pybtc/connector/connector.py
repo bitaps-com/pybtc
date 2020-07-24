@@ -753,7 +753,7 @@ class Connector:
                         pass
 
             if not self.deep_synchronization:
-                if self.mempool_tx:
+                if self.mempool_tx and  self.utxo_data:
                     self.mempool_tx_count -= len(block["tx"]) + len(block["mempoolInvalid"]["tx"])
                     self.log.debug("Mempool transactions %s; "
                                    "orphaned transactions: %s; "
