@@ -106,7 +106,10 @@ class Connector:
         self.sync_utxo = None
         self.uutxo = None
         self.cache_loading = False
-        self.app_block_height_on_start = int(last_block_height) if int(last_block_height) else 0
+        if last_block_height is not None:
+            self.app_block_height_on_start = int(last_block_height) if int(last_block_height) else 0
+        else:
+            self.app_block_height_on_start = None
         self.last_block_height = -1
         self.last_block_utxo_cached_height = 0
         self.deep_synchronization = False
@@ -205,7 +208,9 @@ class Connector:
                 self.log.error("Node rpc url: " + self.rpc_url)
                 await asyncio.sleep(20)
                 continue
-
+            if self.last_block_height is None:
+                self.app_block_height_on_start = self.node_last_block
+                self.last_block_height = self.node_last_block
             self.log.info("Node best block height %s" % self.node_last_block)
             self.log.info("Connector last block height %s [%s]" % (self.last_block_height,
                                                                    self.last_block_utxo_cached_height))
