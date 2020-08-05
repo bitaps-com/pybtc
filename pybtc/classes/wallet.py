@@ -29,7 +29,7 @@ class Wallet():
         self.internal_chain_public_xkey = None
         self.hardened = hardened
 
-        if path_type in (None, "BIP44", "BIP49", "BIP84"):
+        if path_type in (None, "BIP44", "BIP49", """"""):
             self.path_type = path_type
         else:
             raise ValueError("unknown path type %s" % path_type)

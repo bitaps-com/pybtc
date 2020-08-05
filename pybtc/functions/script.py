@@ -1,13 +1,15 @@
 from struct import unpack, pack
 from pybtc.opcodes import *
-
-from pybtc.functions.tools import bytes_from_hex, int_to_bytes, get_stream, get_bytes, bytes_to_int
-from pybtc.functions.hash import hash160, sha256
-from pybtc.functions.address import hash_to_address
+import base64
+from pybtc.functions.tools import bytes_from_hex, get_stream, get_bytes, int_to_var_int
+from pybtc.functions.hash import hash160, sha256, double_sha256
+from pybtc.functions.address import hash_to_address, public_key_to_address
 from pybtc.functions.key import is_wif_valid, wif_to_private_key
 from pybtc.crypto import __secp256k1_ecdsa_verify__
 from pybtc.crypto import __secp256k1_ecdsa_sign__
 from pybtc.crypto import __secp256k1_ecdsa_recover__
+from pybtc.crypto import __secp256k1_ecdsa_recoverable_signature_serialize_compact__
+from pybtc.crypto import __secp256k1_ecdsa_signature_serialize_der__
 
 
 def public_key_to_pubkey_script(key, hex=True):
@@ -465,3 +467,42 @@ def parse_signature(sig):
     s = sig[len_r + 6:-1]
     return r, s
 
+
+def bitcoin_message(msg):
+    if isinstance(msg, str):
+        msg = msg.encode()
+    return double_sha256(b"\x18Bitcoin Signed Message:\n" + int_to_var_int(len(msg)) + msg)
+
+def sign_bitcoin_message(msg, wif, base64_encoded = True):
+    if not is_wif_valid(wif):
+        raise ValueError("invalid private key")
+    compressed = True if wif[0] in ('K', 'L') else False
+    msg = bitcoin_message(msg)
+    signature = __secp256k1_ecdsa_sign__(msg, wif_to_private_key(wif, hex=False), 0)
+    signature =  bytes([signature[0] + 27 + int(compressed) * 4]) + signature[1:]
+    if base64_encoded:
+        return base64.b64encode(signature).decode()
+    return signature
+
+def bitcoin_signed_message_addresses(msg, signature, testnet = False):
+    if isinstance(signature, str):
+        signature = base64.b64decode(signature)
+    msg = bitcoin_message(msg)
+    p = signature[0]
+    if p < 27 or p >= 35:
+        return False
+    if p >= 31:
+        compressed = True
+        p -= 4
+    else:
+        compressed = False
+    rec_id = p - 27
+    pub_key = __secp256k1_ecdsa_recover__(signature[1:], msg, rec_id, compressed, False)
+    if isinstance(pub_key, bytes):
+        return [public_key_to_address(pub_key, testnet = testnet, p2sh_p2wpkh=False, witness_version=0),
+                public_key_to_address(pub_key, testnet = testnet, p2sh_p2wpkh=False, witness_version=None),
+                public_key_to_address(pub_key, testnet=testnet, p2sh_p2wpkh=True, witness_version=0)]
+
+def verify_bitcoin_message(msg, signature, address, testnet = False):
+    a = bitcoin_signed_message_addresses(msg, signature, testnet)
+    return address in a

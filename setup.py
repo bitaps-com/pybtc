@@ -173,7 +173,7 @@ setup(name='pybtc',
                               "pybtc/_crypto/crypto/uint256.cpp",
                               "pybtc/_crypto/crypto/utilstrencodings.cpp",
                               ],
-
+                             extra_compile_args=['-std=c++11'],
                              include_dirs=["pybtc/_crypto/crypto"])
                    ],
 

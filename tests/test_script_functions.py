@@ -20,6 +20,9 @@ from pybtc.functions.script import verify_signature
 from pybtc.functions.script import public_key_recovery
 from pybtc.functions.script import is_valid_signature_encoding
 from pybtc.functions.script import parse_signature
+from pybtc.functions.script import sign_bitcoin_message
+from pybtc.functions.script import verify_bitcoin_message
+from pybtc.functions.script import bitcoin_signed_message_addresses
 from pybtc.functions.key import private_to_public_key
 
 
@@ -593,3 +596,8 @@ def test_parse_signature():
         "d12d482f0220007f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb01"
     with pytest.raises(ValueError):
         parse_signature(s)
+
+def test_sign_bitcoin_message():
+    s = sign_bitcoin_message('test message www', "KyTZwSK5ypXcozECtm69BXHg1PnKTyCxa8qv5uvzmwdp1eVGe4Ed")
+    assert s == "H5Sj3kHPdoYQywVcs7JarMP9GaIkRebE6Ioj56l5F4vESaiBUERbXzh3Bgj7fqkGALdZf1onFhNpXpbXv6KjvOM="
+    assert verify_bitcoin_message('test message www', s, "bc1qnr76ecc0lwadc3czch9wpdj26xc7gkzl53n0jd")

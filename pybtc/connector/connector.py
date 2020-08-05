@@ -1332,7 +1332,6 @@ class Connector:
             self.new_tx_tasks -= 1
             return
 
-
         try:
             self.tx_in_process.add(tx_hash)
             if block_tx:
