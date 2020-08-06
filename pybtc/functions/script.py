@@ -471,6 +471,7 @@ def parse_signature(sig):
 def bitcoin_message(msg):
     if isinstance(msg, str):
         msg = msg.encode()
+    print(b"\x18Bitcoin Signed Message:\n" + int_to_var_int(len(msg)) + msg)
     return double_sha256(b"\x18Bitcoin Signed Message:\n" + int_to_var_int(len(msg)) + msg)
 
 def sign_bitcoin_message(msg, wif, base64_encoded = True):
@@ -490,7 +491,7 @@ def bitcoin_signed_message_addresses(msg, signature, testnet = False):
     msg = bitcoin_message(msg)
     p = signature[0]
     if p < 27 or p >= 35:
-        return False
+        return []
     if p >= 31:
         compressed = True
         p -= 4
