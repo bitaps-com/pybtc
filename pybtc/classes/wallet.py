@@ -190,20 +190,20 @@ class Wallet():
 
         if chain == "external":
             if self.external_chain_private_xkey:
-                key = derive_xkey(path_xkey_to_bip32_xkey(self.external_chain_private_xkey), i)
+                key = derive_xkey(path_xkey_to_bip32_xkey(self.external_chain_private_xkey), [i])
                 private_key = private_from_xprivate_key(key)
                 pub_key = private_to_public_key(private_key)
             else:
-                key = derive_xkey(path_xkey_to_bip32_xkey(self.external_chain_public_xkey), i)
+                key = derive_xkey(path_xkey_to_bip32_xkey(self.external_chain_public_xkey), [i])
                 pub_key = public_from_xpublic_key(key)
                 private_key = None
         else:
             if self.internal_chain_private_xkey:
-                key = derive_xkey(path_xkey_to_bip32_xkey(self.internal_chain_private_xkey), i)
+                key = derive_xkey(path_xkey_to_bip32_xkey(self.internal_chain_private_xkey), [i])
                 private_key = private_from_xprivate_key(key)
                 pub_key = private_to_public_key(private_key)
             else:
-                key = derive_xkey(path_xkey_to_bip32_xkey(self.internal_chain_public_xkey), i)
+                key = derive_xkey(path_xkey_to_bip32_xkey(self.internal_chain_public_xkey), [i])
                 pub_key = public_from_xpublic_key(key)
                 private_key = None
 
