@@ -29,7 +29,7 @@ class Wallet():
         self.internal_chain_public_xkey = None
         self.hardened = hardened
 
-        if path_type in (None, "BIP44", "BIP49", """"""):
+        if path_type in (None, "BIP44", "BIP49", "BIP84"):
             self.path_type = path_type
         else:
             raise ValueError("unknown path type %s" % path_type)
@@ -56,7 +56,7 @@ class Wallet():
                     if len(init_vector) == 156:
                         self._init_vector = bytes.fromhex(init_vector)
                     else:
-                        self._init_vector = decode_base58_with_checksum(init_vector)
+                        self._init_vector = decode_base58(init_vector, checksum = True)
                     self._init_vector_type = "xprivate_key"
 
                     if path_type is None:
@@ -139,16 +139,16 @@ class Wallet():
 
                 self._init_vector = path_xkey_to_bip32_xkey(self._init_vector, base58=False)
 
-                key = derive_xkey(self._init_vector, *(self.path))
+                key = derive_xkey(self._init_vector, self.path)
                 self.account_private_xkey = bip32_xkey_to_path_xkey(key, self.path_type)
                 self.account_public_xkey = bip32_xkey_to_path_xkey(xprivate_to_xpublic_key(key), self.path_type)
 
-                key = derive_xkey(self._init_vector, *(self.path + [0]))
+                key = derive_xkey(self._init_vector, self.path + [0])
                 self.external_chain_private_xkey = bip32_xkey_to_path_xkey(key, self.path_type)
                 self.external_chain_public_xkey = bip32_xkey_to_path_xkey(xprivate_to_xpublic_key(key), self.path_type)
 
 
-                key = derive_xkey(self._init_vector, *(self.path + [1]))
+                key = derive_xkey(self._init_vector, self.path + [1])
 
                 self.internal_chain_private_xkey = bip32_xkey_to_path_xkey(key, self.path_type)
                 self.internal_chain_public_xkey = bip32_xkey_to_path_xkey(xprivate_to_xpublic_key(key), self.path_type)
