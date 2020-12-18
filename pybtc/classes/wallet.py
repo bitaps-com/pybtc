@@ -168,11 +168,11 @@ class Wallet():
                 self.account_private_xkey = None
                 self.account_public_xkey = bip32_xkey_to_path_xkey(self._init_vector, self.path_type)
 
-                key = derive_xkey(self._init_vector, 0)
+                key = derive_xkey(self._init_vector, [0])
                 self.external_chain_private_xkey = None
                 self.external_chain_public_xkey = bip32_xkey_to_path_xkey(key, self.path_type)
 
-                key = derive_xkey(self._init_vector, 1)
+                key = derive_xkey(self._init_vector, [1])
                 self.internal_chain_private_xkey = None
                 self.internal_chain_public_xkey = bip32_xkey_to_path_xkey(key, self.path_type)
         elif self.path_type == "Custom":
