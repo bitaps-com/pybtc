@@ -165,6 +165,7 @@ MINER_COINBASE_TAG = {
     b"pool.bitcoin.com": {"name": "Bitcoin.com", "link": "https://pool.bitcoin.com"},
     b"BTC.COM": {"name": "BTC.COM", "link": "http://btc.com/"},
     b"BTC.com": {"name": "BTC.com", "link": "http://btc.com/"},
+    b"bpool": {"name": "BTC.com", "link": "http://btc.com/"},
     b"SBICrypto.com": {"name": "SBI Crypto", "link": "https://sbicrypto.com"},
     b"TMSPOOL": {"name": "TANMAS MINE", "link": "https://btc.tmspool.top"},
     b"one_more_mcd": {"name": "EMCD", "link": "https://pool.emcd.io"},
