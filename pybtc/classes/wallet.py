@@ -71,6 +71,7 @@ class Wallet():
                             self.path_type = "BIP44"
 
                 elif is_xpublic_key_valid(init_vector):
+                    print(">>")
                     if len(init_vector) == 156:
                         self._init_vector = bytes.fromhex(init_vector)
                     else:

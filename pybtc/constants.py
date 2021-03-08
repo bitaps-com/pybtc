@@ -195,6 +195,7 @@ MINER_COINBASE_TAG = {
 }
 
 MINER_PAYOUT_TAG = { "1CK6KHY6MHgYvmRQ4PAafKYDrg1ejbH1cE" : {"name" : "Slush", "link" : "https://slushpool.com"},
+                     "1Bf9sZvBHPFGVPX71WX2njhd1NXKv5y7v5" : {"name": "BTC.COM", "link": "http://btc.com"},
                      "1AqTMY7kmHZxBuLUR5wJjPFUvqGs23sesr" : {"name" : "Slush", "link" : "https://slushpool.com"},
                      "1AcAj9p6zJn4xLXdvmdiuPCtY7YkBPTAJo" : {"name" : "BitFury", "link" : "http://bitfury.com"},
                      "3HuobiNg2wHjdPU2mQczL9on8WF7hZmaGd" : {"name" : "Huobi", "link" : "http://www.huobi.com"},
