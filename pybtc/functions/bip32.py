@@ -310,8 +310,7 @@ def path_xkey_to_bip32_xkey(key, base58=True, hex=False):
                 key = bytes.fromhex(key)
             except:
                 pass
-    print(key)
-    print(len(key))
+
     if not isinstance(key, bytes) or len(key)!=78:
         raise ValueError("invalid extended key")
 
