@@ -452,7 +452,8 @@ class Connector:
             try:
                 while True:
                     await asyncio.sleep(30)
-                    # check ZeroMQ state
+                    # ch
+                    # tate
                     if self.mempool_tx:
                         if int(time.time()) - self.last_zmq_msg > self.zmq_timeout and self.zmqContext:
                             self.log.error("ZeroMQ no messages about % minutes" % self.zmq_timeout)
@@ -1337,6 +1338,13 @@ class Connector:
                     await self.wait_block_dependences(tx)
 
             else:
+                while True:
+                    if not self.active_block.done():
+                        await self.active_block
+                    else:
+                        break
+
+
                 if tx["coinbase"]:
                     return
 
