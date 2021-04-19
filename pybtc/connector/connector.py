@@ -456,6 +456,7 @@ class Connector:
                     # tate
                     if self.mempool_tx:
                         if int(time.time()) - self.last_zmq_msg > self.zmq_timeout and self.zmqContext:
+                            print(self.zmq_timeout)
                             self.log.error("ZeroMQ no messages about % minutes" % str(self.zmq_timeout))
                             try:
                                 self.zeromq_task.cancel()
