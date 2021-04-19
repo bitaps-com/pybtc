@@ -516,6 +516,7 @@ class Connector:
                 self.log.info("connector watchdog terminated")
                 break
             except Exception as err:
+                print(traceback.format_exc())
                 self.log.error("watchdog error %s " % err)
 
 
@@ -708,6 +709,7 @@ class Connector:
                 for tag in MINER_COINBASE_TAG:
                     if coinbase.find(tag) != -1:
                         block["miner"] = json.dumps(MINER_COINBASE_TAG[tag])
+                        self.log.info("Mined by %s [coinbase tag]" % json.loads(block["miner"])["name"])
                         break
                 else:
                     try:
@@ -716,6 +718,7 @@ class Connector:
                         a = hash_to_address(address_hash, script_hash=script_hash)
                         if a in MINER_PAYOUT_TAG:
                             block["miner"] = json.dumps(MINER_PAYOUT_TAG[a])
+                            self.log.info("Mined by %s [payout address]" % json.loads(block["miner"])["name"])
                     except:
                         pass
 
