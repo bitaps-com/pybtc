@@ -119,22 +119,16 @@ class build_ext(_build_ext):
             self.library_dirs.extend(build_clib.build_flags['library_dirs'])
 
             self.define = build_clib.build_flags['define']
-
         return _build_ext.run(self)
 
-
-
-
-
-
-
 setup(name='pybtc',
-      version='2.3.1',
+      version='2.3.4',
       description='Python Bitcoin library',
       keywords='bitcoin',
       url='https://github.com/bitaps-com/pybtc',
       author='Alexsei Karpov',
       author_email='admin@bitaps.com',
+      python_requires='>=3.7',
       license='GPL-3.0',
       # include_package_data=True,
       package_data={
@@ -147,6 +141,7 @@ setup(name='pybtc',
         'sdist': sdist,
         'bdist_wheel': bdist_wheel
       },
+      options={"bdist_wheel": {"universal": True}},
       distclass=Distribution,
       ext_modules=[Extension("cache_strategies", ["pybtc/cache_strategies/cache.c"]),
                    Extension("_sha3_hash", ["pybtc/_crypto_c/sha3.c"]),
@@ -154,8 +149,8 @@ setup(name='pybtc',
                    Extension("_secp256k1", ["pybtc/_secp256k1/module_secp256k1.c"],
                              include_dirs=["libsecp256k1/include/", "libsecp256k1/src/"]),
                    Extension("_crypto",
-                             ["pybtc/_crypto/module_crypto.cpp",
-                              "pybtc/_crypto/crypto/aes.cpp",
+                             ["pybtc/_crypto/crypto/aes.cpp",
+                              "pybtc/_crypto/module_crypto.cpp",
                               "pybtc/_crypto/crypto/hmac_sha256.cpp",
                               "pybtc/_crypto/crypto/hmac_sha512.cpp",
                               "pybtc/_crypto/crypto/sha256.cpp",
@@ -174,7 +169,7 @@ setup(name='pybtc',
                               "pybtc/_crypto/crypto/utilstrencodings.cpp",
                               ],
                              extra_compile_args=['-std=c++11'],
-                             include_dirs=["pybtc/_crypto/crypto"])
+                             include_dirs=["pybtc/_crypto/crypto/"])
                    ],
 
       packages=find_packages(exclude=('libsecp256k1')),

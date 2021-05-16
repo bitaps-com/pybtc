@@ -1,2 +1,4 @@
 include setup_tools.py
+include pybtc/_crypto/crypto/*.h
 graft libsecp256k1
+graft pybtc/_crypto/crypto
