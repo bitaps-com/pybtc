@@ -249,4 +249,15 @@ def combine_mnemonic(shares, language='english', word_list_dir=None, word_list=N
                                word_list=word_list)
 
 
+def is_mnemonic_valid(mnemonic, word_list=None):
+    if word_list is None:
+        word_list = load_word_list()
+    if isinstance(mnemonic, str):
+        mnemonic = mnemonic.split()
+        for w in mnemonic:
+            if w not in word_list:
+                return False
+        return True
+    return False
+
 

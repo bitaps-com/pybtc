@@ -67,7 +67,7 @@ def test_decode_path():
     assert decode_path("m/0/3/4") == [ 0, 3, 4 ]
     with pytest.raises(Exception):
         decode_path("0/0/3/4")
-    assert decode_path("0", True) == [0]
+    assert decode_path("0/0", True) == [0]
 
 def test_derive_xkey():
     root = "xprv9s21ZrQH143K39fFeGf2cWBTZ6NVj6ZsQ7nEK9f5pWqt4YwHPhnC" \

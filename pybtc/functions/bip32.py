@@ -62,6 +62,14 @@ def xprivate_to_xpublic_key(xprivate_key, base58=True, hex=False):
         prefix = TESTNET_XPUBLIC_KEY_PREFIX
     elif xprivate_key[:4] == MAINNET_XPRIVATE_KEY_PREFIX:
         prefix = MAINNET_XPUBLIC_KEY_PREFIX
+    elif xprivate_key[:4] == MAINNET_M49_XPRIVATE_KEY_PREFIX:
+        prefix = MAINNET_M49_XPUBLIC_KEY_PREFIX
+    elif xprivate_key[:4] == TESTNET_M49_XPRIVATE_KEY_PREFIX:
+        prefix = TESTNET_M49_XPUBLIC_KEY_PREFIX
+    elif xprivate_key[:4] == MAINNET_M84_XPRIVATE_KEY_PREFIX:
+        prefix = MAINNET_M84_XPUBLIC_KEY_PREFIX
+    elif xprivate_key[:4] == TESTNET_M84_XPRIVATE_KEY_PREFIX:
+        prefix = TESTNET_M84_XPUBLIC_KEY_PREFIX
     else:
         raise ValueError("invalid extended private key")
 
@@ -82,8 +90,9 @@ def decode_path(path, sub_path=False):
         if path[0] != 'm':
             raise ValueError("invalid path")
 
+
     r = []
-    for k in path if sub_path else path[1:]:
+    for k in path[1:]:
         if k[-1] == "'":
             k = int(k[:-1]) + HARDENED_KEY
         else:
@@ -94,7 +103,7 @@ def decode_path(path, sub_path=False):
 
 
 
-def derive_xkey(xkey, path, base58=None, hex=None):
+def derive_xkey(xkey, path, base58=None, hex=None, sub_path=False):
     """
     Child Key derivation for extended private/public keys
     
@@ -106,14 +115,17 @@ def derive_xkey(xkey, path, base58=None, hex=None):
     :return: extended child private/public key  in base58, HEX or bytes string format.
     """
     if isinstance(path, str):
-        path = decode_path(path)
+        path = decode_path(path, sub_path = sub_path)
     if isinstance(xkey, str):
         xkey = decode_base58(xkey, checksum=True)
-    if xkey[:4] in [MAINNET_XPRIVATE_KEY_PREFIX, TESTNET_XPRIVATE_KEY_PREFIX]:
+    key_type = xkey_type(xkey)
+
+
+    if key_type == 'private':
         for i in path:
             xkey = derive_child_xprivate_key(xkey, i)
 
-    elif xkey[:4] in [MAINNET_XPUBLIC_KEY_PREFIX, TESTNET_XPUBLIC_KEY_PREFIX]:
+    elif key_type == 'public':
         for i in path:
             xkey = derive_child_xpublic_key(xkey, i)
     else:
@@ -299,7 +311,55 @@ def is_xpublic_key_valid(key):
         return False
     return True
 
+def xkey_derivation_type(key):
+    if isinstance(key, str):
+        key = decode_base58(key, checksum=True)
+    if len(key) != 78:
+        return False
+    prefix = key[:4]
+    if prefix in (MAINNET_XPRIVATE_KEY_PREFIX, TESTNET_XPRIVATE_KEY_PREFIX,
+                  MAINNET_XPUBLIC_KEY_PREFIX, TESTNET_XPUBLIC_KEY_PREFIX):
+        return "BIP44"
+    if prefix in (MAINNET_M49_XPRIVATE_KEY_PREFIX, TESTNET_M49_XPRIVATE_KEY_PREFIX,
+                  MAINNET_M49_XPUBLIC_KEY_PREFIX, TESTNET_M49_XPUBLIC_KEY_PREFIX):
+        return "BIP49"
+    if prefix in (MAINNET_M84_XPRIVATE_KEY_PREFIX, TESTNET_M84_XPRIVATE_KEY_PREFIX,
+                  MAINNET_M84_XPUBLIC_KEY_PREFIX, TESTNET_M84_XPUBLIC_KEY_PREFIX):
+        return "BIP84"
+    return "custom"
 
+
+def xkey_network_type(key):
+    if isinstance(key, str):
+        key = decode_base58(key, checksum=True)
+    if len(key) != 78:
+        raise Exception("invalid extended key")
+    prefix = key[:4]
+    if prefix in (MAINNET_XPRIVATE_KEY_PREFIX, MAINNET_M49_XPRIVATE_KEY_PREFIX,
+                  MAINNET_M84_XPRIVATE_KEY_PREFIX, MAINNET_XPUBLIC_KEY_PREFIX,
+                  MAINNET_M49_XPUBLIC_KEY_PREFIX, MAINNET_M84_XPUBLIC_KEY_PREFIX):
+        return "mainnet"
+    if prefix in (TESTNET_XPRIVATE_KEY_PREFIX, TESTNET_M49_XPRIVATE_KEY_PREFIX,
+                  TESTNET_M84_XPRIVATE_KEY_PREFIX, TESTNET_XPUBLIC_KEY_PREFIX,
+                  TESTNET_M49_XPUBLIC_KEY_PREFIX, TESTNET_M84_XPUBLIC_KEY_PREFIX):
+        return "testnet"
+    raise Exception("invalid extended key")
+
+def xkey_type(key):
+    if isinstance(key, str):
+        key = decode_base58(key, checksum=True)
+    if len(key) != 78:
+        raise Exception("invalid extended key")
+    prefix = key[:4]
+    if prefix in (MAINNET_XPRIVATE_KEY_PREFIX, MAINNET_M49_XPRIVATE_KEY_PREFIX,
+                  MAINNET_M84_XPRIVATE_KEY_PREFIX, TESTNET_XPRIVATE_KEY_PREFIX,
+                  TESTNET_M49_XPRIVATE_KEY_PREFIX, TESTNET_M84_XPRIVATE_KEY_PREFIX):
+        return "private"
+    if prefix in (MAINNET_XPUBLIC_KEY_PREFIX, MAINNET_M49_XPUBLIC_KEY_PREFIX,
+                  MAINNET_M84_XPUBLIC_KEY_PREFIX, TESTNET_XPUBLIC_KEY_PREFIX,
+                  TESTNET_M49_XPUBLIC_KEY_PREFIX, TESTNET_M84_XPUBLIC_KEY_PREFIX):
+        return "public"
+    raise ValueError("invalid extended key")
 
 def path_xkey_to_bip32_xkey(key, base58=True, hex=False):
     if isinstance(key, str):
@@ -384,7 +444,7 @@ def bip32_xkey_to_path_xkey(key, path_type, base58=True, hex=False):
         else:
             key = MAINNET_M84_XPUBLIC_KEY_PREFIX + key[4:]
     else:
-        raise ValueError("invalid key")
+        raise ValueError("invalid extended key")
 
     if hex:
 

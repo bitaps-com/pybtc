@@ -30,6 +30,22 @@ To install pybtc, simply use pip
 ### Dependencies
 
 * Python 3.3.3+
+* autogen
+* autoconf
+* automake
+* pkg-config
+* gcc
+* pip3
+
+### Build on macOS
+    brew install autogen autoconf automake pkg-config
+    pip3 install --requirement requirements-dev.txt
+    python3 setup.py install
+
+### Build on Ubuntu
+    apt-get -y install build-essential libtool autotools-dev automake pkg-config libssl-dev libevent-dev
+    pip3 install --requirement requirements-dev.txt
+    python3 setup.py install
 
 
 ### Documentation

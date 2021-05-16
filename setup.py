@@ -129,7 +129,7 @@ class build_ext(_build_ext):
 
 
 setup(name='pybtc',
-      version='2.2.0',
+      version='2.3.1',
       description='Python Bitcoin library',
       keywords='bitcoin',
       url='https://github.com/bitaps-com/pybtc',
