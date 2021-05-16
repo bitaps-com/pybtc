@@ -16,7 +16,7 @@ from pybtc.functions.script import get_multisig_public_keys, read_opcode, is_val
 from pybtc.functions.script import public_key_recovery, delete_from_script
 from pybtc.functions.hash import hash160, sha256, double_sha256
 from pybtc.functions.address import  hash_to_address, address_net_type, address_to_script
-from pybtc.address import  PrivateKey, Address, ScriptAddress, PublicKey
+from pybtc.classes.address import  PrivateKey, Address, ScriptAddress, PublicKey
 from collections import deque
 
 
@@ -43,6 +43,7 @@ class Transaction(dict):
         self["format"] = format
         self["testnet"] = testnet
         self["segwit"] = False
+        self["rbf"] = False
         self["txId"] = None
         self["hash"] = None
         self["version"] = version
@@ -103,6 +104,8 @@ class Transaction(dict):
             t = read(4)
             rtx(t)
             self["vIn"][k]["sequence"] = unpack('<L', t)[0]
+            if self["vIn"][k]["sequence"] < 0xfffffffe:
+                self["rbf"] = True
         # outputs
         t = read_var_int(stream)
         rtx(t)
@@ -972,6 +975,7 @@ class Transaction(dict):
         pm = bytearray()
         pm += b"%s%s" % (pack('<L', self["version"]),
                          b'\x01' if sighash_type & SIGHASH_ANYONECANPAY else int_to_var_int(len(self["vIn"])))
+
         for i in self["vIn"]:
             # skip all other inputs for SIGHASH_ANYONECANPAY case
             if (sighash_type & SIGHASH_ANYONECANPAY) and (n != i):
@@ -983,14 +987,18 @@ class Transaction(dict):
             if isinstance(tx_id, str):
                 tx_id = s2rh(tx_id)
 
+
             if n == i:
                 pm += b"%s%s%s%s%s" % (tx_id, pack('<L', self["vIn"][i]["vOut"]),
                                        int_to_var_int(len(script_code)),
                                        script_code, pack('<L', sequence))
+
             else:
                 pm += b'%s%s\x00%s' % (tx_id,
                                        pack('<L', self["vIn"][i]["vOut"]),
                                        pack('<L', sequence))
+
+
         if (sighash_type & 31) == SIGHASH_NONE:
             pm += b'\x00'
         else:
@@ -1012,10 +1020,13 @@ class Transaction(dict):
                     pm += b"%s%s%s" % (self["vOut"][i]["value"].to_bytes(8, 'little'),
                                        int_to_var_int(len(script_pub_key)),
                                        script_pub_key)
+
         pm += b"%s%s" % (self["lockTime"].to_bytes(4, 'little'), pack(b"<i", sighash_type))
+
         if not preimage:
             pm = double_sha256(pm)
-        return pm if self["format"] == "raw" else rh2s(pm)
+            return pm if self["format"] == "raw" else rh2s(pm)
+        return pm if self["format"] == "raw" else pm.hex()
 
     def sig_hash_segwit(self, n, amount, script_pub_key=None, sighash_type=SIGHASH_ALL, preimage=False):
         try:
@@ -1111,9 +1122,12 @@ class Transaction(dict):
             self["rawTx"] = self["rawTx"].hex()
 
         input_sum = 0
+        self["rbf"] = False
         for i in self["vIn"]:
             if "value" in self["vIn"][i]:
                 input_sum += self["vIn"][i]["value"]
+                if self["vIn"][i]["sequence"] < 0xfffffffe:
+                    self["rbf"] = True
             else:
                 input_sum = None
                 break

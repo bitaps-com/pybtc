@@ -129,7 +129,7 @@ class build_ext(_build_ext):
 
 
 setup(name='pybtc',
-      version='2.2.0',
+      version='2.3.1',
       description='Python Bitcoin library',
       keywords='bitcoin',
       url='https://github.com/bitaps-com/pybtc',
@@ -149,6 +149,7 @@ setup(name='pybtc',
       },
       distclass=Distribution,
       ext_modules=[Extension("cache_strategies", ["pybtc/cache_strategies/cache.c"]),
+                   Extension("_sha3_hash", ["pybtc/_crypto_c/sha3.c"]),
                    Extension("_bitarray", ["pybtc/bitarray/_bitarray.c"]),
                    Extension("_secp256k1", ["pybtc/_secp256k1/module_secp256k1.c"],
                              include_dirs=["libsecp256k1/include/", "libsecp256k1/src/"]),

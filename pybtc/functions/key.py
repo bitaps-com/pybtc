@@ -6,7 +6,7 @@ bytes_from_hex = bytes.fromhex
 from pybtc.crypto import __secp256k1_ec_pubkey_create__
 
 
-def create_private_key(compressed=True, testnet=False, wif=True, hex=False):
+def create_private_key(compressed=True, testnet=False, wif=None, hex=None):
     """
     Create private key
 
@@ -20,6 +20,12 @@ def create_private_key(compressed=True, testnet=False, wif=True, hex=False):
              raw bytes string in case wif and hex flags set to False.
 
     """
+    if wif is None:
+        if hex is None:
+            wif = True
+        else:
+            wif = False
+
     if wif:
         return private_key_to_wif(generate_entropy(hex=False), compressed=compressed, testnet=testnet)
     elif hex:
@@ -73,7 +79,7 @@ def is_wif_valid(wif):
     :return: boolean.
     """
     if not isinstance(wif, str):
-        raise TypeError("invalid wif key")
+        return False
     if wif[0] not in PRIVATE_KEY_PREFIX_LIST:
         return False
     try:
@@ -119,14 +125,12 @@ def private_to_public_key(private_key, compressed=True, hex=True):
                 try:
                     private_key = bytes_from_hex(private_key)
                 except:
-                    raise TypeError("private key HEX or WIF invalid")
+                    raise ValueError("private key HEX or WIF invalid")
         else:
-            raise TypeError("private key must be a bytes or WIF or hex encoded string")
+            raise ValueError("private key must be a bytes or WIF or hex encoded string")
         if len(private_key) != 32:
-            raise TypeError("private key length invalid")
+            raise ValueError("private key length invalid")
     pub = __secp256k1_ec_pubkey_create__(private_key, bool(compressed))
-    if not pub:
-        raise RuntimeError("secp256k1 error")
     return pub.hex() if hex else pub
 
 
@@ -138,7 +142,10 @@ def is_public_key_valid(key):
     :return: boolean.
     """
     if isinstance(key, str):
-        key = bytes_from_hex(key)
+        try:
+            key = bytes_from_hex(key)
+        except:
+            return False
     if len(key) < 33:
         return False
     elif key[0] == 0x04 and len(key) != 65:
@@ -146,4 +153,4 @@ def is_public_key_valid(key):
     elif key[0] == 0x02 or key[0] == 0x03:
         if len(key) != 33:
             return False
-    return True
+    return not ((key[0] < 2 or key[0] > 4))

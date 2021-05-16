@@ -2,7 +2,12 @@
 
 ## Python bitcoin library
 
-Current version is 2.2
+
+[![travis build](https://img.shields.io/travis/bitaps-com/pybtc?)](https://travis-ci.org/bitaps-com/pybtc)
+[![codecov coverage](https://img.shields.io/codecov/c/github/bitaps-com/pybtc/no_analityca)](https://codecov.io/gh/bitaps-com/pybtc)
+[![version](https://img.shields.io/pypi/v/pybtc)](https://pypi.org/project/pybtc/)
+
+
 
 
 ### Feature Support
@@ -25,6 +30,22 @@ To install pybtc, simply use pip
 ### Dependencies
 
 * Python 3.3.3+
+* autogen
+* autoconf
+* automake
+* pkg-config
+* gcc
+* pip3
+
+### Build on macOS
+    brew install autogen autoconf automake pkg-config
+    pip3 install --requirement requirements-dev.txt
+    python3 setup.py install
+
+### Build on Ubuntu
+    apt-get -y install build-essential libtool autotools-dev automake pkg-config libssl-dev libevent-dev
+    pip3 install --requirement requirements-dev.txt
+    python3 setup.py install
 
 
 ### Documentation

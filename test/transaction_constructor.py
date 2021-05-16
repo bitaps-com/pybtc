@@ -5,8 +5,6 @@ parentPath = os.path.abspath("..")
 if parentPath not in sys.path:
     sys.path.insert(0, parentPath)
 
-from secp256k1 import ffi
-import secp256k1
 from pybtc.functions import *
 from pybtc.opcodes import *
 from pybtc.transaction import *
@@ -864,6 +862,7 @@ class TransactionConstructorTests(unittest.TestCase):
         tx.sign_input(0, private_key="bb127228ddcb9209d7fd6f36b02f7dfa6252af40bb2f1cbc7a557da8027ff866",
                       script_pub_key="2103bc85b4247004744d3e96f861802ec49ea4c64902ded840509879130356b4a0feac")
         self.assertEqual(t, tx.serialize())
+
 
         # sign p2wpkh
         r = "01000000000101d7592de6f96f49ad6b66a718c5ea8d7e4c5a7198b7a9b904687b6e23b553b1b20000000000ffffffff01c027" \

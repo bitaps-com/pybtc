@@ -82,6 +82,38 @@ static PyObject *secp256k1_secp256k1_ecdsa_add_points(PyObject *self, PyObject *
     return return_value;
 }
 
+static PyObject *secp256k1_secp256k1_ecdsa_signature_serialize_compact(PyObject *self, PyObject *args) {
+    Py_buffer sig;
+    if (!PyArg_ParseTuple(args,"y*", &sig)) { return NULL; }
+    unsigned char compact_sig[64] ;
+    size_t outputLen = 64;
+    int t = secp256k1_ecdsa_signature_serialize_compact(secp256k1_context_no_precomp,
+                                                        compact_sig, sig.buf);
+    PyBuffer_Release(&sig);
+
+    if (t==0) { return Py_BuildValue("b", 0); }
+    PyObject *return_value = Py_BuildValue("y#", &compact_sig, outputLen);
+    Py_DECREF(compact_sig);
+    return return_value;
+}
+
+static PyObject *secp256k1_secp256k1_ecdsa_recoverable_signature_serialize_compact(PyObject *self, PyObject *args) {
+    Py_buffer sig;
+    if (!PyArg_ParseTuple(args,"y*", &sig)) { return NULL; }
+    unsigned char compact_sig[65];
+    int rec_id = 0;
+    size_t outputLen = 65;
+    int t = secp256k1_ecdsa_recoverable_signature_serialize_compact(secp256k1_context_no_precomp,
+                                                        compact_sig + 1, &rec_id, sig.buf);
+    PyBuffer_Release(&sig);
+    compact_sig[0] = rec_id;
+
+    if (t==0) { return Py_BuildValue("b", 0); }
+    PyObject *return_value = Py_BuildValue("y#", &compact_sig, outputLen);
+    Py_DECREF(compact_sig);
+    return return_value;
+}
+
 static PyObject *secp256k1_secp256k1_ecdsa_signature_serialize_der(PyObject *self, PyObject *args) {
     Py_buffer sig;
     if (!PyArg_ParseTuple(args,"y*", &sig)) { return NULL; }
@@ -124,29 +156,41 @@ static PyObject *secp256k1_secp256k1_ecdsa_recover(PyObject *self, PyObject *arg
     Py_buffer sig;
     int rec_id;
     int compressed;
-    if (!PyArg_ParseTuple(args,"y*y*ii", &sig, &message, &rec_id, &compressed)) { return NULL; }
+    int der;
+    int r;
 
-    secp256k1_ecdsa_signature signature;
-    int r = secp256k1_ecdsa_signature_parse_der(secp256k1_context_no_precomp,
-                                                &signature,
-                                                sig.buf, sig.len);
-    PyBuffer_Release(&sig);
-    if (r != 1) { return Py_BuildValue("b", -1);}
-
-
-    unsigned char compact_sig[64] ;
-    r = secp256k1_ecdsa_signature_serialize_compact(secp256k1_context_no_precomp,
-                                                              compact_sig,
-                                                              &signature);
-
-    if (r != 1) { return Py_BuildValue("b", -1);}
 
     secp256k1_ecdsa_recoverable_signature signature_recoverable;
-    r = secp256k1_ecdsa_recoverable_signature_parse_compact(secp256k1_context_no_precomp,
-                                                            &signature_recoverable,
-                                                            compact_sig,
-                                                            rec_id);
-    if (r != 1) { return Py_BuildValue("b", -2);}
+
+    if (!PyArg_ParseTuple(args,"y*y*iii", &sig, &message, &rec_id, &compressed, &der)) { return NULL; }
+    if (der) {
+        secp256k1_ecdsa_signature signature;
+        r = secp256k1_ecdsa_signature_parse_der(secp256k1_context_no_precomp,
+                                                &signature,
+                                                sig.buf, sig.len);
+        PyBuffer_Release(&sig);
+
+        unsigned char compact_sig[64] ;
+
+        if (r != 1) { return Py_BuildValue("b", -1);}
+
+        r = secp256k1_ecdsa_signature_serialize_compact(secp256k1_context_no_precomp,
+                                                        compact_sig, &signature);
+        if (r != 1) { return Py_BuildValue("b", -1);}
+
+        r = secp256k1_ecdsa_recoverable_signature_parse_compact(secp256k1_context_no_precomp,
+                                                                &signature_recoverable,
+                                                                compact_sig,
+                                                                rec_id);
+        if (r != 1) { return Py_BuildValue("b", -2);}
+
+    } else {
+        r = secp256k1_ecdsa_recoverable_signature_parse_compact(secp256k1_context_no_precomp,
+                                                                &signature_recoverable,
+                                                                sig.buf, rec_id);
+        if (r != 1) { return Py_BuildValue("b", -2);}
+
+    }
 
     secp256k1_pubkey pubkey;
     r = secp256k1_ecdsa_recover(secp256k1_precomp_context_verify,
@@ -252,7 +296,7 @@ static PyObject *secp256k1_secp256k1_ec_pubkey_create(PyObject *self, PyObject *
     unsigned char pubkeyo[outl];
 
 
-    r = secp256k1_ec_pubkey_serialize(secp256k1_context_no_precomp, pubkeyo, &outl, &pubkey, flag);
+    r = secp256k1_ec_pubkey_serialize(secp256k1_precomp_context_verify, pubkeyo, &outl, &pubkey, flag);
     if (r != 1) {
       return Py_BuildValue("b", (Py_ssize_t)0);
     }
@@ -266,7 +310,7 @@ static PyObject *secp256k1_secp256k1_ecdsa_sign(PyObject *self, PyObject *args) 
     Py_buffer msg;
     Py_buffer private_key;
     int der_encoding;
-    if (!PyArg_ParseTuple(args,"y*y*b", &msg, &private_key, &der_encoding)) {
+    if (!PyArg_ParseTuple(args,"y*y*i", &msg, &private_key, &der_encoding)) {
       return NULL;
     }
     secp256k1_ecdsa_recoverable_signature signature;
@@ -282,8 +326,14 @@ static PyObject *secp256k1_secp256k1_ecdsa_sign(PyObject *self, PyObject *args) 
       return Py_BuildValue("b", 0);
     }
     if (der_encoding == 0) {
-        PyObject *return_value =  Py_BuildValue("y#", &signature, 65);
-//        Py_DECREF(signature);
+        unsigned char outputSer[65];
+        size_t outputLen = 65;
+        secp256k1_ecdsa_recoverable_signature_serialize_compact(secp256k1_context_no_precomp,
+                                                                outputSer + 1,
+                                                                 (int *) outputSer,
+                                                                 &signature);
+        PyObject *return_value = Py_BuildValue("y#", &outputSer, outputLen);
+        Py_DECREF(outputSer);
         return return_value;
     } else {
         unsigned char outputSer[72];
@@ -308,6 +358,8 @@ static PyMethodDef module_methods[] = {
     {"secp256k1_ecdsa_recover", secp256k1_secp256k1_ecdsa_recover, METH_VARARGS, "Recover public key from signature"},
     {"secp256k1_nonce_rfc6979", secp256k1_secp256k1_nonce_rfc6979, METH_VARARGS, "Create rfc6979 nonce"},
     {"secp256k1_ecdsa_signature_serialize_der", secp256k1_secp256k1_ecdsa_signature_serialize_der, METH_VARARGS, "Serialize to DER"},
+    {"secp256k1_ecdsa_signature_serialize_compact", secp256k1_secp256k1_ecdsa_signature_serialize_compact, METH_VARARGS, "Serialize to compact"},
+    {"secp256k1_ecdsa_recoverable_signature_serialize_compact", secp256k1_secp256k1_ecdsa_recoverable_signature_serialize_compact, METH_VARARGS, "Serialize to compact"},
     {"secp256k1_ecdsa_add_points", secp256k1_secp256k1_ecdsa_add_points, METH_VARARGS, "2 points addition"},
     {"secp256k1_ec_pubkey_tweak_add", secp256k1_secp256k1_ec_pubkey_tweak_add, METH_VARARGS, "tweak addition "},
     {NULL, NULL, 0, NULL}

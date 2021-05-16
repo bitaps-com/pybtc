@@ -1,3 +1,9 @@
+tests/__pycache__
+coverage
+.pytest_cache
+pybtc.egg-info
+.idea
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -138,6 +138,7 @@ static PyObject* crypto_sha256(PyObject *, PyObject* args) {
 }
 
 
+
 static PyMethodDef module_methods[] = {
     { "__map_into_range__", (PyCFunction)crypto_map_into_range, METH_VARARGS, nullptr },
     { "__siphash__", (PyCFunction)crypto_siphash, METH_VARARGS, nullptr },

@@ -21,7 +21,7 @@ except: pass
 
 class UTXO():
 
-    def __init__(self, db_type, db,  rpc, loop, log, cache_size):
+    def __init__(self, db,  rpc, loop, log, cache_size):
         self.cache = MRU()  # utxo cache
         self.restore_blocks_cache = LRU()  # blocks cache for restore utxo cache
 
@@ -31,6 +31,7 @@ class UTXO():
 
         self.utxo_records = deque()  # prepared utxo records for write to db
         self.p2pkMapHash = deque()  # prepared utxo records for write to db
+        self.pending_p2pkMapHash = deque()  # prepared utxo records for write to db
         self.pending_saved = dict()  # temp hash table, while records write process
 
         self.scheduled_to_delete = deque()
@@ -41,9 +42,7 @@ class UTXO():
         self.checkpoints = deque()
         self.log = log
 
-
         self.size_limit = cache_size
-        self.db_type = db_type
         self.db = db
         self.loop = loop
 
@@ -138,17 +137,24 @@ class UTXO():
         #  load missed utxo from bitcoind daemon
         #
         if not self.missed_failed: return
-        missed = chunks_by_count(self.missed_failed, 50)
+        missed = chunks_by_count(self.missed_failed, 1)
         for m in missed:
-            result = await self.rpc.batch([["getrawtransaction", rh2s(i[:32]), 1] for i in m])
+            q = time.time()
+            try:
+                result = await self.rpc.batch([["getrawtransaction", rh2s(i[:32]), 1] for i in m])
+            except:
+                print("->", [["getrawtransaction", rh2s(i[:32]), 1] for i in m])
+                raise
+
             hash_list = set()
             for r in result:
                 if r["result"]["blockhash"] not in self.restore_blocks_cache:
                     hash_list.add(r["result"]["blockhash"])
-
-            result2 = await self.rpc.batch([["getblock", r] for r in hash_list])
-            for r in result2:
-               self.restore_blocks_cache[r["result"]["hash"]] = r["result"]
+            hash_list = chunks_by_count(list(hash_list), 30)
+            for hl in hash_list:
+                result2 = await self.rpc.batch([["getblock", r] for r in hl])
+                for r in result2:
+                   self.restore_blocks_cache[r["result"]["hash"]] = r["result"]
 
             for key, r in zip(m, result):
                 out_index = bytes_to_int(key[32:])
@@ -251,6 +257,8 @@ class UTXO():
             self.write_to_db = True
             t = time.time()
             if not self.checkpoint: return
+            self.pending_p2pkMapHash = deque(self.p2pkMapHash)
+            self.p2pkMapHash = deque()
             await self.postgresql_atomic_batch()
             self.log.debug("utxo checkpoint saved time %s" % round(time.time()-t, 4))
             self.saved_utxo_count += len(self.utxo_records)
@@ -258,8 +266,9 @@ class UTXO():
             self.pending_deleted = deque()
             self.utxo_records = deque()
             self.pending_saved = dict()
-
+            self.pending_p2pkMapHash = deque()
         except Exception as err:
+            self.p2pkMapHash = deque(self.pending_p2pkMapHash)
             self.log.critical("save_checkpoint error: %s" % str(err))
         finally:
             self.save_process = False
@@ -281,8 +290,7 @@ class UTXO():
                                                     records=self.utxo_records)
                if self.p2pkMapHash:
                    await conn.executemany("INSERT INTO connector_p2pk_map (address, script) "
-                                          "VALUES ($1, $2) ON CONFLICT DO NOTHING;", self.p2pkMapHash)
-                   self.p2pkMapHash = deque()
+                                          "VALUES ($1, $2) ON CONFLICT DO NOTHING;", self.pending_p2pkMapHash)
                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
                                   "WHERE name = 'last_block';", self.checkpoint)
                await conn.execute("UPDATE connector_utxo_state SET value = $1 "
@@ -301,7 +309,7 @@ class UTXO():
 
 
 class UUTXO():
-    def __init__(self, db_type, db, block_filters, log):
+    def __init__(self, db, block_filters, log):
         self.load_buffer = deque()
         self.loaded_utxo = LRU(100000)  # loaded from db missed records
         self.loaded_ustxo = LRU(100000)  # loaded from db missed records
@@ -310,19 +318,14 @@ class UUTXO():
         self.load_data_future.set_result(True)
 
         self.log = log
-        self.db_type = db_type
         self.db = db
         self.block_filters = block_filters
-
-
-
 
 
     async def load_utxo_data(self):
         #
         # load missed utxo from db
         #
-        # print("load_utxo_data")
         while True:
             if not self.load_data_future.done():
                 await self.load_data_future
@@ -392,21 +395,24 @@ class UUTXO():
                                                       "amount"],
                                              records=commit_uutxo)
         if commit_up2pk_map:
-            await conn.copy_records_to_table('connector_unconfirmed_p2pk_map',
-                                             columns=["tx_id",
-                                                      "address",
-                                                      "script"],
-                                             records=commit_up2pk_map)
+            await conn.fetch("INSERT  INTO connector_unconfirmed_p2pk_map "
+                             "(tx_id, address, script) "
+                             "(SELECT r.tx_id, r.address, r.script "
+                             " FROM unnest($1::connector_unconfirmed_p2pk_map[]) as r ) "
+                             " ON CONFLICT (tx_id) DO NOTHING;  ", commit_up2pk_map)
+
 
         while commit_ustxo:
             rows = await conn.fetch("INSERT  INTO connector_unconfirmed_stxo "
-                                    "(outpoint, sequence, out_tx_id, tx_id, input_index, address) "
+                                    "(outpoint, sequence, out_tx_id, tx_id, input_index, address, amount, pointer) "
                                     " (SELECT r.outpoint,"
                                     "         r.sequence,"
                                     "         r.out_tx_id,"
                                     "         r.tx_id,"
                                     "         r.input_index, "
-                                    "         r.address "
+                                    "         r.address, "
+                                    "         r.amount, "
+                                    "         r.pointer "
                                     "FROM unnest($1::connector_unconfirmed_stxo[]) as r ) "
                                     "ON CONFLICT (outpoint, sequence) DO NOTHING "
                                     "            RETURNING outpoint as o,"
@@ -414,13 +420,16 @@ class UUTXO():
                                     "                      out_tx_id as ot,"
                                     "                      tx_id as t,"
                                     "                      input_index as i,"
-                                    "                      address as a;" , commit_ustxo)
+                                    "                      address as a,"
+                                    "                      amount as am, " 
+                                    "                      pointer as pt;" , commit_ustxo)
 
             for row in rows:
-                commit_ustxo.remove((row["o"], row["s"], row["ot"], row["t"], row["i"], row["a"]))
+                commit_ustxo.remove((row["o"], row["s"], row["ot"], row["t"],
+                                     row["i"], row["a"], row["am"], row["pt"], None))
 
             # in case double spend increment sequence
-            commit_ustxo = set((i[0], i[1] + 1, i[2], i[3], i[4], i[5]) for i in commit_ustxo)
+            commit_ustxo = set((i[0], i[1] + 1, i[2], i[3], i[4], i[5], i[6], i[7], None) for i in commit_ustxo)
 
     async def apply_block_changes(self, txs, h, conn):
 
@@ -451,18 +460,21 @@ class UUTXO():
                                 "           address, "
                                 "           amount;", txs)
 
+
         batch, uutxo = deque(), deque()
+        block_amount = 0
+
         for r in rows:
             batch.append((r["outpoint"],
-                         (h << 39) + (txs.index(r["t"]) << 20) + (1 << 19) + bytes_to_int(r[32:]),
+                         (h << 39) + (txs.index(r["t"]) << 20) + (1 << 19) + bytes_to_int(r["outpoint"][32:]),
                          r["address"], r["amount"]))
             uutxo.append((r["outpoint"], r["t"], r["address"], r["amount"]))
+            block_amount += r["amount"]
             if self.block_filters:
                 try:
-                    tx_filters[txs.index(r["t"])].append(r["address"])
+                    tx_filters[txs.index(r["t"])].add(r["address"])
                 except:
-                    tx_filters[txs.index(r["t"])] = [r["address"]]
-
+                    tx_filters[txs.index(r["t"])] = {r["address"]}
 
         await conn.copy_records_to_table('connector_utxo',
                                          columns=["outpoint", "pointer",
@@ -478,18 +490,19 @@ class UUTXO():
                                 "          out_tx_id,"
                                 "          tx_id,"
                                 "          input_index as i,"
-                                "          address as a;", txs)
-        stxo = deque()
-        utxo = deque()
-        outpoints = set()
+                                "          address as a,"
+                                "          amount as am,"
+                                "          pointer as pt;", txs)
+        stxo, utxo, outpoints = deque(), deque(), set()
         for r in rows:
-            stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"], r["a"]))
+            stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"], r["a"], r["am"], r["pt"]))
             outpoints.add(r["outpoint"])
             if self.block_filters:
                 try:
-                    tx_filters[txs.index(r["tx_id"])].append(r["a"])
+                    tx_filters[txs.index(r["tx_id"])].add(r["a"])
                 except:
                     tx_filters[txs.index(r["tx_id"])] = [r["a"]]
+
         if outpoints:
             rows = await conn.fetch("DELETE FROM connector_utxo WHERE outpoint = ANY($1) "
                                     "RETURNING outpoint, pointer, address, amount;", outpoints)
@@ -498,13 +511,8 @@ class UUTXO():
                 if r["pointer"] >> 39 < h:
                     utxo.append((r["outpoint"], r["pointer"], r["address"], r["amount"]))
 
-
-
-        #    delete dbs records
-
-        dbs_stxo = deque()
-        dbs_uutxo = deque()
-        invalid_txs = set()
+        #  delete dbs records
+        dbs_stxo, dbs_uutxo, block_invalid_txs = deque(), deque(), set()
 
         if outpoints:
             rows = await conn.fetch("DELETE FROM connector_unconfirmed_stxo "
@@ -514,21 +522,23 @@ class UUTXO():
                                     "          out_tx_id,"
                                     "          tx_id,"
                                     "          input_index as i, "
-                                    "          address as a;", outpoints)
+                                    "          address as a,"
+                                    "          amount as am,"
+                                    "          pointer as pt;", outpoints)
             for r in rows:
-                dbs_stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"], r["a"]))
-                invalid_txs.add(r["tx_id"])
+                dbs_stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"],
+                                 r["i"], r["a"], r["am"], r["pt"]))
+                block_invalid_txs.add(r["tx_id"])
 
         # handle invalid transactions while invalid transactions list not empty
         #    remove coins for transactions list from connector_unconfirmed_utxo
         #    remove destroy records for transactions list from connector_unconfirmed_stxo
         #        get new invalid transactions list from deleted records
-
-        block_invalid_txs = set()
+        invalid_txs = set(block_invalid_txs)
 
         while invalid_txs:
-            block_invalid_txs = block_invalid_txs | invalid_txs
 
+            # delete outputs for invalid tx
             rows = await conn.fetch("DELETE FROM connector_unconfirmed_utxo  "
                                     "WHERE out_tx_id = ANY($1) "
                                     "RETURNING  outpoint, "
@@ -540,6 +550,7 @@ class UUTXO():
                 dbs_uutxo.append((r["outpoint"], r["t"], r["address"], r["amount"]))
                 outpoints.add(r["outpoint"])
 
+            # delete inputs for invalid tx using outpoint
             rows = await conn.fetch("DELETE FROM connector_unconfirmed_stxo "
                                     "WHERE outpoint = ANY($1) "
                                     "RETURNING outpoint,"
@@ -547,26 +558,48 @@ class UUTXO():
                                     "          out_tx_id,"
                                     "          tx_id,"
                                     "          input_index as i,"
-                                    "          address as a;", outpoints)
+                                    "          address as a, "
+                                    "          amount as am,"
+                                    "          pointer as pt;", outpoints)
+            # collect new list of invalid tx
             invalid_txs = set()
             for r in rows:
-                dbs_stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"], r["i"], r["a"]))
+                dbs_stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"],
+                                 r["i"], r["a"], r["am"], r["pt"]))
                 invalid_txs.add(r["tx_id"])
+                block_invalid_txs.add(r["tx_id"])
+
+            #  delete inputs for invalid tx using tx
+            rows = await conn.fetch("DELETE FROM connector_unconfirmed_stxo "
+                                    "WHERE tx_id = ANY($1) "
+                                    "RETURNING outpoint,"
+                                    "          sequence,"
+                                    "          out_tx_id,"
+                                    "          tx_id,"
+                                    "          input_index as i,"
+                                    "          address as a, "
+                                    "          amount as am,"
+                                    "          pointer as pt;", invalid_txs)
+            for r in rows:
+                dbs_stxo.append((r["outpoint"], r["sequence"], r["out_tx_id"], r["tx_id"],
+                                 r["i"], r["a"], r["am"], r["pt"]))
+
 
         await conn.execute("INSERT INTO connector_block_state_checkpoint (height, data) "
                            "VALUES ($1, $2);", h, pickle.dumps({"utxo": utxo,
                                                                 "uutxo": uutxo,
                                                                 "stxo": stxo,
-                                                                "dbs_uutxo": dbs_uutxo,
-                                                                "dbs_stxo": dbs_stxo,
-                                                                "invalid_txs": block_invalid_txs,
-                                                                "p2pk_map": p2pk_map_backup}))
+                                                                "p2pk_map": p2pk_map_backup,
+                                                                "coinbase_tx_id": txs[0]}))
 
-        return {"dbs_uutxo": dbs_uutxo,
-                "dbs_stxo": dbs_stxo,
+        return {"invalid_uutxo": dbs_uutxo,
+                "invalid_stxo": dbs_stxo,
                 "invalid_txs": block_invalid_txs,
                 "stxo": stxo,
-                "tx_filters": tx_filters}
+                "utxo": uutxo,
+                "tx_filters": tx_filters,
+                "coinbase_tx_id": txs[0],
+                "block_amount": block_amount}
 
 
     async def rollback_block(self, conn):
@@ -578,37 +611,38 @@ class UUTXO():
 
         data = pickle.loads(row["data"])
 
-        outpoints = deque(r[0] for r in data["uutxo"])
-        await conn.execute("DELETE FROM connector_utxo WHERE outpoint = ANY($1);", outpoints)
-        tx = set(r[0][:32] for r in data["uutxo"])
-
-
-        await conn.copy_records_to_table('connector_utxo',
-                                         columns=["outpoint", "pointer",
-                                                  "address", "amount"], records=data["utxo"])
         if data["p2pk_map"]:
             await conn.copy_records_to_table('connector_unconfirmed_p2pk_map',
                                              columns=["tx_id", "address", "script"],
                                              records=data["p2pk_map"])
+            # skip delete from connector_p2pk_map, we can't determine if connector_p2pk_map
+            # records was before recent block
 
+        r = deque()
+        for t in data["uutxo"]:
+            if t[1] != data["coinbase_tx_id"]:
+                r.append(t)
         await conn.copy_records_to_table('connector_unconfirmed_utxo',
                                          columns=["outpoint", "out_tx_id",
-                                                  "address", "amount"], records=data["uutxo"])
+                                                  "address", "amount"], records=r)
 
-        await conn.copy_records_to_table('connector_unconfirmed_utxo',
-                                         columns=["outpoint", "out_tx_id",
-                                                  "address", "amount"], records=data["dbs_uutxo"])
+        await conn.execute("DELETE FROM connector_utxo WHERE outpoint = ANY($1);",
+                           deque(r[0] for r in data["uutxo"]))
+
         await conn.copy_records_to_table('connector_unconfirmed_stxo',
                                          columns=["outpoint", "sequence",
-                                                  "out_tx_id", "tx_id", "input_index"], records=data["stxo"])
-        await conn.copy_records_to_table('connector_unconfirmed_stxo',
-                                         columns=["outpoint", "sequence",
-                                                  "out_tx_id", "tx_id", "input_index"], records=data["dbs_stxo"])
-        return {"height": row["height"],
-                "mempool": {"tx": data["invalid_txs"],
-                            "inputs": data["dbs_uutxo"],
-                            "outputs": data["dbs_stxo"]},
-                "block_tx_count": len(tx)}
+                                                  "out_tx_id", "tx_id", "input_index", "address", "amount", "pointer"],
+                                         records=data["stxo"])
+
+        await conn.copy_records_to_table('connector_utxo',
+                                         columns=["outpoint", "pointer",
+                                                  "address", "amount"], records=data["utxo"])
+
+
+        return {"height": int(row["height"]),
+                "coinbase_tx_id": bytes(data["coinbase_tx_id"]),
+                "stxo": data["stxo"],
+                "uutxo": data["uutxo"]}
 
 
     async def flush_mempool(self):

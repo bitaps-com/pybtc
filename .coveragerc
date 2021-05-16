@@ -1,0 +1,17 @@
+[run]
+omit =
+    pybtc/connector/*
+    pybtc/bitarray/*
+    pybtc/test/*
+    pybtc/crypto.py
+    pybtc/__init__.py
+    tests
+source = pybtc, tests
+branch = True
+
+
+[report]
+show_missing = true
+precision = 2
+fail_under = 90
+

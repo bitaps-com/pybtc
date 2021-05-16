@@ -1,4 +1,5 @@
 import random
+import time
 
 def _precompute_gf256_exp_log():
     exp = [0 for i in range(255)]
@@ -66,47 +67,66 @@ def _interpolation(points, x=0):
         raise Exception("Minimum 2 points required")
 
     points = sorted(points, key=lambda z: z[0])
-    if len(set(z[0] for z in points)) != k:
-        raise Exception("Unique points required")
 
     p_x = 0
     for j in range(k):
         p_j_x  = 1
         for m in range(k):
-            if m == j: continue
+
+            if m == j:
+                continue
             a =  _gf256_sub(x, points[m][0])
             b =  _gf256_sub(points[j][0], points[m][0])
             c = _gf256_div(a, b)
             p_j_x = _gf256_mul(p_j_x, c)
+
         p_j_x = _gf256_mul( points[j][1], p_j_x)
         p_x  = _gf256_add(p_x , p_j_x)
 
+
     return p_x
 
-def split_secret(threshold, total,  secret):
+def split_secret(threshold, total,  secret, index_bits=8):
     if not isinstance(secret, bytes):
         raise TypeError("Secret as byte string required")
     if threshold > 255:
         raise ValueError("threshold <= 255")
     if total > 255:
         raise ValueError("total shares <= 255")
+    index_max = 2 ** index_bits - 1
+    if total > index_max:
+        raise ValueError("index bits is to low")
+
     shares = dict()
-    for i in range(total):
-        shares[i+1] = b""
+    shares_indexes = []
+
+
+    while len(shares) != total:
+        q = random.SystemRandom().randint(1, index_max)
+        if q in shares:
+            continue
+        shares_indexes.append(q)
+        shares[q] = b""
+
+
     for b in secret:
         q = [b]
         for i in range(threshold - 1):
             a = random.SystemRandom().randint(0, 255)
-            q.append(a)
+            i = int((time.time() % 0.0001) * 1000000) + 1
+            q.append((a * i) % 255)
 
-        for x in range(total):
-            shares[x+1] += bytes([_fn(x + 1, q)])
+        for z in shares_indexes:
+            shares[z] += bytes([_fn(z, q)])
 
     return shares
 
 def restore_secret(shares):
     secret = b""
     share_length = None
+    for share in shares:
+        if share < 1 or share > 255:
+            raise Exception("Invalid share index %s" % share)
     for share in shares.values():
         if share_length is None:
             share_length = len(share)
