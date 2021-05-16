@@ -175,7 +175,6 @@ class Wallet():
         else:
             if self.path_type != 'custom':
                 self.account_public_xkey = init_vector
-                print(self._path)
                 self.external_chain_public_xkey = derive_xkey(init_vector, "%s/%s" % (self._path, self.chain),
                                                                 sub_path=True)
                 self.internal_chain_public_xkey = derive_xkey(init_vector, "%s/%s" % (self._path, self.chain + 1),
