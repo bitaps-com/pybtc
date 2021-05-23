@@ -194,7 +194,7 @@ class Wallet():
                 if self.shares_total > (2 ** check_sum_bit_len - 1):
                     raise Exception("Maximum %s shares "
                                     "allowed for %s mnemonic words" % (2 ** check_sum_bit_len - 1, len(m)))
-                self.mnemonic_shares = split_mnemonic(self.mnemonic, self.shares_total, self.shares_total,
+                self.mnemonic_shares = split_mnemonic(self.mnemonic, self.shares_threshold, self.shares_total,
                                                       embedded_index=True, word_list=word_list)
 
 
@@ -207,11 +207,14 @@ class Wallet():
                 self.address_type = "P2PKH"
 
 
-    def get_address(self, i, external=True):
+    def get_address(self, i, external=True, address_type=None):
+        iq = str(i)
         if self.hardened_addresses:
             i = i|HARDENED_KEY
+            iq = "%s'" % i
         if self.path_type != "custom":
             if external:
+                path = self.path
                 if self.external_chain_private_xkey:
                     key = derive_xkey(path_xkey_to_bip32_xkey(self.external_chain_private_xkey), [i])
                     private_key = private_from_xprivate_key(key)
@@ -229,6 +232,7 @@ class Wallet():
                     key = derive_xkey(path_xkey_to_bip32_xkey(self.internal_chain_public_xkey), [i])
                     pub_key = public_from_xpublic_key(key)
                     private_key = None
+            path = "%s/%s/%s" % (self._path, self.chain, iq)
         else:
             if self.chain_private_xkey:
                 key = derive_xkey(path_xkey_to_bip32_xkey(self.chain_private_xkey), [i])
@@ -238,18 +242,23 @@ class Wallet():
                 key = derive_xkey(path_xkey_to_bip32_xkey(self.chain_public_xkey), [i])
                 pub_key = public_from_xpublic_key(key)
                 private_key = None
+            path = "%s/%s" % (self.path, iq)
+        if address_type is None:
+            address_type = self.address_type
 
-        if self.address_type == "P2WPKH":
+        if address_type == "P2WPKH":
             address = public_key_to_address(pub_key, testnet=self.testnet)
-        elif self.address_type == "P2SH_P2WPKH":
+        elif address_type == "P2SH_P2WPKH":
             address = public_key_to_address(pub_key, p2sh_p2wpkh=True, testnet=self.testnet)
-        elif self.address_type == "P2PKH":
+        else:
             address = public_key_to_address(pub_key, witness_version=None, testnet=self.testnet)
 
+
+
         if private_key:
-            r = {"address": address, "public_key": pub_key, "private_key": private_key}
+            r = {"address": address, "public_key": pub_key, "private_key": private_key, "path": path}
         else:
-            r = {"address": address, "public_key": pub_key}
+            r = {"address": address, "public_key": pub_key, "path": path}
         return r
 
 

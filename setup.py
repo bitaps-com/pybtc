@@ -122,7 +122,7 @@ class build_ext(_build_ext):
         return _build_ext.run(self)
 
 setup(name='pybtc',
-      version='2.3.4',
+      version='2.3.7',
       description='Python Bitcoin library',
       keywords='bitcoin',
       url='https://github.com/bitaps-com/pybtc',
@@ -130,7 +130,6 @@ setup(name='pybtc',
       author_email='admin@bitaps.com',
       python_requires='>=3.7',
       license='GPL-3.0',
-      # include_package_data=True,
       package_data={
           'pybtc': ['bip39_word_list/*.txt', 'test/*.txt'],
       },
