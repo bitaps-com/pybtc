@@ -199,7 +199,8 @@ def split_mnemonic(mnemonic, threshold, total, language='english', embedded_inde
     entropy = mnemonic_to_entropy(mnemonic, language=language, hex=False,
                                   word_list_dir=word_list_dir, word_list=word_list)
     if embedded_index:
-        bits = math.ceil(math.log2(total)) + 1
+        bits = math.ceil(len(entropy) * 8 / 32)
+        # bits = math.ceil(math.log2(total)) + 1
     else:
         bits = 8
     shares = split_secret(threshold, total, entropy, bits)
@@ -215,6 +216,7 @@ def split_mnemonic(mnemonic, threshold, total, language='english', embedded_inde
             raise Exception("split secret failed")
     if embedded_index:
         result = []
+
         for share in shares:
             result.append(entropy_to_mnemonic(shares[share], language=language,
                                               word_list_dir=word_list_dir,
@@ -226,6 +228,43 @@ def split_mnemonic(mnemonic, threshold, total, language='english', embedded_inde
             result[share] = entropy_to_mnemonic(shares[share], language=language,
                                                 word_list_dir=word_list_dir, word_list=word_list)
     return result
+
+
+def create_mnemonic_additional_share(threshold_shares, language='english', word_list_dir=None, word_list=None):
+    embedded_index = isinstance(threshold_shares, list)
+    s = dict()
+    if embedded_index:
+        for share in threshold_shares:
+            e = mnemonic_to_entropy(share, language=language, hex=False, word_list_dir=word_list_dir,
+                                           word_list=word_list)
+            i = get_mnemonic_checksum_data(share)
+            if i in s:
+                raise ValueError("Non unique or invalid shares")
+            s[i] = e
+    else:
+        for share in threshold_shares:
+            s[share] = mnemonic_to_entropy(threshold_shares[share], language=language,
+                                           hex=False, word_list_dir=word_list_dir, word_list=word_list)
+    if embedded_index:
+        bits =  math.ceil(len(s[next(iter(s))]) * 8 / 32)
+        index_max = 2 ** bits - 1
+        assert index_max > len(threshold_shares)
+    else:
+        index_max = 255
+
+    while True:
+        q = random.SystemRandom().randint(1, index_max)
+        if q in s:
+            continue
+        break
+    entropy = restore_secret(s, x = q)
+
+    if embedded_index:
+        return entropy_to_mnemonic(entropy, language=language, word_list_dir=word_list_dir,
+                                   data=q, word_list=word_list)
+    else:
+        return q, entropy_to_mnemonic(entropy, language=language, word_list_dir=word_list_dir, word_list=word_list)
+
 
 
 def combine_mnemonic(shares, language='english', word_list_dir=None, word_list=None):

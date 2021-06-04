@@ -8,6 +8,7 @@ from pybtc.functions.bip39_mnemonic import mnemonic_to_seed
 from pybtc.functions.bip39_mnemonic import is_mnemonic_checksum_valid
 from pybtc.functions.bip39_mnemonic import split_mnemonic
 from pybtc.functions.bip39_mnemonic import combine_mnemonic
+from pybtc.functions.bip39_mnemonic import create_mnemonic_additional_share
 
 def test_generate_entropy():
     assert len(generate_entropy()) == 64
@@ -136,3 +137,8 @@ def test_split_mnemonic():
 
     assert combine_mnemonic(shares) == "enforce north frost swear trial burst girl soccer rent town sea express other " \
                                        "oblige insect youth swarm violin stable push twin close clump extra"
+    shares = ["occur hazard mail question wisdom pill grass tackle fit nephew gown motion",
+              "embark fold seat fix quiz pull fortune wagon clever staff analyst symptom"]
+    s = create_mnemonic_additional_share(shares)
+
+    assert combine_mnemonic(shares) == combine_mnemonic([shares[0], s])

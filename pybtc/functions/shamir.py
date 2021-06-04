@@ -121,7 +121,7 @@ def split_secret(threshold, total,  secret, index_bits=8):
 
     return shares
 
-def restore_secret(shares):
+def restore_secret(shares, x=0):
     secret = b""
     share_length = None
     for share in shares:
@@ -134,5 +134,5 @@ def restore_secret(shares):
             raise Exception("Invalid shares")
 
     for i in range(share_length):
-        secret += bytes([_interpolation([(z, shares[z][i]) for z in  shares])])
+        secret += bytes([_interpolation([(z, shares[z][i]) for z in  shares], x=x)])
     return secret
