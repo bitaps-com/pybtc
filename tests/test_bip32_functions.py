@@ -17,6 +17,7 @@ from pybtc.functions.bip32 import decode_path
 from pybtc.functions.bip32 import derive_xkey
 from pybtc.functions.bip32 import derive_child_xprivate_key
 from pybtc.functions.bip32 import derive_child_xpublic_key
+from pybtc.functions.bip32 import address_from_xkey_path
 
 
 def test_create_master_xprivate_key():
@@ -381,3 +382,21 @@ def test_bip32_xkey_to_path_xkey():
     with pytest.raises(ValueError):
         bip32_xkey_to_path_xkey(decode_base58("pprv9xPgprbtHAtyKqFegHcy7WoUJ7tTsrL3D36Zf4LcXCCNEWfszpQReMWMdSpjE9qos"
                                 "HonUirqo418nd6vG46yi34nbHQ8wvWjLLjzMBFKNqM", checksum=True), "BIP84")
+
+def test_address_from_xkey_path():
+    k = "xprv9s21ZrQH143K4MmJePgCWa3DxkUQuy8LZ33gVVMLjvbSiPBAjmK6XZovvLMGFGQNFUSmGpjGUDyP5nF48WAgkMt6QM39YCriYVzssd92xTP"
+    assert address_from_xkey_path(k,"m/0") == "bc1qn0ulwfzfvv7m73czwtsk480ukuwyy7wyw6j0rq"
+    assert address_from_xkey_path(k,"m/0", address_type="P2SH_P2WPKH") == "39e4J9P5qDMNtdPi9XSrtH9bxTuraN9vTj"
+    assert address_from_xkey_path(k,"m/0", address_type="P2PKH") == "1FDjBdmokvK4oMTNf9oKtFC2ziXi9cXz3a"
+    k = "xpub661MyMwAqRbcGqqmkRDCshyxWnJuKRrBvFyHHskxJG8RbBWKHJdM5N8QmcB1MDRNcUvuy4zT7Bxp2hXbRprs8LKfhKwqkGmqSVNTiwr4Tnz"
+    assert address_from_xkey_path(k,"m/0") == "bc1qn0ulwfzfvv7m73czwtsk480ukuwyy7wyw6j0rq"
+    assert address_from_xkey_path(k,"m/0", address_type="P2SH_P2WPKH") == "39e4J9P5qDMNtdPi9XSrtH9bxTuraN9vTj"
+    assert address_from_xkey_path(k,"m/0", address_type="P2PKH") == "1FDjBdmokvK4oMTNf9oKtFC2ziXi9cXz3a"
+    k = "xprv9s21ZrQH143K4MmJePgCWa3DxkUQuy8LZ33gVVMLjvbSiPBAjmK6XZovvLMGFGQNFUSmGpjGUDyP5nF48WAgkMt6QM39YCriYVzssd92xTP"
+    assert address_from_xkey_path(k,"m/0'/0'/2") == "bc1q2usrj3v56gj5xe9a65n9fs07ea0jekzp4cuxue"
+    assert address_from_xkey_path(k,"m/0'/0'/2", address_type="P2SH_P2WPKH") == "39CPPBDqLvcAaEKr5sJoVHrDx4UTbuZHJ6"
+    assert address_from_xkey_path(k,"m/0'/0'/2", address_type="P2PKH") == "18wgPdgUHfbWGZFu9cz7qhFwyxnYgubk32"
+    k = "xpub69tzdgZfM35wv4hJoZapdJfDErQhdt2m7MrUcFhCK1UeGXu8cQDiHuGuZUyyYYY5nb69QZbQ7RYYQCcFCLEJdSrmrUoBtpc8Tx2ypkSsvkp"
+    assert address_from_xkey_path(k,"m/2") == "bc1q2usrj3v56gj5xe9a65n9fs07ea0jekzp4cuxue"
+    assert address_from_xkey_path(k,"m/2", address_type="P2SH_P2WPKH") == "39CPPBDqLvcAaEKr5sJoVHrDx4UTbuZHJ6"
+    assert address_from_xkey_path(k,"m/2", address_type="P2PKH") == "18wgPdgUHfbWGZFu9cz7qhFwyxnYgubk32"

@@ -122,7 +122,7 @@ class build_ext(_build_ext):
         return _build_ext.run(self)
 
 setup(name='pybtc',
-      version='2.3.7',
+      version='2.3.8',
       description='Python Bitcoin library',
       keywords='bitcoin',
       url='https://github.com/bitaps-com/pybtc',

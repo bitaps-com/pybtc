@@ -1,6 +1,7 @@
 from struct import pack
 from pybtc.functions.key import private_to_public_key, private_key_to_wif
 from pybtc.functions.hash import hmac_sha512, double_sha256, hash160
+from pybtc.functions.address import public_key_to_address
 from pybtc.functions.encode import encode_base58, decode_base58
 from pybtc.constants import *
 from pybtc.crypto import __secp256k1_ec_pubkey_tweak_add__
@@ -453,4 +454,19 @@ def bip32_xkey_to_path_xkey(key, path_type, base58=True, hex=False):
         return encode_base58(key, checksum = True)
     else:
         return key
+
+
+def address_from_xkey_path(key, path, address_type="P2WPKH", testnet=None):
+    if testnet is None:
+        testnet = xkey_network_type(key) == "testnet"
+    k = derive_xkey(key, path)
+    if xkey_type(key) == "private":
+        k = xprivate_to_xpublic_key(k)
+    k = public_from_xpublic_key(k)
+    if address_type == "P2SH_P2WPKH":
+        return public_key_to_address(k, testnet=testnet, p2sh_p2wpkh=True)
+    elif address_type == "P2WPKH":
+        return public_key_to_address(k, testnet=testnet)
+    elif  address_type == "P2PKH" or address_type == "PUBKEY" :
+        return public_key_to_address(k, testnet=testnet, witness_version=None)
 
