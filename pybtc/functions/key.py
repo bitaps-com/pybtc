@@ -1,7 +1,7 @@
 from pybtc.constants import *
 from pybtc.functions.encode import encode_base58, decode_base58
 from pybtc.functions.hash import double_sha256
-from .bip39_mnemonic import generate_entropy
+from pybtc.functions.entropy import generate_entropy
 bytes_from_hex = bytes.fromhex
 from pybtc.crypto import __secp256k1_ec_pubkey_create__
 

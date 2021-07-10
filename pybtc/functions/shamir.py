@@ -1,5 +1,6 @@
 import random
 import time
+from pybtc.functions.entropy import generate_entropy
 
 def _precompute_gf256_exp_log():
     exp = [0 for i in range(255)]
@@ -108,13 +109,20 @@ def split_secret(threshold, total,  secret, index_bits=8):
         shares_indexes.append(q)
         shares[q] = b""
 
-
+    e = generate_entropy(hex=False)
+    e_i = 0
     for b in secret:
         q = [b]
+
         for i in range(threshold - 1):
-            a = random.SystemRandom().randint(0, 255)
-            i = int((time.time() % 0.0001) * 1000000) + 1
-            q.append((a * i) % 255)
+            if e_i < len(e):
+                a = e[e_i]
+                e_i += 1
+            else:
+                e = generate_entropy(hex=False)
+                a = e[0]
+                e_i = 1
+            q.append(a)
 
         for z in shares_indexes:
             shares[z] += bytes([_fn(z, q)])

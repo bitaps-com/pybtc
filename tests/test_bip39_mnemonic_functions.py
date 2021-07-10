@@ -1,6 +1,8 @@
 import pytest
 
-from pybtc.functions.bip39_mnemonic import generate_entropy
+from pybtc.functions.entropy import generate_entropy
+from pybtc.functions.entropy import igam
+from pybtc.functions.entropy import igamc
 from pybtc.functions.bip39_mnemonic import load_word_list
 from pybtc.functions.bip39_mnemonic import entropy_to_mnemonic
 from pybtc.functions.bip39_mnemonic import mnemonic_to_entropy
@@ -19,6 +21,20 @@ def test_generate_entropy():
     assert len(generate_entropy(strength=224)) == 56
     with pytest.raises(ValueError):
         generate_entropy(strength=40)
+
+def test_gam_funtions():
+    q = 0.0000000000001
+    assert igam(0.56133437, 7.79533309) - 0.99989958147838275959 < q
+    assert igam(3.80398274, 0.77658461) - 0.01162079725209424867 < q
+    assert igam(6.71146614, 0.39790492) - 0.00000051486912406477 < q
+    assert igam(5.05505886, 6.08602125) - 0.71809645160316382118 < q
+    assert igam(9.45603411, 4.60043366) - 0.03112942473115925396 < q
+    assert igamc(3.08284045, 0.79469709) - 0.95896191705843125686 < q
+    assert igamc(7.91061495, 9.30889249) - 0.27834295370900602462 < q
+    assert igamc(4.89616780, 5.75314859) - 0.30291667399717547848 < q
+    assert igamc(8.11261940, 4.05857957) - 0.95010562492501993148 < q
+    assert igamc(1.34835811, 6.64708856) - 0.00295250273836756942 < q
+
 
 def test_load_word_list():
     assert len(load_word_list()) == 2048

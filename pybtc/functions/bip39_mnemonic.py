@@ -1,32 +1,11 @@
 from pybtc.constants import *
-import time
 import hashlib
 from pybtc.functions.hash import sha256
 from pybtc.functions.shamir import split_secret, restore_secret
-from pybtc.functions.tools import int_from_bytes, get_bytes
+from pybtc.functions.tools import get_bytes
 import random
 import math
 
-def generate_entropy(strength=256, hex=True):
-    """
-    Generate 128-256 bits entropy bytes string
-
-    :param int strength: entropy bits strength, by default is 256 bit.
-    :param boolean hex: return HEX encoded string result flag, by default True.
-    :return: HEX encoded or bytes entropy string.
-    """
-    if strength not in [128, 160, 192, 224, 256]:
-        raise ValueError('strength should be one of the following [128, 160, 192, 224, 256]')
-    a = random.SystemRandom().randint(0, ECDSA_SEC256K1_ORDER)
-    i = int((time.time() % 0.01 ) * 100000)
-    h = a.to_bytes(32, byteorder="big")
-    # more entropy from system timer and sha256 derivation
-    while i:
-        h = hashlib.sha256(h).digest()
-        i -= 1
-        if not i and int_from_bytes(h, byteorder="big") > ECDSA_SEC256K1_ORDER: # pragma: no cover
-            i += 1
-    return h[:int(strength/8)] if not hex else h[:int(strength/8)].hex()
 
 
 def load_word_list(language='english', word_list_dir=None):
@@ -267,7 +246,8 @@ def create_mnemonic_additional_share(threshold_shares, language='english', word_
 
 
 
-def combine_mnemonic(shares, language='english', word_list_dir=None, word_list=None):
+def combine_mnemonic(shares, share_id = None, language='english', word_list_dir=None, word_list=None):
+    # share_id used to reconstruct upper level share
     embedded_index = isinstance(shares, list)
     s = dict()
     if embedded_index:
@@ -284,8 +264,15 @@ def combine_mnemonic(shares, language='english', word_list_dir=None, word_list=N
             s[share] = mnemonic_to_entropy(shares[share], language=language, hex=False, word_list_dir=word_list_dir,
                                            word_list=word_list)
     entropy = restore_secret(s)
-    return entropy_to_mnemonic(entropy, language=language, word_list_dir=word_list_dir,
-                               word_list=word_list)
+
+    if share_id is None:
+        return entropy_to_mnemonic(entropy, language=language, word_list_dir=word_list_dir, word_list=word_list)
+    else:
+        m = entropy_to_mnemonic(entropy, language=language, word_list_dir=word_list_dir, word_list=word_list)
+        m = m.split()[:-1]
+        m.append(share_id)
+        return " ".join(m)
+
 
 
 def is_mnemonic_valid(mnemonic, word_list=None):
