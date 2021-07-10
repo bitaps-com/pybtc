@@ -463,7 +463,7 @@ class Worker:
                                             block["txMap"].add((address, tx_pointer))
 
                                     out["_address"] = address
-                                    self.coins[o] = (pointer, out["value"], w)
+                                    self.coins[o] = (pointer, out["value"], address)
 
                                     if self.option_analytica:
                                         tx = block["rawTx"][z]
