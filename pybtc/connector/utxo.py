@@ -629,7 +629,7 @@ class UUTXO():
         await conn.execute("DELETE FROM connector_utxo WHERE outpoint = ANY($1);",
                            deque(r[0] for r in data["uutxo"]))
 
-        rows = await conn.fecth("SELECT outpoint, sequence FROM connector_unconfirmed_stxo WHERE outpoint = ANY($1);",
+        rows = await conn.fetch("SELECT outpoint, sequence FROM connector_unconfirmed_stxo WHERE outpoint = ANY($1);",
                            deque(r[0] for r in data["stxo"]))
         ustxo_map_sequence = dict()
         for row in rows:
