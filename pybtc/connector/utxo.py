@@ -634,9 +634,9 @@ class UUTXO():
         ustxo_map_sequence = dict()
         for row in rows:
             try:
-                ustxo_map_sequence[row["ustxo_map_sequence"]].append(row["sequence"])
+                ustxo_map_sequence[row["outpoint"]].append(row["sequence"])
             except:
-                ustxo_map_sequence[row["ustxo_map_sequence"]] = [row["sequence"]]
+                ustxo_map_sequence[row["outpoint"]] = [row["sequence"]]
 
         d = list()
         for s in  data["stxo"]:
