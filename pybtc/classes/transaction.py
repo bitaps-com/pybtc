@@ -2,8 +2,13 @@ import json
 from struct import unpack, pack
 from math import ceil
 from io import BytesIO
-from pybtc.constants import *
-from pybtc.opcodes import *
+from pybtc.constants import (MAX_AMOUNT,
+                             SIGHASH_ALL,
+                             SIGHASH_SINGLE,
+                             SIGHASH_ANYONECANPAY,
+                             SIGHASH_NONE,
+                             MAINNET_ADDRESS_BYTE_PREFIX)
+from pybtc.opcodes import OP_0, BYTE_OPCODE, OP_DUP, OP_HASH160, OP_EQUALVERIFY, OP_CHECKSIG
 from pybtc.functions.tools import (int_to_var_int,
                                    read_var_int,
                                    var_int_to_int,
@@ -15,8 +20,8 @@ from pybtc.functions.script import op_push_data, decode_script, parse_script, si
 from pybtc.functions.script import get_multisig_public_keys, read_opcode, is_valid_signature_encoding
 from pybtc.functions.script import public_key_recovery, delete_from_script
 from pybtc.functions.hash import hash160, sha256, double_sha256
-from pybtc.functions.address import  hash_to_address, address_net_type, address_to_script
-from pybtc.classes.address import  PrivateKey, Address, ScriptAddress, PublicKey
+from pybtc.functions.address import hash_to_address, address_net_type, address_to_script
+from pybtc.classes.address import PrivateKey, Address, ScriptAddress, PublicKey
 from collections import deque
 
 
@@ -28,7 +33,7 @@ class Transaction(dict):
                 well be created new empty transaction template.
     :param tx_format: "raw" or "decoded" format. Raw format is mean that all transaction represented in bytes
                       for best performance.
-                      Decoded transaction is represented in human readable format using base68, hex, bech32, 
+                      Decoded transaction is represented in human readable format using base68, hex, bech32,
                       asm and opcodes. By default "decoded" format using.
     :param int version: transaction version for new template, by default 1.
     :param int lock_time: transaction lock time for new template, by default 0.
@@ -36,10 +41,12 @@ class Transaction(dict):
 
     """
     def __init__(self, raw_tx=None, format="decoded", version=1,
-                 lock_time=0, testnet=False, auto_commit=True, keep_raw_tx=False):
+                 lock_time=0, testnet=False, auto_commit=True,
+                 keep_raw_tx=False, address_byte_prefix=MAINNET_ADDRESS_BYTE_PREFIX):
         if format not in ("decoded", "raw"):
             raise ValueError("format error, raw or decoded allowed")
         self.auto_commit = auto_commit
+        self.address_byte_prefix = address_byte_prefix
         self["format"] = format
         self["testnet"] = testnet
         self["segwit"] = False
@@ -219,7 +226,8 @@ class Transaction(dict):
                 self["vIn"][i]["address"] = hash_to_address(self["vIn"][i]["addressHash"],
                                                             self["testnet"],
                                                             sh,
-                                                            witness_version)
+                                                            witness_version,
+                                                            self.address_byte_prefix)
             except:
                 pass
             if "scriptPubKey" in self["vIn"][i]:
@@ -249,7 +257,8 @@ class Transaction(dict):
                 self["vOut"][i]["address"] = hash_to_address(self["vOut"][i]["addressHash"],
                                                              self["testnet"],
                                                              sh,
-                                                             witness_version)
+                                                             witness_version,
+                                                             self.address_byte_prefix)
             except:
                 pass
             self["vOut"][i]["scriptPubKeyOpcodes"] = decode_script(self["vOut"][i]["scriptPubKey"])
@@ -261,7 +270,7 @@ class Transaction(dict):
 
     def encode(self):
         """
-        change Transaction object representation to "raw" bytes format, 
+        change Transaction object representation to "raw" bytes format,
         all human readable part will be stripped.
 
         """
@@ -348,9 +357,9 @@ class Transaction(dict):
 
     def serialize(self, segwit=True, hex=True):
         """
-        Get serialized transaction 
-        
-        :param bool segwit: (optional) flag for segwit representation of serialized transaction, by 
+        Get serialized transaction
+
+        :param bool segwit: (optional) flag for segwit representation of serialized transaction, by
                             default True.
         :param bool hex: (optional) if set to True return HEX encoded string, by default True.
         :return str,bytes: serialized transaction in HEX or bytes.
@@ -1144,10 +1153,3 @@ class Transaction(dict):
             self["fee"] = input_sum - output_sum
         else:
             self["fee"] = None
-
-
-
-
-
-
-
