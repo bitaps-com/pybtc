@@ -1,9 +1,11 @@
-from pybtc.constants import *
-from pybtc.opcodes import *
+from pybtc.constants import (MAINNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX,
+                             TESTNET_PRIVATE_KEY_UNCOMPRESSED_PREFIX,
+                             TESTNET_PRIVATE_KEY_COMPRESSED_PREFIX)
+from pybtc.opcodes import OP_CHECKSIG, OP_CHECKMULTISIG
 from pybtc.functions.tools import bytes_from_hex, int_to_var_int
 from pybtc.functions.script import op_push_data, decode_script
 from pybtc.functions.hash import hash160, sha256
-from pybtc.functions.address import  hash_to_address, public_key_to_p2sh_p2wpkh_script
+from pybtc.functions.address import hash_to_address, public_key_to_p2sh_p2wpkh_script
 from pybtc.functions.key import (create_private_key,
                                  private_key_to_wif,
                                  is_wif_valid,
@@ -11,7 +13,8 @@ from pybtc.functions.key import (create_private_key,
                                  is_public_key_valid,
                                  private_to_public_key)
 
-class PrivateKey():
+
+class PrivateKey:
     """
     The class for creating private key object.
 
@@ -20,7 +23,6 @@ class PrivateKey():
     :param compressed: (optional) if set to True private key corresponding compressed public key,
                        by default set to True. Recommended use only compressed public key.
     :param testnet: (optional) if set to True mean that this private key for testnet Bitcoin network.
-
     """
     def __init__(self, key=None, compressed=True, testnet=False):
 
@@ -71,28 +73,27 @@ class PrivateKey():
         return self.wif
 
 
-class PublicKey():
+class PublicKey:
     """
     The class for public key object.
 
     :param key:  one of this types allowed:
-    
+
                 - private key is instance of ``PrivateKey`` class
                 - private key HEX encoded string
                 - private key 32 bytes string
                 - private key in WIF format
                 - public key in HEX encoded string
                 - public key [33/65] bytes string
-                
-                In case no key specified with HEX or bytes string you have to provide flag for testnet 
+
+                In case no key specified with HEX or bytes string you have to provide flag for testnet
                 and compressed key. WIF format and ``PrivateKey`` instance already contain this flags.
-                For HEX or bytes public key only testnet flag has the meaning, comressed flag is determined 
+                For HEX or bytes public key only testnet flag has the meaning, comressed flag is determined
                 according to the length of key.
-                
+
     :param compressed: (optional) if set to True private key corresponding compressed public key,
                        by default set to True. Recommended use only compressed public key.
     :param testnet: (optional) if set to True mean that this private key for testnet Bitcoin network.
-
     """
     def __init__(self, key, compressed=True, testnet=False):
         if isinstance(key, str):
@@ -129,17 +130,17 @@ class PublicKey():
         return self.hex
 
 
-class Address():
+class Address:
     """
     The class for Address object.
 
     :param key: (optional) one of this types allowed:
-    
+
                 - private key WIF format
                 - instance of ``PrivateKey``
                 - private key HEX encoded string
                 - instance of ``PublicKey``
-                
+
                 In case no key specified new Address will be created with random keys.
     :param address_type: (optional) P2PKH, PUBKEY, P2WPKH, P2SH_P2WPKH, by default P2WPKH.
     :param compressed: (optional) if set to True private key corresponding compressed public key,
@@ -237,15 +238,13 @@ class ScriptAddress():
 
         :param n: count of required signatures (max 15).
         :param m: count of total addresses of participants (max 15).
-        :param list address_list: addresses list, allowed types:
-                       
+        :param list address_list: addresses list, allowed types: - TODO
+
                              - bytes or HEX encoded private key
                              - private key in WIF format
                              - PrivateKey instance,
                              - bytes or HEX encoded public key
                              - PublicKey instance
-                             
-                             
         """
         if n > 15 or m > 15 or n > m or n < 1 or m < 1:
             raise TypeError("invalid n of m maximum 15 of 15 multisig allowed")
