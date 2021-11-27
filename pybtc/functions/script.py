@@ -38,10 +38,13 @@ def parse_script(script, segwit=True):
     script = get_bytes(script)
     l = len(script)
     if segwit:
+        if l == 34 and script[0] == OPCODE["OP_1"] :
+            return {"nType": 9, "type": "V1_P2TR", "reqSigs": None, "addressHash": script[2:]}
         if l == 22 and script[0] == 0:
             return {"nType": 5, "type": "P2WPKH", "reqSigs": 1, "addressHash": script[2:]}
         if l == 34 and script[0] == 0:
             return {"nType": 6, "type": "P2WSH", "reqSigs": None, "addressHash": script[2:]}
+
     if l == 25 and \
        script[:2] == b"\x76\xa9" and \
        script[-2:] == b"\x88\xac":
@@ -141,7 +144,13 @@ def script_to_address(script, testnet=False):
     """
     d = parse_script(script)
     if "addressHash" in d:
-        witness_version = 0 if d["nType"] in (5, 6) else None
+        if d["nType"] in (5, 6):
+            witness_version = 0
+        elif d["nType"] == 9:
+            witness_version = 1
+        else:
+            witness_version = None
+
         script_hash = True if d["nType"] in (1, 6) else False
         return hash_to_address(d["addressHash"], testnet=testnet,
                                script_hash=script_hash, witness_version=witness_version)

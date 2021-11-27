@@ -46,7 +46,7 @@ TESTNET_PRIVATE_KEY_BYTE_PREFIX = b'\xef'
 
 MAINNET_SEGWIT_ADDRESS_PREFIX = 'bc'
 TESTNET_SEGWIT_ADDRESS_PREFIX = 'tb'
-
+BECH32M_CONST = 0x2bc830a3
 
 SCRIPT_TYPES = {"P2PKH":        0,
                 "P2SH":         1,
@@ -56,7 +56,8 @@ SCRIPT_TYPES = {"P2PKH":        0,
                 "P2WPKH":       5,
                 "P2WSH":        6,
                 "NON_STANDARD": 7,
-                "NULL_DATA_NON_STANDARD": 8
+                "NULL_DATA_NON_STANDARD": 8,
+                "V1_P2TR": 9
                 }
 
 SCRIPT_N_TYPES = {0: "P2PKH",
@@ -67,7 +68,8 @@ SCRIPT_N_TYPES = {0: "P2PKH",
                   5: "P2WPKH",
                   6: "P2WSH",
                   7: "NON_STANDARD",
-                  8: "NULL_DATA_NON_STANDARD"
+                  8: "NULL_DATA_NON_STANDARD",
+                  9: "V1_P2TR"
                 }
 
 # CONSTANTS hierarchical deterministic wallets (HD Wallets)
