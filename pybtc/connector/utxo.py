@@ -629,10 +629,27 @@ class UUTXO():
         await conn.execute("DELETE FROM connector_utxo WHERE outpoint = ANY($1);",
                            deque(r[0] for r in data["uutxo"]))
 
+        qrows = await conn.fetch("SELECT outpoint, sequence FROM connector_unconfirmed_stxo WHERE outpoint = ANY($1);",
+                           deque(r[0] for r in data["stxo"]))
+        ustxo_map_sequence = dict()
+        for qrow in qrows:
+            try:
+                ustxo_map_sequence[qrow["outpoint"]].append(qrow["sequence"])
+            except:
+                ustxo_map_sequence[qrow["outpoint"]] = [qrow["sequence"]]
+
+        d = list()
+        for s in  data["stxo"]:
+            i = s[1]
+            if s[0] in ustxo_map_sequence:
+                if s[1] in ustxo_map_sequence[s[0]]:
+                    i = max(ustxo_map_sequence[s[0]]) + 1
+            d.append((s[0], i, s[2], s[3], s[4], s[5], s[6], s[7]))
+
         await conn.copy_records_to_table('connector_unconfirmed_stxo',
                                          columns=["outpoint", "sequence",
                                                   "out_tx_id", "tx_id", "input_index", "address", "amount", "pointer"],
-                                         records=data["stxo"])
+                                         records=d)
 
         await conn.copy_records_to_table('connector_utxo',
                                          columns=["outpoint", "pointer",

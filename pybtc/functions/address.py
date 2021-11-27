@@ -6,7 +6,9 @@ from pybtc.functions.hash import double_sha256, hash160
 from pybtc.functions.encode import (encode_base58,
                                     rebase_8_to_5,
                                     bech32_polymod,
+                                    bech32m_polymod,
                                     rebase_5_to_32,
+                                    rebasebits,
                                     decode_base58,
                                     rebase_5_to_8,
                                     rebase_32_to_5,
@@ -90,7 +92,10 @@ def hash_to_address(address_hash, testnet=False, script_hash=False, witness_vers
 
     address_hash = b"%s%s" % (witness_version.to_bytes(1, "big"),
                               rebase_8_to_5(address_hash))
-    checksum = bech32_polymod(b"%s%s%s" % (prefix, address_hash, b"\x00" * 6))
+    if witness_version > 0:
+        checksum = bech32m_polymod(b"%s%s%s" % (prefix, address_hash, b"\x00" * 6)) ^ BECH32M_CONST
+    else:
+        checksum = bech32_polymod(b"%s%s%s" % (prefix, address_hash, b"\x00" * 6))
     checksum = rebase_8_to_5(checksum.to_bytes(5, "big"))[2:]
     return "%s1%s" % (hrp, rebase_5_to_32(address_hash + checksum).decode())
 
@@ -134,7 +139,13 @@ def address_type(address, num=False):
         if len(address) == 42:
             t = 'P2WPKH'
         elif len(address) == 62:
-            t = 'P2WSH'
+            w = get_witness_version(address)
+            if w == 0:
+                t = 'P2WSH'
+            elif w == 1:
+                t = "V1_P2TR"
+            else:
+                return SCRIPT_TYPES['NON_STANDARD'] if num else 'UNKNOWN'
         else:
             return SCRIPT_TYPES['NON_STANDARD'] if num else 'UNKNOWN'
     else:
@@ -192,7 +203,12 @@ def address_to_script(address, hex=False):
     elif address[:2] in (TESTNET_SEGWIT_ADDRESS_PREFIX,
                          MAINNET_SEGWIT_ADDRESS_PREFIX):
         h = address_to_hash(address, hex=False)
-        s = [OP_0,
+        w = get_witness_version(address)
+        if w == 0:
+            v_opcode = 0
+        else:
+            v_opcode = 0x50 + w
+        s = [bytes([v_opcode]),
              bytes([len(h)]),
              h]
     else:
@@ -278,12 +294,13 @@ def is_address_valid(address, testnet=False):
         except:
             return False
         upp = True if prefix[0].isupper() else False
+
         for i in payload[1:]:
             if upp:
-                if not i.isupper() or i not in base32charset_upcase:
+                if  i not in base32charset_upcase:
                     return False
             else:
-                if i.isupper() or i not in base32charset:
+                if  i not in base32charset:
                     return False
         payload = payload.lower()
         prefix = prefix.lower()
@@ -298,7 +315,10 @@ def is_address_valid(address, testnet=False):
         d = rebase_32_to_5(payload)
         address_hash = d[:-6]
         checksum = d[-6:]
-        checksum2 = bech32_polymod(b"%s%s%s" % (stripped_prefix, address_hash, b"\x00" * 6))
+        if d[0] == 0:
+            checksum2 = bech32_polymod(b"%s%s%s" % (stripped_prefix, address_hash, b"\x00" * 6))
+        else:
+            checksum2 = bech32m_polymod(b"%s%s%s" % (stripped_prefix, address_hash, b"\x00" * 6)) ^ BECH32M_CONST
         checksum2 = rebase_8_to_5(checksum2.to_bytes(5, "big"))[2:]
         if checksum != checksum2:
             return False

@@ -154,3 +154,30 @@ def is_public_key_valid(key):
         if len(key) != 33:
             return False
     return not ((key[0] < 2 or key[0] > 4))
+
+
+def decompress_pubkey(key, hex=True):
+    if isinstance(key, str):
+        try:
+            key = bytes_from_hex(key)
+        except:
+            raise Exception("public key invalid")
+
+    if not is_public_key_valid(key):
+        raise Exception("public key invalid")
+    if len(key) == 33:
+        p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+        x = int.from_bytes(key[1:33], byteorder='big')
+        y_sq = (pow(x, 3, p) + 7) % p
+        y = pow(y_sq, (p + 1) // 4, p)
+        if y % 2 != key[0] % 2:
+            y = p - y
+        y = y.to_bytes(32, byteorder='big')
+        if hex:
+            r = b'\x04' + key[1:33] + y
+            return r.hex()
+        return b'\x04' + key[1:33] + y
+    else:
+        if hex: return key.hex()
+        else:
+            return key

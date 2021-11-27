@@ -245,7 +245,13 @@ class Transaction(dict):
                 if type(self["vOut"][i]["addressHash"]) == bytes:
                     self["vOut"][i]["addressHash"] = self["vOut"][i]["addressHash"].hex()
                 sh = True if self["vOut"][i]["nType"] in (1, 5) else False
-                witness_version = None if self["vOut"][i]["nType"] < 5 else 0
+                if self["vOut"][i]["nType"] in (5,6):
+                    witness_version = 0
+                elif self["vOut"][i]["nType"] == 9:
+                    witness_version = 1
+                else:
+                    witness_version = None
+
                 self["vOut"][i]["address"] = hash_to_address(self["vOut"][i]["addressHash"],
                                                              self["testnet"],
                                                              sh,

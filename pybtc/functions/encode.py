@@ -106,3 +106,13 @@ def bech32_polymod(values):
         for i in range(5):
             chk ^= generator[i] if ((top >> i) & 1) else 0
     return chk ^ 1
+
+def bech32m_polymod(values):
+  generator = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3]
+  chk = 1
+  for v in values:
+    b = (chk >> 25)
+    chk = (chk & 0x1ffffff) << 5 ^ v
+    for i in range(5):
+      chk ^= generator[i] if ((b >> i) & 1) else 0
+  return chk

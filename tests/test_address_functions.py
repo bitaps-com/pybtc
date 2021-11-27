@@ -102,12 +102,13 @@ def test_address_type():
     assert address_type("1Fs2Xqrk4P2XADaJeZWykaGXJ4HEb6RyT1") == 'P2PKH'
     assert address_type("mvNyptwisQTmwL3vN8VMaVUrA3swVCX83c") == 'P2PKH'
     assert address_type("33am12q3Bncnn3BfvLYHczyv23Sq2Wbwjw") == 'P2SH'
-    assert address_type("2Mu8y4mm4oF88yppDbUAAEwyBEPezrx7CLh") == 'P2SH'
+    assert address_type("tb1pqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesf3hn0c") == 'V1_P2TR'
 
 def test_address_net_type():
     assert address_net_type("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4") == 'mainnet'
     assert address_net_type("tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx") == 'testnet'
     assert address_net_type("bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3") == 'mainnet'
+    assert address_net_type("bc1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kt5nd6y") == 'mainnet'
     assert address_net_type("tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7") == 'testnet'
     assert address_net_type("1Fs2Xqrk4P2XADaJeZWykaGXJ4HEb6RyT1") == 'mainnet'
     assert address_net_type("mvNyptwisQTmwL3vN8VMaVUrA3swVCX83c") == 'testnet'
@@ -129,6 +130,10 @@ def test_address_to_script():
            "a914130319921ecbcfa33fec2a8503c4ae1c86e4419387"
     assert address_to_script("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4").hex() == \
            "0014751e76e8199196d454941c45d1b3a323f1433bd6"
+    assert address_to_script("bc1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kt5nd6y").hex() == \
+           "5128751e76e8199196d454941c45d1b3a323f1433bd6751e76e8199196d454941c45d1b3a323f1433bd6"
+    assert address_to_script("tb1pqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesf3hn0c").hex() == \
+           "5120000000c4a5cad46221b2a187905e5266362b99d5e91c6ce24d165dab93e86433"
     with pytest.raises(ValueError):
         address_to_script("bd6qejxtdg4y5r3zarvary0c5xw7kv8f3t4")
     with pytest.raises(TypeError):
@@ -184,7 +189,12 @@ def test_is_address_valid():
     assert is_address_valid("2Mu8y4mm4oF78yppDbUAAEwyBEPezrx7CLh", testnet=True) == False
     assert is_address_valid("33am12q3Bncmn3BfvLYHczyv23Sq2Wbwjw") == False
     assert is_address_valid("73am12q3Bncmn3BfvLYHczyv23Sq2Wbwjw") == False
+    assert is_address_valid("BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4") == True
+    assert is_address_valid("tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7", testnet=True) == True
+    assert is_address_valid("tb1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesrxh6hy", testnet=True) == True
+    assert is_address_valid("bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0") == True
 
 def test_get_witness_version():
     assert get_witness_version("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4") == 0
+    assert get_witness_version("bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0") == 1
 
