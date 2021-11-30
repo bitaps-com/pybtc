@@ -452,7 +452,7 @@ class Worker:
                                     except:
                                         address = b"".join((bytes([out_type]), out["scriptPubKey"]))
 
-                                    if out_type in (0, 1, 2, 5, 6):
+                                    if out_type in (0, 1, 2, 5, 6, 9):
                                         if self.option_block_filters:
                                             e = b"".join((bytes([out_type]),
                                                           z.to_bytes(4, byteorder="little"),
