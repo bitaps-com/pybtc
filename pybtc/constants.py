@@ -212,6 +212,7 @@ MINER_COINBASE_TAG = {
     b"prohashing.com": {"name": "prohashing.com", "link": "https://prohashing.com"},
     b"GIVE-ME-COINS.com": {"name": "give-me-coins.com", "link": "http://give-me-coins.com"},
     b"XNPool": {"name": "XNPool", "link": "https://www.xnpool.cn"},
+    b"MARA Pool": {"name": "MARA Pool", "link": "https://marathondh.com"},
     b"Easy2Mine": {"name": "Easy2Mine", "link": "https://www.easy2mine.com"}
 }
 

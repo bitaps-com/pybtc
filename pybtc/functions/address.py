@@ -236,8 +236,12 @@ def hash_to_script(address_hash, script_type, hex=False):
         s = [OP_HASH160, b'\x14', address_hash, OP_EQUAL]
     elif script_type == 0:
         s = [OP_DUP, OP_HASH160, b'\x14', address_hash, OP_EQUALVERIFY, OP_CHECKSIG]
-    elif script_type in (5, 6, 9):
+    elif script_type in (5, 6):
         s = [OP_0,
+             bytes([len(address_hash)]),
+             address_hash]
+    elif script_type == 9:
+        s = [OP_1,
              bytes([len(address_hash)]),
              address_hash]
     else:
