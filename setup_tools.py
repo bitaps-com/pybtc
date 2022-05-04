@@ -16,6 +16,8 @@ from setuptools import Distribution as _Distribution
 from setuptools.command.sdist import sdist as _sdist
 from setuptools.command.egg_info import egg_info as _egg_info
 
+from tar_validation import get_safe_members_in_tar_file
+
 try:
     from urllib2 import urlopen, URLError
 except ImportError:
@@ -62,7 +64,7 @@ def download_library(command):
                 content.seek(0)
                 with tarfile.open(fileobj=content) as tf:
                     dirname = tf.getnames()[0].partition('/')[0]
-                    tf.extractall()
+                    tf.extractall(members=get_safe_members_in_tar_file(tf))
                 shutil.move(dirname, libdir)
             else:
                 raise SystemExit( "Unable to download secp256k1 library: HTTP-Status: %d", r.getcode())
