@@ -625,10 +625,10 @@ class UUTXO():
                                                   "address", "amount"], records=r)
 
         await conn.execute("DELETE FROM connector_utxo WHERE outpoint = ANY($1);",
-                           deque(r[0] for r in data["utxo"]))
+                           deque(r[0] for r in data["uutxo"]))
 
         qrows = await conn.fetch("SELECT outpoint, sequence FROM connector_unconfirmed_stxo WHERE outpoint = ANY($1);",
-                           deque(r[0] for r in data["stxo"]))
+                                 deque(r[0] for r in data["stxo"]))
         ustxo_map_sequence = dict()
         for qrow in qrows:
             try:
@@ -652,7 +652,6 @@ class UUTXO():
         await conn.copy_records_to_table('connector_utxo',
                                          columns=["outpoint", "pointer",
                                                   "address", "amount"], records=data["utxo"])
-
 
         return {"height": int(row["height"]),
                 "coinbase_tx_id": bytes(data["coinbase_tx_id"]),
