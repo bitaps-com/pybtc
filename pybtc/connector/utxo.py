@@ -385,7 +385,6 @@ class UUTXO():
         finally:
             self.load_data_future.set_result(True)
 
-
     async def commit_tx(self, commit_uutxo, commit_ustxo, commit_up2pk_map, conn):
         if commit_uutxo:
             await conn.copy_records_to_table('connector_unconfirmed_utxo',
@@ -598,7 +597,6 @@ class UUTXO():
                 "tx_filters": tx_filters,
                 "coinbase_tx_id": txs[0],
                 "block_amount": block_amount}
-
 
     async def rollback_block(self, conn):
         row = await conn.fetchrow("DELETE FROM connector_block_state_checkpoint "

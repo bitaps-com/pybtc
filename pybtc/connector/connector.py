@@ -838,14 +838,13 @@ class Connector:
                                            "WHERE name = 'last_cached_block';",
                                            self.last_block_height - 1)
 
-
                         self.mempool_tx_count = await conn.fetchval("SELECT count(DISTINCT out_tx_id) "
                                                                     "FROM connector_unconfirmed_utxo;")
-                        if  self.test_orphans:
+                        if self.test_orphans:
                             if self.test_rollback and self.rollback_counter:
                                 self.log.warning("Rollback last block")
                                 self.rollback_counter -= 1
-                                if  self.rollback_counter < 1:
+                                if self.rollback_counter < 1:
                                     self.test_rollback = False
 
                     self.log.debug("Mempool transactions %s; "
@@ -1445,6 +1444,7 @@ class Connector:
                 self.tx_orphan_buffer[rh2s(err.args[0][:32])].append(tx)
             except:
                 self.tx_orphan_buffer[rh2s(err.args[0][:32])] = [tx]
+            print(err.args)
             self.log.debug("tx orphaned %s" % tx_hash)
             self.loop.create_task(self._get_transaction(rh2s(err.args[0][:32])))
             self.log.debug("requested %s" % rh2s(err.args[0][:32]))
