@@ -606,6 +606,8 @@ class UUTXO():
                                   "height, data;")
 
         data = pickle.loads(row["data"])
+        print(">>>", row["height"])
+        print(data)
 
         if data["p2pk_map"]:
             await conn.copy_records_to_table('connector_unconfirmed_p2pk_map',
