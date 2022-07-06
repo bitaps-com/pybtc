@@ -1274,6 +1274,7 @@ class Connector:
     async def _get_transaction(self, tx_hash):
         try:
             raw_tx = await self.rpc.getrawtransaction(tx_hash)
+            print(raw_tx)
             tx = Transaction(raw_tx, format="raw")
             self.new_tx[tx["txId"]] = (tx, int(time.time()))
             if self.new_tx_handler is None or self.new_tx_handler.done():
