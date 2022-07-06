@@ -1334,7 +1334,7 @@ class Connector:
         if self.tx_cache.has_key(tx_hash):
             self.new_tx_tasks -= 1
             return
-
+        print("handle_new_tx")
         try:
             self.tx_in_process.add(tx_hash)
             if block_tx:
