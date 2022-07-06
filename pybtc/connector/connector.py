@@ -1348,7 +1348,6 @@ class Connector:
                     else:
                         break
 
-
                 if tx["coinbase"]:
                     return
 

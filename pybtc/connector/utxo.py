@@ -449,7 +449,6 @@ class UUTXO():
             await conn.executemany("INSERT INTO connector_p2pk_map (address, script) "
                                    "VALUES ($1, $2) ON CONFLICT DO NOTHING;", p2pk_map)
 
-
         # remove all block created coins from connector_unconfirmed_utxo table
         # add new coins to connector_utxo table
 
@@ -459,7 +458,6 @@ class UUTXO():
                                 "           out_tx_id as t,"
                                 "           address, "
                                 "           amount;", txs)
-
 
         batch, uutxo = deque(), deque()
         block_amount = 0
@@ -627,7 +625,7 @@ class UUTXO():
                                                   "address", "amount"], records=r)
 
         await conn.execute("DELETE FROM connector_utxo WHERE outpoint = ANY($1);",
-                           deque(r[0] for r in data["uutxo"]))
+                           deque(r[0] for r in data["utxo"]))
 
         qrows = await conn.fetch("SELECT outpoint, sequence FROM connector_unconfirmed_stxo WHERE outpoint = ANY($1);",
                            deque(r[0] for r in data["stxo"]))
@@ -639,7 +637,7 @@ class UUTXO():
                 ustxo_map_sequence[qrow["outpoint"]] = [qrow["sequence"]]
 
         d = list()
-        for s in  data["stxo"]:
+        for s in data["stxo"]:
             i = s[1]
             if s[0] in ustxo_map_sequence:
                 if s[1] in ustxo_map_sequence[s[0]]:
