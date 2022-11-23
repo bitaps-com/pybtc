@@ -15,6 +15,10 @@
 #define IS_PY3K
 #endif
 
+#if PY_VERSION_HEX < 0x030900A4
+#  define Py_SET_SIZE(obj, size) do { Py_SIZE(obj) = (size); } while (0)
+#endif
+
 
 #define Py_TPFLAGS_HAVE_WEAKREFS  0
 
@@ -108,7 +112,7 @@ static int resize(bitarrayobject *self, idx_t nbits) {
     */
     if (allocated >= newsize && newsize >= (allocated >> 1)) {
         assert(self->ob_item != NULL || newsize == 0);
-        Py_SIZE(self) = newsize;
+        Py_SET_SIZE(self, newsize);
         self->nbits = nbits;
         return 0;
     }
@@ -133,7 +137,7 @@ static int resize(bitarrayobject *self, idx_t nbits) {
         PyErr_NoMemory();
         return -1;
     }
-    Py_SIZE(self) = newsize;
+    Py_SET_SIZE(self, newsize);
     self->allocated = new_allocated;
     self->nbits = nbits;
     return 0;
@@ -152,7 +156,7 @@ static PyObject * newbitarrayobject(PyTypeObject *type, idx_t nbits, int endian)
         return NULL;
 
     nbytes = (Py_ssize_t) BYTES(nbits);
-    Py_SIZE(obj) = nbytes;
+    Py_SET_SIZE(obj, nbytes);
     obj->nbits = nbits;
     obj->endian = endian;
     if (nbytes == 0) {
@@ -2960,10 +2964,10 @@ static PyModuleDef moduledef = { PyModuleDef_HEAD_INIT, "_bitarray", 0, -1, modu
 static PyObject *moduleinit(void) {
     PyObject *m;
 
-    Py_TYPE(&Bitarraytype) = &PyType_Type;
-    Py_TYPE(&SearchIter_Type) = &PyType_Type;
-    Py_TYPE(&DecodeIter_Type) = &PyType_Type;
-    Py_TYPE(&BitarrayIter_Type) = &PyType_Type;
+    Py_SET_SIZE(&Bitarraytype, &PyType_Type);
+    Py_SET_SIZE(&SearchIter_Type, &PyType_Type);
+    Py_SET_SIZE(&DecodeIter_Type, &PyType_Type);
+    Py_SET_SIZE(&BitarrayIter_Type, &PyType_Type);
 
     m = PyModule_Create(&moduledef);
     if (m == NULL) return NULL;
