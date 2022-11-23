@@ -15,8 +15,10 @@
 #define IS_PY3K
 #endif
 
+
 #if PY_VERSION_HEX < 0x030900A4
 #  define Py_SET_SIZE(obj, size) do { Py_SIZE(obj) = (size); } while (0)
+#  define Py_SET_TYPE(obj, size) do { Py_TYPE(obj) = (size); } while (0)
 #endif
 
 
@@ -1248,7 +1250,7 @@ bitarray_fromfile(bitarrayobject *self, PyObject *args)
         Py_DECREF(reader);
         return NULL;
     }
-    result = PyEval_CallObject(reader, rargs);
+    result = PyObject_Call(reader, rargs, NULL);
     if (result != NULL) {
         if (!PyBytes_Check(result)) {
             PyErr_SetString(PyExc_TypeError,
@@ -1387,7 +1389,7 @@ bitarray_tofile(bitarrayobject *self, PyObject *f)
         Py_DECREF(writer);
         return NULL;
     }
-    result = PyEval_CallObject(writer, args);
+    result = PyObject_Call(writer, args, NULL);
     Py_DECREF(args);
     Py_DECREF(value);
     Py_DECREF(writer);
@@ -2964,10 +2966,10 @@ static PyModuleDef moduledef = { PyModuleDef_HEAD_INIT, "_bitarray", 0, -1, modu
 static PyObject *moduleinit(void) {
     PyObject *m;
 
-    Py_SET_SIZE(&Bitarraytype, &PyType_Type);
-    Py_SET_SIZE(&SearchIter_Type, &PyType_Type);
-    Py_SET_SIZE(&DecodeIter_Type, &PyType_Type);
-    Py_SET_SIZE(&BitarrayIter_Type, &PyType_Type);
+    Py_SET_TYPE(&Bitarraytype, &PyType_Type);
+    Py_SET_TYPE(&SearchIter_Type, &PyType_Type);
+    Py_SET_TYPE(&DecodeIter_Type, &PyType_Type);
+    Py_SET_TYPE(&BitarrayIter_Type, &PyType_Type);
 
     m = PyModule_Create(&moduledef);
     if (m == NULL) return NULL;
