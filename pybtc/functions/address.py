@@ -1,6 +1,19 @@
-from pybtc.opcodes import *
-from pybtc.constants import *
-
+from pybtc.opcodes import OP_HASH160, OP_EQUAL, OP_DUP, OP_HASH160, OP_EQUALVERIFY, OP_CHECKSIG, OP_0
+from pybtc.constants import (MAINNET_ADDRESS_PREFIX,
+                             TESTNET_ADDRESS_PREFIX,
+                             TESTNET_ADDRESS_PREFIX_2,
+                             TESTNET_ADDRESS_BYTE_PREFIX,
+                             MAINNET_ADDRESS_BYTE_PREFIX,
+                             MAINNET_SCRIPT_ADDRESS_BYTE_PREFIX,
+                             TESTNET_SCRIPT_ADDRESS_BYTE_PREFIX,
+                             TESTNET_SEGWIT_ADDRESS_BYTE_PREFIX,
+                             TESTNET_SEGWIT_ADDRESS_PREFIX,
+                             MAINNET_SEGWIT_ADDRESS_BYTE_PREFIX,
+                             MAINNET_SEGWIT_ADDRESS_PREFIX,
+                             ADDRESS_PREFIX_LIST,
+                             TESTNET_SCRIPT_ADDRESS_PREFIX,
+                             MAINNET_SCRIPT_ADDRESS_PREFIX,
+                             SCRIPT_TYPES)
 from pybtc.functions.tools import bytes_from_hex, get_bytes
 from pybtc.functions.hash import double_sha256, hash160
 from pybtc.functions.encode import (encode_base58,
@@ -44,7 +57,8 @@ def public_key_to_address(pubkey, testnet=False, p2sh_p2wpkh=False, witness_vers
                            witness_version=witness_version)
 
 
-def hash_to_address(address_hash, testnet=False, script_hash=False, witness_version=0):
+def hash_to_address(address_hash, testnet=False, script_hash=False,
+                    witness_version=0, address_byte_prefix=MAINNET_ADDRESS_BYTE_PREFIX):
     """
     Get address from public key/script hash. In case PUBKEY, P2PKH, P2PKH public key/script hash is SHA256+RIPEMD160,
     P2WSH script hash is SHA256.
@@ -66,7 +80,7 @@ def hash_to_address(address_hash, testnet=False, script_hash=False, witness_vers
             if testnet:
                 prefix = TESTNET_ADDRESS_BYTE_PREFIX
             else:
-                prefix = MAINNET_ADDRESS_BYTE_PREFIX
+                prefix = address_byte_prefix
             address_hash = b"%s%s" % (prefix, address_hash)
             address_hash += double_sha256(address_hash)[:4]
             return encode_base58(address_hash)
@@ -87,7 +101,7 @@ def hash_to_address(address_hash, testnet=False, script_hash=False, witness_vers
         prefix = TESTNET_SEGWIT_ADDRESS_BYTE_PREFIX
         hrp = TESTNET_SEGWIT_ADDRESS_PREFIX
     else:
-        prefix = MAINNET_SEGWIT_ADDRESS_BYTE_PREFIX
+        prefix = address_byte_prefix
         hrp = MAINNET_SEGWIT_ADDRESS_PREFIX
 
     address_hash = b"%s%s" % (witness_version.to_bytes(1, "big"),
@@ -121,11 +135,11 @@ def address_to_hash(address, hex=True):
 
 def address_type(address, num=False):
     """
-    Get address type.   
+    Get address type.
 
     :param address: address in base58 or bech32 format.
     :param num: (optional) If set to True return type in numeric format, by default is False.
-    :return: address type in string or numeric format. 
+    :return: address type in string or numeric format.
     """
     if address[0] in (TESTNET_SCRIPT_ADDRESS_PREFIX,
                       MAINNET_SCRIPT_ADDRESS_PREFIX):
@@ -155,10 +169,10 @@ def address_type(address, num=False):
 
 def address_net_type(address):
     """
-    Get address network type.   
+    Get address network type.
 
     :param address: address in base58 or bech32 format.
-    :return: address network type in string format or None. 
+    :return: address network type in string format or None.
     """
     if address[0] in (MAINNET_SCRIPT_ADDRESS_PREFIX,
                       MAINNET_ADDRESS_PREFIX):
