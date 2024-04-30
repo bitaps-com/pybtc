@@ -1225,6 +1225,8 @@ class Connector:
 
 
 
+            self.log.debug("missed tx %s" % missed)
+
             if self.utxo_data:
                 async with self.db_pool.acquire() as conn:
                     rows = await conn.fetch("SELECT distinct tx_id FROM  connector_unconfirmed_stxo "
@@ -1254,6 +1256,7 @@ class Connector:
                 b = decode_block_tx(raw_block)
                 for tx in b["rawTx"].values():
                     if rh2s(tx["txId"]) in missed:
+                        self.log.debug("_new_transaction handler %s" % rh2s(tx["txId"]))
                         self.loop.create_task(self._new_transaction(tx, self.block_timestamp, True))
 
                 try:
