@@ -1246,15 +1246,15 @@ class Connector:
                 self.await_tx = set(missed)
                 self.await_tx_future = {s2rh(i): asyncio.Future() for i in missed}
                 self.block_timestamp = block["time"]
-                if len(missed) < 100:
-                    self.loop.create_task(self._get_missed())
-                else:
-                    self.log.debug("request block %s" % block["hash"])
-                    raw_block = await self.rpc.getblock(block["hash"], 0)
-                    b = decode_block_tx(raw_block)
-                    for tx in b["rawTx"].values():
-                        if rh2s(tx["txId"]) in missed:
-                            self.loop.create_task(self._new_transaction(tx, self.block_timestamp, True))
+                # if len(missed) < 100:
+                #     self.loop.create_task(self._get_missed())
+                # else:
+                self.log.debug("request block %s" % block["hash"])
+                raw_block = await self.rpc.getblock(block["hash"], 0)
+                b = decode_block_tx(raw_block)
+                for tx in b["rawTx"].values():
+                    if rh2s(tx["txId"]) in missed:
+                        self.loop.create_task(self._new_transaction(tx, self.block_timestamp, True))
 
                 try:
                     await asyncio.wait_for(self.block_txs_request, timeout=self.block_timeout)
