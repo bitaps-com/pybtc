@@ -1429,12 +1429,6 @@ class Connector:
             self.tx_cache[tx_hash] = True
             self.mempool_tx_count += 1
 
-            if block_tx:
-                self.await_tx.remove(tx_hash)
-                self.await_tx_future[tx["txId"]].set_result(True)
-                self.log.debug("tx %s; left %s" % (tx_hash, len(self.await_tx)))
-
-
             # in case recently added transaction
             # in dependency list for orphaned transactions
             # try add orphaned again
@@ -1444,6 +1438,10 @@ class Connector:
                 for row in rows:
                     self.new_tx[tx["txId"]] = (row, int(time.time()))
 
+            if block_tx:
+                self.await_tx.remove(tx_hash)
+                self.await_tx_future[tx["txId"]].set_result(True)
+                self.log.debug("tx %s; left %s" % (tx_hash, len(self.await_tx)))
 
         except asyncio.CancelledError:
             pass
