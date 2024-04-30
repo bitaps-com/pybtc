@@ -1466,11 +1466,12 @@ class Connector:
         except Exception as err:
             try:
                 # check if transaction already exist
+                print("err.detail", err.detail)
                 if err.detail.find("already exists") != -1:
                     if block_tx:
                         self.await_tx.remove(tx_hash)
                         self.await_tx_future[tx["txId"]].set_result(True)
-                return
+                        return
             except:
                 pass
 
