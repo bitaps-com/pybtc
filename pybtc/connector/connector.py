@@ -1225,8 +1225,6 @@ class Connector:
 
 
 
-            self.log.debug("missed tx %s" % missed)
-
             if self.utxo_data:
                 async with self.db_pool.acquire() as conn:
                     rows = await conn.fetch("SELECT distinct tx_id FROM  connector_unconfirmed_stxo "
@@ -1248,16 +1246,15 @@ class Connector:
                 self.await_tx = set(missed)
                 self.await_tx_future = {s2rh(i): asyncio.Future() for i in missed}
                 self.block_timestamp = block["time"]
-                # if len(missed) < 100:
-                #     self.loop.create_task(self._get_missed())
-                # else:
-                self.log.debug("request block %s" % block["hash"])
-                raw_block = await self.rpc.getblock(block["hash"], 0)
-                b = decode_block_tx(raw_block)
-                for tx in b["rawTx"].values():
-                    if rh2s(tx["txId"]) in missed:
-                        self.log.debug("_new_transaction handler %s" % rh2s(tx["txId"]))
-                        self.loop.create_task(self._new_transaction(tx, self.block_timestamp, True))
+                if len(missed) < 100:
+                    self.loop.create_task(self._get_missed())
+                else:
+                    self.log.debug("request block %s" % block["hash"])
+                    raw_block = await self.rpc.getblock(block["hash"], 0)
+                    b = decode_block_tx(raw_block)
+                    for tx in b["rawTx"].values():
+                        if rh2s(tx["txId"]) in missed:
+                            self.loop.create_task(self._new_transaction(tx, self.block_timestamp, True))
 
                 try:
                     await asyncio.wait_for(self.block_txs_request, timeout=self.block_timeout)
@@ -1469,7 +1466,7 @@ class Connector:
                     if block_tx:
                         self.await_tx.remove(tx_hash)
                         self.await_tx_future[tx["txId"]].set_result(True)
-                        return
+                    return
             except:
                 pass
 
