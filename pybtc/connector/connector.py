@@ -470,8 +470,13 @@ class Connector:
                     except Exception as err:
                         self.log.error("watchdog get block count failed: %s" % err)
 
-                    if  not self.get_next_block_mutex and \
-                        self.node_last_block > self.last_block_height + self.backlog:
+                    self.log.info("watchdog: get_next_block_mutex %s" %self.get_next_block_mutex)
+                    self.log.info("watchdog: node_last_block %s" %self.node_last_block)
+                    self.log.info("watchdog: last_block_height %s" %self.last_block_height)
+                    self.log.info("watchdog: backlog %s" %self.backlog)
+                    self.log.info("watchdog: synchronized %s" %self.synchronized)
+                    self.log.info("watchdog: active block done %s" % self.active_block.done())
+                    if  not self.get_next_block_mutex and self.node_last_block > self.last_block_height + self.backlog:
                             self.get_next_block_mutex = True
                             self.loop.create_task(self.get_next_block())
                             if self.synchronized:
