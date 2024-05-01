@@ -1444,7 +1444,6 @@ class Connector:
             pass
 
         except KeyError as err:
-            print(traceback.format_exc())
             # transaction orphaned
             try:
                 self.tx_orphan_buffer[rh2s(err.args[0][:32])].append(tx)
@@ -1461,7 +1460,6 @@ class Connector:
         except Exception as err:
             try:
                 # check if transaction already exist
-                print("err.detail", err.detail)
                 if err.detail.find("already exists") != -1:
                     if block_tx:
                         self.await_tx.remove(tx_hash)
