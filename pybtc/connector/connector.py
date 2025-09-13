@@ -1362,6 +1362,8 @@ class Connector:
                     self.unconfirmed_tx_processing = asyncio.Future()
 
             if self.utxo_data:
+                self.log.debug("utxo_data %s" % (self.utxo_data))
+
                 tx["double_spent"] = False
                 commit_uutxo_buffer = set()
                 commit_ustxo_buffer = set()
@@ -1374,6 +1376,8 @@ class Connector:
                         self.uutxo.load_buffer.append(tx["vIn"][i]["outpoint"])
 
                     await self.uutxo.load_utxo_data()
+
+                    self.log.debug("load_utxo_data")
 
                     for i in tx["vIn"]:
                         tx["vIn"][i]["coin"] = self.uutxo.loaded_utxo[tx["vIn"][i]["outpoint"]]
@@ -1391,7 +1395,7 @@ class Connector:
                             tx["double_spent"] = True
                         except:
                             pass
-
+                    self.log.debug("for1 done")
                 for i in tx["vOut"]:
                     try:
                         if tx["vOut"][i]["nType"] == 2:
@@ -1408,6 +1412,7 @@ class Connector:
                                              tx["txId"],
                                              address,
                                              tx["vOut"][i]["value"]))
+                self.log.debug("for2 done")
 
                 async with self.db_pool.acquire() as conn:
                     async with conn.transaction():
@@ -1417,6 +1422,8 @@ class Connector:
                                                    conn)
                         if self.tx_handler:
                             await self.tx_handler(tx, timestamp, conn)
+                        self.log.debug("tx_handler")
+
             else:
                 if self.tx_handler:
                     await self.tx_handler(tx, timestamp, None)
