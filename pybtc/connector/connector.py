@@ -1318,7 +1318,7 @@ class Connector:
         while self.await_tx_future:
             for i in tx["vIn"]:
                 if tx["vIn"][i]["txId"] in self.await_tx_future:
-                    self.log.info("await txId %s " % tx["vIn"][i]["txId"])
+                    self.log.info("await txId %s " % rh2s(tx["vIn"][i]["txId"]))
 
                     if not self.await_tx_future[tx["vIn"][i]["txId"]].done():
                         await self.await_tx_future[tx["vIn"][i]["txId"]]
