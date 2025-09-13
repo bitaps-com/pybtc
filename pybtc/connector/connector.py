@@ -1340,8 +1340,9 @@ class Connector:
             self.tx_in_process.add(tx_hash)
             if block_tx:
                 if not tx["coinbase"]:
+                    self.log.debug("wait_block_dependences start %s" % (tx_hash))
                     await self.wait_block_dependences(tx)
-
+                    self.log.debug("wait_block_dependences end %s" % (tx_hash))
             else:
                 while True:
                     if not self.active_block.done():
