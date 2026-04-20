@@ -32,6 +32,7 @@ try:
     import asyncpg
 except:
     pass
+import traceback
 
 class Connector:
 
@@ -1467,6 +1468,7 @@ class Connector:
                 pass
 
             if block_tx:
+                self.log.error(str(traceback.format_exc()))
                 self.log.critical("new transaction error %s" % err)
                 self.block_txs_request.cancel()
                 self.await_tx = set()
