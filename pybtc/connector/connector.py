@@ -171,8 +171,8 @@ class Connector:
         self.new_tx_handler = None
         self.new_tx_tasks = 0
 
-        self.await_tx = list()
-        self.missed_tx = list()
+        self.await_tx = set()
+        self.missed_tx = set()
         self.await_tx_future = dict()
         self.add_tx_future = dict()
         self.get_missed_tx_threads = 0
@@ -1422,7 +1422,8 @@ class Connector:
             self.mempool_tx_count += 1
 
             if block_tx:
-                self.await_tx.remove(tx_hash)
+                if tx_hash in self.await_tx:
+                    self.await_tx.remove(tx_hash)
                 self.await_tx_future[tx["txId"]].set_result(True)
                 self.log.debug("tx %s; left %s" % (tx_hash, len(self.await_tx)))
 
@@ -1467,9 +1468,8 @@ class Connector:
 
             if block_tx:
                 self.log.critical("new transaction error %s" % err)
+                self.block_txs_request.cancel()
                 self.await_tx = set()
-                if not self.block_txs_request.done():
-                    self.block_txs_request.cancel()
                 for i in self.await_tx_future:
                     if not self.await_tx_future[i].done():
                         self.await_tx_future[i].cancel()

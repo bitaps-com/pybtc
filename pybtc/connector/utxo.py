@@ -394,13 +394,14 @@ class UUTXO():
                                                       "address",
                                                       "amount"],
                                              records=commit_uutxo)
+            self.log.debug("insert connector_unconfirmed_utxo")
         if commit_up2pk_map:
             await conn.fetch("INSERT  INTO connector_unconfirmed_p2pk_map "
                              "(tx_id, address, script) "
                              "(SELECT r.tx_id, r.address, r.script "
                              " FROM unnest($1::connector_unconfirmed_p2pk_map[]) as r ) "
                              " ON CONFLICT (tx_id) DO NOTHING;  ", commit_up2pk_map)
-
+            self.log.debug("insert connector_unconfirmed_p2pk_map")
 
         while commit_ustxo:
             rows = await conn.fetch("INSERT  INTO connector_unconfirmed_stxo "
@@ -423,6 +424,7 @@ class UUTXO():
                                     "                      address as a,"
                                     "                      amount as am, " 
                                     "                      pointer as pt;" , commit_ustxo)
+            self.log.debug("insert connector_unconfirmed_stxo")
 
             for row in rows:
                 commit_ustxo.remove((row["o"], row["s"], row["ot"], row["t"],
