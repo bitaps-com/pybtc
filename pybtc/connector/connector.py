@@ -1252,6 +1252,12 @@ class Connector:
                         if rh2s(tx["txId"]) in missed:
                             self.loop.create_task(self._new_transaction(tx, self.block_timestamp, True))
 
+                self.log.debug(
+                    "block_txs_request state: exists=%s done=%s cancelled=%s",
+                    self.block_txs_request is not None,
+                    self.block_txs_request.done() if self.block_txs_request else None,
+                    self.block_txs_request.cancelled() if self.block_txs_request else None,
+                )
                 try:
                     await asyncio.wait_for(self.block_txs_request, timeout=self.block_timeout)
                 except asyncio.TimeoutError:
