@@ -312,10 +312,10 @@ class Connector:
                                """)
 
             await conn.execute("""CREATE INDEX IF NOT EXISTS uutxo_out_tx_id
-                                  ON connector_unconfirmed_utxo USING BTREE (out_tx_id);
+                                  ON connector_unconfirmed_utxo USING HASH (out_tx_id);
                                """)
             await conn.execute("""CREATE INDEX IF NOT EXISTS sutxo_out_tx_id
-                                  ON connector_unconfirmed_stxo USING BTREE (out_tx_id);
+                                  ON connector_unconfirmed_stxo USING HASH (out_tx_id);
                                """)
 
 
