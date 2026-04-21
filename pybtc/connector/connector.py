@@ -1254,14 +1254,20 @@ class Connector:
 
                 try:
                     await asyncio.wait_for(self.block_txs_request, timeout=self.block_timeout)
-                except asyncio.CancelledError:
-                    # refresh rpc connection session
+                except asyncio.TimeoutError:
                     try:
                         await self.rpc.close()
                         self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
-                    except:
+                    except Exception:
                         pass
                     raise RuntimeError("block transaction request timeout")
+                except asyncio.CancelledError:
+                    try:
+                        await self.rpc.close()
+                        self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
+                    except Exception:
+                        pass
+                    raise RuntimeError("block transaction request cancelled")
 
 
             self.total_received_tx += tx_count
@@ -1310,8 +1316,9 @@ class Connector:
                 except Exception as err:
                     self.log.error("_get_missed exception %s " % str(err))
                     self.await_tx = set()
-                    if not self.block_txs_request.done():
+                    if self.block_txs_request is not None and not self.block_txs_request.done():
                         self.block_txs_request.cancel()
+                    self.block_txs_request = None
             self.get_missed_tx_threads -= 1
 
 
@@ -1470,7 +1477,9 @@ class Connector:
             if block_tx:
                 self.log.error(str(traceback.format_exc()))
                 self.log.critical("new transaction error %s" % err)
-                self.block_txs_request.cancel()
+                if self.block_txs_request is not None and not self.block_txs_request.done():
+                    self.block_txs_request.cancel()
+                self.block_txs_request = None
                 self.await_tx = set()
                 for i in self.await_tx_future:
                     if not self.await_tx_future[i].done():
