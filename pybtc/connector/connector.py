@@ -329,13 +329,13 @@ class Connector:
 
 
             await conn.execute("""CREATE INDEX IF NOT EXISTS sutxo_tx_id
-                                  ON connector_unconfirmed_stxo USING BTREE (tx_id);
+                                  ON connector_unconfirmed_stxo USING HASH (tx_id);
                                """)
             await conn.execute("""CREATE INDEX IF NOT EXISTS sutxo_address
-                                  ON connector_unconfirmed_stxo USING BTREE (address);
+                                  ON connector_unconfirmed_stxo USING HASH (address);
                                """)
             await conn.execute("""CREATE INDEX IF NOT EXISTS up2pk_map_address
-                                  ON connector_unconfirmed_p2pk_map USING BTREE (address);
+                                  ON connector_unconfirmed_p2pk_map USING HASH (address);
                                """)
 
 
