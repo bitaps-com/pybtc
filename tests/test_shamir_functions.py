@@ -79,6 +79,19 @@ def test_secret_spliting():
         shamir.split_secret(20, 20, secret, index_bits = 2)
 
 
+def test_split_secret_regenerates_zero_leading_coefficient(monkeypatch):
+    entropy_chunks = iter([bytes([7, 0, 11])])
+    monkeypatch.setattr(shamir, "generate_entropy", lambda hex=False: next(entropy_chunks))
+
+    secret = b"*"
+    shares = shamir.split_secret(3, 3, secret)
+    keys = list(shares)
+    two_shares = {keys[0]: shares[keys[0]], keys[1]: shares[keys[1]]}
+
+    assert shamir.restore_secret(two_shares) != secret
+    assert shamir.restore_secret(shares) == secret
+
+
 
 
 def test__interpolation():
