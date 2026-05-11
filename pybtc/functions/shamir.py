@@ -115,13 +115,17 @@ def split_secret(threshold, total,  secret, index_bits=8):
         q = [b]
 
         for i in range(threshold - 1):
-            if e_i < len(e):
-                a = e[e_i]
-                e_i += 1
-            else:
-                e = generate_entropy(hex=False)
-                a = e[0]
-                e_i = 1
+            is_leading_coefficient = i == threshold - 2
+            while True:
+                if e_i < len(e):
+                    a = e[e_i]
+                    e_i += 1
+                else:
+                    e = generate_entropy(hex=False)
+                    a = e[0]
+                    e_i = 1
+                if not is_leading_coefficient or a != 0:
+                    break
             q.append(a)
 
         for z in shares_indexes:
