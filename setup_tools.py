@@ -61,6 +61,12 @@ def download_library(command):
                 content = BytesIO(r.read())
                 content.seek(0)
                 with tarfile.open(fileobj=content) as tf:
+                    # Prevent Tar Slip (Path Traversal)
+                    base_path = os.path.realpath(os.getcwd())
+                    for member in tf.getmembers():
+                        member_path = os.path.realpath(os.path.join(base_path, member.name))
+                        if not member_path.startswith(base_path + os.sep) and member_path != base_path:
+                            raise Exception('Attempted Path Traversal in Tar File')
                     dirname = tf.getnames()[0].partition('/')[0]
                     tf.extractall()
                 shutil.move(dirname, libdir)
