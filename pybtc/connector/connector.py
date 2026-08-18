@@ -1201,89 +1201,316 @@ class Connector:
                                                                  / self.destroyed_coins, 4)))
             self.log.debug("---------------------")
 
-
     async def fetch_block_transactions(self, block):
-        q = time.time()
-        missed = set()
-        tx_count = len(block["tx"])
+        started_at = time.time()
+        tx_hashes = list(block["tx"])
+        tx_count = len(tx_hashes)
+        coinbase_hash = tx_hashes[0]
 
-        self.block_txs_request = asyncio.Future()
+        block_request = self.loop.create_future()
+        self.block_txs_request = block_request
+
+        async def find_incomplete_transactions():
+            """
+            Return transaction hashes for which durable staging state is
+            incomplete.
+
+            Every transaction must have at least one output in
+            connector_unconfirmed_utxo.
+
+            Every non-coinbase transaction must also have at least one input
+            in connector_unconfirmed_stxo.
+            """
+            if not self.utxo_data:
+                return {
+                    tx_hash
+                    for tx_hash in tx_hashes
+                    if not self.tx_cache.has_key(tx_hash)
+                }
+
+            tx_ids = [s2rh(tx_hash) for tx_hash in tx_hashes]
+
+            async with self.db_pool.acquire() as conn:
+                output_rows = await conn.fetch(
+                    """
+                    SELECT DISTINCT out_tx_id
+                    FROM connector_unconfirmed_utxo
+                    WHERE out_tx_id = ANY($1);
+                    """,
+                    tx_ids,
+                )
+
+                input_rows = await conn.fetch(
+                    """
+                    SELECT DISTINCT tx_id
+                    FROM connector_unconfirmed_stxo
+                    WHERE tx_id = ANY($1);
+                    """,
+                    tx_ids,
+                )
+
+            have_outputs = {
+                rh2s(row["out_tx_id"])
+                for row in output_rows
+            }
+
+            have_inputs = {
+                rh2s(row["tx_id"])
+                for row in input_rows
+            }
+
+            # Coinbase has no inputs, so only its outputs are required.
+            complete_transactions = have_outputs & (
+                    have_inputs | {coinbase_hash}
+            )
+
+            return set(tx_hashes) - complete_transactions
+
+        def invalidate_tx_cache(transactions):
+            """
+            A cache hit cannot be trusted when durable DB state is missing.
+            Remove such entries so _new_transaction() does not skip them.
+            """
+            for tx_hash in transactions:
+                try:
+                    self.tx_cache.delete(tx_hash)
+                except Exception:
+                    pass
+
         try:
-            self.log.debug("Wait unconfirmed tx tasks  %s" % len(self.tx_in_process))
+            self.log.debug(
+                "Wait unconfirmed tx tasks %s",
+                len(self.tx_in_process),
+            )
+
             if not self.unconfirmed_tx_processing.done():
                 await self.unconfirmed_tx_processing
 
-            for h in block["tx"]:
-                try:
-                    self.tx_cache[h]
-                except:
-                    missed.add(h)
+            missed = await find_incomplete_transactions()
+            invalidate_tx_cache(missed)
 
-
-
-            if self.utxo_data:
-                async with self.db_pool.acquire() as conn:
-                    rows = await conn.fetch("SELECT distinct tx_id FROM  connector_unconfirmed_stxo "
-                                            "WHERE tx_id = ANY($1);", set(s2rh(t) for t in missed))
-
-                    for row in rows:
-                        missed.remove(rh2s(row["tx_id"]))
-                    if missed:
-                        coinbase = await conn.fetchval("SELECT   out_tx_id FROM connector_unconfirmed_utxo "
-                                                  "WHERE out_tx_id  = $1 LIMIT 1;", s2rh(block["tx"][0]))
-                        if coinbase:
-                            if block["tx"][0] in missed:
-                                missed.remove(block["tx"][0])
-
-            self.log.debug("Block missed transactions  %s from %s" % (len(missed), tx_count))
+            self.log.debug(
+                "Block missed transactions %s from %s",
+                len(missed),
+                tx_count,
+            )
 
             if missed:
                 self.missed_tx = set(missed)
                 self.await_tx = set(missed)
-                self.await_tx_future = {s2rh(i): asyncio.Future() for i in missed}
+                self.await_tx_future = {
+                    s2rh(tx_hash): self.loop.create_future()
+                    for tx_hash in missed
+                }
                 self.block_timestamp = block["time"]
+
                 if len(missed) < 100:
                     self.loop.create_task(self._get_missed())
+
                 else:
-                    self.log.debug("request block %s" % block["hash"])
-                    raw_block = await self.rpc.getblock(block["hash"], 0)
-                    b = decode_block_tx(raw_block)
-                    for tx in b["rawTx"].values():
-                        if rh2s(tx["txId"]) in missed:
-                            self.loop.create_task(self._new_transaction(tx, self.block_timestamp, True))
+                    self.log.debug(
+                        "Request raw block %s",
+                        block["hash"],
+                    )
+
+                    raw_block = await self.rpc.getblock(
+                        block["hash"],
+                        0,
+                    )
+                    decoded_block = decode_block_tx(raw_block)
+
+                    scheduled = set()
+
+                    for tx in decoded_block["rawTx"].values():
+                        tx_hash = rh2s(tx["txId"])
+
+                        if tx_hash not in missed:
+                            continue
+
+                        scheduled.add(tx_hash)
+
+                        self.loop.create_task(
+                            self._new_transaction(
+                                tx,
+                                self.block_timestamp,
+                                True,
+                            )
+                        )
+
+                    not_found_in_raw_block = missed - scheduled
+
+                    if not_found_in_raw_block:
+                        sample = sorted(not_found_in_raw_block)[:10]
+
+                        raise RuntimeError(
+                            "block %s raw data does not contain %s "
+                            "requested transactions; sample: %s"
+                            % (
+                                block["height"],
+                                len(not_found_in_raw_block),
+                                sample,
+                            )
+                        )
 
                 self.log.debug(
-                    "block_txs_request state: exists=%s done=%s cancelled=%s",
+                    "block_txs_request state: "
+                    "exists=%s done=%s cancelled=%s",
                     self.block_txs_request is not None,
-                    self.block_txs_request.done() if self.block_txs_request else None,
-                    self.block_txs_request.cancelled() if self.block_txs_request else None,
+                    block_request.done(),
+                    block_request.cancelled(),
                 )
-                try:
-                    await asyncio.wait_for(self.block_txs_request, timeout=self.block_timeout)
-                except asyncio.TimeoutError:
-                    try:
-                        await self.rpc.close()
-                        self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
-                    except Exception:
-                        pass
-                    raise RuntimeError("block transaction request timeout")
-                except asyncio.CancelledError:
-                    try:
-                        await self.rpc.close()
-                        self.rpc = aiojsonrpc.rpc(self.rpc_url, self.loop, timeout=self.rpc_timeout)
-                    except Exception:
-                        pass
-                    raise RuntimeError("block transaction request cancelled")
 
+                try:
+                    # shield() prevents wait_for() from cancelling the shared
+                    # Future when the timeout expires.
+                    await asyncio.wait_for(
+                        asyncio.shield(block_request),
+                        timeout=self.block_timeout,
+                    )
+
+                except asyncio.TimeoutError:
+                    incomplete = await find_incomplete_transactions()
+                    invalidate_tx_cache(incomplete)
+
+                    try:
+                        await self.rpc.close()
+                        self.rpc = aiojsonrpc.rpc(
+                            self.rpc_url,
+                            self.loop,
+                            timeout=self.rpc_timeout,
+                        )
+                    except Exception:
+                        pass
+
+                    raise RuntimeError(
+                        "block %s transaction request timeout; "
+                        "%s transactions still incomplete; sample: %s"
+                        % (
+                            block["height"],
+                            len(incomplete),
+                            sorted(incomplete)[:10],
+                        )
+                    )
+
+                except asyncio.CancelledError:
+                    # If the inner Future was cancelled by a transaction
+                    # worker, convert it into a block-processing error.
+                    # If only the outer coroutine was cancelled, propagate
+                    # cancellation normally (for example during shutdown).
+                    if not block_request.cancelled():
+                        raise
+
+                    incomplete = await find_incomplete_transactions()
+                    invalidate_tx_cache(incomplete)
+
+                    raise RuntimeError(
+                        "block %s transaction request cancelled; "
+                        "%s transactions still incomplete; sample: %s"
+                        % (
+                            block["height"],
+                            len(incomplete),
+                            sorted(incomplete)[:10],
+                        )
+                    )
+
+            # Mandatory durable-state barrier. The block must never be
+            # accepted merely because block_request was completed.
+            incomplete = await find_incomplete_transactions()
+
+            if incomplete:
+                invalidate_tx_cache(incomplete)
+
+                raise RuntimeError(
+                    "block %s transactions incomplete after processing: "
+                    "%s from %s; sample: %s"
+                    % (
+                        block["height"],
+                        len(incomplete),
+                        tx_count,
+                        sorted(incomplete)[:10],
+                    )
+                )
 
             self.total_received_tx += tx_count
             self.total_received_tx_last += tx_count
-            self.total_received_tx_time += time.time() - q
-            rate = round(self.total_received_tx/self.total_received_tx_time)
-            self.log.debug("Transactions received: %s [%s] received tx rate tx/s ->> %s <<" % (tx_count, time.time() - q, rate))
+            self.total_received_tx_time += time.time() - started_at
+
+            rate = round(
+                self.total_received_tx / self.total_received_tx_time
+            )
+
+            self.log.debug(
+                "Transactions received: %s [%s] "
+                "received tx rate tx/s ->> %s <<",
+                tx_count,
+                time.time() - started_at,
+                rate,
+            )
+
         finally:
-            if not self.block_txs_request.done():
-                self.block_txs_request.set_result(True)
+            # Release any coroutine waiting for this block request. Because
+            # wait_for() uses shield(), timeout does not cancel block_request.
+            if not block_request.done():
+                block_request.set_result(False)
+
+            # Older worker code from debug-4 can set the shared reference to
+            # None or cancel it. Always leave a valid completed Future behind.
+            replace_request = self.block_txs_request is None
+
+            if self.block_txs_request is block_request:
+                if block_request.cancelled():
+                    replace_request = True
+                else:
+                    try:
+                        if block_request.exception() is not None:
+                            replace_request = True
+                    except asyncio.CancelledError:
+                        replace_request = True
+
+            if replace_request:
+                completed_request = self.loop.create_future()
+                completed_request.set_result(False)
+                self.block_txs_request = completed_request
+
+    async def get_incomplete_block_transactions(self, block):
+        tx_hashes = set(block["tx"])
+
+        if not self.utxo_data:
+            return {
+                h for h in tx_hashes
+                if not self.tx_cache.has_key(h)
+            }
+
+        tx_ids = [s2rh(h) for h in block["tx"]]
+
+        async with self.db_pool.acquire() as conn:
+            output_rows = await conn.fetch(
+                """
+                SELECT DISTINCT out_tx_id
+                FROM connector_unconfirmed_utxo
+                WHERE out_tx_id = ANY($1);
+                """,
+                tx_ids,
+            )
+
+            input_rows = await conn.fetch(
+                """
+                SELECT DISTINCT tx_id
+                FROM connector_unconfirmed_stxo
+                WHERE tx_id = ANY($1);
+                """,
+                tx_ids,
+            )
+
+        have_outputs = {rh2s(row["out_tx_id"]) for row in output_rows}
+        have_inputs = {rh2s(row["tx_id"]) for row in input_rows}
+
+        # Coinbase не имеет inputs.
+        complete = have_outputs & (
+                have_inputs | {block["tx"][0]}
+        )
+
+        return tx_hashes - complete
 
     async def _get_transaction(self, tx_hash):
         try:
@@ -1324,7 +1551,6 @@ class Connector:
                     self.await_tx = set()
                     if self.block_txs_request is not None and not self.block_txs_request.done():
                         self.block_txs_request.cancel()
-                    self.block_txs_request = None
             self.get_missed_tx_threads -= 1
 
 
@@ -1485,7 +1711,6 @@ class Connector:
                 self.log.critical("new transaction error %s" % err)
                 if self.block_txs_request is not None and not self.block_txs_request.done():
                     self.block_txs_request.cancel()
-                self.block_txs_request = None
                 self.await_tx = set()
                 for i in self.await_tx_future:
                     if not self.await_tx_future[i].done():
