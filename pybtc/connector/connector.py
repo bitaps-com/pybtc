@@ -1472,46 +1472,6 @@ class Connector:
                 completed_request.set_result(False)
                 self.block_txs_request = completed_request
 
-    async def get_incomplete_block_transactions(self, block):
-        tx_hashes = set(block["tx"])
-
-        if not self.utxo_data:
-            return {
-                h for h in tx_hashes
-                if not self.tx_cache.has_key(h)
-            }
-
-        tx_ids = [s2rh(h) for h in block["tx"]]
-
-        async with self.db_pool.acquire() as conn:
-            output_rows = await conn.fetch(
-                """
-                SELECT DISTINCT out_tx_id
-                FROM connector_unconfirmed_utxo
-                WHERE out_tx_id = ANY($1);
-                """,
-                tx_ids,
-            )
-
-            input_rows = await conn.fetch(
-                """
-                SELECT DISTINCT tx_id
-                FROM connector_unconfirmed_stxo
-                WHERE tx_id = ANY($1);
-                """,
-                tx_ids,
-            )
-
-        have_outputs = {rh2s(row["out_tx_id"]) for row in output_rows}
-        have_inputs = {rh2s(row["tx_id"]) for row in input_rows}
-
-        # Coinbase не имеет inputs.
-        complete = have_outputs & (
-                have_inputs | {block["tx"][0]}
-        )
-
-        return tx_hashes - complete
-
     async def _get_transaction(self, tx_hash):
         try:
             raw_tx = await self.rpc.getrawtransaction(tx_hash)
