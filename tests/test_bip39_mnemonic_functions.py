@@ -11,6 +11,8 @@ from pybtc.functions.bip39_mnemonic import is_mnemonic_checksum_valid
 from pybtc.functions.bip39_mnemonic import split_mnemonic
 from pybtc.functions.bip39_mnemonic import combine_mnemonic
 from pybtc.functions.bip39_mnemonic import create_mnemonic_additional_share
+from pybtc.functions.bip39_mnemonic import get_mnemonic_checksum_data
+from pybtc.functions.bip39_mnemonic import is_mnemonic_valid
 
 def test_generate_entropy():
     assert len(generate_entropy()) == 64
@@ -158,3 +160,23 @@ def test_split_mnemonic():
     s = create_mnemonic_additional_share(shares)
 
     assert combine_mnemonic(shares) == combine_mnemonic([shares[0], s])
+
+
+def test_non_english_embedded_index_mnemonic():
+    # Issue #85: Embedded index extraction for non-English mnemonic shares
+    share = 'antena comida cordón uno lunes empleo cubrir boina conocer brusco noche malo'
+    chk = get_mnemonic_checksum_data(share, language='spanish')
+    assert isinstance(chk, int)
+
+    m = entropy_to_mnemonic(generate_entropy(strength=128), language='spanish')
+    assert is_mnemonic_valid(m, language='spanish')
+    shares = split_mnemonic(m, 3, 5, language='spanish', embedded_index=True)
+    assert len(shares) == 5
+    assert isinstance(shares, list)
+    recovered = combine_mnemonic(shares[:3], language='spanish')
+    assert recovered == m
+
+    add_share = create_mnemonic_additional_share(shares[:3], language='spanish')
+    assert isinstance(add_share, str)
+    assert combine_mnemonic([shares[0], shares[1], add_share], language='spanish') == m
+
