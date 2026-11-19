@@ -84,3 +84,18 @@ def test_secret_spliting():
 def test__interpolation():
     with pytest.raises(Exception):
         shamir._interpolation([])
+
+
+def test_unique_coefficients_rejection_sampling(monkeypatch):
+    # Simulate entropy generator returning duplicate bytes
+    sequence = iter([42, 42, 42, 99, 100, 101, 102])
+    def mock_entropy(strength=256, hex=False):
+        return bytes([next(sequence, 1) for _ in range(32)])
+
+    monkeypatch.setattr(shamir, "generate_entropy", mock_entropy)
+
+    secret = b"\x2a"  # 42
+    # threshold 3: secret is 42, next coefficients must be unique and not in q=[42]
+    shares = shamir.split_secret(3, 3, secret)
+    assert shamir.restore_secret(shares) == secret
+
