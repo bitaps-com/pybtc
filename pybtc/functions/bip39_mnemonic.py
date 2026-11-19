@@ -100,8 +100,11 @@ def mnemonic_to_entropy(mnemonic, language='english', word_list_dir=None,
     return entropy if not hex else entropy.hex()
 
 
-def get_mnemonic_checksum_data(mnemonic):
-    word_list = load_word_list()
+def get_mnemonic_checksum_data(mnemonic, language='english', word_list_dir=None, word_list=None):
+    if word_list is None:
+        word_list = load_word_list(language, word_list_dir)
+    elif not isinstance(word_list, list) or len(word_list) != 2048:
+        raise TypeError("invalid word list type")
     mnemonic = mnemonic.split()
     word_count = len(mnemonic)
     chk_sum_bit_len = word_count * 11 % 32
@@ -216,7 +219,8 @@ def create_mnemonic_additional_share(threshold_shares, language='english', word_
         for share in threshold_shares:
             e = mnemonic_to_entropy(share, language=language, hex=False, word_list_dir=word_list_dir,
                                            word_list=word_list)
-            i = get_mnemonic_checksum_data(share)
+            i = get_mnemonic_checksum_data(share, language=language, word_list_dir=word_list_dir,
+                                           word_list=word_list)
             if i in s:
                 raise ValueError("Non unique or invalid shares")
             s[i] = e
@@ -254,7 +258,8 @@ def combine_mnemonic(shares, share_id = None, language='english', word_list_dir=
         for share in shares:
             e = mnemonic_to_entropy(share, language=language, hex=False, word_list_dir=word_list_dir,
                                            word_list=word_list)
-            i = get_mnemonic_checksum_data(share)
+            i = get_mnemonic_checksum_data(share, language=language, word_list_dir=word_list_dir,
+                                           word_list=word_list)
             if i in s:
                 raise ValueError("Non unique or invalid shares")
             s[i] = e
@@ -275,9 +280,11 @@ def combine_mnemonic(shares, share_id = None, language='english', word_list_dir=
 
 
 
-def is_mnemonic_valid(mnemonic, word_list=None):
+def is_mnemonic_valid(mnemonic, language='english', word_list_dir=None, word_list=None):
     if word_list is None:
-        word_list = load_word_list()
+        word_list = load_word_list(language=language, word_list_dir=word_list_dir)
+    elif not isinstance(word_list, list) or len(word_list) != 2048:
+        raise TypeError("invalid word list type")
     if isinstance(mnemonic, str):
         mnemonic = mnemonic.split()
         for w in mnemonic:
