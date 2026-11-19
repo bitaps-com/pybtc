@@ -158,3 +158,17 @@ def test_split_mnemonic():
     s = create_mnemonic_additional_share(shares)
 
     assert combine_mnemonic(shares) == combine_mnemonic([shares[0], s])
+
+    # Test threshold validations and combinations
+    with pytest.raises(ValueError, match="At least 2 threshold shares required"):
+        create_mnemonic_additional_share([shares[0]])
+
+    with pytest.raises(TypeError, match="threshold_shares must be a list or dict"):
+        create_mnemonic_additional_share("invalid_type")
+
+    with pytest.raises(ValueError, match="At least 2 shares required to combine mnemonic"):
+        combine_mnemonic([shares[0]])
+
+    with pytest.raises(TypeError, match="shares must be a list or dict"):
+        combine_mnemonic("invalid_type")
+

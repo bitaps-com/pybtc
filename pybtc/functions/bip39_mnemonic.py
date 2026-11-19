@@ -1,5 +1,6 @@
 from pybtc.constants import *
 import hashlib
+import itertools
 from pybtc.functions.hash import sha256
 from pybtc.functions.shamir import split_secret, restore_secret
 from pybtc.functions.tools import get_bytes
@@ -155,20 +156,7 @@ def mnemonic_to_seed(mnemonic, passphrase="", hex=True):
 
 
 def __combinations(a, n):
-        results = []
-        total = len(a) ** 2
-        for m in range(n, total):
-            r = []
-            i = len(a) - 1
-            while i:
-                if (m & (1 << i)) != 0:
-                    r.append(a[i])
-                i -= 1
-
-            if len(r) >= n:
-                results.append(r)
-
-        return results
+    return [list(c) for c in itertools.combinations(a, n)]
 
 
 def split_mnemonic(mnemonic, threshold, total, language='english', embedded_index = False,
@@ -210,6 +198,10 @@ def split_mnemonic(mnemonic, threshold, total, language='english', embedded_inde
 
 
 def create_mnemonic_additional_share(threshold_shares, language='english', word_list_dir=None, word_list=None):
+    if not isinstance(threshold_shares, (list, dict)):
+        raise TypeError("threshold_shares must be a list or dict")
+    if len(threshold_shares) < 2:
+        raise ValueError("At least 2 threshold shares required")
     embedded_index = isinstance(threshold_shares, list)
     s = dict()
     if embedded_index:
@@ -227,9 +219,12 @@ def create_mnemonic_additional_share(threshold_shares, language='english', word_
     if embedded_index:
         bits =  math.ceil(len(s[next(iter(s))]) * 8 / 32)
         index_max = 2 ** bits - 1
-        assert index_max > len(threshold_shares)
+        if index_max <= len(threshold_shares):
+            raise ValueError("Cannot create additional share: index space exhausted")
     else:
         index_max = 255
+        if index_max <= len(threshold_shares):
+            raise ValueError("Cannot create additional share: index space exhausted")
 
     while True:
         q = random.SystemRandom().randint(1, index_max)
@@ -248,6 +243,10 @@ def create_mnemonic_additional_share(threshold_shares, language='english', word_
 
 def combine_mnemonic(shares, share_id = None, language='english', word_list_dir=None, word_list=None):
     # share_id used to reconstruct upper level share
+    if not isinstance(shares, (list, dict)):
+        raise TypeError("shares must be a list or dict")
+    if len(shares) < 2:
+        raise ValueError("At least 2 shares required to combine mnemonic")
     embedded_index = isinstance(shares, list)
     s = dict()
     if embedded_index:
