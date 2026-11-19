@@ -84,3 +84,37 @@ def test_secret_spliting():
 def test__interpolation():
     with pytest.raises(Exception):
         shamir._interpolation([])
+
+
+def test_shamir_parameter_validations():
+    secret = b"test_secret_32_bytes_entropy_ok!"
+    # threshold > total must raise ValueError
+    with pytest.raises(ValueError, match="threshold cannot be greater than total shares"):
+        shamir.split_secret(3, 2, secret)
+
+    # threshold < 2 must raise ValueError
+    with pytest.raises(ValueError, match="threshold must be at least 2"):
+        shamir.split_secret(1, 5, secret)
+
+    # total < 2 must raise ValueError
+    with pytest.raises(ValueError, match="total shares must be at least 2"):
+        shamir.split_secret(2, 1, secret)
+
+    # non-integer threshold or total must raise TypeError
+    with pytest.raises(TypeError, match="threshold and total must be integers"):
+        shamir.split_secret("3", 5, secret)
+    with pytest.raises(TypeError, match="threshold and total must be integers"):
+        shamir.split_secret(3, "5", secret)
+
+    # restore_secret must reject non-dict
+    with pytest.raises(TypeError, match="Shares as dict required"):
+        shamir.restore_secret([b"share1", b"share2"])
+
+    # restore_secret must reject fewer than 2 shares
+    with pytest.raises(ValueError, match="At least 2 shares required"):
+        shamir.restore_secret({1: b"single_share"})
+
+    # _interpolation must reject duplicate x coordinates
+    with pytest.raises(ValueError, match="Duplicate share indices in interpolation points"):
+        shamir._interpolation([(2, 100), (2, 200)])
+

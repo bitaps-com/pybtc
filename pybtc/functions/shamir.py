@@ -67,6 +67,10 @@ def _interpolation(points, x=0):
     if k < 2:
         raise Exception("Minimum 2 points required")
 
+    x_coords = [p[0] for p in points]
+    if len(x_coords) != len(set(x_coords)):
+        raise ValueError("Duplicate share indices in interpolation points")
+
     points = sorted(points, key=lambda z: z[0])
 
     p_x = 0
@@ -90,10 +94,18 @@ def _interpolation(points, x=0):
 def split_secret(threshold, total,  secret, index_bits=8):
     if not isinstance(secret, bytes):
         raise TypeError("Secret as byte string required")
+    if not isinstance(threshold, int) or not isinstance(total, int):
+        raise TypeError("threshold and total must be integers")
+    if threshold < 2:
+        raise ValueError("threshold must be at least 2")
     if threshold > 255:
         raise ValueError("threshold <= 255")
+    if total < 2:
+        raise ValueError("total shares must be at least 2")
     if total > 255:
         raise ValueError("total shares <= 255")
+    if threshold > total:
+        raise ValueError("threshold cannot be greater than total shares")
     index_max = 2 ** index_bits - 1
     if total > index_max:
         raise ValueError("index bits is to low")
@@ -130,10 +142,14 @@ def split_secret(threshold, total,  secret, index_bits=8):
     return shares
 
 def restore_secret(shares, x=0):
+    if not isinstance(shares, dict):
+        raise TypeError("Shares as dict required")
+    if len(shares) < 2:
+        raise ValueError("At least 2 shares required to restore secret")
     secret = b""
     share_length = None
     for share in shares:
-        if share < 1 or share > 255:
+        if not isinstance(share, int) or share < 1 or share > 255:
             raise Exception("Invalid share index %s" % share)
     for share in shares.values():
         if share_length is None:

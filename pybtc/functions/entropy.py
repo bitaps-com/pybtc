@@ -25,7 +25,7 @@ def generate_entropy(strength=256, hex=True):
                 c += 1
                 continue
             else:
-                raise Exception("Entropy generator filed")
+                raise Exception("Entropy generator failed")
     h = a.to_bytes(32, byteorder="big")
     return h[:int(strength/8)] if not hex else h[:int(strength/8)].hex()
 
