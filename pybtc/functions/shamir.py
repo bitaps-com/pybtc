@@ -90,6 +90,8 @@ def _interpolation(points, x=0):
 def split_secret(threshold, total,  secret, index_bits=8):
     if not isinstance(secret, bytes):
         raise TypeError("Secret as byte string required")
+    if threshold < 1 or total < 1 or threshold > total:
+        raise ValueError("threshold and total must satisfy 1 <= threshold <= total")
     if threshold > 255:
         raise ValueError("threshold <= 255")
     if total > 255:
