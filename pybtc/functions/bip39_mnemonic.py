@@ -155,20 +155,8 @@ def mnemonic_to_seed(mnemonic, passphrase="", hex=True):
 
 
 def __combinations(a, n):
-        results = []
-        total = len(a) ** 2
-        for m in range(n, total):
-            r = []
-            i = len(a) - 1
-            while i:
-                if (m & (1 << i)) != 0:
-                    r.append(a[i])
-                i -= 1
-
-            if len(r) >= n:
-                results.append(r)
-
-        return results
+    from itertools import combinations
+    return [list(c) for c in combinations(a, n)]
 
 
 def split_mnemonic(mnemonic, threshold, total, language='english', embedded_index = False,
